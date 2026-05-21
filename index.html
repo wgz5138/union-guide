@@ -1,0 +1,520 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>加班費申請說明 — 高雄榮總護理工會</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@400;600;700&family=Noto+Sans+TC:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --red: #C0392B;
+    --red-light: #FDECEA;
+    --red-mid: #E74C3C;
+    --gold: #B7860B;
+    --gold-light: #FEF9E7;
+    --ink: #1A1A1A;
+    --ink-mid: #444;
+    --ink-soft: #777;
+    --bg: #FAFAF8;
+    --card: #FFFFFF;
+    --border: #E8E4DE;
+    --green: #1A7A4A;
+    --green-light: #EAFAF1;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: 'Noto Sans TC', sans-serif;
+    background: var(--bg);
+    color: var(--ink);
+    font-size: 15px;
+    line-height: 1.7;
+  }
+  .header {
+    background: var(--red);
+    color: #fff;
+    padding: 2rem 1.25rem 1.5rem;
+    text-align: center;
+    position: relative;
+    overflow: hidden;
+  }
+  .header::before {
+    content: '';
+    position: absolute;
+    top: -40px; right: -40px;
+    width: 180px; height: 180px;
+    border-radius: 50%;
+    background: rgba(255,255,255,0.06);
+  }
+  .header::after {
+    content: '';
+    position: absolute;
+    bottom: -60px; left: -30px;
+    width: 200px; height: 200px;
+    border-radius: 50%;
+    background: rgba(255,255,255,0.04);
+  }
+  .header-label {
+    font-size: 11px;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    opacity: 0.75;
+    margin-bottom: 8px;
+  }
+  .header h1 {
+    font-family: 'Noto Serif TC', serif;
+    font-size: 22px;
+    font-weight: 700;
+    line-height: 1.4;
+    margin-bottom: 6px;
+  }
+  .header-sub {
+    font-size: 13px;
+    opacity: 0.8;
+    margin-bottom: 1.25rem;
+  }
+  .countdown-box {
+    background: rgba(255,255,255,0.15);
+    border: 1px solid rgba(255,255,255,0.25);
+    border-radius: 12px;
+    padding: 0.85rem 1rem;
+    display: inline-block;
+    min-width: 260px;
+  }
+  .countdown-label {
+    font-size: 11px;
+    opacity: 0.8;
+    margin-bottom: 8px;
+    letter-spacing: 0.05em;
+  }
+  .countdown-digits {
+    display: flex;
+    justify-content: center;
+    gap: 4px;
+    align-items: flex-end;
+  }
+  .cd-unit { text-align: center; }
+  .cd-num {
+    font-family: 'Noto Serif TC', serif;
+    font-size: 32px;
+    font-weight: 700;
+    line-height: 1;
+    display: block;
+  }
+  .cd-label {
+    font-size: 10px;
+    opacity: 0.7;
+    display: block;
+    margin-top: 2px;
+  }
+  .cd-sep {
+    font-size: 28px;
+    font-weight: 300;
+    opacity: 0.5;
+    margin-bottom: 14px;
+  }
+  .deadline-note {
+    font-size: 12px;
+    opacity: 0.75;
+    margin-top: 8px;
+  }
+  .warn-banner {
+    background: #7B1818;
+    color: #FFCDD2;
+    padding: 0.6rem 1.25rem;
+    text-align: center;
+    font-size: 13px;
+    font-weight: 500;
+    letter-spacing: 0.02em;
+  }
+  .warn-banner span { opacity: 0.8; font-weight: 300; margin-left: 6px; }
+  main { max-width: 600px; margin: 0 auto; padding: 1.5rem 1.25rem 3rem; }
+  .section { margin-bottom: 1.75rem; }
+  .section-header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 1rem;
+  }
+  .section-num {
+    width: 28px; height: 28px;
+    background: var(--red);
+    color: #fff;
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 13px;
+    font-weight: 500;
+    flex-shrink: 0;
+  }
+  .section-title {
+    font-family: 'Noto Serif TC', serif;
+    font-size: 17px;
+    font-weight: 600;
+    color: var(--ink);
+  }
+  .card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 1.1rem 1.25rem;
+  }
+  .card + .card { margin-top: 10px; }
+  .info-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    padding: 6px 0;
+    border-bottom: 1px solid #F2EFE9;
+    font-size: 14px;
+    gap: 12px;
+  }
+  .info-row:last-child { border-bottom: none; padding-bottom: 0; }
+  .info-row:first-child { padding-top: 0; }
+  .info-key { color: var(--ink-soft); flex-shrink: 0; }
+  .info-val { font-weight: 500; text-align: right; }
+  .info-val.red { color: var(--red); }
+  .info-val.green { color: var(--green); }
+  .highlight-card {
+    background: var(--red-light);
+    border: 1px solid #F5C6C2;
+    border-radius: 12px;
+    padding: 1rem 1.25rem;
+  }
+  .highlight-card p { font-size: 14px; color: #7B1818; line-height: 1.8; }
+  .highlight-card strong { font-weight: 500; }
+  .checklist { list-style: none; display: flex; flex-direction: column; gap: 10px; }
+  .checklist li {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 0.85rem 1rem;
+    font-size: 14px;
+    cursor: pointer;
+    transition: background 0.15s;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .checklist li:active { background: #F7F4F0; }
+  .check-box {
+    width: 22px; height: 22px;
+    border: 2px solid var(--border);
+    border-radius: 6px;
+    flex-shrink: 0;
+    display: flex; align-items: center; justify-content: center;
+    margin-top: 1px;
+    transition: all 0.2s;
+  }
+  .checklist li.done .check-box {
+    background: var(--green);
+    border-color: var(--green);
+  }
+  .checklist li.done .check-box::after {
+    content: '✓';
+    color: #fff;
+    font-size: 13px;
+    font-weight: 700;
+  }
+  .checklist li.done .check-text {
+    text-decoration: line-through;
+    color: var(--ink-soft);
+  }
+  .check-text { flex: 1; line-height: 1.5; }
+  .check-tag {
+    font-size: 11px;
+    padding: 2px 8px;
+    border-radius: 20px;
+    white-space: nowrap;
+    align-self: flex-start;
+    margin-top: 2px;
+  }
+  .tag-urgent { background: var(--red-light); color: var(--red); }
+  .tag-prep { background: var(--gold-light); color: var(--gold); }
+  .tag-done { background: var(--green-light); color: var(--green); }
+  .timeline { display: flex; flex-direction: column; gap: 0; }
+  .tl-item { display: flex; gap: 16px; position: relative; }
+  .tl-left {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    flex-shrink: 0;
+    width: 20px;
+  }
+  .tl-dot {
+    width: 12px; height: 12px;
+    border-radius: 50%;
+    background: var(--border);
+    border: 2px solid var(--bg);
+    flex-shrink: 0;
+    margin-top: 4px;
+  }
+  .tl-dot.red { background: var(--red); }
+  .tl-dot.gold { background: var(--gold); }
+  .tl-dot.green { background: var(--green); }
+  .tl-line {
+    flex: 1;
+    width: 1px;
+    background: var(--border);
+    margin: 4px 0;
+  }
+  .tl-item:last-child .tl-line { display: none; }
+  .tl-content { padding-bottom: 1.25rem; flex: 1; }
+  .tl-date { font-size: 12px; color: var(--ink-soft); margin-bottom: 2px; }
+  .tl-title { font-size: 14px; font-weight: 500; line-height: 1.5; }
+  .tl-desc { font-size: 13px; color: var(--ink-soft); margin-top: 3px; line-height: 1.6; }
+  .faq-item {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    overflow: hidden;
+    margin-bottom: 8px;
+  }
+  .faq-q {
+    padding: 0.9rem 1rem;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 10px;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .faq-q::after {
+    content: '＋';
+    color: var(--red);
+    font-size: 18px;
+    line-height: 1;
+    flex-shrink: 0;
+    transition: transform 0.2s;
+  }
+  .faq-item.open .faq-q::after { transform: rotate(45deg); }
+  .faq-a {
+    display: none;
+    padding: 0 1rem 0.9rem;
+    font-size: 13px;
+    color: var(--ink-mid);
+    line-height: 1.8;
+    border-top: 1px solid #F2EFE9;
+  }
+  .faq-item.open .faq-a { display: block; }
+  .contact-card {
+    background: var(--gold-light);
+    border: 1px solid #EAD67A;
+    border-radius: 12px;
+    padding: 1rem 1.25rem;
+    font-size: 14px;
+    color: #5C4000;
+    line-height: 1.8;
+  }
+  .progress-note {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-left: 3px solid var(--red);
+    border-radius: 0 10px 10px 0;
+    padding: 0.85rem 1rem;
+    font-size: 13px;
+    color: var(--ink-mid);
+    line-height: 1.8;
+  }
+  .progress-date { font-size: 11px; color: var(--ink-soft); margin-bottom: 4px; }
+  footer {
+    text-align: center;
+    padding: 1.5rem 1.25rem;
+    font-size: 12px;
+    color: var(--ink-soft);
+    border-top: 1px solid var(--border);
+  }
+</style>
+</head>
+<body>
+<div class="header">
+  <div class="header-label">高雄榮總護理部 · 工會公告</div>
+  <h1>約用人員加班費<br>補發申請說明</h1>
+  <div class="header-sub">2020年1月 ～ 2024年7月 加班費追溯補發</div>
+  <div class="countdown-box">
+    <div class="countdown-label">⏰ 距離申請截止</div>
+    <div class="countdown-digits">
+      <div class="cd-unit"><span class="cd-num" id="cd-days">--</span><span class="cd-label">天</span></div>
+      <div class="cd-sep">:</div>
+      <div class="cd-unit"><span class="cd-num" id="cd-hours">--</span><span class="cd-label">時</span></div>
+      <div class="cd-sep">:</div>
+      <div class="cd-unit"><span class="cd-num" id="cd-mins">--</span><span class="cd-label">分</span></div>
+    </div>
+    <div class="deadline-note">截止日：2026年6月30日</div>
+  </div>
+</div>
+<div class="warn-banner">
+  ⚠ 每晚申請一個月，少追溯一個月
+  <span>請盡快完成申請</span>
+</div>
+<main>
+  <div class="section">
+    <div class="section-header">
+      <div class="section-num">1</div>
+      <div class="section-title">這是什麼？新成員先看這裡</div>
+    </div>
+    <div class="card">
+      <div class="info-row"><span class="info-key">補發對象</span><span class="info-val">護理部約用人員</span></div>
+      <div class="info-row"><span class="info-key">補發期間</span><span class="info-val">2020/01/01 ～ 2024/07/31</span></div>
+      <div class="info-row"><span class="info-key">申請截止</span><span class="info-val red">2026/06/30</span></div>
+      <div class="info-row"><span class="info-key">依據</span><span class="info-val">輔導會公告開放補發</span></div>
+    </div>
+    <div class="highlight-card" style="margin-top:10px">
+      <p>醫院開放補發 <strong>2020年1月1日至2024年7月31日</strong>期間，約用人員以「分計」計算之加班費。<br>
+      <strong>每晚申請一個月，就少追溯一個月的金額</strong>，請盡快完成申請手續。</p>
+    </div>
+  </div>
+  <div class="section">
+    <div class="section-header">
+      <div class="section-num">2</div>
+      <div class="section-title">目前申請進度</div>
+    </div>
+    <div class="progress-note">
+      <div class="progress-date">最後更新：2026/05/20</div>
+      工會目前正在協助成員彙整申請資料。請各成員依下方待辦清單自行備妥資料，並向人事室調取薪資紀錄後，儘快完成申報。
+    </div>
+  </div>
+  <div class="section">
+    <div class="section-header">
+      <div class="section-num">3</div>
+      <div class="section-title">你需要做的事（點擊勾選）</div>
+    </div>
+    <ul class="checklist" id="checklist">
+      <li data-id="0"><div class="check-box"></div><div class="check-text">向人事室調取 2020/01 ～ 2024/07 每月本薪紀錄</div><span class="check-tag tag-urgent">最急</span></li>
+      <li data-id="1"><div class="check-box"></div><div class="check-text">從醫院系統調出刷卡紀錄（每次最多180天，共需查詢約10次）</div><span class="check-tag tag-urgent">最急</span></li>
+      <li data-id="2"><div class="check-box"></div><div class="check-text">確認排班紀錄是否可複製貼上（向資訊室確認）</div><span class="check-tag tag-prep">準備中</span></li>
+      <li data-id="3"><div class="check-box"></div><div class="check-text">使用計算工具，逐日核算加班分鐘與金額</div><span class="check-tag tag-prep">準備中</span></li>
+      <li data-id="4"><div class="check-box"></div><div class="check-text">向醫院提出正式申請（依醫院系統格式填寫）</div><span class="check-tag tag-prep">準備中</span></li>
+    </ul>
+    <p style="font-size:12px;color:var(--ink-soft);margin-top:8px;text-align:center">勾選記錄儲存在你的裝置，重新整理不會消失</p>
+  </div>
+  <div class="section">
+    <div class="section-header">
+      <div class="section-num">4</div>
+      <div class="section-title">哪些加班可以申請？</div>
+    </div>
+    <div class="card" style="margin-bottom:10px">
+      <div class="info-row" style="padding-bottom:8px"><span class="info-key" style="font-weight:500;color:var(--red)">A 類</span><span class="info-val" style="font-size:13px">當天已有舊加班紀錄（滿1小時）</span></div>
+      <p style="font-size:13px;color:var(--ink-soft);padding-top:4px">補申請超出整點的「剩餘分鐘」（例：舊紀錄3小時，實際3小時20分 → 補申請20分）</p>
+    </div>
+    <div class="card">
+      <div class="info-row" style="padding-bottom:8px"><span class="info-key" style="font-weight:500;color:var(--gold)">B 類</span><span class="info-val" style="font-size:13px">當天加班未滿1小時或無舊紀錄</span></div>
+      <p style="font-size:13px;color:var(--ink-soft);padding-top:4px">本次開放申請全部分鐘數</p>
+    </div>
+    <div class="highlight-card" style="margin-top:10px">
+      <p>⚠ <strong>注意：</strong>申報時間不能與排班時間重疊，只能申報<strong>班前</strong>（早到）或<strong>班後</strong>（晚走）時段。</p>
+    </div>
+  </div>
+  <div class="section">
+    <div class="section-header">
+      <div class="section-num">5</div>
+      <div class="section-title">事件時間軸</div>
+    </div>
+    <div class="timeline">
+      <div class="tl-item">
+        <div class="tl-left"><div class="tl-dot green"></div><div class="tl-line"></div></div>
+        <div class="tl-content"><div class="tl-date">2020年1月</div><div class="tl-title">加班費爭議期間開始</div><div class="tl-desc">約用人員加班費未依分計方式計算</div></div>
+      </div>
+      <div class="tl-item">
+        <div class="tl-left"><div class="tl-dot green"></div><div class="tl-line"></div></div>
+        <div class="tl-content"><div class="tl-date">2024年7月31日</div><div class="tl-title">補發期間結束</div><div class="tl-desc">本次開放補發的最後一天</div></div>
+      </div>
+      <div class="tl-item">
+        <div class="tl-left"><div class="tl-dot gold"></div><div class="tl-line"></div></div>
+        <div class="tl-content"><div class="tl-date">2026年初</div><div class="tl-title">輔導會公告開放補發</div><div class="tl-desc">工會開始協助成員準備申請資料</div></div>
+      </div>
+      <div class="tl-item">
+        <div class="tl-left"><div class="tl-dot red"></div><div class="tl-line"></div></div>
+        <div class="tl-content"><div class="tl-date">2026年6月30日 ⚠</div><div class="tl-title">申請截止日</div><div class="tl-desc">逾期每晚一個月，少追溯一個月</div></div>
+      </div>
+    </div>
+  </div>
+  <div class="section">
+    <div class="section-header">
+      <div class="section-num">6</div>
+      <div class="section-title">常見問題</div>
+    </div>
+    <div class="faq-item">
+      <div class="faq-q">我是新成員，第一步要做什麼？</div>
+      <div class="faq-a">第一步：馬上去向人事室調取 2020/01～2024/07 每個月的本薪紀錄。同時從醫院系統調出這段期間的刷卡資料。這兩份資料是計算加班費的基礎，越早取得越好。</div>
+    </div>
+    <div class="faq-item">
+      <div class="faq-q">我的刷卡資料怎麼查？</div>
+      <div class="faq-a">從醫院系統查詢刷卡紀錄，一次最多查180天。2020/01～2024/07 整個期間共約需查詢10次，請耐心分批查詢並複製貼上保存。</div>
+    </div>
+    <div class="faq-item">
+      <div class="faq-q">加班費怎麼計算？</div>
+      <div class="faq-a">時薪 ＝ 當月本薪 ÷ 30 ÷ 8<br>分鐘費率 ＝ 時薪 ÷ 60<br>• 前120分鐘：× 4/3<br>• 121分鐘起：× 5/3<br><br>每月本薪不同，需逐月對應計算。工會將提供計算工具協助。</div>
+    </div>
+    <div class="faq-item">
+      <div class="faq-q">我的排班紀錄找不到怎麼辦？</div>
+      <div class="faq-a">2020/01～2021/04 的排班紀錄系統查不到，可依刷卡上班時間自動推斷班別。計算工具會協助判斷，若推斷有誤可手動修正。</div>
+    </div>
+    <div class="faq-item">
+      <div class="faq-q">來不及申請完怎麼辦？</div>
+      <div class="faq-a">每晚申請一個月，就少追溯一個月的加班費。建議先把金額較高的月份優先申請，不要讓整個申請都泡湯。</div>
+    </div>
+    <div class="faq-item">
+      <div class="faq-q">2025年以後的加班費也可以申請嗎？</div>
+      <div class="faq-a">本次開放的是 2020/01～2024/07 的補發。2025年以後的加班申請依正常程序辦理，不在本次範圍內。</div>
+    </div>
+  </div>
+  <div class="section">
+    <div class="section-header">
+      <div class="section-num">7</div>
+      <div class="section-title">有問題找誰？</div>
+    </div>
+    <div class="contact-card">
+      📌 有任何疑問，請在 LINE 群組中發問，幹部會盡快回覆。<br>
+      💡 資料準備問題請先參考上方 FAQ，大部分問題都有說明。<br>
+      📋 薪資紀錄查詢請直接聯絡人事室。
+    </div>
+  </div>
+</main>
+<footer>
+  高雄榮總護理部工會 · 僅供工會成員參考使用<br>
+  如有疑問請洽工會幹部
+</footer>
+<script>
+function updateCountdown() {
+  const deadline = new Date('2026-06-30T23:59:59');
+  const now = new Date();
+  const diff = deadline - now;
+  if (diff <= 0) {
+    document.getElementById('cd-days').textContent = '0';
+    document.getElementById('cd-hours').textContent = '00';
+    document.getElementById('cd-mins').textContent = '00';
+    return;
+  }
+  const days = Math.floor(diff / 86400000);
+  const hours = Math.floor((diff % 86400000) / 3600000);
+  const mins = Math.floor((diff % 3600000) / 60000);
+  document.getElementById('cd-days').textContent = days;
+  document.getElementById('cd-hours').textContent = String(hours).padStart(2,'0');
+  document.getElementById('cd-mins').textContent = String(mins).padStart(2,'0');
+}
+updateCountdown();
+setInterval(updateCountdown, 30000);
+const cl = document.getElementById('checklist');
+const saved = JSON.parse(localStorage.getItem('union_checklist') || '{}');
+cl.querySelectorAll('li').forEach(li => {
+  const id = li.dataset.id;
+  if (saved[id]) li.classList.add('done');
+  li.addEventListener('click', () => {
+    li.classList.toggle('done');
+    saved[id] = li.classList.contains('done');
+    localStorage.setItem('union_checklist', JSON.stringify(saved));
+  });
+});
+document.querySelectorAll('.faq-q').forEach(q => {
+  q.addEventListener('click', () => {
+    const item = q.parentElement;
+    const wasOpen = item.classList.contains('open');
+    document.querySelectorAll('.faq-item').forEach(i => i.classList.remove('open'));
+    if (!wasOpen) item.classList.add('open');
+  });
+});
+</script>
+</body>
+</html>
