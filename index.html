@@ -7,9 +7,12 @@
 <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@400;600;700&family=Noto+Sans+TC:wght@300;400;500&display=swap" rel="stylesheet">
 <style>
   :root {
-    --red: #C0392B; --red-light: #FDECEA; --gold: #B7860B; --gold-light: #FEF9E7;
+    --red: #C0392B; --red-light: #FDECEA; --red-deep: #7B1818;
+    --gold: #B7860B; --gold-light: #FEF9E7;
     --ink: #1A1A1A; --ink-mid: #444; --ink-soft: #777; --bg: #FAFAF8;
-    --card: #FFFFFF; --border: #E8E4DE; --green: #1A7A4A; --green-light: #EAFAF1;
+    --card: #FFFFFF; --border: #E8E4DE;
+    --green: #1A7A4A; --green-light: #EAFAF1; --green-mid: #2D9D6E;
+    --blue: #2E5C8A;
   }
   * { box-sizing: border-box; margin: 0; padding: 0; }
   body { font-family: 'Noto Sans TC', sans-serif; background: var(--bg); color: var(--ink); font-size: 15px; line-height: 1.7; }
@@ -19,21 +22,30 @@
   .header-label { font-size: 11px; letter-spacing: 0.15em; opacity: 0.75; margin-bottom: 8px; }
   .header h1 { font-family: 'Noto Serif TC', serif; font-size: 22px; font-weight: 700; line-height: 1.4; margin-bottom: 6px; }
   .header-sub { font-size: 13px; opacity: 0.8; margin-bottom: 1.25rem; }
-  .countdown-box { background: rgba(255,255,255,0.15); border: 1px solid rgba(255,255,255,0.25); border-radius: 12px; padding: 0.85rem 1rem; display: inline-block; min-width: 260px; }
+  .countdown-box { background: rgba(255,255,255,0.15); border: 1px solid rgba(255,255,255,0.25); border-radius: 12px; padding: 0.85rem 1rem; display: inline-block; min-width: 280px; }
   .countdown-label { font-size: 11px; opacity: 0.8; margin-bottom: 8px; }
   .countdown-digits { display: flex; justify-content: center; gap: 4px; align-items: flex-end; }
-  .cd-unit { text-align: center; }
-  .cd-num { font-family: 'Noto Serif TC', serif; font-size: 32px; font-weight: 700; line-height: 1; display: block; }
+  .cd-unit { text-align: center; min-width: 38px; }
+  .cd-num { font-family: 'Noto Serif TC', serif; font-size: 30px; font-weight: 700; line-height: 1; display: block; font-variant-numeric: tabular-nums; }
   .cd-label { font-size: 10px; opacity: 0.7; display: block; margin-top: 2px; }
-  .cd-sep { font-size: 28px; font-weight: 300; opacity: 0.5; margin-bottom: 14px; }
+  .cd-sep { font-size: 26px; font-weight: 300; opacity: 0.5; margin-bottom: 14px; }
   .deadline-note { font-size: 12px; opacity: 0.75; margin-top: 8px; }
-  .warn-banner { background: #7B1818; color: #FFCDD2; padding: 0.6rem 1.25rem; text-align: center; font-size: 13px; font-weight: 500; }
+  .warn-banner { background: var(--red-deep); color: #FFCDD2; padding: 0.6rem 1.25rem; text-align: center; font-size: 13px; font-weight: 500; }
   .warn-banner span { opacity: 0.8; font-weight: 300; margin-left: 6px; }
+
+  /* sticky 進度提示 */
+  .sticky-progress { position: sticky; top: 0; z-index: 50; background: rgba(255,255,255,0.96); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); border-bottom: 1px solid var(--border); padding: 0.55rem 1.25rem; font-size: 12px; color: var(--ink-mid); display: flex; align-items: center; justify-content: center; gap: 14px; flex-wrap: wrap; }
+  .sticky-progress a { color: var(--green); text-decoration: none; font-weight: 500; display: inline-flex; align-items: center; gap: 4px; }
+  .sticky-progress a:hover { text-decoration: underline; }
+  .sticky-progress .sp-divider { color: var(--border); }
+
   main { max-width: 600px; margin: 0 auto; padding: 1.5rem 1.25rem 3rem; }
-  .section { margin-bottom: 1.75rem; }
+  .section { margin-bottom: 1.75rem; scroll-margin-top: 60px; }
   .section-header { display: flex; align-items: center; gap: 10px; margin-bottom: 1rem; }
   .section-num { width: 28px; height: 28px; background: var(--red); color: #fff; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 500; flex-shrink: 0; }
+  .section-num.green { background: var(--green); }
   .section-title { font-family: 'Noto Serif TC', serif; font-size: 17px; font-weight: 600; color: var(--ink); }
+
   .card { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 1.1rem 1.25rem; }
   .card + .card { margin-top: 10px; }
   .info-row { display: flex; justify-content: space-between; align-items: baseline; padding: 6px 0; border-bottom: 1px solid #F2EFE9; font-size: 14px; gap: 12px; }
@@ -42,20 +54,45 @@
   .info-key { color: var(--ink-soft); flex-shrink: 0; }
   .info-val { font-weight: 500; text-align: right; }
   .info-val.red { color: var(--red); }
+
   .highlight-card { background: var(--red-light); border: 1px solid #F5C6C2; border-radius: 12px; padding: 1rem 1.25rem; }
-  .highlight-card p { font-size: 14px; color: #7B1818; line-height: 1.8; }
+  .highlight-card p { font-size: 14px; color: var(--red-deep); line-height: 1.8; }
   .highlight-card strong { font-weight: 500; }
+
+  /* 進度條 */
+  .progress-bar-wrap { background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 0.7rem 1rem; margin-bottom: 12px; }
+  .progress-bar-head { display: flex; justify-content: space-between; align-items: center; font-size: 13px; margin-bottom: 7px; }
+  .progress-bar-label { color: var(--ink-mid); font-weight: 500; }
+  .progress-bar-count { color: var(--green); font-weight: 600; font-variant-numeric: tabular-nums; }
+  .progress-bar-count.full { color: var(--green-mid); }
+  .progress-bar-track { height: 6px; background: #F2EFE9; border-radius: 99px; overflow: hidden; }
+  .progress-bar-fill { height: 100%; background: linear-gradient(90deg, var(--green) 0%, var(--green-mid) 100%); border-radius: 99px; transition: width 0.4s cubic-bezier(0.4,0,0.2,1); width: 0%; }
+
+  /* checklist 通用 */
   .checklist { list-style: none; display: flex; flex-direction: column; gap: 10px; }
-  .checklist li { display: flex; align-items: flex-start; gap: 12px; background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 0.85rem 1rem; font-size: 14px; cursor: pointer; transition: background 0.15s; -webkit-tap-highlight-color: transparent; }
+  .checklist li { display: flex; align-items: flex-start; gap: 12px; background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 0.85rem 1rem; font-size: 14px; cursor: pointer; transition: background 0.15s, border-color 0.2s; -webkit-tap-highlight-color: transparent; }
   .checklist li:active { background: #F7F4F0; }
+  .checklist li.done { background: #F8FBF9; border-color: #C8E6D5; }
   .check-box { width: 22px; height: 22px; border: 2px solid var(--border); border-radius: 6px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; margin-top: 1px; transition: all 0.2s; }
   .checklist li.done .check-box { background: var(--green); border-color: var(--green); }
   .checklist li.done .check-box::after { content: '✓'; color: #fff; font-size: 13px; font-weight: 700; }
   .checklist li.done .check-text { text-decoration: line-through; color: var(--ink-soft); }
   .check-text { flex: 1; line-height: 1.5; }
+  .check-text .hint { display: block; font-size: 12px; color: var(--ink-soft); font-weight: 300; margin-top: 2px; line-height: 1.5; }
+  .checklist li.done .check-text .hint { color: #B8B0A4; }
   .check-tag { font-size: 11px; padding: 2px 8px; border-radius: 20px; white-space: nowrap; align-self: flex-start; margin-top: 2px; }
   .tag-urgent { background: var(--red-light); color: var(--red); }
   .tag-prep { background: var(--gold-light); color: var(--gold); }
+
+  /* 證據清單專屬樣式（綠色強調） */
+  .evidence-section { position: relative; }
+  .evidence-section .section-num { background: var(--green); }
+  .evidence-banner { background: linear-gradient(135deg, var(--green-light) 0%, #F2FBF5 100%); border: 1px solid #C8E6D5; border-radius: 12px; padding: 0.9rem 1.1rem; margin-bottom: 12px; font-size: 13px; color: #1A5C38; line-height: 1.7; display: flex; gap: 10px; align-items: flex-start; }
+  .evidence-banner-icon { font-size: 20px; flex-shrink: 0; line-height: 1.2; }
+  .evidence-banner strong { font-weight: 600; }
+  .evidence-section .checklist li.done { background: var(--green-light); border-color: #B4DCC5; }
+
+  /* 時間軸 */
   .timeline { display: flex; flex-direction: column; }
   .tl-item { display: flex; gap: 16px; }
   .tl-left { display: flex; flex-direction: column; align-items: center; flex-shrink: 0; width: 20px; }
@@ -69,17 +106,27 @@
   .tl-date { font-size: 12px; color: var(--ink-soft); margin-bottom: 2px; }
   .tl-title { font-size: 14px; font-weight: 500; line-height: 1.5; }
   .tl-desc { font-size: 13px; color: var(--ink-soft); margin-top: 3px; line-height: 1.6; }
+
+  /* FAQ */
   .faq-item { background: var(--card); border: 1px solid var(--border); border-radius: 10px; overflow: hidden; margin-bottom: 8px; }
   .faq-q { padding: 0.9rem 1rem; font-size: 14px; font-weight: 500; cursor: pointer; display: flex; justify-content: space-between; align-items: center; gap: 10px; -webkit-tap-highlight-color: transparent; }
   .faq-q::after { content: '＋'; color: var(--red); font-size: 18px; line-height: 1; flex-shrink: 0; transition: transform 0.2s; }
   .faq-item.open .faq-q::after { transform: rotate(45deg); }
   .faq-a { display: none; padding: 0 1rem 0.9rem; font-size: 13px; color: var(--ink-mid); line-height: 1.8; border-top: 1px solid #F2EFE9; }
   .faq-item.open .faq-a { display: block; }
+  .faq-a code { background: #F2EFE9; padding: 1px 6px; border-radius: 4px; font-size: 12px; }
+
   .contact-card { background: var(--gold-light); border: 1px solid #EAD67A; border-radius: 12px; padding: 1rem 1.25rem; font-size: 14px; color: #5C4000; line-height: 1.8; }
   .progress-note { background: var(--card); border: 1px solid var(--border); border-left: 3px solid var(--red); border-radius: 0 10px 10px 0; padding: 0.85rem 1rem; font-size: 13px; color: var(--ink-mid); line-height: 1.8; }
   .progress-date { font-size: 11px; color: var(--ink-soft); margin-bottom: 4px; }
   .step-badge { background: var(--red); color: #fff; border-radius: 20px; padding: 2px 10px; font-size: 12px; font-weight: 500; }
+
   footer { text-align: center; padding: 1.5rem 1.25rem; font-size: 12px; color: var(--ink-soft); border-top: 1px solid var(--border); }
+
+  @media (max-width: 380px) {
+    .countdown-box { min-width: 100%; }
+    .cd-num { font-size: 26px; }
+  }
 </style>
 </head>
 <body>
@@ -96,12 +143,21 @@
       <div class="cd-unit"><span class="cd-num" id="cd-hours">--</span><span class="cd-label">時</span></div>
       <div class="cd-sep">:</div>
       <div class="cd-unit"><span class="cd-num" id="cd-mins">--</span><span class="cd-label">分</span></div>
+      <div class="cd-sep">:</div>
+      <div class="cd-unit"><span class="cd-num" id="cd-secs">--</span><span class="cd-label">秒</span></div>
     </div>
     <div class="deadline-note">截止日：2026年6月30日</div>
   </div>
 </div>
 
 <div class="warn-banner">⚠ 每晚申請一個月，少追溯一個月<span>請盡快完成申請</span></div>
+
+<!-- sticky 進度條：捲動時固定在頂部 -->
+<div class="sticky-progress">
+  <a href="#sec-todo">📋 待辦 <span id="sp-todo">0/5</span></a>
+  <span class="sp-divider">|</span>
+  <a href="#sec-evidence">📁 證據 <span id="sp-evidence">0/8</span></a>
+</div>
 
 <main>
 
@@ -124,14 +180,23 @@
   <div class="section">
     <div class="section-header"><div class="section-num">2</div><div class="section-title">目前申請進度</div></div>
     <div class="progress-note">
-      <div class="progress-date">最後更新：2026/05/20</div>
+      <div class="progress-date">最後更新:2026/05/24</div>
       工會目前正在協助成員彙整申請資料。請各成員依下方待辦清單自行備妥資料，並向人事室調取薪資紀錄後，儘快完成申報。
     </div>
   </div>
 
   <!-- 3 -->
-  <div class="section">
+  <div class="section" id="sec-todo">
     <div class="section-header"><div class="section-num">3</div><div class="section-title">你需要做的事（點擊勾選）</div></div>
+
+    <div class="progress-bar-wrap">
+      <div class="progress-bar-head">
+        <span class="progress-bar-label">待辦完成度</span>
+        <span class="progress-bar-count" id="todo-count">0 / 5</span>
+      </div>
+      <div class="progress-bar-track"><div class="progress-bar-fill" id="todo-fill"></div></div>
+    </div>
+
     <ul class="checklist" id="checklist">
       <li data-id="0"><div class="check-box"></div><div class="check-text">向人事室調取 2020/01 ～ 2024/07 每月本薪紀錄</div><span class="check-tag tag-urgent">最急</span></li>
       <li data-id="1"><div class="check-box"></div><div class="check-text">從醫院系統調出刷卡紀錄（每次最多180天，共需查詢約10次）</div><span class="check-tag tag-urgent">最急</span></li>
@@ -142,9 +207,39 @@
     <p style="font-size:12px;color:var(--ink-soft);margin-top:8px;text-align:center">勾選記錄儲存在你的裝置，重新整理不會消失</p>
   </div>
 
-  <!-- 4 -->
+  <!-- 4 證據清單（新增、獨立、置前） -->
+  <div class="section evidence-section" id="sec-evidence">
+    <div class="section-header"><div class="section-num green">4</div><div class="section-title">📁 我的證據準備清單</div></div>
+
+    <div class="evidence-banner">
+      <span class="evidence-banner-icon">🔑</span>
+      <div>不是只靠口頭講，而是<strong>留紀錄、留 Email、留訊息、留截圖、留時間點</strong>，讓整件事形成<strong>完整證據鏈</strong>。<br>下方 8 項是最關鍵的證據種類，準備好就勾選起來。</div>
+    </div>
+
+    <div class="progress-bar-wrap">
+      <div class="progress-bar-head">
+        <span class="progress-bar-label">證據準備度</span>
+        <span class="progress-bar-count" id="evidence-count">0 / 8</span>
+      </div>
+      <div class="progress-bar-track"><div class="progress-bar-fill" id="evidence-fill"></div></div>
+    </div>
+
+    <ul class="checklist" id="evidence-list">
+      <li data-id="ev0"><div class="check-box"></div><div class="check-text">班表<span class="hint">每月排班表電子檔或紙本，標出實際出勤日</span></div></li>
+      <li data-id="ev1"><div class="check-box"></div><div class="check-text">出勤刷卡紀錄<span class="hint">從醫院系統匯出/截圖，含完整起迄時間</span></div></li>
+      <li data-id="ev2"><div class="check-box"></div><div class="check-text">病人紀錄時間<span class="hint">病歷系統的登錄時間戳，可佐證實際在崗</span></div></li>
+      <li data-id="ev3"><div class="check-box"></div><div class="check-text">交班紀錄<span class="hint">交班本拍照或電子交班記錄，含時間</span></div></li>
+      <li data-id="ev4"><div class="check-box"></div><div class="check-text">LINE通知<span class="hint">主管或同事要求加班的訊息截圖（含時間戳）</span></div></li>
+      <li data-id="ev5"><div class="check-box"></div><div class="check-text">被要求工作內容<span class="hint">工作項目截圖、會議紀錄、紙本指派單</span></div></li>
+      <li data-id="ev6"><div class="check-box"></div><div class="check-text">加班駁回畫面<span class="hint">系統駁回截圖，含日期、駁回理由</span></div></li>
+      <li data-id="ev7"><div class="check-box"></div><div class="check-text">Email 往來紀錄<span class="hint">與護理部/人事部的往來信件，含完整收發資訊</span></div></li>
+    </ul>
+    <p style="font-size:12px;color:var(--ink-soft);margin-top:8px;text-align:center">勾選記錄儲存在你的裝置，重新整理不會消失</p>
+  </div>
+
+  <!-- 5 -->
   <div class="section">
-    <div class="section-header"><div class="section-num">4</div><div class="section-title">哪些加班可以申請？</div></div>
+    <div class="section-header"><div class="section-num">5</div><div class="section-title">哪些加班可以申請？</div></div>
     <div class="card" style="margin-bottom:10px">
       <div class="info-row" style="padding-bottom:8px"><span class="info-key" style="font-weight:500;color:var(--red)">A 類</span><span class="info-val" style="font-size:13px">當天已有舊加班紀錄（滿1小時）</span></div>
       <p style="font-size:13px;color:var(--ink-soft);padding-top:4px">補申請超出整點的「剩餘分鐘」（例：舊紀錄3小時，實際3小時20分 → 補申請20分）</p>
@@ -154,13 +249,13 @@
       <p style="font-size:13px;color:var(--ink-soft);padding-top:4px">本次開放申請全部分鐘數</p>
     </div>
     <div class="highlight-card" style="margin-top:10px">
-      <p>⚠ <strong>注意：</strong>申報時間不能與排班時間重疊，只能申報<strong>班前</strong>（早到）或<strong>班後</strong>（晚走）時段。</p>
+      <p>⚠ <strong>注意:</strong>申報時間不能與排班時間重疊，只能申報<strong>班前</strong>(早到)或<strong>班後</strong>(晚走)時段。</p>
     </div>
   </div>
 
-  <!-- 5 -->
+  <!-- 6 -->
   <div class="section">
-    <div class="section-header"><div class="section-num">5</div><div class="section-title">事件時間軸</div></div>
+    <div class="section-header"><div class="section-num">6</div><div class="section-title">事件時間軸</div></div>
     <div class="timeline">
       <div class="tl-item"><div class="tl-left"><div class="tl-dot green"></div><div class="tl-line"></div></div><div class="tl-content"><div class="tl-date">2020年1月</div><div class="tl-title">加班費爭議期間開始</div><div class="tl-desc">約用人員加班費未依分計方式計算</div></div></div>
       <div class="tl-item"><div class="tl-left"><div class="tl-dot green"></div><div class="tl-line"></div></div><div class="tl-content"><div class="tl-date">2024年7月31日</div><div class="tl-title">補發期間結束</div><div class="tl-desc">本次開放補發的最後一天</div></div></div>
@@ -169,20 +264,20 @@
     </div>
   </div>
 
-  <!-- 6 -->
+  <!-- 7 -->
   <div class="section">
-    <div class="section-header"><div class="section-num">6</div><div class="section-title">常見問題</div></div>
-    <div class="faq-item"><div class="faq-q">我是新成員，第一步要做什麼？</div><div class="faq-a">第一步：馬上去向人事室調取 2020/01～2024/07 每個月的本薪紀錄。同時從醫院系統調出這段期間的刷卡資料。這兩份資料是計算加班費的基礎，越早取得越好。</div></div>
+    <div class="section-header"><div class="section-num">7</div><div class="section-title">常見問題</div></div>
+    <div class="faq-item"><div class="faq-q">我是新成員，第一步要做什麼？</div><div class="faq-a">第一步:馬上去向人事室調取 2020/01～2024/07 每個月的本薪紀錄。同時從醫院系統調出這段期間的刷卡資料。這兩份資料是計算加班費的基礎，越早取得越好。</div></div>
     <div class="faq-item"><div class="faq-q">我的刷卡資料怎麼查？</div><div class="faq-a">從醫院系統查詢刷卡紀錄，一次最多查180天。2020/01～2024/07 整個期間共約需查詢10次，請耐心分批查詢並複製貼上保存。</div></div>
-    <div class="faq-item"><div class="faq-q">加班費怎麼計算？</div><div class="faq-a">時薪 ＝ 當月本薪 ÷ 30 ÷ 8<br>分鐘費率 ＝ 時薪 ÷ 60<br>• 前120分鐘：× 4/3<br>• 121分鐘起：× 5/3<br><br>每月本薪不同，需逐月對應計算。工會將提供計算工具協助。</div></div>
+    <div class="faq-item"><div class="faq-q">加班費怎麼計算？</div><div class="faq-a">⚠ 高榮時薪是用<strong>當月實際天數</strong>計算（不是固定30天）：<br><br>時薪 ＝ 當月本薪 ÷ <code>當月實際天數</code> ÷ 8<br>分鐘費率 ＝ 時薪 ÷ 60<br>• 大月（1、3、5、7、8、10、12月）÷ 31<br>• 小月（4、6、9、11月）÷ 30<br>• 2月平年 ÷ 28、閏年 ÷ 29<br><br>• 前120分鐘：× 4/3<br>• 121分鐘起：× 5/3<br><br>每月本薪不同，需逐月對應計算。工會將提供計算工具協助。</div></div>
     <div class="faq-item"><div class="faq-q">我的排班紀錄找不到怎麼辦？</div><div class="faq-a">2020/01～2021/04 的排班紀錄系統查不到，可依刷卡上班時間自動推斷班別。計算工具會協助判斷，若推斷有誤可手動修正。</div></div>
     <div class="faq-item"><div class="faq-q">來不及申請完怎麼辦？</div><div class="faq-a">每晚申請一個月，就少追溯一個月的加班費。建議先把金額較高的月份優先申請，不要讓整個申請都泡湯。</div></div>
     <div class="faq-item"><div class="faq-q">2025年以後的加班費也可以申請嗎？</div><div class="faq-a">本次開放的是 2020/01～2024/07 的補發。2025年以後的加班申請依正常程序辦理，不在本次範圍內。</div></div>
   </div>
 
-  <!-- 7 -->
+  <!-- 8 -->
   <div class="section">
-    <div class="section-header"><div class="section-num">7</div><div class="section-title">有問題找誰？</div></div>
+    <div class="section-header"><div class="section-num">8</div><div class="section-title">有問題找誰？</div></div>
     <div class="contact-card">
       📌 有任何疑問，請在 LINE 群組中發問，幹部會盡快回覆。<br>
       💡 資料準備問題請先參考上方 FAQ，大部分問題都有說明。<br>
@@ -190,9 +285,9 @@
     </div>
   </div>
 
-  <!-- 8 新增：專案加班申請流程 -->
+  <!-- 9 專案加班申請流程 -->
   <div class="section">
-    <div class="section-header"><div class="section-num">8</div><div class="section-title">專案加班申請流程整理</div></div>
+    <div class="section-header"><div class="section-num">9</div><div class="section-title">專案加班申請流程整理</div></div>
 
     <div class="card" style="margin-bottom:10px">
       <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
@@ -201,7 +296,7 @@
       </div>
       <p style="font-size:13px;color:var(--ink-mid);margin-bottom:8px">將所有專案加班資料送出，等待審核通過或被駁回。</p>
       <div style="background:var(--gold-light);border-radius:8px;padding:0.7rem 0.9rem;font-size:13px;color:#5C4000">
-        📁 <strong>建議先自行留存：</strong>送件畫面截圖、系統紀錄、排班表、出勤紀錄、加班申請內容
+        📁 <strong>建議先自行留存：</strong>送件畫面截圖、系統紀錄、排班表、出勤紀錄、加班申請內容（完整清單見上方第 4 節）
       </div>
     </div>
 
@@ -212,7 +307,7 @@
       </div>
       <p style="font-size:13px;color:var(--ink-mid);margin-bottom:8px">先將「被駁回畫面」截圖保存，並寄信給<strong>人事部</strong>及<strong>護理部</strong>。</p>
       <div style="background:#F2EFE9;border-radius:8px;padding:0.7rem 0.9rem;font-size:13px;color:var(--ink-mid)">
-        信件重點：說明已提出申請、目前遭駁回、希望協助確認處理方式、保留正式紀錄。
+        信件重點:說明已提出申請、目前遭駁回、希望協助確認處理方式、保留正式紀錄。
       </div>
     </div>
 
@@ -221,9 +316,9 @@
         <span class="step-badge">三</span>
         <span style="font-weight:500;font-size:14px">親自至人事部詢問</span>
       </div>
-      <p style="font-size:13px;color:var(--ink-mid);margin-bottom:6px">說明：「本單位護理部不給報專案加班，想請問依勞基法及院內規定應如何處理？」</p>
-      <div style="background:var(--red-light);border-radius:8px;padding:0.7rem 0.9rem;font-size:13px;color:#7B1818">
-        ⚠ 大機率會得到回覆：「要再去和護理部談。」
+      <p style="font-size:13px;color:var(--ink-mid);margin-bottom:6px">說明:「本單位護理部不給報專案加班，想請問依勞基法及院內規定應如何處理？」</p>
+      <div style="background:var(--red-light);border-radius:8px;padding:0.7rem 0.9rem;font-size:13px;color:var(--red-deep)">
+        ⚠ 大機率會得到回覆:「要再去和護理部談。」
       </div>
     </div>
 
@@ -242,38 +337,24 @@
       </div>
       <p style="font-size:13px;color:var(--ink-mid);margin-bottom:10px">不論對方說什麼，<strong>不要情緒化爭辯，先保持冷靜。</strong></p>
       <div style="background:var(--green-light);border-radius:8px;padding:0.7rem 0.9rem;font-size:13px;color:#1A5C38;margin-bottom:8px">
-        ✅ 可以統一回覆：<br>
+        ✅ 可以統一回覆:<br>
         「好，我知道了，我回去再考慮看看。」<br>
         「我了解了。」「謝謝說明。」
       </div>
-      <div style="background:var(--red-light);border-radius:8px;padding:0.7rem 0.9rem;font-size:13px;color:#7B1818">
+      <div style="background:var(--red-light);border-radius:8px;padding:0.7rem 0.9rem;font-size:13px;color:var(--red-deep)">
         ❌ 不當場衝突、不口頭放棄權利、保留後續紀錄空間
       </div>
     </div>
 
-    <div class="card" style="margin-bottom:10px">
+    <div class="card">
       <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
         <span class="step-badge">六</span>
         <span style="font-weight:500;font-size:14px">事後用訊息／Email 正式通知</span>
       </div>
       <p style="font-size:13px;color:var(--ink-mid);margin-bottom:8px">附上勞動事件法第38條截圖、出勤紀錄、加班申請紀錄，並說明：</p>
       <div style="background:#F2EFE9;border-radius:8px;padding:0.7rem 0.9rem;font-size:13px;color:var(--ink-mid);line-height:1.8">
-        依勞動事件法第38條：「出勤紀錄內記載之勞工出勤時間，推定勞工於該時間內經雇主同意而執行職務。」<br>
+        依勞動事件法第38條:「出勤紀錄內記載之勞工出勤時間，推定勞工於該時間內經雇主同意而執行職務。」<br>
         人事部表示將朝「從寬認定」方向處理。
-      </div>
-    </div>
-
-    <div class="highlight-card" style="margin-bottom:10px">
-      <p>🔑 <strong>重點核心：</strong>不是只靠口頭講，而是留紀錄、留Email、留訊息、留截圖、留時間點，讓整件事形成<strong>完整證據鏈</strong>。</p>
-    </div>
-
-    <div class="card">
-      <div style="font-weight:500;font-size:14px;margin-bottom:10px">📂 建議保留資料清單</div>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;font-size:13px;color:var(--ink-mid)">
-        <div>✓ 班表</div><div>✓ 出勤刷卡</div>
-        <div>✓ 病人紀錄時間</div><div>✓ 交班紀錄</div>
-        <div>✓ LINE通知</div><div>✓ 被要求工作內容</div>
-        <div>✓ 加班駁回畫面</div><div>✓ Email往來紀錄</div>
       </div>
     </div>
   </div>
@@ -286,25 +367,70 @@
 </footer>
 
 <script>
+// === 倒數計時 ===
 function updateCountdown() {
   const deadline = new Date('2026-06-30T23:59:59');
   const now = new Date();
   const diff = deadline - now;
-  if (diff <= 0) { document.getElementById('cd-days').textContent='0'; document.getElementById('cd-hours').textContent='00'; document.getElementById('cd-mins').textContent='00'; return; }
-  document.getElementById('cd-days').textContent = Math.floor(diff/86400000);
-  document.getElementById('cd-hours').textContent = String(Math.floor((diff%86400000)/3600000)).padStart(2,'0');
-  document.getElementById('cd-mins').textContent = String(Math.floor((diff%3600000)/60000)).padStart(2,'0');
+  const $d = document.getElementById('cd-days');
+  const $h = document.getElementById('cd-hours');
+  const $m = document.getElementById('cd-mins');
+  const $s = document.getElementById('cd-secs');
+  if (diff <= 0) {
+    $d.textContent='0'; $h.textContent='00'; $m.textContent='00'; $s.textContent='00';
+    return;
+  }
+  $d.textContent = Math.floor(diff/86400000);
+  $h.textContent = String(Math.floor((diff%86400000)/3600000)).padStart(2,'0');
+  $m.textContent = String(Math.floor((diff%3600000)/60000)).padStart(2,'0');
+  $s.textContent = String(Math.floor((diff%60000)/1000)).padStart(2,'0');
 }
 updateCountdown();
-setInterval(updateCountdown, 30000);
-const cl = document.getElementById('checklist');
-const saved = JSON.parse(localStorage.getItem('union_checklist') || '{}');
-cl.querySelectorAll('li').forEach(li => {
-  if (saved[li.dataset.id]) li.classList.add('done');
-  li.addEventListener('click', () => { li.classList.toggle('done'); saved[li.dataset.id]=li.classList.contains('done'); localStorage.setItem('union_checklist',JSON.stringify(saved)); });
-});
+setInterval(updateCountdown, 1000);
+
+// === 通用 checklist 綁定函式 ===
+function bindChecklist(listId, storageKey, countElId, fillElId, stickyElId, total) {
+  const list = document.getElementById(listId);
+  if (!list) return;
+  const saved = JSON.parse(localStorage.getItem(storageKey) || '{}');
+  const countEl = document.getElementById(countElId);
+  const fillEl = document.getElementById(fillElId);
+  const stickyEl = stickyElId ? document.getElementById(stickyElId) : null;
+
+  function refresh() {
+    let done = 0;
+    list.querySelectorAll('li').forEach(li => {
+      if (li.classList.contains('done')) done++;
+    });
+    countEl.textContent = done + ' / ' + total;
+    fillEl.style.width = (done/total*100) + '%';
+    if (done === total) countEl.classList.add('full'); else countEl.classList.remove('full');
+    if (stickyEl) stickyEl.textContent = done + '/' + total;
+  }
+
+  list.querySelectorAll('li').forEach(li => {
+    if (saved[li.dataset.id]) li.classList.add('done');
+    li.addEventListener('click', () => {
+      li.classList.toggle('done');
+      saved[li.dataset.id] = li.classList.contains('done');
+      localStorage.setItem(storageKey, JSON.stringify(saved));
+      refresh();
+    });
+  });
+  refresh();
+}
+
+bindChecklist('checklist',     'union_checklist',          'todo-count',     'todo-fill',     'sp-todo',     5);
+bindChecklist('evidence-list', 'union_evidence_checklist', 'evidence-count', 'evidence-fill', 'sp-evidence', 8);
+
+// === FAQ 展開／收合 ===
 document.querySelectorAll('.faq-q').forEach(q => {
-  q.addEventListener('click', () => { const item=q.parentElement; const was=item.classList.contains('open'); document.querySelectorAll('.faq-item').forEach(i=>i.classList.remove('open')); if(!was) item.classList.add('open'); });
+  q.addEventListener('click', () => {
+    const item = q.parentElement;
+    const was = item.classList.contains('open');
+    document.querySelectorAll('.faq-item').forEach(i => i.classList.remove('open'));
+    if (!was) item.classList.add('open');
+  });
 });
 </script>
 </body>
