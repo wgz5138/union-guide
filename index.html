@@ -33,7 +33,6 @@
   .warn-banner { background: var(--red-deep); color: #FFCDD2; padding: 0.6rem 1.25rem; text-align: center; font-size: 13px; font-weight: 500; }
   .warn-banner span { opacity: 0.8; font-weight: 300; margin-left: 6px; }
 
-  /* sticky 進度提示 */
   .sticky-progress { position: sticky; top: 0; z-index: 50; background: rgba(255,255,255,0.96); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); border-bottom: 1px solid var(--border); padding: 0.55rem 1.25rem; font-size: 12px; color: var(--ink-mid); display: flex; align-items: center; justify-content: center; gap: 14px; flex-wrap: wrap; }
   .sticky-progress a { color: var(--green); text-decoration: none; font-weight: 500; display: inline-flex; align-items: center; gap: 4px; }
   .sticky-progress a:hover { text-decoration: underline; }
@@ -59,7 +58,6 @@
   .highlight-card p { font-size: 14px; color: var(--red-deep); line-height: 1.8; }
   .highlight-card strong { font-weight: 500; }
 
-  /* 進度條 */
   .progress-bar-wrap { background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 0.7rem 1rem; margin-bottom: 12px; }
   .progress-bar-head { display: flex; justify-content: space-between; align-items: center; font-size: 13px; margin-bottom: 7px; }
   .progress-bar-label { color: var(--ink-mid); font-weight: 500; }
@@ -68,7 +66,6 @@
   .progress-bar-track { height: 6px; background: #F2EFE9; border-radius: 99px; overflow: hidden; }
   .progress-bar-fill { height: 100%; background: linear-gradient(90deg, var(--green) 0%, var(--green-mid) 100%); border-radius: 99px; transition: width 0.4s cubic-bezier(0.4,0,0.2,1); width: 0%; }
 
-  /* checklist 通用 */
   .checklist { list-style: none; display: flex; flex-direction: column; gap: 10px; }
   .checklist li { display: flex; align-items: flex-start; gap: 12px; background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 0.85rem 1rem; font-size: 14px; cursor: pointer; transition: background 0.15s, border-color 0.2s; -webkit-tap-highlight-color: transparent; }
   .checklist li:active { background: #F7F4F0; }
@@ -84,7 +81,6 @@
   .tag-urgent { background: var(--red-light); color: var(--red); }
   .tag-prep { background: var(--gold-light); color: var(--gold); }
 
-  /* 證據清單專屬樣式（綠色強調） */
   .evidence-section { position: relative; }
   .evidence-section .section-num { background: var(--green); }
   .evidence-banner { background: linear-gradient(135deg, var(--green-light) 0%, #F2FBF5 100%); border: 1px solid #C8E6D5; border-radius: 12px; padding: 0.9rem 1.1rem; margin-bottom: 12px; font-size: 13px; color: #1A5C38; line-height: 1.7; display: flex; gap: 10px; align-items: flex-start; }
@@ -92,7 +88,6 @@
   .evidence-banner strong { font-weight: 600; }
   .evidence-section .checklist li.done { background: var(--green-light); border-color: #B4DCC5; }
 
-  /* 時間軸 */
   .timeline { display: flex; flex-direction: column; }
   .tl-item { display: flex; gap: 16px; }
   .tl-left { display: flex; flex-direction: column; align-items: center; flex-shrink: 0; width: 20px; }
@@ -107,7 +102,6 @@
   .tl-title { font-size: 14px; font-weight: 500; line-height: 1.5; }
   .tl-desc { font-size: 13px; color: var(--ink-soft); margin-top: 3px; line-height: 1.6; }
 
-  /* FAQ */
   .faq-item { background: var(--card); border: 1px solid var(--border); border-radius: 10px; overflow: hidden; margin-bottom: 8px; }
   .faq-q { padding: 0.9rem 1rem; font-size: 14px; font-weight: 500; cursor: pointer; display: flex; justify-content: space-between; align-items: center; gap: 10px; -webkit-tap-highlight-color: transparent; }
   .faq-q::after { content: '＋'; color: var(--red); font-size: 18px; line-height: 1; flex-shrink: 0; transition: transform 0.2s; }
@@ -152,7 +146,6 @@
 
 <div class="warn-banner">⚠ 每晚申請一個月，少追溯一個月<span>請盡快完成申請</span></div>
 
-<!-- sticky 進度條：捲動時固定在頂部 -->
 <div class="sticky-progress">
   <a href="#sec-todo">📋 待辦 <span id="sp-todo">0/5</span></a>
   <span class="sp-divider">|</span>
@@ -161,7 +154,6 @@
 
 <main>
 
-  <!-- 1 -->
   <div class="section">
     <div class="section-header"><div class="section-num">1</div><div class="section-title">這是什麼？新成員先看這裡</div></div>
     <div class="card">
@@ -176,7 +168,6 @@
     </div>
   </div>
 
-  <!-- 2 -->
   <div class="section">
     <div class="section-header"><div class="section-num">2</div><div class="section-title">目前申請進度</div></div>
     <div class="progress-note">
@@ -185,7 +176,6 @@
     </div>
   </div>
 
-  <!-- 3 -->
   <div class="section" id="sec-todo">
     <div class="section-header"><div class="section-num">3</div><div class="section-title">你需要做的事（點擊勾選）</div></div>
 
@@ -207,7 +197,6 @@
     <p style="font-size:12px;color:var(--ink-soft);margin-top:8px;text-align:center">勾選記錄儲存在你的裝置，重新整理不會消失</p>
   </div>
 
-  <!-- 4 證據清單（新增、獨立、置前） -->
   <div class="section evidence-section" id="sec-evidence">
     <div class="section-header"><div class="section-num green">4</div><div class="section-title">📁 我的證據準備清單</div></div>
 
@@ -237,7 +226,6 @@
     <p style="font-size:12px;color:var(--ink-soft);margin-top:8px;text-align:center">勾選記錄儲存在你的裝置，重新整理不會消失</p>
   </div>
 
-  <!-- 5 -->
   <div class="section">
     <div class="section-header"><div class="section-num">5</div><div class="section-title">哪些加班可以申請？</div></div>
     <div class="card" style="margin-bottom:10px">
@@ -253,7 +241,6 @@
     </div>
   </div>
 
-  <!-- 6 -->
   <div class="section">
     <div class="section-header"><div class="section-num">6</div><div class="section-title">事件時間軸</div></div>
     <div class="timeline">
@@ -264,7 +251,6 @@
     </div>
   </div>
 
-  <!-- 7 -->
   <div class="section">
     <div class="section-header"><div class="section-num">7</div><div class="section-title">常見問題</div></div>
     <div class="faq-item"><div class="faq-q">我是新成員，第一步要做什麼？</div><div class="faq-a">第一步:馬上去向人事室調取 2020/01～2024/07 每個月的本薪紀錄。同時從醫院系統調出這段期間的刷卡資料。這兩份資料是計算加班費的基礎，越早取得越好。</div></div>
@@ -275,7 +261,6 @@
     <div class="faq-item"><div class="faq-q">2025年以後的加班費也可以申請嗎？</div><div class="faq-a">本次開放的是 2020/01～2024/07 的補發。2025年以後的加班申請依正常程序辦理，不在本次範圍內。</div></div>
   </div>
 
-  <!-- 8 -->
   <div class="section">
     <div class="section-header"><div class="section-num">8</div><div class="section-title">有問題找誰？</div></div>
     <div class="contact-card">
@@ -285,7 +270,6 @@
     </div>
   </div>
 
-  <!-- 9 專案加班申請流程 -->
   <div class="section">
     <div class="section-header"><div class="section-num">9</div><div class="section-title">專案加班申請流程整理</div></div>
 
@@ -367,7 +351,6 @@
 </footer>
 
 <script>
-// === 倒數計時 ===
 function updateCountdown() {
   const deadline = new Date('2026-06-30T23:59:59');
   const now = new Date();
@@ -388,7 +371,6 @@ function updateCountdown() {
 updateCountdown();
 setInterval(updateCountdown, 1000);
 
-// === 通用 checklist 綁定函式 ===
 function bindChecklist(listId, storageKey, countElId, fillElId, stickyElId, total) {
   const list = document.getElementById(listId);
   if (!list) return;
@@ -423,7 +405,6 @@ function bindChecklist(listId, storageKey, countElId, fillElId, stickyElId, tota
 bindChecklist('checklist',     'union_checklist',          'todo-count',     'todo-fill',     'sp-todo',     5);
 bindChecklist('evidence-list', 'union_evidence_checklist', 'evidence-count', 'evidence-fill', 'sp-evidence', 8);
 
-// === FAQ 展開／收合 ===
 document.querySelectorAll('.faq-q').forEach(q => {
   q.addEventListener('click', () => {
     const item = q.parentElement;
