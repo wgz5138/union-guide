@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>風格樣板 — 冷感科技 vs 極簡企業</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+/* ===== 共用骨架 ===== */
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: 'Inter', system-ui, sans-serif; transition: background .3s, color .3s; min-height: 100vh; }
+
+.switcher { position: sticky; top: 0; z-index: 50; display: flex; gap: 8px; justify-content: center; padding: 12px; backdrop-filter: blur(10px); }
+.switcher button { font-family: inherit; font-size: 13px; font-weight: 600; padding: 9px 16px; border-radius: 10px; cursor: pointer; border: 1px solid transparent; transition: all .2s; }
+.switcher .hint { width: 100%; text-align: center; font-size: 11px; opacity: .6; margin-top: 2px; }
+
+.wrap { max-width: 540px; margin: 0 auto; padding: 8px 16px 60px; }
+
+/* 元件骨架（顏色由主題覆寫） */
+.topbar { display: flex; align-items: center; gap: 10px; padding: 14px 16px; border-radius: 14px; margin-bottom: 14px; }
+.topbar .logo { width: 34px; height: 34px; border-radius: 9px; display: flex; align-items: center; justify-content: center; font-size: 17px; }
+.topbar .ttl { font-size: 15px; font-weight: 700; letter-spacing: .01em; }
+.topbar .sub { font-size: 11px; opacity: .6; }
+.topbar .user { margin-left: auto; font-size: 11px; padding: 5px 11px; border-radius: 20px; display: flex; align-items: center; gap: 5px; }
+
+.tabs { display: flex; gap: 8px; margin-bottom: 16px; }
+.tab { flex: 1; text-align: center; font-size: 13px; font-weight: 600; padding: 10px; border-radius: 10px; cursor: pointer; }
+
+.label { font-size: 11px; font-weight: 600; letter-spacing: .08em; text-transform: uppercase; opacity: .55; margin: 18px 0 9px; }
+
+.chips { display: flex; flex-wrap: wrap; gap: 7px; margin-bottom: 4px; }
+.chip { width: 34px; height: 34px; border-radius: 9px; display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 600; cursor: pointer; }
+
+.card { border-radius: 14px; padding: 16px; margin-bottom: 12px; }
+.q-head { display: flex; align-items: flex-start; gap: 11px; }
+.q-no { width: 26px; height: 26px; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 700; flex-shrink: 0; }
+.q-text { flex: 1; font-size: 14px; font-weight: 600; line-height: 1.5; }
+.ans { flex-shrink: 0; font-size: 11px; font-weight: 700; padding: 4px 11px; border-radius: 20px; }
+.q-body { margin-top: 11px; padding-left: 37px; font-size: 13px; line-height: 1.7; opacity: .85; }
+.q-quote { margin-top: 9px; padding: 8px 11px; border-radius: 8px; font-size: 12px; line-height: 1.6; font-style: italic; }
+
+.badges { display: flex; gap: 7px; flex-wrap: wrap; margin: 10px 0 4px; }
+.badge { font-size: 11px; font-weight: 700; padding: 4px 11px; border-radius: 20px; }
+
+.flag { display: flex; align-items: center; gap: 9px; padding: 11px 14px; border-radius: 11px; font-size: 12.5px; font-weight: 600; margin-top: 10px; }
+
+/* =================================================== */
+/* 主題 1：冷感科技風 (tech)                              */
+/* =================================================== */
+body.tech { background: #0A0E16; color: #C9D4E3; background-image: radial-gradient(circle at 20% 0%, rgba(63,214,208,.06), transparent 40%), radial-gradient(circle at 90% 30%, rgba(79,157,255,.07), transparent 45%); }
+body.tech .switcher { background: rgba(10,14,22,.7); }
+body.tech .switcher .hint { color: #6B7A90; }
+body.tech .topbar { background: #11182600; background: linear-gradient(180deg,#121A28,#0E1521); border: 1px solid #1E2A3D; }
+body.tech .topbar .logo { background: rgba(63,214,208,.12); color: #3DD6D0; border: 1px solid rgba(63,214,208,.35); box-shadow: 0 0 16px rgba(63,214,208,.18); }
+body.tech .topbar .ttl { color: #EAF2FF; }
+body.tech .topbar .sub { color: #5E6E85; font-family: 'JetBrains Mono', monospace; }
+body.tech .topbar .user { background: rgba(63,214,208,.1); color: #3DD6D0; border: 1px solid rgba(63,214,208,.25); }
+body.tech .tab { background: #0F1622; color: #6B7A90; border: 1px solid #1E2A3D; }
+body.tech .tab.on { background: rgba(63,214,208,.12); color: #3DD6D0; border-color: rgba(63,214,208,.45); box-shadow: 0 0 14px rgba(63,214,208,.15) inset; }
+body.tech .label { color: #5E6E85; }
+body.tech .chip { background: #0F1622; color: #5E6E85; border: 1px solid #1E2A3D; font-family: 'JetBrains Mono', monospace; }
+body.tech .chip.on { background: rgba(79,157,255,.15); color: #6FB4FF; border-color: rgba(79,157,255,.5); box-shadow: 0 0 12px rgba(79,157,255,.2); }
+body.tech .card { background: linear-gradient(180deg,#111A28,#0D1420); border: 1px solid #1E2A3D; }
+body.tech .q-no { background: rgba(79,157,255,.12); color: #6FB4FF; border: 1px solid rgba(79,157,255,.3); font-family: 'JetBrains Mono', monospace; }
+body.tech .q-text { color: #DCE7F5; }
+body.tech .ans.yes { background: rgba(46,213,160,.14); color: #2ED5A0; border: 1px solid rgba(46,213,160,.4); }
+body.tech .ans.no { background: rgba(255,99,99,.14); color: #FF7A7A; border: 1px solid rgba(255,99,99,.4); }
+body.tech .q-quote { background: #0A111C; border-left: 2px solid #3DD6D0; color: #7E8CA3; }
+body.tech .badge.type { background: rgba(63,214,208,.14); color: #3DD6D0; border: 1px solid rgba(63,214,208,.35); }
+body.tech .badge.lvl { background: rgba(79,157,255,.13); color: #6FB4FF; border: 1px solid rgba(79,157,255,.35); }
+body.tech .badge.grade { background: rgba(180,140,255,.14); color: #B79BFF; border: 1px solid rgba(180,140,255,.35); }
+body.tech .flag { background: rgba(255,170,60,.1); color: #FFB13D; border: 1px solid rgba(255,170,60,.35); }
+body.tech .switcher button { background: #0F1622; color: #6B7A90; border-color: #1E2A3D; }
+body.tech .switcher button.active { background: #3DD6D0; color: #07212A; }
+
+/* =================================================== */
+/* 主題 2：極簡企業風 (corp)                              */
+/* =================================================== */
+body.corp { background: #FBFBFC; color: #2A2E37; }
+body.corp .switcher { background: rgba(251,251,252,.8); }
+body.corp .switcher .hint { color: #9AA0AB; }
+body.corp .topbar { background: #FFFFFF; border: 1px solid #ECEEF1; box-shadow: 0 1px 2px rgba(20,24,40,.03); }
+body.corp .topbar .logo { background: #2A2E37; color: #fff; }
+body.corp .topbar .ttl { color: #15181F; }
+body.corp .topbar .sub { color: #9AA0AB; }
+body.corp .topbar .user { background: #F3F4F6; color: #5A616E; }
+body.corp .tab { background: #fff; color: #8A909C; border: 1px solid #ECEEF1; }
+body.corp .tab.on { background: #15181F; color: #fff; border-color: #15181F; }
+body.corp .label { color: #9AA0AB; }
+body.corp .chip { background: #fff; color: #8A909C; border: 1px solid #E4E6EA; }
+body.corp .chip.on { background: #4F46E5; color: #fff; border-color: #4F46E5; }
+body.corp .card { background: #fff; border: 1px solid #ECEEF1; box-shadow: 0 1px 3px rgba(20,24,40,.04); }
+body.corp .q-no { background: #F3F4F6; color: #4F46E5; }
+body.corp .q-text { color: #1B1E26; }
+body.corp .ans.yes { background: #ECFDF3; color: #157347; border: 1px solid #C7EBD5; }
+body.corp .ans.no { background: #FEF2F2; color: #B42318; border: 1px solid #F3CFCB; }
+body.corp .q-quote { background: #F7F8FA; border-left: 2px solid #C9CDD6; color: #6B7280; }
+body.corp .badge.type { background: #15181F; color: #fff; }
+body.corp .badge.lvl { background: #F3F4F6; color: #4A5160; border: 1px solid #E4E6EA; }
+body.corp .badge.grade { background: #EEF0FF; color: #4F46E5; border: 1px solid #D9DCFB; }
+body.corp .flag { background: #FFF8EC; color: #9A6700; border: 1px solid #F5E4BD; }
+body.corp .switcher button { background: #fff; color: #8A909C; border-color: #E4E6EA; }
+body.corp .switcher button.active { background: #15181F; color: #fff; }
+</style>
+</head>
+<body class="tech">
+
+<div class="switcher">
+  <button class="active" data-theme="tech">🖤 冷感科技風</button>
+  <button data-theme="corp">🤍 極簡企業風</button>
+  <div class="hint">點上面兩顆按鈕切換 · 同一個畫面，兩種皮膚</div>
+</div>
+
+<div class="wrap">
+
+  <!-- 上方列：登入狀態 + 標題 -->
+  <div class="topbar">
+    <div class="logo">🔒</div>
+    <div>
+      <div class="ttl">實證評讀工作台</div>
+      <div class="sub">EBN Appraisal Workspace</div>
+    </div>
+    <div class="user">● 已登入</div>
+  </div>
+
+  <!-- 模式切換 -->
+  <div class="tabs">
+    <div class="tab on">組員模式</div>
+    <div class="tab">主講者模式</div>
+  </div>
+
+  <!-- 我負責的題目 -->
+  <div class="label">我被分配到的題目</div>
+  <div class="chips">
+    <div class="chip">1</div><div class="chip">2</div>
+    <div class="chip on">3</div><div class="chip on">4</div><div class="chip on">5</div>
+    <div class="chip">6</div><div class="chip">7</div><div class="chip">8</div>
+    <div class="chip">9</div><div class="chip">10</div><div class="chip">11</div>
+  </div>
+
+  <!-- 一張評讀卡（示意） -->
+  <div class="label">逐題評讀</div>
+  <div class="card">
+    <div class="q-head">
+      <div class="q-no">3</div>
+      <div class="q-text">進入研究的受試者，最後是否都有交代清楚？</div>
+      <div class="ans yes">是</div>
+    </div>
+    <div class="q-body">
+      <b>理由：</b>文中報告了 CONSORT 流程圖，兩組失去追蹤皆 &lt;5%，且採意向治療分析（ITT），沒有提早中止，受試者去向交代完整。
+      <div class="q-quote">"...analysed on an intention-to-treat basis; loss to follow-up was 3.8% and 4.1%..."</div>
+    </div>
+  </div>
+
+  <!-- 報告標頭示意 -->
+  <div class="label">報告標頭</div>
+  <div class="card">
+    <div style="font-size:16px;font-weight:700;margin-bottom:4px;">早期下床活動對加護病房病人住院天數之成效</div>
+    <div style="font-size:12px;opacity:.6;">Lin et al., 2024, J Adv Nurs</div>
+    <div class="badges">
+      <span class="badge type">隨機對照試驗 RCT</span>
+      <span class="badge lvl">證據等級 Level II</span>
+      <span class="badge grade">品質：中</span>
+    </div>
+  </div>
+
+  <!-- 主講者統合：抓錯示意 -->
+  <div class="label">主講者統合 · 一致性檢查</div>
+  <div class="card" style="padding-top:14px;">
+    <div style="font-size:13px;opacity:.85;line-height:1.7;">系統把 4 位組員交回的題目拼成完整報告，並比對正確答案：</div>
+    <div class="flag">⚠ 第 6 題：組員填「是」，正確答案應為「否」 — 已標記待你確認</div>
+  </div>
+
+</div>
+
+<script>
+document.querySelectorAll('.switcher button[data-theme]').forEach(b => {
+  b.addEventListener('click', () => {
+    document.body.className = b.dataset.theme;
+    document.querySelectorAll('.switcher button').forEach(x => x.classList.remove('active'));
+    b.classList.add('active');
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  });
+});
+</script>
+</body>
+</html>
