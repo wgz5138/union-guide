@@ -1,0 +1,622 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>實證護理報告小幫手 — CASP 文獻評讀</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@400;600;700&family=Noto+Sans+TC:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --red: #C0392B; --red-light: #FDECEA; --red-deep: #7B1818;
+    --gold: #B7860B; --gold-light: #FEF9E7;
+    --ink: #1A1A1A; --ink-mid: #444; --ink-soft: #777; --bg: #FAFAF8;
+    --card: #FFFFFF; --border: #E8E4DE;
+    --green: #1A7A4A; --green-light: #EAFAF1; --green-mid: #2D9D6E;
+    --green-deep: #0F5C36;
+    --gray-tag: #8A8A85; --gray-bg: #F0EEEA;
+    --blue: #2E5C8A; --blue-light: #EAF1F8;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Noto Sans TC', sans-serif; background: var(--bg); color: var(--ink); font-size: 15px; line-height: 1.7; }
+
+  .header { background: var(--green-deep); color: #fff; padding: 1.8rem 1.25rem 1.5rem; text-align: center; position: relative; overflow: hidden; }
+  .header::before { content: ''; position: absolute; top: -40px; right: -40px; width: 180px; height: 180px; border-radius: 50%; background: rgba(255,255,255,0.06); }
+  .header::after { content: ''; position: absolute; bottom: -60px; left: -30px; width: 200px; height: 200px; border-radius: 50%; background: rgba(255,255,255,0.04); }
+  .header-label { font-size: 11px; letter-spacing: 0.15em; opacity: 0.78; margin-bottom: 8px; }
+  .header h1 { font-family: 'Noto Serif TC', serif; font-size: 22px; font-weight: 700; line-height: 1.4; margin-bottom: 6px; }
+  .header-sub { font-size: 13px; opacity: 0.85; }
+
+  .flow-banner { background: rgba(0,0,0,0.0); border-top: 1px solid var(--border); background: #fff; padding: 0.7rem 1rem; display: flex; justify-content: center; gap: 6px; flex-wrap: wrap; font-size: 12px; color: var(--ink-soft); }
+  .flow-step { display: inline-flex; align-items: center; gap: 5px; }
+  .flow-step b { color: var(--green-deep); font-weight: 600; }
+  .flow-arrow { color: var(--border); }
+
+  main { max-width: 640px; margin: 0 auto; padding: 1.5rem 1.25rem 4rem; }
+  .section { margin-bottom: 1.6rem; scroll-margin-top: 16px; }
+  .section-header { display: flex; align-items: center; gap: 10px; margin-bottom: 0.9rem; }
+  .section-num { width: 30px; height: 30px; background: var(--green); color: #fff; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 14px; font-weight: 600; flex-shrink: 0; }
+  .section-title { font-family: 'Noto Serif TC', serif; font-size: 17px; font-weight: 600; color: var(--ink); }
+  .section-desc { font-size: 13px; color: var(--ink-soft); margin: -4px 0 12px 40px; line-height: 1.6; }
+
+  .card { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 1.1rem 1.25rem; }
+
+  /* 文獻類型選擇 */
+  .type-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .type-opt { background: var(--card); border: 2px solid var(--border); border-radius: 12px; padding: 1rem; cursor: pointer; transition: all 0.18s; text-align: center; -webkit-tap-highlight-color: transparent; }
+  .type-opt:active { transform: scale(0.98); }
+  .type-opt.active { border-color: var(--green); background: var(--green-light); }
+  .type-opt .t-icon { font-size: 26px; line-height: 1; margin-bottom: 6px; }
+  .type-opt .t-name { font-weight: 600; font-size: 15px; color: var(--ink); }
+  .type-opt .t-en { font-size: 11px; color: var(--ink-soft); margin-top: 2px; }
+  .type-opt .t-casp { font-size: 11px; margin-top: 6px; color: var(--green-deep); font-weight: 500; }
+  .type-opt.active .t-casp { color: var(--green-deep); }
+
+  .helper-toggle { font-size: 13px; color: var(--blue); cursor: pointer; margin-top: 10px; display: inline-flex; align-items: center; gap: 5px; user-select: none; }
+  .helper-body { display: none; margin-top: 8px; background: var(--blue-light); border: 1px solid #CBDDEF; border-radius: 10px; padding: 0.85rem 1rem; font-size: 13px; color: #234; line-height: 1.8; }
+  .helper-body.open { display: block; }
+  .helper-body strong { color: var(--blue); }
+
+  /* 表單 */
+  label.fld { display: block; font-size: 13px; color: var(--ink-mid); font-weight: 500; margin-bottom: 5px; }
+  input.txt, textarea.txt { width: 100%; border: 1px solid var(--border); border-radius: 9px; padding: 0.6rem 0.75rem; font-family: inherit; font-size: 14px; color: var(--ink); background: #fff; resize: vertical; }
+  input.txt:focus, textarea.txt:focus { outline: none; border-color: var(--green-mid); box-shadow: 0 0 0 3px rgba(45,157,110,0.12); }
+  .fld-row { margin-bottom: 12px; }
+  .fld-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .fld-hint { font-size: 12px; color: var(--ink-soft); margin-top: 4px; }
+
+  /* CASP 題目預覽 */
+  .casp-preview { margin-top: 10px; }
+  .casp-sec-head { font-size: 12px; font-weight: 600; color: var(--green-deep); margin: 12px 0 6px; letter-spacing: 0.02em; }
+  .casp-q { display: flex; gap: 10px; padding: 7px 0; border-bottom: 1px dashed #ECE8E2; font-size: 13.5px; }
+  .casp-q:last-child { border-bottom: none; }
+  .casp-q .qn { flex-shrink: 0; width: 22px; height: 22px; background: var(--gray-bg); color: var(--green-deep); border-radius: 6px; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 600; }
+  .casp-q .qt { flex: 1; line-height: 1.55; }
+  .casp-q .qt .en { display: block; font-size: 11.5px; color: var(--ink-soft); margin-top: 2px; }
+
+  /* 按鈕 */
+  .btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; border: none; border-radius: 10px; padding: 0.8rem 1.2rem; font-family: inherit; font-size: 15px; font-weight: 600; cursor: pointer; transition: all 0.15s; -webkit-tap-highlight-color: transparent; }
+  .btn-primary { background: var(--green); color: #fff; width: 100%; }
+  .btn-primary:active { background: var(--green-deep); }
+  .btn-ghost { background: #fff; border: 1px solid var(--border); color: var(--ink-mid); }
+  .btn-ghost:active { background: #F4F0EA; }
+  .btn-block { width: 100%; }
+  .btn-sm { padding: 0.5rem 0.9rem; font-size: 13px; font-weight: 500; }
+  .btn-row { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 12px; }
+  .btn-row .btn { flex: 1; min-width: 130px; }
+
+  /* 產出區（提示詞 / 報告） */
+  .output-box { position: relative; }
+  .prompt-area { width: 100%; min-height: 220px; border: 1px solid var(--border); border-radius: 10px; padding: 0.85rem; font-family: ui-monospace, 'SFMono-Regular', Menlo, monospace; font-size: 12.5px; line-height: 1.6; color: var(--ink-mid); background: #FBFAF7; white-space: pre-wrap; resize: vertical; }
+  .open-ai-links { display: flex; gap: 8px; margin-top: 10px; flex-wrap: wrap; }
+  .open-ai-links a { flex: 1; min-width: 130px; text-align: center; text-decoration: none; }
+
+  .toast { position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%) translateY(20px); background: var(--ink); color: #fff; padding: 0.7rem 1.2rem; border-radius: 30px; font-size: 13px; opacity: 0; pointer-events: none; transition: all 0.25s; z-index: 200; }
+  .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+  .note { font-size: 12.5px; color: var(--ink-soft); margin-top: 8px; line-height: 1.7; }
+  .step-divider { height: 1px; background: var(--border); margin: 0; border: none; }
+
+  /* ===== 報告排版 ===== */
+  #report-output { display: none; }
+  .report { background: #fff; border: 1px solid var(--border); border-radius: 14px; padding: 1.5rem 1.4rem; }
+  .rp-title { font-family: 'Noto Serif TC', serif; font-size: 20px; font-weight: 700; color: var(--green-deep); line-height: 1.4; margin-bottom: 4px; }
+  .rp-cite { font-size: 13px; color: var(--ink-soft); line-height: 1.7; margin-bottom: 10px; }
+  .rp-badges { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 1.2rem; }
+  .badge { font-size: 12px; font-weight: 600; padding: 3px 11px; border-radius: 20px; }
+  .badge-type { background: var(--green-deep); color: #fff; }
+  .badge-level { background: var(--gold-light); color: var(--gold); border: 1px solid #EAD67A; }
+  .badge-grade { background: var(--blue-light); color: var(--blue); border: 1px solid #CBDDEF; }
+  .rp-block { margin-bottom: 1.3rem; }
+  .rp-h { font-family: 'Noto Serif TC', serif; font-size: 15px; font-weight: 600; color: var(--ink); border-left: 3px solid var(--green); padding-left: 9px; margin-bottom: 8px; }
+  .rp-text { font-size: 14px; color: var(--ink-mid); line-height: 1.85; white-space: pre-wrap; }
+
+  .pico-grid { display: grid; grid-template-columns: auto 1fr; gap: 0; border: 1px solid var(--border); border-radius: 10px; overflow: hidden; }
+  .pico-grid .pk { background: var(--green-light); color: var(--green-deep); font-weight: 600; padding: 8px 12px; font-size: 13px; border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 6px; }
+  .pico-grid .pv { padding: 8px 12px; font-size: 13.5px; color: var(--ink-mid); border-bottom: 1px solid var(--border); line-height: 1.6; }
+  .pico-grid .pk:last-of-type, .pico-grid .pv:last-of-type { border-bottom: none; }
+
+  /* 評讀表 */
+  .appr-item { border: 1px solid var(--border); border-radius: 10px; padding: 0.85rem 1rem; margin-bottom: 9px; }
+  .appr-head { display: flex; align-items: flex-start; gap: 10px; }
+  .appr-no { flex-shrink: 0; width: 24px; height: 24px; border-radius: 6px; background: var(--gray-bg); color: var(--green-deep); font-size: 12px; font-weight: 700; display: flex; align-items: center; justify-content: center; }
+  .appr-q { flex: 1; font-size: 14px; font-weight: 600; color: var(--ink); line-height: 1.5; }
+  .ans-badge { flex-shrink: 0; font-size: 12px; font-weight: 700; padding: 3px 10px; border-radius: 20px; white-space: nowrap; }
+  .ans-yes { background: var(--green-light); color: var(--green-deep); border: 1px solid #B8DCC4; }
+  .ans-no { background: var(--red-light); color: var(--red-deep); border: 1px solid #F5C6C2; }
+  .ans-unsure { background: var(--gray-bg); color: var(--gray-tag); border: 1px solid #DDD7CD; }
+  .appr-body { margin-top: 8px; padding-left: 34px; }
+  .appr-rationale { font-size: 13.5px; color: var(--ink-mid); line-height: 1.75; }
+  .appr-rationale b { color: var(--green-deep); font-weight: 600; }
+  .appr-quote { margin-top: 7px; font-size: 12.5px; color: var(--ink-soft); background: #FBFAF7; border-left: 2px solid var(--gold); padding: 6px 10px; border-radius: 0 6px 6px 0; line-height: 1.65; font-style: italic; }
+
+  .conclusion-card { background: var(--green-light); border: 1px solid #B8DCC4; border-radius: 10px; padding: 1rem 1.1rem; font-size: 14px; color: #1A5C38; line-height: 1.85; }
+
+  .parse-warn { background: var(--gold-light); border: 1px solid #EAD67A; border-radius: 10px; padding: 0.85rem 1rem; font-size: 13px; color: #5C4000; line-height: 1.7; margin-bottom: 12px; }
+
+  footer { text-align: center; padding: 1.5rem 1.25rem 2.5rem; font-size: 12px; color: var(--ink-soft); line-height: 1.8; }
+  footer a { color: var(--green); }
+
+  @media print {
+    body { background: #fff; font-size: 12pt; }
+    .header, .flow-banner, footer, .no-print, #sec-type .helper-toggle, #sec-type .helper-body { display: none !important; }
+    main { max-width: 100%; padding: 0; }
+    .section:not(#report-section) { display: none !important; }
+    #report-output { display: block !important; }
+    .report { border: none; padding: 0; }
+    .appr-item { break-inside: avoid; }
+  }
+  @media (max-width: 420px) {
+    .fld-grid, .type-grid { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="header-label">實證護理 · 文獻評讀小幫手</div>
+  <h1>實證護理報告小幫手</h1>
+  <div class="header-sub">用 CASP 最新版檢核表，丟文獻 → 生出逐題評讀報告</div>
+</div>
+
+<div class="flow-banner">
+  <span class="flow-step"><b>①</b> 選文獻類型</span>
+  <span class="flow-arrow">→</span>
+  <span class="flow-step"><b>②</b> 填文獻資訊</span>
+  <span class="flow-arrow">→</span>
+  <span class="flow-step"><b>③</b> 產生提示詞貼給 AI</span>
+  <span class="flow-arrow">→</span>
+  <span class="flow-step"><b>④</b> 貼回答案出報告</span>
+</div>
+
+<main>
+
+  <!-- ① 文獻類型 -->
+  <div class="section" id="sec-type">
+    <div class="section-header"><div class="section-num">1</div><div class="section-title">這篇文獻是哪一種？</div></div>
+    <div class="section-desc">先確定類型，CASP 檢核表才會對。學姊提醒的就是這一步 — Meta 跟 RCT 用的表不一樣。</div>
+
+    <div class="type-grid">
+      <div class="type-opt active" data-type="RCT">
+        <div class="t-icon">🧪</div>
+        <div class="t-name">RCT</div>
+        <div class="t-en">隨機對照試驗</div>
+        <div class="t-casp">CASP RCT 表 · 11 題</div>
+      </div>
+      <div class="type-opt" data-type="SR">
+        <div class="t-icon">📚</div>
+        <div class="t-name">Meta / 系統回顧</div>
+        <div class="t-en">Systematic Review</div>
+        <div class="t-casp">CASP SR 表 · 10 題</div>
+      </div>
+    </div>
+
+    <div class="helper-toggle" id="helper-toggle">❓ 我不確定是哪一種，怎麼分辨？</div>
+    <div class="helper-body" id="helper-body">
+      <strong>看這篇文章「自己做實驗」還是「整理一堆別人的研究」：</strong><br><br>
+      • 找一批病人、<strong>隨機分成兩組</strong>（一組給新介入、一組對照），再比較結果 → 這是 <strong>RCT</strong>。題目／摘要常出現 <em>randomi(z/s)ed controlled trial、random assignment、intervention/control group</em>。<br><br>
+      • 沒有自己收病人，而是<strong>系統性地搜尋、彙整很多篇既有研究</strong>，常把多篇數據合併算一個總結果（<strong>森林圖 forest plot</strong>）→ 這是 <strong>系統性回顧 / Meta-analysis</strong>。摘要常出現 <em>systematic review、meta-analysis、databases searched、pooled、heterogeneity (I²)</em>。<br><br>
+      還是不確定？把摘要貼進第②步，產生提示詞時也會請 AI 幫你判斷類型，發現選錯它會提醒你。
+    </div>
+
+    <div class="casp-preview card" style="margin-top:14px;">
+      <div style="font-size:13px;font-weight:600;color:var(--green-deep);margin-bottom:2px;">即將套用的檢核表 → <span id="casp-name">CASP RCT 檢核表（11 題）</span></div>
+      <div id="casp-list"></div>
+    </div>
+  </div>
+
+  <hr class="step-divider">
+
+  <!-- ② 文獻資訊 -->
+  <div class="section" id="sec-info">
+    <div class="section-header"><div class="section-num">2</div><div class="section-title">填一下文獻資訊</div></div>
+    <div class="section-desc">標題等欄位可留白；摘要／全文貼上越多，AI 評讀越準。沒空貼也行，第③步會請你直接附上 PDF。</div>
+
+    <div class="card">
+      <div class="fld-row">
+        <label class="fld">文獻標題</label>
+        <input class="txt" id="f-title" placeholder="例：Effect of early mobilization on ...（可留白）">
+      </div>
+      <div class="fld-grid">
+        <div class="fld-row">
+          <label class="fld">作者</label>
+          <input class="txt" id="f-author" placeholder="第一作者 et al.（可留白）">
+        </div>
+        <div class="fld-row">
+          <label class="fld">年份 / 期刊</label>
+          <input class="txt" id="f-journal" placeholder="2024, J Adv Nurs（可留白）">
+        </div>
+      </div>
+      <div class="fld-row">
+        <label class="fld">我的臨床情境 / 想解決的問題（選填）</label>
+        <input class="txt" id="f-context" placeholder="例：加護病房病人早期下床，能否降低住院天數？">
+        <div class="fld-hint">填了這格，AI 的「臨床應用建議」會更貼近你的單位。</div>
+      </div>
+      <div class="fld-row" style="margin-bottom:0;">
+        <label class="fld">文獻摘要 / 全文（強烈建議貼上）</label>
+        <textarea class="txt" id="f-text" rows="6" placeholder="把 Abstract（或全文）複製貼到這裡。內容只會留在你的瀏覽器，不會上傳。"></textarea>
+      </div>
+    </div>
+  </div>
+
+  <hr class="step-divider">
+
+  <!-- ③ 產生提示詞 -->
+  <div class="section" id="sec-prompt">
+    <div class="section-header"><div class="section-num">3</div><div class="section-title">產生提示詞，貼給 AI</div></div>
+    <div class="section-desc">按下去會組出一段完整指令（已內含正確版 CASP 題目）。複製它 → 貼到 ChatGPT 或 Claude → 送出。沒貼全文的話，記得在 AI 對話框「附上文獻 PDF」再送。</div>
+
+    <button class="btn btn-primary" id="gen-btn">⚙️ 產生提示詞</button>
+
+    <div id="prompt-wrap" style="display:none; margin-top:14px;">
+      <div class="output-box">
+        <textarea class="prompt-area" id="prompt-out" readonly></textarea>
+      </div>
+      <div class="btn-row">
+        <button class="btn btn-ghost" id="copy-prompt">📋 複製提示詞</button>
+      </div>
+      <div class="open-ai-links">
+        <a class="btn btn-ghost btn-sm" href="https://chatgpt.com/" target="_blank" rel="noopener">↗ 開啟 ChatGPT</a>
+        <a class="btn btn-ghost btn-sm" href="https://claude.ai/new" target="_blank" rel="noopener">↗ 開啟 Claude</a>
+      </div>
+      <div class="note">💡 提示：請 AI 用「電腦版／網頁版」，手機 App 有時候會把 JSON 截斷。若 AI 回得太短，可在對話裡補一句「請完整輸出，不要省略」。</div>
+    </div>
+  </div>
+
+  <hr class="step-divider">
+
+  <!-- ④ 貼回答案出報告 -->
+  <div class="section" id="sec-paste">
+    <div class="section-header"><div class="section-num">4</div><div class="section-title">把 AI 的回覆貼回來</div></div>
+    <div class="section-desc">把 AI 整段回覆（一大串 JSON）原封不動複製貼上，按「產生報告」即可。</div>
+
+    <div class="card">
+      <textarea class="txt" id="ai-resp" rows="6" placeholder="把 ChatGPT / Claude 回的內容整段貼這裡⋯⋯"></textarea>
+    </div>
+    <button class="btn btn-primary btn-block" id="render-btn" style="margin-top:12px;">📄 產生報告</button>
+  </div>
+
+  <!-- 報告輸出 -->
+  <div class="section" id="report-section">
+    <div id="report-output">
+      <div class="section-header no-print" style="margin-top:1rem;"><div class="section-num">✓</div><div class="section-title">你的實證護理報告</div></div>
+      <div id="report-output-inner"></div>
+      <div class="btn-row no-print">
+        <button class="btn btn-ghost" id="print-btn">🖨️ 列印 / 存成 PDF</button>
+        <button class="btn btn-ghost" id="copy-report">📋 複製純文字</button>
+      </div>
+    </div>
+  </div>
+
+</main>
+
+<footer>
+  CASP 檢核表內容依 Critical Appraisal Skills Programme (CASP) 2024 版整理。<br>
+  本工具只是協助排版，<strong>評讀內容與最終判斷仍需由你本人確認</strong>。<br>
+  最新版表單請見 <a href="https://casp-uk.net/casp-tools-checklists/" target="_blank" rel="noopener">casp-uk.net</a>。
+</footer>
+
+<div class="toast" id="toast"></div>
+
+<script>
+/* ===================== CASP 題庫（2024） ===================== */
+const CASP = {
+  RCT: {
+    name: "CASP RCT 檢核表（11 題）",
+    sections: [
+      { sec: "A · 這個 RCT 的基本研究設計是否站得住腳？", qs: [
+        { n:1, zh:"研究是否針對一個清楚聚焦的研究問題？", hint:"對象、介入措施、對照、結果指標", en:"Did the study address a clearly focused research question?" },
+        { n:2, zh:"受試者分配到各組是否採隨機分派？", hint:"如何隨機、分配是否隱藏（allocation concealment）", en:"Was the assignment of participants to interventions randomised?" },
+        { n:3, zh:"進入研究的受試者，最後是否都有交代清楚？", hint:"失去追蹤、是否採意向治療分析（ITT）、是否提早中止", en:"Were all participants who entered the study accounted for at its conclusion?" },
+      ]},
+      { sec: "B · 研究方法是否嚴謹？", qs: [
+        { n:4, zh:"受試者、研究人員與結果評估者是否「盲性」（不知分組）？", hint:"單盲、雙盲、評估者盲性", en:"Were participants, staff and study personnel 'blind' to participants' study group?" },
+        { n:5, zh:"兩組在試驗開始時的條件是否相近？", hint:"基線特性（年齡、病情等）是否平衡", en:"Were the study groups similar at the start of the randomised controlled trial?" },
+        { n:6, zh:"除了實驗介入之外，各組是否接受相同水準的照護？", hint:"是否被同等對待（co-intervention）", en:"Apart from the experimental intervention, did each study group receive the same level of care?" },
+      ]},
+      { sec: "C · 結果是什麼？", qs: [
+        { n:7, zh:"介入的效果是否完整呈現？", hint:"檢力計算、主要/次要結果、各結果數據、p 值/信賴區間", en:"Were the effects of intervention reported comprehensively?" },
+        { n:8, zh:"是否報告了治療效果估計值的精確度？", hint:"信賴區間（CI）", en:"Was the precision of the estimate of the intervention or treatment effect reported?" },
+        { n:9, zh:"實驗介入的好處，是否大於它的壞處與成本？", hint:"效益 vs 副作用、成本", en:"Do the benefits of the experimental intervention outweigh the harms and costs?" },
+      ]},
+      { sec: "D · 結果對你的臨床有幫助嗎？", qs: [
+        { n:10, zh:"這些結果能否套用到你的臨床對象 / 情境？", hint:"你的病人是否和研究對象夠相似", en:"Can the results be applied to your local population/in your context?" },
+        { n:11, zh:"與現有做法相比，這個介入是否能為你照顧的病人帶來更大價值？", hint:"和目前常規比較", en:"Would the experimental intervention provide greater value to the people in your care than existing interventions?" },
+      ]},
+    ],
+  },
+  SR: {
+    name: "CASP 系統性回顧 / Meta 檢核表（10 題）",
+    sections: [
+      { sec: "A · 回顧的結果是否可信？", qs: [
+        { n:1, zh:"這篇回顧是否針對一個清楚聚焦的問題？", hint:"對象、介入、結果指標（PICO）", en:"Did the review address a clearly focused question?" },
+        { n:2, zh:"作者是否搜尋了正確類型的研究？", hint:"納入的研究設計是否符合回顧的問題", en:"Did the authors look for the right type of papers?" },
+        { n:3, zh:"你認為所有重要且相關的研究，是否都被納入了？", hint:"搜尋了哪些資料庫、參考文獻、專家、未發表/非英文、灰色文獻", en:"Do you think all the important, relevant studies were included?" },
+        { n:4, zh:"作者是否充分評估了納入研究的品質？", hint:"是否做了偏差風險 / 品質評讀", en:"Did the review's authors do enough to assess the quality of the included studies?" },
+        { n:5, zh:"若把各研究結果合併（meta-analysis），這樣做是否合理？", hint:"異質性、各研究結果是否相近、是否清楚呈現、是否討論差異原因", en:"If the results of the review have been combined, was it reasonable to do so?" },
+      ]},
+      { sec: "B · 結果是什麼？", qs: [
+        { n:6, zh:"這篇回顧的整體結果是什麼？", hint:"數值結果、如何表達（如 OR、RR、效果量）", en:"What are the overall results of the review?" },
+        { n:7, zh:"結果有多精確？", hint:"信賴區間（CI）", en:"How precise are the results?" },
+      ]},
+      { sec: "C · 結果對你的臨床有幫助嗎？", qs: [
+        { n:8, zh:"結果能否套用到你的臨床對象？", hint:"你的病人是否和被納入研究的對象夠相似", en:"Can the results be applied to the local population?" },
+        { n:9, zh:"是否考量了所有重要的結果指標？", hint:"有沒有漏掉重要的好處或壞處", en:"Were all important outcomes considered?" },
+        { n:10, zh:"好處是否值得它的壞處與成本？", hint:"效益 vs 風險、成本", en:"Are the benefits worth the harms and costs?" },
+      ]},
+    ],
+  },
+};
+
+let currentType = "RCT";
+
+/* ===================== UI：類型選擇 & 預覽 ===================== */
+function renderCaspPreview() {
+  const data = CASP[currentType];
+  document.getElementById("casp-name").textContent = data.name;
+  let html = "";
+  data.sections.forEach(s => {
+    html += `<div class="casp-sec-head">${s.sec}</div>`;
+    s.qs.forEach(q => {
+      html += `<div class="casp-q"><span class="qn">${q.n}</span><span class="qt">${q.zh}<span class="en">${q.en}</span></span></div>`;
+    });
+  });
+  document.getElementById("casp-list").innerHTML = html;
+}
+document.querySelectorAll(".type-opt").forEach(opt => {
+  opt.addEventListener("click", () => {
+    document.querySelectorAll(".type-opt").forEach(o => o.classList.remove("active"));
+    opt.classList.add("active");
+    currentType = opt.dataset.type;
+    renderCaspPreview();
+  });
+});
+document.getElementById("helper-toggle").addEventListener("click", () => {
+  document.getElementById("helper-body").classList.toggle("open");
+});
+renderCaspPreview();
+
+/* ===================== ③ 產生提示詞 ===================== */
+function buildPrompt() {
+  const data = CASP[currentType];
+  const title = document.getElementById("f-title").value.trim();
+  const author = document.getElementById("f-author").value.trim();
+  const journal = document.getElementById("f-journal").value.trim();
+  const context = document.getElementById("f-context").value.trim();
+  const text = document.getElementById("f-text").value.trim();
+
+  // 題目清單字串
+  let qLines = "";
+  data.sections.forEach(s => {
+    qLines += `\n【${s.sec}】\n`;
+    s.qs.forEach(q => {
+      qLines += `  ${q.n}. ${q.zh}（提示：${q.hint}） / 原文：${q.en}\n`;
+    });
+  });
+
+  const typeLabel = currentType === "RCT"
+    ? "隨機對照試驗（RCT），請用 CASP RCT 檢核表（共 11 題）"
+    : "系統性回顧 / Meta-analysis，請用 CASP 系統性回顧檢核表（共 10 題）";
+
+  const nQ = currentType === "RCT" ? 11 : 10;
+
+  let meta = "";
+  if (title)   meta += `標題：${title}\n`;
+  if (author)  meta += `作者：${author}\n`;
+  if (journal) meta += `年份/期刊：${journal}\n`;
+  if (context) meta += `我的臨床情境/問題：${context}\n`;
+
+  const sourceBlock = text
+    ? `以下是這篇文獻的內容（摘要或全文）：\n"""\n${text}\n"""`
+    : `※ 我沒有貼上文獻全文，請依我「另外附上的文獻 PDF / 檔案」進行評讀；若你看不到附檔，請先提醒我補上，不要憑空編造。`;
+
+  return `你是一位資深的實證護理（Evidence-Based Nursing）專家，擅長用 CASP 檢核表評讀文獻。請協助我完成一份實證護理報告。
+
+這篇文獻的類型是：${typeLabel}。
+（若你判斷我選的類型不對，請在最後一行用「⚠️提醒」告訴我，但仍依我指定的表評讀。）
+
+${meta ? meta + "\n" : ""}${sourceBlock}
+
+請依「CASP ${currentType === "RCT" ? "RCT" : "系統性回顧"}檢核表」逐題評讀，題目如下（請用完全相同的題號與題目）：
+${qLines}
+== 輸出要求（非常重要）==
+請「只」輸出一個 JSON 物件，不要有任何前後說明文字，不要用 \`\`\` 程式碼框包起來。JSON 結構如下：
+
+{
+  "studyType": "${currentType}",
+  "title": "文獻標題（中英皆可）",
+  "citation": "完整引用（APA 格式，可用文獻原資訊）",
+  "clinicalQuestion": "用一句話寫出這篇對應的臨床問題（PICO 句型）",
+  "pico": { "P": "對象", "I": "介入措施", "C": "對照", "O": "結果指標" },
+  "summary": "150~250 字的中文重點摘要：研究目的、設計、樣本數、主要發現",
+  "evidenceLevel": "證據等級（依 Melnyk 七級，例：Level II — 單篇 RCT；或 Level I — RCT 的系統性回顧）",
+  "qualityGrade": "整體品質評等：高 / 中 / 低，並用半句話說明",
+  "appraisal": [
+    {
+      "no": 1,
+      "section": "A",
+      "question": "（照抄上面的中文題目）",
+      "answer": "是",            // 只能填：是 / 否 / 不確定
+      "rationale": "為什麼給這個答案，2~4 句，要具體",
+      "quote": "支持你判斷的原文關鍵句（英文原文佳，找不到可留空字串）"
+    }
+    // ...共 ${nQ} 題，順序與題號需完整對應
+  ],
+  "clinicalApplication": "臨床應用建議：這篇結果能不能、以及如何用在我的單位/病人身上（${context ? "請扣緊我上面填的臨床情境" : "若我未提供情境，給一般性建議"}）",
+  "conclusion": "整體結論：這篇證據夠不夠強、可信度如何、是否建議採用，3~5 句"
+}
+
+注意：
+- appraisal 一定要剛好 ${nQ} 題，題號 1~${nQ} 都要有，不能省略。
+- answer 僅能是「是 / 否 / 不確定」三選一。
+- 全部用繁體中文（quote 原文可保留英文）。
+- 再次強調：只輸出 JSON 本體，前後不要加任何文字。`;
+}
+
+document.getElementById("gen-btn").addEventListener("click", () => {
+  const p = buildPrompt();
+  document.getElementById("prompt-out").value = p;
+  document.getElementById("prompt-wrap").style.display = "block";
+  document.getElementById("prompt-wrap").scrollIntoView({ behavior: "smooth", block: "nearest" });
+});
+
+document.getElementById("copy-prompt").addEventListener("click", () => {
+  copyText(document.getElementById("prompt-out").value, "已複製提示詞，貼到 ChatGPT / Claude 吧！");
+});
+
+/* ===================== ④ 解析回覆 → 報告 ===================== */
+function extractJSON(raw) {
+  if (!raw) return null;
+  let s = raw.trim();
+  // 去掉 ```json ... ``` 外框
+  s = s.replace(/^```(?:json)?/i, "").replace(/```$/,"").trim();
+  // 取第一個 { 到最後一個 }
+  const a = s.indexOf("{");
+  const b = s.lastIndexOf("}");
+  if (a === -1 || b === -1 || b < a) return null;
+  let body = s.slice(a, b + 1);
+  try { return JSON.parse(body); } catch (e) {}
+  // 容錯：去掉結尾多餘逗號再試
+  try { return JSON.parse(body.replace(/,\s*([}\]])/g, "$1")); } catch (e) {}
+  return null;
+}
+
+function esc(t) {
+  return String(t == null ? "" : t)
+    .replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
+}
+
+function ansClass(a) {
+  const s = String(a || "");
+  if (/^是|yes/i.test(s)) return "ans-yes";
+  if (/^否|no/i.test(s)) return "ans-no";
+  return "ans-unsure";
+}
+
+function renderReport(d) {
+  let h = `<div class="report" id="report-paper">`;
+
+  // 標題 + 引用
+  h += `<div class="rp-title">${esc(d.title || "實證護理文獻評讀報告")}</div>`;
+  if (d.citation) h += `<div class="rp-cite">${esc(d.citation)}</div>`;
+
+  // badges
+  const typeName = (d.studyType === "SR" || /review|meta/i.test(d.studyType||"")) ? "系統性回顧 / Meta" : "隨機對照試驗 RCT";
+  h += `<div class="rp-badges">`;
+  h += `<span class="badge badge-type">${esc(typeName)}</span>`;
+  if (d.evidenceLevel) h += `<span class="badge badge-level">證據等級：${esc(d.evidenceLevel)}</span>`;
+  if (d.qualityGrade) h += `<span class="badge badge-grade">品質：${esc(d.qualityGrade)}</span>`;
+  h += `</div>`;
+
+  // 臨床問題 + PICO
+  if (d.clinicalQuestion) {
+    h += `<div class="rp-block"><div class="rp-h">臨床問題</div><div class="rp-text">${esc(d.clinicalQuestion)}</div></div>`;
+  }
+  if (d.pico) {
+    h += `<div class="rp-block"><div class="rp-h">PICO 拆解</div><div class="pico-grid">`;
+    const map = [["P","🧍 對象 P"],["I","💉 介入 I"],["C","⚖️ 對照 C"],["O","🎯 結果 O"]];
+    map.forEach(([k,label]) => {
+      h += `<div class="pk">${label}</div><div class="pv">${esc(d.pico[k] || "—")}</div>`;
+    });
+    h += `</div></div>`;
+  }
+
+  // 摘要
+  if (d.summary) {
+    h += `<div class="rp-block"><div class="rp-h">文獻重點摘要</div><div class="rp-text">${esc(d.summary)}</div></div>`;
+  }
+
+  // 評讀表（核心）
+  if (Array.isArray(d.appraisal) && d.appraisal.length) {
+    h += `<div class="rp-block"><div class="rp-h">CASP 逐題評讀</div>`;
+    d.appraisal.forEach(item => {
+      h += `<div class="appr-item">
+        <div class="appr-head">
+          <span class="appr-no">${esc(item.no)}</span>
+          <span class="appr-q">${esc(item.question)}</span>
+          <span class="ans-badge ${ansClass(item.answer)}">${esc(item.answer)}</span>
+        </div>
+        <div class="appr-body">
+          <div class="appr-rationale"><b>理由：</b>${esc(item.rationale)}</div>
+          ${item.quote ? `<div class="appr-quote">原文佐證：${esc(item.quote)}</div>` : ``}
+        </div>
+      </div>`;
+    });
+    h += `</div>`;
+  }
+
+  // 臨床應用
+  if (d.clinicalApplication) {
+    h += `<div class="rp-block"><div class="rp-h">臨床應用建議</div><div class="rp-text">${esc(d.clinicalApplication)}</div></div>`;
+  }
+
+  // 結論
+  if (d.conclusion) {
+    h += `<div class="rp-block"><div class="rp-h">整體結論</div><div class="conclusion-card">${esc(d.conclusion)}</div></div>`;
+  }
+
+  h += `</div>`;
+  return h;
+}
+
+document.getElementById("render-btn").addEventListener("click", () => {
+  const raw = document.getElementById("ai-resp").value;
+  const out = document.getElementById("report-output");
+  const inner = document.getElementById("report-output-inner");
+
+  if (!raw.trim()) { toast("請先把 AI 的回覆貼上來"); return; }
+
+  const data = extractJSON(raw);
+  if (data && (data.appraisal || data.summary)) {
+    inner.innerHTML = renderReport(data);
+  } else {
+    // 容錯：解析失敗就直接呈現純文字，至少不會卡住
+    inner.innerHTML =
+      `<div class="parse-warn">⚠️ 我沒有從這段文字裡讀到標準格式（可能 AI 沒照 JSON 輸出，或被截斷）。先用純文字幫你呈現如下。<br>建議回到 AI 對話補一句：「請只輸出 JSON，不要省略、不要加說明」，再貼回來。</div>`
+      + `<div class="report"><div class="rp-text">${esc(raw)}</div></div>`;
+  }
+  out.style.display = "block";
+  out.scrollIntoView({ behavior: "smooth", block: "start" });
+});
+
+document.getElementById("print-btn").addEventListener("click", () => window.print());
+
+document.getElementById("copy-report").addEventListener("click", () => {
+  const el = document.getElementById("report-output-inner");
+  const txt = el.innerText || el.textContent || "";
+  copyText(txt, "已複製報告純文字");
+});
+
+/* ===================== 小工具 ===================== */
+function toast(msg) {
+  const t = document.getElementById("toast");
+  t.textContent = msg;
+  t.classList.add("show");
+  clearTimeout(t._timer);
+  t._timer = setTimeout(() => t.classList.remove("show"), 2200);
+}
+function copyText(text, okMsg) {
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(text).then(() => toast(okMsg)).catch(() => fallbackCopy(text, okMsg));
+  } else {
+    fallbackCopy(text, okMsg);
+  }
+}
+function fallbackCopy(text, okMsg) {
+  const ta = document.createElement("textarea");
+  ta.value = text; ta.style.position = "fixed"; ta.style.opacity = "0";
+  document.body.appendChild(ta); ta.focus(); ta.select();
+  try { document.execCommand("copy"); toast(okMsg); } catch (e) { toast("複製失敗，請手動長按選取"); }
+  document.body.removeChild(ta);
+}
+
+/* ===================== 暫存到瀏覽器（避免誤關白填） ===================== */
+const SAVE_FIELDS = ["f-title","f-author","f-journal","f-context","f-text","ai-resp"];
+SAVE_FIELDS.forEach(id => {
+  const el = document.getElementById(id);
+  const saved = localStorage.getItem("ebn_" + id);
+  if (saved) el.value = saved;
+  el.addEventListener("input", () => localStorage.setItem("ebn_" + id, el.value));
+});
+</script>
+</body>
+</html>
