@@ -40,7 +40,8 @@
     background:rgba(63,214,208,.12);color:var(--cyan);border:1px solid rgba(63,214,208,.35);box-shadow:0 0 16px rgba(63,214,208,.18)}
   .topbar .ttl{font-size:16px;font-weight:700;color:var(--head)}
   .topbar .sub{font-size:11px;color:var(--muted)}
-  .topbar .user{margin-left:auto;font-size:11px;padding:5px 11px;border-radius:20px;background:rgba(63,214,208,.1);color:var(--cyan);border:1px solid rgba(63,214,208,.25);cursor:pointer}
+  .topbar .right{margin-left:auto;display:flex;gap:8px}
+  .topbar .user{font-size:11px;padding:5px 11px;border-radius:20px;background:rgba(63,214,208,.1);color:var(--cyan);border:1px solid rgba(63,214,208,.25);cursor:pointer;font-family:inherit}
 
   main{max-width:680px;margin:0 auto;padding:14px 16px 70px}
 
@@ -208,7 +209,10 @@
       <div class="ttl">實證評讀工作台</div>
       <div class="sub mono">EBN Appraisal Workspace</div>
     </div>
-    <div class="user" id="lock-btn">● 已登入 · 鎖定</div>
+    <div class="right">
+      <button class="user" id="chpw-btn" type="button">🔑 改密碼</button>
+      <div class="user" id="lock-btn">● 鎖定</div>
+    </div>
   </div>
 
   <main>
@@ -323,10 +327,10 @@
 
 <script>
 /* ===================== 設定 ===================== */
-// 通行密碼（輕量鎖）。要改密碼：把下面換成「你的新密碼反過來拼」即可，或直接告訴我幫你改。
-// 目前密碼 = ebn2026
-const PW_REV = "6202nbe";
-function pwOk(v){ return (v||"").split("").reverse().join("") === PW_REV; }
+// 通行密碼（輕量鎖）。預設 = ebn2026；登入後可用「🔑 改密碼」自行變更（存在本機瀏覽器）。
+const DEFAULT_PW = "ebn2026", PW_KEY = "ebn_pw";
+function obf(s){ return (s||"").split("").reverse().join(""); }
+function pwOk(v){ const st=localStorage.getItem(PW_KEY); return st? obf(v)===st : v===DEFAULT_PW; }
 
 /* ===================== CASP 題庫 ===================== */
 const CASP = {
@@ -379,6 +383,13 @@ function tryUnlock(){
   else{ document.getElementById("gate-err").textContent="密碼不對"; document.getElementById("gate-pw").value=""; }
 }
 document.getElementById("lock-btn").addEventListener("click",()=>{ sessionStorage.removeItem("ebn_unlocked"); location.reload(); });
+document.getElementById("chpw-btn").addEventListener("click",()=>{
+  const a=prompt("輸入新密碼（至少 4 字）："); if(a==null) return;
+  if(a.trim().length<4){ toast("密碼太短，至少 4 字"); return; }
+  const b=prompt("再輸入一次確認："); if(b==null) return;
+  if(a.trim()!==b.trim()){ toast("兩次不一致"); return; }
+  localStorage.setItem(PW_KEY,obf(a.trim())); toast("✅ 密碼已更改（這台裝置）");
+});
 
 /* ===================== 模式切換 ===================== */
 document.body.dataset.mode="member";

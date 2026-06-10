@@ -31,7 +31,8 @@
   .topbar{display:flex;align-items:center;gap:10px;max-width:720px;margin:0 auto;padding:16px 16px 0}
   .topbar .logo{width:36px;height:36px;border-radius:9px;display:flex;align-items:center;justify-content:center;font-size:18px;background:rgba(63,214,208,.12);color:var(--cyan);border:1px solid rgba(63,214,208,.35);box-shadow:0 0 16px rgba(63,214,208,.18)}
   .topbar .ttl{font-size:16px;font-weight:700;color:var(--head)} .topbar .sub{font-size:11px;color:var(--muted)}
-  .topbar .link{margin-left:auto;font-size:11px;padding:6px 11px;border-radius:20px;background:#0F1622;color:var(--blue);border:1px solid var(--line);text-decoration:none}
+  .topbar .right{margin-left:auto;display:flex;gap:8px}
+  .topbar .link{font-size:11px;padding:6px 11px;border-radius:20px;background:#0F1622;color:var(--blue);border:1px solid var(--line);text-decoration:none;font-family:inherit;cursor:pointer}
 
   main{max-width:720px;margin:0 auto;padding:14px 16px 70px}
   .label{font-size:11px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin:20px 0 9px;display:flex;align-items:center;gap:8px}
@@ -101,7 +102,10 @@
   <div class="topbar">
     <div class="logo">🔎</div>
     <div><div class="ttl">臨床快查</div><div class="sub mono">Evidence Quick-Search</div></div>
-    <a class="link" href="evidence.html">→ 評讀工具</a>
+    <div class="right">
+      <button class="link" id="chpw-btn" type="button">🔑 改密碼</button>
+      <a class="link" href="evidence.html">→ 評讀工具</a>
+    </div>
   </div>
 
   <main>
@@ -173,9 +177,10 @@
 <div class="toast" id="toast"></div>
 
 <script>
-/* ===== 密碼（與評讀工具獨立，可自行設不同密碼）。目前 = ebn2026 ===== */
-const PW_REV="6202nbe";
-function pwOk(v){ return (v||"").split("").reverse().join("")===PW_REV; }
+/* ===== 密碼（與評讀工具獨立）。預設 = qqq1111111；登入後可自行變更（存在本機瀏覽器）。 ===== */
+const DEFAULT_PW="qqq1111111", PW_KEY="ebnq_pw";
+function obf(s){ return (s||"").split("").reverse().join(""); }
+function pwOk(v){ const st=localStorage.getItem(PW_KEY); return st? obf(v)===st : v===DEFAULT_PW; }
 function unlock(){ document.body.classList.remove("locked"); document.body.classList.add("unlocked"); }
 if(sessionStorage.getItem("ebnq_unlocked")==="1") unlock();
 function tryUnlock(){ const v=document.getElementById("gate-pw").value;
@@ -183,6 +188,13 @@ function tryUnlock(){ const v=document.getElementById("gate-pw").value;
   else{ document.getElementById("gate-err").textContent="密碼不對"; document.getElementById("gate-pw").value=""; } }
 document.getElementById("gate-go").addEventListener("click",tryUnlock);
 document.getElementById("gate-pw").addEventListener("keydown",e=>{ if(e.key==="Enter") tryUnlock(); });
+document.getElementById("chpw-btn").addEventListener("click",()=>{
+  const a=prompt("輸入新密碼（至少 4 字）："); if(a==null) return;
+  if(a.trim().length<4){ toast("密碼太短，至少 4 字"); return; }
+  const b=prompt("再輸入一次確認："); if(b==null) return;
+  if(a.trim()!==b.trim()){ toast("兩次不一致"); return; }
+  localStorage.setItem(PW_KEY,obf(a.trim())); toast("✅ 密碼已更改（這台裝置）");
+});
 
 /* ===== 小工具 ===== */
 function val(id){ return document.getElementById(id).value.trim(); }
