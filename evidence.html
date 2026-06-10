@@ -156,6 +156,35 @@
 
   footer{text-align:center;padding:24px 16px 40px;font-size:11.5px;color:var(--muted);line-height:1.8;max-width:680px;margin:0 auto}
   footer a{color:var(--cyan)}
+
+  /* ===== 交報告樸素版 =====
+     畫面永遠維持科技風；PDF 由下方 @media print 一律輸出白底黑字低調版；
+     PPT 配色由 JS 的 plainMode 控制（科技/樸素一鍵切換）。 */
+
+  /* 列印 / 存 PDF：一律白底黑字、只留報告（交報告就用這個） */
+  @media print{
+    body{background:#fff !important}
+    #gate,.topbar,.tabs,footer,.toast{display:none !important}
+    main>*:not(#report-wrap){display:none !important}
+    #report-wrap>.label,#report-wrap>.member-only,#report-wrap>.btn-row,#report-wrap>.plain-toggle{display:none !important}
+    main{max-width:100%;padding:0;margin:0}
+    .report{background:#fff !important;border:none !important;color:#222 !important;padding:0}
+    .report .rp-title{color:#1a1a1a}
+    .report .rp-cite,.report .rp-watermark{color:#777}
+    .report .rp-h{color:#1a1a1a;border-left-color:#999}
+    .report .rp-text,.report .appr-rat{color:#333}.report .appr-rat b{color:#111}
+    .report .badge{background:#eee;color:#333;border:1px solid #ccc;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+    .report .badge.type{background:#333;color:#fff}
+    .report .appr{border-color:#ccc;break-inside:avoid}
+    .report .appr-no{background:#eee;color:#333}
+    .report .appr-q,.report .qa-q{color:#111}
+    .report .appr-plain{color:#555;background:#f4f4f4}
+    .report .appr-quote{background:#f6f6f6;border-left-color:#bbb;color:#666}
+    .report .pico .pk{background:#f0f0f0;color:#333}.report .pico .pv{color:#333}
+    .report .conc{background:#f4f4f4;color:#222}
+    .report .ans.yes{color:#1a7a4a}.report .ans.no{color:#c0392b}
+    *{-webkit-print-color-adjust:exact;print-color-adjust:exact}
+  }
   @media (max-width:430px){.type-grid,.fld-grid{grid-template-columns:1fr}}
 </style>
 </head>
@@ -275,10 +304,12 @@
           <div class="btn-row"><button class="btn btn-ghost" id="copy-part">📋 複製，傳給主講者</button></div>
         </div>
       </div>
-      <div class="leader-only btn-row">
+      <div class="btn-row" style="margin-top:14px">
+        <button class="btn btn-ghost" id="plain-toggle" type="button">📄 切換樸素版</button>
         <button class="btn btn-ghost" id="export-pdf">🖨️ PDF</button>
         <button class="btn btn-ghost" id="export-pptx">📊 匯出 PPT（含演講稿）</button>
       </div>
+      <div class="note">畫面維持科技風（看著舒服）。<b>PDF 一律輸出樸素低調版</b>（交報告用、不亮眼）。這顆按鈕只切換 <b>PPT</b> 配色：自己上台用科技、要交上去再切樸素。</div>
     </div>
   </main>
 
@@ -546,8 +577,16 @@ document.getElementById("export-part").addEventListener("click",()=>{
 });
 document.getElementById("copy-part").addEventListener("click",()=>copy(val("part-out"),"已複製，把這段傳給主講者"));
 
-/* ===================== 主講者：匯出 ===================== */
+/* ===================== 匯出 ===================== */
+// PDF：靠 @media print 一律輸出樸素白底黑字（畫面不受影響）。
 document.getElementById("export-pdf").addEventListener("click",()=>window.print());
+
+// 樸素/科技 只切「PPT 配色」，畫面永遠科技風
+let plainMode = localStorage.getItem("ebn_plain")==="1";
+const plainBtn=document.getElementById("plain-toggle");
+function applyPlain(){ plainBtn.textContent = plainMode ? "📊 PPT：樸素版" : "📊 PPT：科技版"; }
+plainBtn.addEventListener("click",()=>{ plainMode=!plainMode; localStorage.setItem("ebn_plain",plainMode?"1":"0"); applyPlain(); toast(plainMode?"PPT 改輸出樸素版（PDF 本來就樸素）":"PPT 改輸出科技版"); });
+applyPlain();
 
 document.getElementById("export-pptx").addEventListener("click",()=>{
   if(!LAST){ toast("請先產生報告"); return; }
@@ -555,7 +594,8 @@ document.getElementById("export-pptx").addEventListener("click",()=>{
   const d=LAST, group=d.group||val("f-group")||"";
   const p=new PptxGenJS();
   p.author=group||"EBN"; p.company=group; p.title=d.title||"實證報告";
-  const BG="0A0E16", HEAD="EAF2FF", TXT="C9D4E3", CY="3DD6D0", MUT="5E6E85";
+  const PL=plainMode;
+  const BG=PL?"FFFFFF":"0A0E16", HEAD=PL?"1A1A1A":"EAF2FF", TXT=PL?"333333":"C9D4E3", CY=PL?"444444":"3DD6D0", MUT=PL?"888888":"5E6E85";
   const wm=s=>{ if(group) s.addText(group+" 實證報告",{x:0.3,y:5.05,w:9.4,h:0.3,fontSize:9,color:MUT,align:"left"}); };
   const note=t=>t||"";
   function slide(){ const s=p.addSlide(); s.background={color:BG}; wm(s); return s; }
