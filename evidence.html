@@ -582,8 +582,18 @@ document.getElementById("render-btn").addEventListener("click",()=>{
 /* ===================== 組員：匯出我的部分 ===================== */
 document.getElementById("export-part").addEventListener("click",()=>{
   if(!LAST){ toast("請先產生報告"); return; }
-  const pack={ by: val("f-group")||"組員", studyType:LAST.studyType, title:LAST.title, appraisal:LAST.appraisal, speech:LAST.speech };
-  document.getElementById("part-out").value=JSON.stringify(pack,null,2);
+  const d=LAST, L=[];
+  const head=[val("f-group"),d.title].filter(Boolean).join("｜"); if(head) L.push(head);
+  L.push("研究類型："+(d.studyType==="SR"?"系統回顧/Meta":"RCT"));
+  L.push("——我負責的題目——");
+  (d.appraisal||[]).slice().sort((a,b)=>(+a.no)-(+b.no)).forEach(it=>{
+    L.push("");
+    L.push("Q"+it.no+"　"+(it.question||""));
+    L.push("答案："+(it.answer||""));
+    if(it.rationale) L.push("理由："+it.rationale);
+    if(it.quote) L.push("原文："+it.quote);
+  });
+  document.getElementById("part-out").value=L.join("\n");
   document.getElementById("part-box").style.display="block";
 });
 document.getElementById("copy-part").addEventListener("click",()=>copy(val("part-out"),"已複製，把這段傳給主講者"));
