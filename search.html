@@ -1,0 +1,329 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>臨床快查</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#0A0E16; --panel:#111A28; --panel2:#0D1420; --line:#1E2A3D;
+    --txt:#C9D4E3; --txt2:#9FB0C7; --muted:#5E6E85;
+    --cyan:#3DD6D0; --blue:#6FB4FF; --blue-d:#4F9DFF; --violet:#B79BFF;
+    --green:#2ED5A0; --red:#FF7A7A; --amber:#FFB13D; --head:#EAF2FF;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:'Inter',system-ui,'Noto Sans TC',sans-serif;background:var(--bg);color:var(--txt);min-height:100vh;
+    background-image:radial-gradient(circle at 18% -5%,rgba(63,214,208,.06),transparent 38%),radial-gradient(circle at 92% 22%,rgba(79,157,255,.07),transparent 42%);font-size:15px;line-height:1.65}
+  .mono{font-family:'JetBrains Mono',monospace}
+
+  #gate{position:fixed;inset:0;z-index:1000;background:var(--bg);display:flex;align-items:center;justify-content:center;flex-direction:column;padding:24px;background-image:radial-gradient(circle at 50% 30%,rgba(63,214,208,.08),transparent 45%)}
+  #gate .lock{font-size:40px;margin-bottom:14px}
+  #gate h2{font-size:18px;color:var(--head);font-weight:700;margin-bottom:6px}
+  #gate p{font-size:13px;color:var(--muted);margin-bottom:20px}
+  #gate input{width:240px;max-width:80vw;text-align:center;background:var(--panel);border:1px solid var(--line);border-radius:10px;color:var(--head);padding:.7rem 1rem;font-size:16px;letter-spacing:.15em;font-family:'JetBrains Mono',monospace}
+  #gate input:focus{outline:none;border-color:var(--cyan);box-shadow:0 0 0 3px rgba(63,214,208,.15)}
+  #gate button{margin-top:12px;width:240px;max-width:80vw;background:var(--cyan);color:#06231f;border:none;border-radius:10px;padding:.7rem;font-weight:700;font-size:15px;cursor:pointer;font-family:inherit}
+  #gate .err{color:var(--red);font-size:12px;height:16px;margin-top:10px}
+  body.locked{overflow:hidden} #app{display:none}
+  body.unlocked #app{display:block} body.unlocked #gate{display:none}
+
+  .topbar{display:flex;align-items:center;gap:10px;max-width:720px;margin:0 auto;padding:16px 16px 0}
+  .topbar .logo{width:36px;height:36px;border-radius:9px;display:flex;align-items:center;justify-content:center;font-size:18px;background:rgba(63,214,208,.12);color:var(--cyan);border:1px solid rgba(63,214,208,.35);box-shadow:0 0 16px rgba(63,214,208,.18)}
+  .topbar .ttl{font-size:16px;font-weight:700;color:var(--head)} .topbar .sub{font-size:11px;color:var(--muted)}
+  .topbar .link{margin-left:auto;font-size:11px;padding:6px 11px;border-radius:20px;background:#0F1622;color:var(--blue);border:1px solid var(--line);text-decoration:none}
+
+  main{max-width:720px;margin:0 auto;padding:14px 16px 70px}
+  .label{font-size:11px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin:20px 0 9px;display:flex;align-items:center;gap:8px}
+  .label .n{width:20px;height:20px;border-radius:6px;background:rgba(79,157,255,.14);color:var(--blue);display:flex;align-items:center;justify-content:center;font-size:11px}
+  .card{background:linear-gradient(180deg,var(--panel),var(--panel2));border:1px solid var(--line);border-radius:14px;padding:16px}
+
+  textarea.txt,input.txt,select.txt{width:100%;background:#0C131F;border:1px solid var(--line);border-radius:9px;color:var(--head);padding:.6rem .75rem;font-family:inherit;font-size:14px;resize:vertical}
+  textarea.txt:focus,input.txt:focus,select.txt:focus{outline:none;border-color:var(--blue-d);box-shadow:0 0 0 3px rgba(79,157,255,.12)}
+  .hint{font-size:12px;color:var(--muted);margin-top:6px;line-height:1.7}
+
+  .btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;border:none;border-radius:10px;padding:.75rem 1.1rem;font-family:inherit;font-size:14px;font-weight:600;cursor:pointer;transition:.15s}
+  .btn-primary{background:var(--cyan);color:#06231f;width:100%}
+  .btn-ghost{background:#0F1622;border:1px solid var(--line);color:var(--txt2)}
+  .btn-sm{padding:.45rem .7rem;font-size:12.5px;font-weight:500;border-radius:8px}
+  .btn-row{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
+
+  .filters{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
+  .filters > div{flex:1;min-width:130px}
+  .filters label{display:block;font-size:11px;color:var(--muted);margin-bottom:4px}
+  .chk{display:flex;align-items:center;gap:7px;font-size:13px;color:var(--txt2);margin-top:10px;cursor:pointer;user-select:none}
+  .chk input{width:16px;height:16px;accent-color:var(--cyan)}
+
+  .prompt-area{width:100%;min-height:150px;background:#0A111C;border:1px solid var(--line);border-radius:10px;padding:.85rem;font-family:'JetBrains Mono',monospace;font-size:12px;line-height:1.6;color:var(--txt2);white-space:pre-wrap;resize:vertical}
+  .ai-links{display:flex;gap:8px;margin-top:10px;flex-wrap:wrap}.ai-links a{flex:1;min-width:130px;text-align:center;text-decoration:none}
+
+  #status{font-size:13px;color:var(--muted);margin:14px 0 6px;min-height:18px}
+  .res{border:1px solid var(--line);border-radius:12px;padding:14px;margin-bottom:10px;background:#0F18260f}
+  .res-top{display:flex;gap:10px;align-items:flex-start}
+  .res-chk{margin-top:3px;width:17px;height:17px;accent-color:var(--cyan);flex-shrink:0}
+  .res-title{flex:1;font-size:15px;font-weight:600;color:var(--head);line-height:1.45}
+  .res-meta{font-size:12px;color:var(--muted);margin:6px 0 0 27px;line-height:1.6}
+  .res-badges{display:flex;gap:6px;flex-wrap:wrap;margin:8px 0 0 27px}
+  .b{font-size:10.5px;font-weight:600;padding:2px 8px;border-radius:20px}
+  .b.sr{background:rgba(63,214,208,.14);color:var(--cyan);border:1px solid rgba(63,214,208,.3)}
+  .b.rct{background:rgba(79,157,255,.14);color:var(--blue);border:1px solid rgba(79,157,255,.3)}
+  .b.oa{background:rgba(46,213,160,.14);color:var(--green);border:1px solid rgba(46,213,160,.3)}
+  .b.coch{background:rgba(183,155,255,.14);color:var(--violet);border:1px solid rgba(183,155,255,.3)}
+  .res-abs{font-size:13px;color:var(--txt2);line-height:1.7;margin:10px 0 0 27px;max-height:84px;overflow:hidden;position:relative;transition:max-height .25s}
+  .res-abs.open{max-height:1500px}
+  .res-abs::after{content:'';position:absolute;left:0;right:0;bottom:0;height:30px;background:linear-gradient(transparent,#0c1320)}
+  .res-abs.open::after{display:none}
+  .res-more{font-size:12px;color:var(--blue);cursor:pointer;margin:4px 0 0 27px;user-select:none}
+  .res-actions{display:flex;gap:7px;flex-wrap:wrap;margin:10px 0 0 27px}
+  .res-actions a,.res-actions button{text-decoration:none}
+
+  .fallback{background:rgba(255,177,61,.08);border:1px solid rgba(255,177,61,.35);border-radius:10px;padding:14px;margin-top:12px;display:none}
+  .fallback.show{display:block}
+  .fallback p{font-size:13px;color:var(--amber);line-height:1.7;margin-bottom:10px}
+
+  .toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(20px);background:#1A2433;color:#fff;border:1px solid var(--line);padding:.7rem 1.2rem;border-radius:30px;font-size:13px;opacity:0;pointer-events:none;transition:.25s;z-index:1100}
+  .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+  footer{text-align:center;padding:24px 16px 40px;font-size:11.5px;color:var(--muted);line-height:1.8;max-width:720px;margin:0 auto}
+</style>
+</head>
+<body class="locked">
+
+<div id="gate">
+  <div class="lock">🔒</div>
+  <h2>臨床快查</h2>
+  <p>請輸入通行密碼</p>
+  <input id="gate-pw" type="password" autocomplete="off" placeholder="••••••">
+  <button id="gate-go">進入</button>
+  <div class="err" id="gate-err"></div>
+</div>
+
+<div id="app">
+  <div class="topbar">
+    <div class="logo">🔎</div>
+    <div><div class="ttl">臨床快查</div><div class="sub mono">Evidence Quick-Search</div></div>
+    <a class="link" href="evidence.html">→ 評讀工具</a>
+  </div>
+
+  <main>
+    <!-- ① 中文描述 → 關鍵字 -->
+    <div class="label"><span class="n">1</span>不會下關鍵字？用中文描述你的問題</div>
+    <div class="card">
+      <textarea class="txt" id="q-desc" rows="3" placeholder="例：糖尿病長期洗腎病人，洗腎中嚴重低血壓、水脫不掉，有什麼處理方式？"></textarea>
+      <div class="btn-row"><button class="btn btn-ghost" id="q-prompt-btn" style="flex:1">🧠 幫我想英文關鍵字＋查詢</button></div>
+      <div id="q-prompt-box" style="display:none;margin-top:10px">
+        <textarea class="prompt-area" id="q-prompt-out" readonly></textarea>
+        <div class="btn-row"><button class="btn btn-ghost" id="copy-qprompt">📋 複製，貼給 AI</button></div>
+        <div class="ai-links">
+          <a class="btn btn-ghost btn-sm" href="https://chatgpt.com/" target="_blank" rel="noopener">↗ ChatGPT</a>
+          <a class="btn btn-ghost btn-sm" href="https://claude.ai/new" target="_blank" rel="noopener">↗ Claude</a>
+        </div>
+        <div class="hint">AI 會回你一行英文查詢字串，把它貼到下面第②步的框框裡按搜尋。</div>
+      </div>
+    </div>
+
+    <!-- ② 搜尋 -->
+    <div class="label"><span class="n">2</span>搜尋（標題＋摘要）</div>
+    <div class="card">
+      <input class="txt" id="q-query" placeholder="英文關鍵字，例：intradialytic hypotension ultrafiltration">
+      <div class="filters">
+        <div>
+          <label>研究類型</label>
+          <select class="txt" id="f-type"><option value="">不限</option><option value="SR">系統回顧 / Meta</option><option value="RCT">RCT</option></select>
+        </div>
+        <div>
+          <label>年份</label>
+          <select class="txt" id="f-years"><option value="">不限</option><option value="5">近 5 年</option><option value="10">近 10 年</option></select>
+        </div>
+      </div>
+      <label class="chk"><input type="checkbox" id="f-coch"> 只看 Cochrane 系統回顧（實證金標準）</label>
+      <div class="btn-row"><button class="btn btn-primary" id="search-btn">🔎 搜尋</button></div>
+      <div class="hint">資料來源：Europe PMC（涵蓋 PubMed＋更多，含 Cochrane）。只抓<b>標題＋摘要</b>，全文點下方連結、用<b>醫院網路</b>開即可看。</div>
+    </div>
+
+    <div id="status"></div>
+
+    <div class="fallback" id="fallback">
+      <p>⚠ 直接搜尋被擋住了（可能是網路或防火牆）。沒關係，幫你一鍵開好「已填關鍵字」的搜尋頁：</p>
+      <div class="btn-row">
+        <a class="btn btn-ghost btn-sm" id="fb-pubmed" target="_blank" rel="noopener">↗ PubMed</a>
+        <a class="btn btn-ghost btn-sm" id="fb-epmc" target="_blank" rel="noopener">↗ Europe PMC</a>
+        <a class="btn btn-ghost btn-sm" id="fb-coch" target="_blank" rel="noopener">↗ Cochrane</a>
+      </div>
+    </div>
+
+    <div id="results"></div>
+
+    <!-- ③ AI 綜合 -->
+    <div id="synth-wrap" style="display:none">
+      <div class="label"><span class="n">3</span>請 AI 綜合（勾選文獻後）</div>
+      <div class="card">
+        <button class="btn btn-ghost" id="synth-btn" style="width:100%">🧪 用勾選的摘要，產生「實證綜合」提示詞</button>
+        <div id="synth-box" style="display:none;margin-top:10px">
+          <textarea class="prompt-area" id="synth-out" readonly></textarea>
+          <div class="btn-row"><button class="btn btn-ghost" id="copy-synth">📋 複製，貼給 AI</button></div>
+          <div class="hint">AI 只會根據你勾的這幾篇摘要回答、並標出處，不會憑空編造。最終臨床判斷仍由醫師／你決定。</div>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <footer>臨床快查 · 私人研究用 · 只抓標題與摘要，全文請依各資料庫授權於醫院網路取得。</footer>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+/* ===== 密碼（與評讀工具獨立，可自行設不同密碼）。目前 = ebn2026 ===== */
+const PW_REV="6202nbe";
+function pwOk(v){ return (v||"").split("").reverse().join("")===PW_REV; }
+function unlock(){ document.body.classList.remove("locked"); document.body.classList.add("unlocked"); }
+if(sessionStorage.getItem("ebnq_unlocked")==="1") unlock();
+function tryUnlock(){ const v=document.getElementById("gate-pw").value;
+  if(pwOk(v)){ sessionStorage.setItem("ebnq_unlocked","1"); unlock(); }
+  else{ document.getElementById("gate-err").textContent="密碼不對"; document.getElementById("gate-pw").value=""; } }
+document.getElementById("gate-go").addEventListener("click",tryUnlock);
+document.getElementById("gate-pw").addEventListener("keydown",e=>{ if(e.key==="Enter") tryUnlock(); });
+
+/* ===== 小工具 ===== */
+function val(id){ return document.getElementById(id).value.trim(); }
+function esc(t){ return String(t==null?"":t).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;"); }
+function toast(m){ const t=document.getElementById("toast"); t.textContent=m; t.classList.add("show"); clearTimeout(t._t); t._t=setTimeout(()=>t.classList.remove("show"),2400); }
+function copy(text,ok){ if(navigator.clipboard&&navigator.clipboard.writeText){ navigator.clipboard.writeText(text).then(()=>toast(ok)).catch(()=>fb(text,ok)); } else fb(text,ok); }
+function fb(text,ok){ const ta=document.createElement("textarea"); ta.value=text; ta.style.position="fixed"; ta.style.opacity="0"; document.body.appendChild(ta); ta.select(); try{document.execCommand("copy");toast(ok);}catch(e){toast("複製失敗");} document.body.removeChild(ta); }
+
+/* ===== ① 中文 → 查詢字串提示詞 ===== */
+document.getElementById("q-prompt-btn").addEventListener("click",()=>{
+  const desc=val("q-desc"); if(!desc){ toast("先用中文描述你的問題"); return; }
+  const L=[];
+  L.push("你是醫學文獻檢索專家。我會用中文描述一個臨床問題，請幫我：");
+  L.push("1. 用一句話點出核心 PICO（對象/介入/比較/結果）。");
+  L.push("2. 給我一行可直接貼進 PubMed / Europe PMC 的英文查詢字串（用 AND/OR、片語加引號、納入同義詞與 MeSH 概念），以精準命中相關文獻。");
+  L.push("只要那一行查詢字串用 `QUERY:` 開頭單獨一行，方便我複製。");
+  L.push("");
+  L.push("我的臨床問題：");
+  L.push(desc);
+  document.getElementById("q-prompt-out").value=L.join("\n");
+  document.getElementById("q-prompt-box").style.display="block";
+});
+document.getElementById("copy-qprompt").addEventListener("click",()=>copy(val("q-prompt-out"),"已複製，貼給 AI 拿查詢字串"));
+
+/* ===== ② 搜尋（Europe PMC API） ===== */
+const EPMC="https://www.ebi.ac.uk/europepmc/webservices/rest/search";
+function buildQuery(){
+  let q=val("q-query"); if(!q) return null;
+  const t=document.getElementById("f-type").value;
+  if(t==="SR") q+=' AND (PUB_TYPE:"systematic review" OR PUB_TYPE:"meta-analysis")';
+  else if(t==="RCT") q+=' AND PUB_TYPE:"Randomized Controlled Trial"';
+  if(document.getElementById("f-coch").checked) q+=' AND SRC:CDSR';
+  const y=document.getElementById("f-years").value;
+  if(y){ const cur=new Date().getFullYear(); q+=` AND PUB_YEAR:[${cur-(+y)+1} TO ${cur}]`; }
+  return q;
+}
+document.getElementById("search-btn").addEventListener("click",doSearch);
+document.getElementById("q-query").addEventListener("keydown",e=>{ if(e.key==="Enter") doSearch(); });
+
+let RESULTS=[];
+async function doSearch(){
+  const q=buildQuery();
+  document.getElementById("fallback").classList.remove("show");
+  if(!q){ toast("請先輸入查詢關鍵字"); return; }
+  document.getElementById("status").textContent="搜尋中⋯⋯";
+  document.getElementById("results").innerHTML="";
+  document.getElementById("synth-wrap").style.display="none";
+  try{
+    const url=`${EPMC}?query=${encodeURIComponent(q)}&format=json&resultType=core&pageSize=25&sort=`;
+    const r=await fetch(url);
+    if(!r.ok) throw new Error("HTTP "+r.status);
+    const data=await r.json();
+    RESULTS=(data.resultList&&data.resultList.result)||[];
+    if(!RESULTS.length){ document.getElementById("status").textContent="沒有結果，換個關鍵字試試。"; return; }
+    document.getElementById("status").textContent=`找到約 ${data.hitCount} 篇，顯示前 ${RESULTS.length} 篇（標題＋摘要）：`;
+    renderResults();
+    document.getElementById("synth-wrap").style.display="block";
+  }catch(err){
+    document.getElementById("status").textContent="";
+    showFallback(q);
+  }
+}
+function showFallback(q){
+  const fb=document.getElementById("fallback");
+  document.getElementById("fb-pubmed").href="https://pubmed.ncbi.nlm.nih.gov/?term="+encodeURIComponent(val("q-query"));
+  document.getElementById("fb-epmc").href="https://europepmc.org/search?query="+encodeURIComponent(q);
+  document.getElementById("fb-coch").href="https://www.cochranelibrary.com/search?q="+encodeURIComponent(val("q-query"));
+  fb.classList.add("show");
+}
+function typeBadge(r){
+  const t=(r.pubTypeList&&r.pubTypeList.pubType||[]).join(" ").toLowerCase();
+  if(r.source==="CDSR"||/cochrane/i.test(r.journalTitle||"")) return '<span class="b coch">Cochrane</span>';
+  if(/systematic review|meta-analysis/.test(t)) return '<span class="b sr">系統回顧/Meta</span>';
+  if(/randomized controlled trial/.test(t)) return '<span class="b rct">RCT</span>';
+  return "";
+}
+function renderResults(){
+  const box=document.getElementById("results");
+  box.innerHTML=RESULTS.map((r,i)=>{
+    const pmid=r.pmid||"", doi=r.doi||"";
+    const full = doi?("https://doi.org/"+doi) : pmid?("https://pubmed.ncbi.nlm.nih.gov/"+pmid+"/") : (r.fullTextUrlList&&"#");
+    const meta=[r.authorString,r.journalTitle,r.pubYear].filter(Boolean).join(" · ");
+    const oa = r.isOpenAccess==="Y" ? '<span class="b oa">免費全文</span>' : "";
+    const abs = r.abstractText ? esc(r.abstractText) : "（這篇沒有提供摘要）";
+    return `<div class="res">
+      <div class="res-top">
+        <input type="checkbox" class="res-chk" data-i="${i}">
+        <div class="res-title">${esc(r.title||"(無標題)")}</div>
+      </div>
+      <div class="res-meta">${esc(meta)}</div>
+      <div class="res-badges">${typeBadge(r)}${oa}</div>
+      <div class="res-abs" id="abs-${i}">${abs}</div>
+      <div class="res-more" data-i="${i}">展開摘要 ▾</div>
+      <div class="res-actions">
+        ${pmid?`<a class="btn btn-ghost btn-sm" href="https://pubmed.ncbi.nlm.nih.gov/${pmid}/" target="_blank" rel="noopener">PubMed</a>`:""}
+        ${full&&full!=="#"?`<a class="btn btn-ghost btn-sm" href="${full}" target="_blank" rel="noopener">🔓 全文（醫院網路）</a>`:""}
+        <button class="btn btn-ghost btn-sm" data-eval="${i}">📋 帶去評讀</button>
+      </div>
+    </div>`;
+  }).join("");
+  box.querySelectorAll(".res-more").forEach(el=>el.addEventListener("click",()=>{
+    const a=document.getElementById("abs-"+el.dataset.i); a.classList.toggle("open");
+    el.textContent=a.classList.contains("open")?"收合摘要 ▴":"展開摘要 ▾";
+  }));
+  box.querySelectorAll("[data-eval]").forEach(b=>b.addEventListener("click",()=>toEval(RESULTS[+b.dataset.eval])));
+}
+/* 帶去評讀：寫進共用 localStorage，評讀工具開啟時會自動帶入 */
+function toEval(r){
+  localStorage.setItem("ebn_f-title", r.title||"");
+  localStorage.setItem("ebn_f-author", (r.authorString||"").split(",")[0]+" et al.");
+  localStorage.setItem("ebn_f-journal", [r.journalTitle,r.pubYear].filter(Boolean).join(", "));
+  localStorage.setItem("ebn_f-text", r.abstractText||"");
+  toast("已帶入，前往評讀工具⋯⋯");
+  setTimeout(()=>location.href="evidence.html",700);
+}
+
+/* ===== ③ 綜合提示詞 ===== */
+document.getElementById("synth-btn").addEventListener("click",()=>{
+  const picks=[...document.querySelectorAll(".res-chk:checked")].map(c=>RESULTS[+c.dataset.i]);
+  if(!picks.length){ toast("請先勾選要綜合的文獻"); return; }
+  const L=[];
+  L.push("你是實證醫學專家。以下是我用 PubMed/Europe PMC 找到的數篇文獻（標題＋摘要）。");
+  L.push("請『只根據這些摘要的內容』，用繁體中文回答我的臨床問題，做到：");
+  L.push("1. 綜合這幾篇的證據，給出實證上的處理方向（條列）。");
+  L.push("2. 每一個論點後面標出處（用第幾篇／作者年份）。");
+  L.push("3. 明確指出證據強弱、以及彼此是否一致／有無分歧。");
+  L.push("4. 不要加入摘要裡沒有的資訊，找不到就說「這些摘要未提及」。最終臨床判斷由醫師決定。");
+  if(val("q-desc")){ L.push(""); L.push("我的臨床問題："+val("q-desc")); }
+  L.push("");
+  L.push("文獻：");
+  picks.forEach((r,i)=>{ L.push(`【第 ${i+1} 篇】${r.title||""}（${[r.authorString,r.pubYear].filter(Boolean).join(", ")}）`);
+    L.push("摘要："+(r.abstractText||"（無摘要）")); L.push(""); });
+  document.getElementById("synth-out").value=L.join("\n");
+  document.getElementById("synth-box").style.display="block";
+});
+document.getElementById("copy-synth").addEventListener("click",()=>copy(val("synth-out"),"已複製，貼給 AI 做實證綜合"));
+
+/* 暫存中文描述與查詢 */
+["q-desc","q-query"].forEach(id=>{ const el=document.getElementById(id);
+  const s=localStorage.getItem("ebnq_"+id); if(s)el.value=s;
+  el.addEventListener("input",()=>localStorage.setItem("ebnq_"+id,el.value)); });
+</script>
+</body>
+</html>
