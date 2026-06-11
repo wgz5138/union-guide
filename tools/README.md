@@ -33,6 +33,18 @@ cp tools/statusline/statusline-command.sh ~/.claude/
 
 需求：`jq`、`bash ≥ 4`、支援 truecolor 的終端機。
 
+## 🩺 體檢腳本
+
+每台機器裝好後（或之後想確認狀態），跑一次體檢（純檢查、不改任何東西）：
+
+```bash
+bash tools/healthcheck.sh
+```
+
+它會檢查：相依工具（jq/fzf/python3/git/claude）、PATH、ccc 腳本、statusline
+（含實跑煙霧測試）、Claude 帳號槽與鏡像/登入狀態，最後給 ✅/⚠️/❌ 總結。
+相容 macOS 內建 bash 3.2 / Linux bash 5 / WSL。
+
 ## 整合時修正的 bug
 
 匯入時做了測試（Linux/bash 5.2），修掉以下問題：
