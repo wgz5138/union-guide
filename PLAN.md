@@ -42,7 +42,7 @@
 ## 三、第二批 — 「臨床快查」模式 → 已建立 `search.html`（獨立檔）
 
 **決策：與評讀工具「分開」**（使用者同意）。理由：評讀工具遲早要分享給組員，合在一起會連帶暴露私人臨床快查。
-- `search.html` 獨立、獨立 sessionStorage 鎖（`ebnq_unlocked`）、可自設不同密碼（目前同預設 ebn2026）。
+- `search.html` 獨立、獨立 sessionStorage 鎖、進場密碼 **qqq11111111（3q＋8個一）**，與評讀工具不同。
 - 中間留橋：搜尋結果「帶去評讀」→ 寫入共用 localStorage（`ebn_f-title/f-author/f-journal/f-text`）→ 轉跳 `evidence.html` 自動帶入。
 
 ### 已實作
@@ -83,6 +83,24 @@
 
 ---
 
+## 三之二、後續加入並完成的功能（皆已上線於 main / GitHub Pages）
+
+**評讀工具 `evidence.html`：**
+- **❓操作手冊**：右上「❓怎麼用」，首次自動開（`ebn_seen_manual`）。小白五步驟、論文放哪、交報告/上台、純好奇就直接問 AI、免費vs付費。
+- **類型「🤖 我不確定」(UNK)**：不必懂 RCT/Meta，產生提示詞時請 AI 先判斷類型、用對的表；報告含 `typeNote`（`buildPromptUnknown()` / `bothChecklists()`）。
+- **匯出我的部分**：改為**純文字**（是/否＋理由），方便組員直接貼 LINE 傳組長（不再是 JSON）。
+- **交報告樸素版**：`@media print` 一律白底黑字；PPT 配色按鈕一鍵切科技/樸素（`plainMode`）。
+- **⚡ 付費一鍵**：貼自己的 Anthropic API 金鑰（`localStorage ebn_api-key`）＋拖 PDF（document base64 直送）→ 瀏覽器直連 Claude API（header `anthropic-dangerous-direct-browser-access`）→ 自動出報告（`max_tokens:16000`）。含「🧮 先估價」(`count_tokens`，免費)＋生成後顯示**實際花費**（用 `usage` 換算 NT$，匯率 31.5，`PRICE` 表）。模型 Sonnet/Haiku/Opus 可選。免費複製貼上並存。
+- **📲 換裝置接力**：`collectState()/applyState()`，一鍵複製進度（填的內容＋AI 回覆，**不含金鑰/密碼**）→ 另一台貼上續用、有 AI 回覆自動出報告。解決 localStorage 不跨裝置。
+
+**臨床快查 `search.html`：**
+- **❓操作手冊**（`ebnq_seen_manual`，首次自動開）、上方按鈕與評讀工具一致。
+- **⚡ 付費一鍵**：①「直接生成查詢」(呼叫 Claude→填 `q-query`→自動 `doSearch()`)、③「直接綜合」(呼叫 Claude→結果顯示於 `#synth-result`)。
+
+**共通（金鑰共用）：** 兩工具同源（github.io/union-guide），故 **API 金鑰共用同一把**（`ebn_api-key`/`ebn_api-model`），貼一次兩邊用、同一 Anthropic 帳戶扣款。金鑰只存本機、不外流、不入版本庫。成本：評讀一篇約 NT$1~10、查詢/綜合約 NT$0.1~0.5；額度約一年過期；偶爾用建議免費版。
+
+---
+
 ## 四、貫穿全案的關鍵決策
 
 - **風格**：冷感科技風（深色、青藍、JetBrains Mono）。刻意與使用者本人風格（工會頁那種紅金襯線溫暖風）**相反**，讓人看不出是她做的。
@@ -95,6 +113,7 @@
 ## 五、檔案清單
 - `evidence.html` — 評讀工具（第一批，冷感科技風，含交報告樸素版）
 - `search.html` — 臨床快查（第二批，獨立檔，Europe PMC live 搜尋）
+- `使用小抄.md` — 給使用者本人的小抄（網址/密碼/用法/費用/趕人/給未來 AI 的開場白）
 - `demo-*.html` — 風格樣板（選色用，已完成任務，可留存）
 - `index.html` — 高雄榮總護理工會加班費頁（**與本工具無關**，另一個專案）
 - `PLAN.md` — 本檔
