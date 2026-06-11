@@ -1,30 +1,42 @@
 #!/usr/bin/env bash
-# ccc-resume2 — 跨 Claude 帳號 resume 對話（雙向）
+# ccc-resume2 — 跨 Claude 帳號 resume 對話（支援任意帳號數：①②③…）
 # 用途：某帳號額度爆了，把某串對話搬到另一帳號用它的額度接著做
 # Usage: ccc-resume2 [path]   (path 預設當前目錄)
 # 依賴：claude CLI、fzf、python3
 set -euo pipefail
 
 TARGET="${1:-.}"
-A1="$HOME/.claude"
-A2="${CLAUDE_CONFIG_DIR_2:-$HOME/.claude-2}"
+MAX_ACCT="${CCC_MAX_ACCOUNTS:-9}"
 BACK="← 上一頁"
+
+acct_dir() { [ "$1" = 1 ] && echo "$HOME/.claude" || echo "$HOME/.claude-$1"; }
+
+# 列出已存在的 Claude 帳號（1 一定算，2+ 看目錄）
+accounts=()
+for n in $(seq 1 "$MAX_ACCT"); do
+  { [ "$n" = 1 ] || [ -d "$(acct_dir "$n")" ]; } && accounts+=("$n")
+done
+[ "${#accounts[@]}" -ge 2 ] || { echo "❌ 至少要 2 個 Claude 帳號才能接力（目前 ${#accounts[@]} 個）。見 SKILL.md。"; exit 1; }
+
+# 組所有方向：「用 (to) 額度 ← resume (from) 的對話」
+directions=()
+for to in "${accounts[@]}"; do
+  for from in "${accounts[@]}"; do
+    [ "$from" != "$to" ] && directions+=("用 ($to) 額度  ←  resume ($from) 的對話")
+  done
+done
 
 FZF=(fzf --height=~15 --border=none --pointer="▌"
      --color="pointer:#ff79c6,hl:#bd93f9,hl+:#ff79c6")
 
 while true; do
   # ── 1. 選方向 ──────────────────────────────────────────────────────────────
-  dir=$(printf '%s\n' \
-        "用 (2) 額度  ←  resume (1) 的對話" \
-        "用 (1) 額度  ←  resume (2) 的對話" \
-        | "${FZF[@]}" --no-info --prompt="接力方向: " 2>/dev/null) || exit 130
+  dir=$(printf '%s\n' "${directions[@]}" | "${FZF[@]}" --no-info --prompt="接力方向: " 2>/dev/null) || exit 130
 
-  case "$dir" in
-    *"(2) 額度"*) SRC="$A1"; DST="$A2"; src_n=1; dst_n=2 ;;
-    *"(1) 額度"*) SRC="$A2"; DST="$A1"; src_n=2; dst_n=1 ;;
-    *) exit 0 ;;
-  esac
+  dst_n=$(printf '%s' "$dir" | sed -n 's/^用 (\([0-9][0-9]*\)) 額度.*/\1/p')
+  src_n=$(printf '%s' "$dir" | sed -n 's/.*resume (\([0-9][0-9]*\)) 的對話/\1/p')
+  [ -n "$src_n" ] && [ -n "$dst_n" ] || exit 0
+  SRC=$(acct_dir "$src_n"); DST=$(acct_dir "$dst_n")
 
   # ── 2. 算出 project 目錄（cwd 絕對路徑，非英數字 → "-"）─────────────────────
   abs=$(cd "$TARGET" && pwd)
@@ -37,7 +49,7 @@ while true; do
   # ── 3. 挑要 resume 的對話（預覽第一句 user 訊息）─────────────────────────────
   sel=$( { echo -e "\t$BACK"; ls -t "$src_dir"/*.jsonl 2>/dev/null | while read -r f; do
           id=$(basename "$f" .jsonl)
-          ts=$(date -r "$f" "+%m/%d %H:%M")
+          ts=$(date -r "$f" "+%m/%d %H:%M" 2>/dev/null || echo "")
           first=$(grep -m1 '"role":"user"' "$f" 2>/dev/null \
                   | python3 -c "import sys,json
 try:
