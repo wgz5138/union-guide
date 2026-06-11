@@ -87,13 +87,23 @@ color_rem() {
   fi
 }
 
-# --- 帳號偵測（由 CLAUDE_CONFIG_DIR 判斷）---
+# --- 帳號編號 → 圓圈數字徽章 ---
+badge_for() {
+  case "$1" in
+    1) echo "①";; 2) echo "②";; 3) echo "③";; 4) echo "④";; 5) echo "⑤";;
+    6) echo "⑥";; 7) echo "⑦";; 8) echo "⑧";; 9) echo "⑨";; *) echo "($1)";;
+  esac
+}
+
+# --- 帳號偵測（由 CLAUDE_CONFIG_DIR 判斷，支援 ~/.claude-N）---
 ccfg="${CLAUDE_CONFIG_DIR:-$HOME/.claude}"
-case "$ccfg" in
-  "$HOME/.claude")   acct_n="1"; acct_badge="①" ;;
-  "$HOME/.claude-2") acct_n="2"; acct_badge="②" ;;
-  *)                 acct_n="?"; acct_badge="$(basename "$ccfg")" ;;
-esac
+if [ "$ccfg" = "$HOME/.claude" ]; then
+  acct_n="1"
+else
+  acct_n="${ccfg##*/.claude-}"
+  [[ "$acct_n" =~ ^[0-9]+$ ]] || acct_n="?"
+fi
+if [ "$acct_n" = "?" ]; then acct_badge="$(basename "$ccfg")"; else acct_badge="$(badge_for "$acct_n")"; fi
 
 # --- 寫入本帳號 5h/7d 用量到共用快取（供另一帳號的 status line 讀）---
 qdir="$HOME/.claude-quota-cache"
@@ -120,10 +130,19 @@ time_bar() {
   printf '%s' "$b"
 }
 
-# --- 雙帳號 5h+7d 純數字並排（含 reset 時間）---
+# --- 多帳號 5h+7d 純數字並排（含 reset 時間）---
 now_epoch=$(date +%s)
+# 帳號清單：① (~/.claude) 一定有，加上所有 ~/.claude-N 目錄，再併入目前帳號，數字排序去重
+acct_list=$( {
+  echo 1
+  for d in "$HOME"/.claude-*; do
+    [ -d "$d" ] || continue
+    m="${d##*/.claude-}"; [[ "$m" =~ ^[0-9]+$ ]] && echo "$m"
+  done
+  [[ "$acct_n" =~ ^[0-9]+$ ]] && echo "$acct_n"
+} | sort -n | uniq )
 acct_block=""
-for n in 1 2; do
+for n in $acct_list; do
   if [ "$n" = "$acct_n" ]; then
     a_five="$five_pct"; a_week="$week_pct"
     a_reset="$five_reset"; a_wreset="$week_reset"; a_age=0
@@ -139,7 +158,7 @@ for n in 1 2; do
   fi
   [ -z "$a_five" ] && [ -z "$a_week" ] && continue
 
-  badge=$([ "$n" = "1" ] && echo "①" || echo "②")
+  badge=$(badge_for "$n")
   mark=""; [ "$n" = "$acct_n" ] && mark="*"
   stale=""; [ "$a_age" -gt 7200 ] && [ "$n" != "$acct_n" ] && stale="$DIM"
   a_reset_i=$(echo "${a_reset:-0}" | awk '{printf "%d", $1}')

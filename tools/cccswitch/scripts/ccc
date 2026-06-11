@@ -1,25 +1,47 @@
 #!/usr/bin/env bash
 # ccc — 多帳號 AI agent 啟動選單（自動偵測你裝了什麼）
 # 只會顯示你電腦上實際存在的 agent。沒有的就不出現。
+# Claude 帳號支援多個：① = ~/.claude，②③… = ~/.claude-2 / ~/.claude-3 / …
 # Usage: ccc [path]
 # 依賴：fzf（必要）；claude / codex / gemini 至少一個
 set -euo pipefail
 
 TARGET="${1:-.}"
 CLAUDE_FLAGS="${CCC_CLAUDE_FLAGS:-}"                    # 自訂 flag，例如 export CCC_CLAUDE_FLAGS="--dangerously-skip-permissions"
-A2="${CLAUDE_CONFIG_DIR_2:-$HOME/.claude-2}"
 CODEX_HOMES="${CODEX_ACCOUNT_HOMES_DIR:-$HOME/.codex-homes}"
+MAX_ACCT="${CCC_MAX_ACCOUNTS:-9}"                       # 最多掃到第幾個 Claude 帳號
 AGY="/Applications/Antigravity.app/Contents/MacOS/Antigravity"
 
 has() { command -v "$1" >/dev/null 2>&1; }
 
+# 帳號編號 → 設定目錄（1 = 裸的 ~/.claude；其餘 = ~/.claude-N）
+acct_dir() { [ "$1" = 1 ] && echo "$HOME/.claude" || echo "$HOME/.claude-$1"; }
+# 帳號編號 → 圓圈數字徽章
+badge_for() {
+  case "$1" in
+    1) echo "①";; 2) echo "②";; 3) echo "③";; 4) echo "④";; 5) echo "⑤";;
+    6) echo "⑥";; 7) echo "⑦";; 8) echo "⑧";; 9) echo "⑨";; *) echo "($1)";;
+  esac
+}
+
 # ── 依「實際安裝情況」組選單 ──────────────────────────────────────────────────
 items=()
 if has claude; then
-  items+=("Claude Code (1)  · 主帳號")
-  if [ -d "$A2" ]; then items+=("Claude Code (2)  · 第二帳號")
-  else items+=("Claude Code (2)  · 未設定（見 SKILL.md）"); fi
-  [ -d "$A2" ] && items+=("Claude 接力 · 跨帳號 resume 同一場對話 (1↔2)")
+  # 列出已存在的 Claude 帳號（帳號1 一定列，2+ 看目錄存不存在）
+  claude_accounts=()
+  for n in $(seq 1 "$MAX_ACCT"); do
+    { [ "$n" = 1 ] || [ -d "$(acct_dir "$n")" ]; } && claude_accounts+=("$n")
+  done
+  for n in "${claude_accounts[@]}"; do
+    b=$(badge_for "$n")
+    [ "$n" = 1 ] && items+=("Claude Code ($n) $b · 主帳號") \
+                 || items+=("Claude Code ($n) $b · 第${n}帳號")
+  done
+  # 下一個「未設定」槽（讓你知道怎麼再加一個）
+  next=2; while [ -d "$(acct_dir "$next")" ]; do next=$((next+1)); done
+  items+=("Claude Code ($next)  · 未設定（見 SKILL.md）")
+  # 接力（2 個以上才有意義）
+  [ "${#claude_accounts[@]}" -ge 2 ] && items+=("Claude 接力 · 跨帳號 resume 同一場對話")
 fi
 if has codex; then
   if [ -d "$CODEX_HOMES" ] && compgen -G "$CODEX_HOMES/*/" >/dev/null; then
@@ -42,23 +64,25 @@ while true; do
 
   # ── 啟動 ────────────────────────────────────────────────────────────────────
   case "$sel" in
-    "Claude Code (1)"*)
-      cd "$TARGET" || exit 1
-      exec env CCC_ACCOUNT=1 ccc-watch $CLAUDE_FLAGS
-      ;;
-    Claude\ Code\ \(2\)*)
-      if [ ! -d "$A2" ]; then
-        echo "⚠  第二 Claude 帳號未設定。見 SKILL.md「Claude 模組」。"
-        continue  # 回主選單
-      fi
-      ccc-mirror-config "$A2" >/dev/null 2>&1 || true
-      cd "$TARGET" || exit 1
-      exec env CCC_ACCOUNT=2 CLAUDE_CONFIG_DIR="$A2" ccc-watch $CLAUDE_FLAGS
-      ;;
-    Claude\ 接力*)
+    "Claude 接力"*)
       ccc-resume2 "$TARGET" || true
       # ccc-resume2 成功時 exec 取代進程不會回來；Esc 退出回主選單
       continue
+      ;;
+    "Claude Code ("*)
+      n=$(printf '%s' "$sel" | sed -n 's/^Claude Code (\([0-9][0-9]*\)).*/\1/p')
+      d=$(acct_dir "$n")
+      if [ "$n" != 1 ] && [ ! -d "$d" ]; then
+        echo "⚠  第${n} Claude 帳號未設定。見 SKILL.md「Claude 模組」。"
+        continue  # 回主選單
+      fi
+      cd "$TARGET" || exit 1
+      if [ "$n" = 1 ]; then
+        exec env CCC_ACCOUNT=1 ccc-watch $CLAUDE_FLAGS
+      else
+        ccc-mirror-config "$d" >/dev/null 2>&1 || true
+        exec env CCC_ACCOUNT="$n" CLAUDE_CONFIG_DIR="$d" ccc-watch $CLAUDE_FLAGS
+      fi
       ;;
     Codex\ 接力*)
       ccc-codex-resume || true

@@ -4,8 +4,13 @@
 
 ## 📂 cccswitch/ — AI agent 多帳號無縫切換
 
-把一個會撞使用限制的帳號，變成兩個輪流用、且**同一場對話接得起來**的帳號。
+把一個會撞使用限制的帳號，變成多個輪流用、且**同一場對話接得起來**的帳號。
 支援 Claude Code 與 Codex，模組可分開裝。完整說明見 [`cccswitch/SKILL.md`](cccswitch/SKILL.md)。
+
+> **多帳號（①②③…）**：Claude 帳號 ① = `~/.claude`，②③… = `~/.claude-2`、`~/.claude-3`…
+> `ccc` 選單、跨帳號接力、狀態列徽章都會自動依「存在哪些 `~/.claude-N` 目錄」動態列出，
+> 不限 2 個。新增一個帳號槽：`mkdir ~/.claude-3 && ccc-mirror-config ~/.claude-3`，
+> 之後用該帳號登入一次即可（需付費方案；免費帳號無法使用 Claude Code）。
 
 安裝（需 `fzf`；macOS 用 `brew install fzf`，Linux 用 `sudo apt install fzf`）：
 
@@ -37,3 +42,13 @@ cp tools/statusline/statusline-command.sh ~/.claude/
 | `statusline/statusline-command.sh` | 帳號區塊的 `5h`/`7d` 百分比顯示成 `35%%`（多一個 `%`），因為字串是經 `printf '%b'` 當參數輸出，而非格式字串 | `%%` → `%` |
 | `statusline/statusline-command.sh` | 7d 重置日期在 Linux 完全不顯示：`fmt_reset_date` 的 `date -d` fallback 少了開頭的 `+`，GNU date 報錯 | 補上 `+` |
 | `cccswitch/scripts/install.sh` | 寫死 `~/.zshrc` 與 `brew`，在 Linux/bash 給錯誤指引 | 依 `$SHELL` 偵測 rc 檔、依 `uname` 給對應的 fzf 安裝指令 |
+
+## 後續強化：多帳號（①②③…）
+
+原版 `ccc` / `ccc-resume2` / statusline 只寫死支援 2 個 Claude 帳號，已改寫為**動態支援任意帳號數**：
+
+- `ccc`：依存在哪些 `~/.claude-N` 目錄動態列出帳號，並顯示下一個「未設定」槽。
+- `ccc-resume2`：接力方向自動組出所有帳號間的配對（不再只有 1↔2）。
+- `ccc-watch`：rate limit 提示改為「切換帳號接續」，交給 `ccc-resume2` 選目標。
+- `statusline-command.sh`：帳號徽章 `badge_for` 支援 ①–⑨，並排區塊掃描所有 `~/.claude-N`。
+- `ccc-mirror-config`：本來就吃任意目標目錄，無需改動。
