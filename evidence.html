@@ -64,6 +64,7 @@
   .type-opt .cs{font-size:11px;color:var(--cyan);margin-top:5px}
 
   .help{font-size:13px;color:var(--blue);cursor:pointer;margin-top:10px;user-select:none}
+  .relay-toggle{font-size:12.5px;color:var(--blue);cursor:pointer;user-select:none;margin:0 0 8px;display:inline-block}
   .help-body{display:none;margin-top:8px;background:rgba(79,157,255,.07);border:1px solid rgba(79,157,255,.25);border-radius:10px;padding:12px;font-size:13px;color:var(--txt2);line-height:1.8}
   .help-body.open{display:block}
   .help-body em{color:var(--blue);font-style:normal}
@@ -236,6 +237,15 @@
     <div class="tabs">
       <div class="tab on" data-mode="member">組員模式</div>
       <div class="tab" data-mode="leader">主講者模式</div>
+    </div>
+
+    <!-- 📲 換裝置接力 -->
+    <div class="relay-toggle" id="relay-toggle">📲 換手機／電腦接力 ▾</div>
+    <div class="card" id="relay-body" style="display:none;margin-bottom:4px">
+      <div class="hint" style="margin-top:0">電腦做一半想躺床上用手機接著？在 A 機按「複製進度」→ 傳到 LINE 給自己 → 在 B 機貼進下面框框按「接力」。<b>不含金鑰、不含密碼</b>。</div>
+      <button class="btn btn-ghost" id="relay-copy" style="width:100%;margin-top:10px">📋 複製這台的進度（拿去另一台貼）</button>
+      <textarea class="txt" id="relay-in" rows="3" placeholder="把另一台複製的進度碼整段貼這裡" style="margin-top:8px"></textarea>
+      <button class="btn btn-ghost" id="relay-apply" style="width:100%;margin-top:8px">📥 貼上進度，接力過來</button>
     </div>
 
     <!-- 文獻類型（共用） -->
@@ -533,6 +543,35 @@ document.getElementById("help-t").addEventListener("click",()=>document.getEleme
 renderType();
 
 function assignedNums(){ return [...document.querySelectorAll("#assign-chips .chip.on")].map(c=>+c.dataset.n).sort((a,b)=>a-b); }
+
+/* ===================== 📲 換裝置接力（複製進度→另一台貼上，不含金鑰/密碼） ===================== */
+function collectState(){
+  return { v:1, type:TYPE, mode:MODE, assigned:assignedNums(),
+    f:{title:val("f-title"),author:val("f-author"),journal:val("f-journal"),group:val("f-group"),context:val("f-context"),text:val("f-text"),mins:val("f-mins")},
+    ai:val("ai-resp"), imports:val("member-imports") };
+}
+function applyState(s){
+  if(s.type && CASP[s.type]!==undefined || s.type==="UNK"){ TYPE=s.type;
+    document.querySelectorAll(".type-opt").forEach(o=>o.classList.toggle("on",o.dataset.type===TYPE)); renderType(); }
+  if(s.mode){ MODE=s.mode; document.body.dataset.mode=MODE;
+    document.querySelectorAll(".tab").forEach(t=>t.classList.toggle("on",t.dataset.mode===MODE));
+    document.getElementById("prompt-title").textContent = MODE==="leader" ? "產生「完整正確版」提示詞" : "產生提示詞"; }
+  const f=s.f||{}; [["f-title",f.title],["f-author",f.author],["f-journal",f.journal],["f-group",f.group],["f-context",f.context],["f-text",f.text],["f-mins",f.mins]].forEach(([id,v])=>{ if(v!=null){ document.getElementById(id).value=v; localStorage.setItem("ebn_"+id,v); }});
+  if(s.ai!=null){ document.getElementById("ai-resp").value=s.ai; localStorage.setItem("ebn_ai-resp",s.ai); }
+  if(s.imports!=null){ document.getElementById("member-imports").value=s.imports; localStorage.setItem("ebn_member-imports",s.imports); }
+  if(Array.isArray(s.assigned)) s.assigned.forEach(n=>{ const c=document.querySelector('#assign-chips .chip[data-n="'+n+'"]'); if(c) c.classList.add("on"); });
+  if(s.ai && s.ai.trim()) document.getElementById("render-btn").click();
+}
+document.getElementById("relay-toggle").addEventListener("click",()=>{
+  const b=document.getElementById("relay-body"); b.style.display = b.style.display==="none" ? "block" : "none";
+});
+document.getElementById("relay-copy").addEventListener("click",()=>copy(JSON.stringify(collectState()),"已複製進度，傳到另一台貼上接力"));
+document.getElementById("relay-apply").addEventListener("click",()=>{
+  const raw=val("relay-in"); if(!raw){ toast("請先貼上進度碼"); return; }
+  let s=null; try{ s=JSON.parse(raw); }catch(e){ try{ s=JSON.parse(raw.slice(raw.indexOf("{"),raw.lastIndexOf("}")+1)); }catch(e2){} }
+  if(!s||typeof s!=="object"){ toast("進度碼看起來不對，請整段重貼"); return; }
+  applyState(s); toast("✅ 進度已接力過來");
+});
 
 /* ===================== 產生提示詞 ===================== */
 function val(id){ return document.getElementById(id).value.trim(); }
