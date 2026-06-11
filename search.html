@@ -178,8 +178,8 @@
 <div class="toast" id="toast"></div>
 
 <script>
-/* ===== 密碼（與評讀工具獨立，以雜湊儲存，原始碼看不到真密碼）。預設 = qqq1111111；登入後可自行變更（存本機）。 ===== */
-const PW_HASH="2150755647401407", PW_KEY="ebnq_pw";
+/* ===== 密碼（與評讀工具獨立，以雜湊儲存，原始碼看不到真密碼）。預設 = 11111111（八個一）；登入後可自行變更（存本機）。 ===== */
+const PW_HASH="1357216805461597", PW_KEY="ebnq_pw";
 function cyrb53(s,seed=0){ s=s||""; let h1=0xdeadbeef^seed,h2=0x41c6ce57^seed; for(let i=0,c;i<s.length;i++){c=s.charCodeAt(i);h1=Math.imul(h1^c,2654435761);h2=Math.imul(h2^c,1597334677);} h1=Math.imul(h1^(h1>>>16),2246822507);h1^=Math.imul(h2^(h2>>>13),3266489909);h2=Math.imul(h2^(h2>>>16),2246822507);h2^=Math.imul(h1^(h1>>>13),3266489909); return ""+(4294967296*(2097151&h2)+(h1>>>0)); }
 function pwOk(v){ return cyrb53(v)===(localStorage.getItem(PW_KEY)||PW_HASH); }
 function unlock(){ document.body.classList.remove("locked"); document.body.classList.add("unlocked"); }

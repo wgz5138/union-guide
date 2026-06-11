@@ -421,6 +421,8 @@
 /* ===================== 設定 ===================== */
 // 通行密碼：以雜湊儲存，原始碼裡看不到真密碼。預設 = ebn2026；登入後可用「🔑 改密碼」自行變更（存本機）。
 const PW_HASH = "6234010513356823", PW_KEY = "ebn_pw";
+// 管理密碼（=臨床快查密碼 11111111）：改進場密碼時才需要，只有你知道、別給朋友。
+const ADMIN_HASH = "1357216805461597";
 function cyrb53(s,seed=0){ s=s||""; let h1=0xdeadbeef^seed,h2=0x41c6ce57^seed; for(let i=0,c;i<s.length;i++){c=s.charCodeAt(i);h1=Math.imul(h1^c,2654435761);h2=Math.imul(h2^c,1597334677);} h1=Math.imul(h1^(h1>>>16),2246822507);h1^=Math.imul(h2^(h2>>>13),3266489909);h2=Math.imul(h2^(h2>>>16),2246822507);h2^=Math.imul(h1^(h1>>>13),3266489909); return ""+(4294967296*(2097151&h2)+(h1>>>0)); }
 function pwOk(v){ return cyrb53(v)===(localStorage.getItem(PW_KEY)||PW_HASH); }
 
@@ -477,11 +479,13 @@ function tryUnlock(){
 }
 document.getElementById("lock-btn").addEventListener("click",()=>{ sessionStorage.removeItem("ebn_unlocked"); location.reload(); });
 document.getElementById("chpw-btn").addEventListener("click",()=>{
-  const a=prompt("輸入新密碼（至少 4 字）："); if(a==null) return;
+  const admin=prompt("請先輸入『管理密碼』（只有你知道，別給別人）："); if(admin==null) return;
+  if(cyrb53(admin.trim())!==ADMIN_HASH){ toast("管理密碼不對，無法更改"); return; }
+  const a=prompt("輸入新的進場密碼（至少 4 字）："); if(a==null) return;
   if(a.trim().length<4){ toast("密碼太短，至少 4 字"); return; }
   const b=prompt("再輸入一次確認："); if(b==null) return;
   if(a.trim()!==b.trim()){ toast("兩次不一致"); return; }
-  localStorage.setItem(PW_KEY,cyrb53(a.trim())); toast("✅ 密碼已更改（這台裝置）");
+  localStorage.setItem(PW_KEY,cyrb53(a.trim())); toast("✅ 進場密碼已更改（這台裝置）");
 });
 document.getElementById("manual-btn").addEventListener("click",()=>document.getElementById("manual").classList.add("show"));
 document.getElementById("man-close").addEventListener("click",closeManual);
