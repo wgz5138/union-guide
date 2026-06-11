@@ -1,0 +1,56 @@
+#!/usr/bin/env bash
+# ccc-mirror-config — 讓第二（含以後第 N）Claude 帳號的「設定」完全鏡像主帳號
+# 做法：把主帳號 ~/.claude 的「純設定」項目 symlink 進目標 config 目錄，
+#       主帳號改什麼，目標帳號自動跟上 → 兩者只差在「登入身份 / 對話歷史」。
+# Usage: ccc-mirror-config [目標config目錄]   (預設 = $CLAUDE_CONFIG_DIR_2)
+set -euo pipefail
+
+SRC="$HOME/.claude"
+DST="${1:-${CLAUDE_CONFIG_DIR_2:-$HOME/.claude-2}}"
+
+[ -d "$SRC" ] || { echo "❌ 找不到主帳號 $SRC"; exit 1; }
+[ "$DST" != "$SRC" ] || { echo "❌ 目標不能是主帳號本身"; exit 1; }
+mkdir -p "$DST"
+
+# 要鏡像的「純設定」項目（檔案或目錄皆可）。
+# 注意：故意不含 .claude.json / projects / sessions / history.jsonl / plugins /
+#       cache / telemetry 等「帳號或執行狀態」，那些必須各帳號獨立。
+SHARE=(
+  settings.json
+  settings.local.json
+  statusline-command.sh
+  rules
+  skills
+  commands
+  agents
+  hooks
+  scripts
+)
+
+ts=$(date +%Y%m%d-%H%M%S)
+echo "鏡像來源：$SRC"
+echo "鏡像目標：$DST"
+echo ""
+
+for item in "${SHARE[@]}"; do
+  s="$SRC/$item"
+  d="$DST/$item"
+  [ -e "$s" ] || { echo "－ 跳過 $item（主帳號沒有）"; continue; }
+
+  if [ -L "$d" ] && [ "$(readlink "$d")" = "$s" ]; then
+    echo "✓ $item 已鏈結，略過"
+    continue
+  fi
+
+  if [ -e "$d" ] || [ -L "$d" ]; then
+    mv "$d" "$d.bak-$ts"
+    echo "↪ 備份舊的 $item → $item.bak-$ts"
+  fi
+
+  ln -s "$s" "$d"
+  echo "🔗 $item → $s"
+done
+
+echo ""
+echo "✅ 完成。目標帳號的設定現在鏡像主帳號（symlink，會自動同步）。"
+echo "   各自獨立的部分：登入身份、對話歷史(projects)、sessions、plugins、cache。"
