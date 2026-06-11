@@ -35,7 +35,7 @@ echo ""
 for item in "${SHARE[@]}"; do
   s="$SRC/$item"
   d="$DST/$item"
-  [ -e "$s" ] || { echo "－ 跳過 $item（主帳號沒有）"; continue; }
+  [ -e "$s" ] || { echo "－ 跳過 ${item}（主帳號沒有）"; continue; }
 
   if [ -L "$d" ] && [ "$(readlink "$d")" = "$s" ]; then
     echo "✓ $item 已鏈結，略過"
