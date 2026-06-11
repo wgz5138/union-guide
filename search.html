@@ -178,14 +178,16 @@
 <div class="toast" id="toast"></div>
 
 <script>
-/* ===== 密碼（與評讀工具獨立，以雜湊儲存，原始碼看不到真密碼）。預設 = qqq11111111（3個q＋8個一）；登入後可自行變更（存本機）。 ===== */
-const PW_HASH="2716985802763051", PW_KEY="ebnq_pw";
+/* ===== 密碼（與評讀工具獨立，以雜湊儲存，原始碼看不到真密碼）。預設 = qqq11111111（3個q＋8個一）。 =====
+   🚨 趕人／重設名單：把 ACCESS_VERSION +1、並換下面 PW_HASH，所有人被踢出、舊密碼全失效，只有新密碼能再進。 */
+const ACCESS_VERSION="1";
+const PW_HASH="2716985802763051", PW_KEY="ebnq_pw_v"+ACCESS_VERSION, UNLOCK_KEY="ebnq_unlocked_v"+ACCESS_VERSION;
 function cyrb53(s,seed=0){ s=s||""; let h1=0xdeadbeef^seed,h2=0x41c6ce57^seed; for(let i=0,c;i<s.length;i++){c=s.charCodeAt(i);h1=Math.imul(h1^c,2654435761);h2=Math.imul(h2^c,1597334677);} h1=Math.imul(h1^(h1>>>16),2246822507);h1^=Math.imul(h2^(h2>>>13),3266489909);h2=Math.imul(h2^(h2>>>16),2246822507);h2^=Math.imul(h1^(h1>>>13),3266489909); return ""+(4294967296*(2097151&h2)+(h1>>>0)); }
 function pwOk(v){ return cyrb53(v)===(localStorage.getItem(PW_KEY)||PW_HASH); }
 function unlock(){ document.body.classList.remove("locked"); document.body.classList.add("unlocked"); }
-if(sessionStorage.getItem("ebnq_unlocked")==="1") unlock();
+if(sessionStorage.getItem(UNLOCK_KEY)==="1") unlock();
 function tryUnlock(){ const v=document.getElementById("gate-pw").value;
-  if(pwOk(v)){ sessionStorage.setItem("ebnq_unlocked","1"); unlock(); }
+  if(pwOk(v)){ sessionStorage.setItem(UNLOCK_KEY,"1"); unlock(); }
   else{ document.getElementById("gate-err").textContent="密碼不對"; document.getElementById("gate-pw").value=""; } }
 document.getElementById("gate-go").addEventListener("click",tryUnlock);
 document.getElementById("gate-pw").addEventListener("keydown",e=>{ if(e.key==="Enter") tryUnlock(); });

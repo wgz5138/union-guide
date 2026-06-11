@@ -419,8 +419,11 @@
 
 <script>
 /* ===================== 設定 ===================== */
-// 通行密碼：以雜湊儲存，原始碼裡看不到真密碼。預設 = ebn2026；登入後可用「🔑 改密碼」自行變更（存本機）。
-const PW_HASH = "6234010513356823", PW_KEY = "ebn_pw";
+// 🚨 趕人／重塑名單開關：密碼外流時，把 ACCESS_VERSION 數字 +1，並把下面 PW_HASH 換成新密碼的雜湊。
+//    一旦這樣做：所有人（含已登入、含在別台自己改過密碼的人）全部被踢出，舊密碼全失效，只有新密碼能重新進。
+const ACCESS_VERSION = "1";
+// 通行密碼：以雜湊儲存，原始碼裡看不到真密碼。預設 = ebn2026；登入後可用「🔑 改密碼」自行變更（這台裝置）。
+const PW_HASH = "6234010513356823", PW_KEY = "ebn_pw_v"+ACCESS_VERSION, UNLOCK_KEY = "ebn_unlocked_v"+ACCESS_VERSION;
 // 管理密碼（=臨床快查密碼 qqq11111111）：改進場密碼時才需要，只有你知道、別給朋友。
 const ADMIN_HASH = "2716985802763051";
 function cyrb53(s,seed=0){ s=s||""; let h1=0xdeadbeef^seed,h2=0x41c6ce57^seed; for(let i=0,c;i<s.length;i++){c=s.charCodeAt(i);h1=Math.imul(h1^c,2654435761);h2=Math.imul(h2^c,1597334677);} h1=Math.imul(h1^(h1>>>16),2246822507);h1^=Math.imul(h2^(h2>>>13),3266489909);h2=Math.imul(h2^(h2>>>16),2246822507);h2^=Math.imul(h1^(h1>>>13),3266489909); return ""+(4294967296*(2097151&h2)+(h1>>>0)); }
@@ -469,15 +472,15 @@ const qById = (t,n) => allQs(t).find(q=>q.n===n);
 /* ===================== 密碼鎖 ===================== */
 function unlock(){ document.body.classList.remove("locked"); document.body.classList.add("unlocked"); if(!localStorage.getItem("ebn_seen_manual")) setTimeout(()=>document.getElementById("manual").classList.add("show"),350); }
 function closeManual(){ document.getElementById("manual").classList.remove("show"); localStorage.setItem("ebn_seen_manual","1"); }
-if(sessionStorage.getItem("ebn_unlocked")==="1") unlock();
+if(sessionStorage.getItem(UNLOCK_KEY)==="1") unlock();
 document.getElementById("gate-go").addEventListener("click",tryUnlock);
 document.getElementById("gate-pw").addEventListener("keydown",e=>{ if(e.key==="Enter") tryUnlock(); });
 function tryUnlock(){
   const v=document.getElementById("gate-pw").value;
-  if(pwOk(v)){ sessionStorage.setItem("ebn_unlocked","1"); unlock(); }
+  if(pwOk(v)){ sessionStorage.setItem(UNLOCK_KEY,"1"); unlock(); }
   else{ document.getElementById("gate-err").textContent="密碼不對"; document.getElementById("gate-pw").value=""; }
 }
-document.getElementById("lock-btn").addEventListener("click",()=>{ sessionStorage.removeItem("ebn_unlocked"); location.reload(); });
+document.getElementById("lock-btn").addEventListener("click",()=>{ sessionStorage.removeItem(UNLOCK_KEY); location.reload(); });
 document.getElementById("chpw-btn").addEventListener("click",()=>{
   const admin=prompt("請先輸入『管理密碼』（只有你知道，別給別人）："); if(admin==null) return;
   if(cyrb53(admin.trim())!==ADMIN_HASH){ toast("管理密碼不對，無法更改"); return; }
