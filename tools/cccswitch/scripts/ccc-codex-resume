@@ -8,7 +8,7 @@ set -euo pipefail
 CODEX_HOMES="${CODEX_ACCOUNT_HOMES_DIR:-$HOME/.codex-homes}"
 BACK="← 上一頁"
 
-[ -d "$CODEX_HOMES" ] || { echo "❌ 找不到 $CODEX_HOMES（見 SKILL.md「Codex 模組」）"; exit 1; }
+[ -d "$CODEX_HOMES" ] || { echo "❌ 找不到 ${CODEX_HOMES}（見 SKILL.md「Codex 模組」）"; exit 1; }
 
 fzf_pick() { fzf --height=~15 --border=none --pointer="▌" \
   --color="pointer:#ff79c6,hl:#bd93f9,hl+:#ff79c6" "$@" 2>/dev/null; }

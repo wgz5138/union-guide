@@ -34,7 +34,7 @@ fi
 
 if [ "$rate_limited" = true ]; then
   echo ""
-  echo "⚡ Rate limit hit（帳號 $ACCOUNT）。"
+  echo "⚡ Rate limit hit（帳號 ${ACCOUNT}）。"
 
   printf '   切換帳號接續這場對話？(Y/n) '
   read -r -n1 ans </dev/tty
