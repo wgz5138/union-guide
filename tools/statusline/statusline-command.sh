@@ -306,3 +306,6 @@ else
   [ -n "$five_pct" ] && [ "$(echo "$five_pct" | awk '{printf "%d", $1}')" -ge 90 ] && printf " ${RED}!${RST}"
   printf '\n'
 fi
+
+# statusline 永遠以 0 結束（避免 L2 為空時尾端短路造成非 0 退出）
+exit 0

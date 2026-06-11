@@ -61,6 +61,17 @@ bash tools/healthcheck.sh
 （含實跑煙霧測試）、Claude 帳號槽與鏡像/登入狀態，最後給 ✅/⚠️/❌ 總結。
 相容 macOS 內建 bash 3.2 / Linux bash 5 / WSL。
 
+## ✅ CI 自動把關
+
+`.github/workflows/tools-ci.yml` 會在每次動到 `tools/` 的 push／PR 自動跑
+[`tools/ci-check.sh`](ci-check.sh)：bash 語法檢查、shellcheck（error 級）、
+**全形字地雷掃描**（防止 macOS bash 3.2 那類 bug 回歸）、statusline 煙霧測試。
+任何一項失敗 GitHub 會亮紅燈擋下。本地也可先跑一次：
+
+```bash
+bash tools/ci-check.sh
+```
+
 ## 整合時修正的 bug
 
 匯入時做了測試（Linux/bash 5.2），修掉以下問題：
