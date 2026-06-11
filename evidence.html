@@ -151,6 +151,18 @@
   .toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(20px);background:#1A2433;color:#fff;border:1px solid var(--line);padding:.7rem 1.2rem;border-radius:30px;font-size:13px;opacity:0;pointer-events:none;transition:.25s;z-index:1100}
   .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
 
+  /* 操作手冊 */
+  #manual{position:fixed;inset:0;z-index:1200;background:rgba(6,10,18,.93);backdrop-filter:blur(4px);overflow-y:auto;display:none;padding:20px 16px 60px}
+  #manual.show{display:block}
+  .man-box{max-width:600px;margin:0 auto;background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:20px}
+  .man-box h2{font-size:18px;color:var(--head);margin-bottom:4px}
+  .man-close{background:var(--cyan);color:#06231f;border:none;border-radius:20px;padding:6px 14px;font-weight:700;cursor:pointer;font-family:inherit;float:right}
+  .man-box h3{font-size:14px;color:var(--cyan);margin:18px 0 8px;border-left:3px solid var(--cyan);padding-left:8px}
+  .man-box p,.man-box li{font-size:13.5px;color:var(--txt2);line-height:1.85}
+  .man-box ol,.man-box ul{padding-left:20px}.man-box li{margin-bottom:6px}
+  .man-box b{color:var(--head)}
+  .man-box .tip{background:rgba(79,157,255,.08);border:1px solid rgba(79,157,255,.25);border-radius:10px;padding:10px 12px;margin:10px 0;font-size:13px;line-height:1.8}
+
   .member-only,.leader-only{display:none}
   body[data-mode="member"] .member-only{display:block}
   body[data-mode="leader"] .leader-only{display:block}
@@ -210,6 +222,7 @@
       <div class="sub mono">EBN Appraisal Workspace</div>
     </div>
     <div class="right">
+      <button class="user" id="manual-btn" type="button">❓ 怎麼用</button>
       <button class="user" id="chpw-btn" type="button">🔑 改密碼</button>
       <div class="user" id="lock-btn">● 鎖定</div>
     </div>
@@ -227,7 +240,8 @@
       <div class="type-opt on" data-type="RCT"><div class="ic">🧪</div><div class="nm">RCT</div><div class="en">隨機對照試驗</div><div class="cs">CASP RCT · 11 題</div></div>
       <div class="type-opt" data-type="SR"><div class="ic">📚</div><div class="nm">Meta / 系統回顧</div><div class="en">Systematic Review</div><div class="cs">CASP SR · 10 題</div></div>
     </div>
-    <div class="help" id="help-t">❓ 不確定是哪一種？</div>
+    <div class="type-opt unk" data-type="UNK" style="margin-top:10px;text-align:left"><div class="nm">🤖 我不確定 → 讓 AI 幫我判斷</div><div class="en" style="margin-top:2px">看不懂是哪一種？選這個最省事，AI 會先判斷再用對的表</div></div>
+    <div class="help" id="help-t">❓ 想自己分辨 RCT / Meta？</div>
     <div class="help-body" id="help-b">
       <strong>自己做實驗</strong> → 找病人、<em>隨機分兩組</em>比較 → <strong>RCT</strong>（摘要常見 randomized controlled trial）。<br>
       <strong>整理別人研究</strong> → 系統搜尋彙整多篇、常合併數據畫<em>森林圖</em> → <strong>系統回顧 / Meta</strong>（摘要常見 systematic review、meta-analysis、heterogeneity）。
@@ -323,6 +337,44 @@
   </footer>
 </div>
 
+<!-- 操作手冊 -->
+<div id="manual">
+  <div class="man-box">
+    <button class="man-close" id="man-close">✕ 關閉</button>
+    <h2>📖 怎麼用（小白版）</h2>
+    <p style="font-size:13px;color:var(--muted)">兩年用一次也沒關係，照著走就好。</p>
+
+    <h3>這工具在幹嘛？</h3>
+    <p>它<b>不會自己讀論文</b>。它幫你<b>寫好一份指令</b>，你拿去貼給 <b>ChatGPT 或 Claude</b>、附上論文，AI 逐題評讀；再把 AI 回覆貼回來，它幫你<b>排版成報告</b>。</p>
+    <div class="tip">一句話：<b>工具出題＋寫指令 → ChatGPT/Claude 讀論文作答 → 貼回工具排版</b>。</div>
+
+    <h3>五個步驟</h3>
+    <ol>
+      <li><b>選類型</b>：不知道是 RCT 還是 Meta？直接點 <b>「🤖 我不確定」</b>，讓 AI 判斷。</li>
+      <li><b>填文獻資訊</b>：標題可不填；<b>摘要</b>貼進大框（整篇 PDF 不用貼這裡）。</li>
+      <li>（組員）選你被分到的題號 → 按 <b>「產生提示詞」</b> → 按 <b>複製</b>。</li>
+      <li>開 <b>ChatGPT / Claude</b> → 貼上 → <b>把論文 PDF 也附上去</b> → 送出。</li>
+      <li>AI 回一大串 → 整段複製 → 貼到 <b>「貼回 AI 的回覆」</b> → 按 <b>「產生報告」</b>。</li>
+    </ol>
+
+    <h3>我的論文放哪？</h3>
+    <ul>
+      <li><b>摘要（短文字）</b> → 步驟②那個大框。</li>
+      <li><b>整篇 PDF</b> → 不放工具，貼提示詞給 AI 時在那邊<b>附檔</b>。</li>
+    </ul>
+
+    <h3>交報告 / 上台</h3>
+    <p>報告出來後：<b>PDF</b> 一律白底黑字樸素版（交報告用、不亮眼）；<b>PPT</b> 可一鍵切科技/樸素，演講稿藏在投影片備忘稿（台下看不到）。</p>
+
+    <h3>只是想看懂一篇、不交報告？</h3>
+    <div class="tip">那<b>不用這個工具</b>～直接把 PDF 丟給 ChatGPT 或 Claude，問「用 CASP 幫我評讀這篇、逐題給答案和理由，並解釋它在講什麼」就好，還能一直追問，更全面。</div>
+
+    <h3>密碼</h3>
+    <p>按右上 <b>🔑 改密碼</b> 改成你好記的（存這台裝置）。</p>
+    <button class="man-close" id="man-close2" style="float:none;display:block;width:100%;margin-top:18px;border-radius:10px;padding:10px">我懂了，開始用</button>
+  </div>
+</div>
+
 <div class="toast" id="toast"></div>
 
 <script>
@@ -373,7 +425,8 @@ const allQs = t => CASP[t].sections.flatMap(s=>s.qs);
 const qById = (t,n) => allQs(t).find(q=>q.n===n);
 
 /* ===================== 密碼鎖 ===================== */
-function unlock(){ document.body.classList.remove("locked"); document.body.classList.add("unlocked"); }
+function unlock(){ document.body.classList.remove("locked"); document.body.classList.add("unlocked"); if(!localStorage.getItem("ebn_seen_manual")) setTimeout(()=>document.getElementById("manual").classList.add("show"),350); }
+function closeManual(){ document.getElementById("manual").classList.remove("show"); localStorage.setItem("ebn_seen_manual","1"); }
 if(sessionStorage.getItem("ebn_unlocked")==="1") unlock();
 document.getElementById("gate-go").addEventListener("click",tryUnlock);
 document.getElementById("gate-pw").addEventListener("keydown",e=>{ if(e.key==="Enter") tryUnlock(); });
@@ -390,6 +443,9 @@ document.getElementById("chpw-btn").addEventListener("click",()=>{
   if(a.trim()!==b.trim()){ toast("兩次不一致"); return; }
   localStorage.setItem(PW_KEY,cyrb53(a.trim())); toast("✅ 密碼已更改（這台裝置）");
 });
+document.getElementById("manual-btn").addEventListener("click",()=>document.getElementById("manual").classList.add("show"));
+document.getElementById("man-close").addEventListener("click",closeManual);
+document.getElementById("man-close2").addEventListener("click",closeManual);
 
 /* ===================== 模式切換 ===================== */
 document.body.dataset.mode="member";
@@ -401,6 +457,12 @@ document.querySelectorAll(".tab").forEach(t=>t.addEventListener("click",()=>{
 
 /* ===================== 類型 + 預覽 + 選題 ===================== */
 function renderType(){
+  if(TYPE==="UNK"){
+    document.getElementById("casp-name").textContent="AI 會先判斷類型，再用對的表";
+    document.getElementById("casp-list").innerHTML='<div style="font-size:13px;color:var(--txt2);padding:8px 0;line-height:1.8">你不用懂文獻是哪一種 🙂<br>AI 會先看你的論文，判斷它是 <b style="color:var(--cyan)">RCT</b> 還是 <b style="color:var(--cyan)">Meta／系統回顧</b>，自動用對的那張 CASP 表評讀，並在報告開頭告訴你它的判斷。</div>';
+    document.getElementById("assign-chips").innerHTML='<div style="font-size:12.5px;color:var(--muted);line-height:1.7">類型不確定時，AI 會做<b>全部題目</b>（之後若知道類型、想只做幾題，再回頭選 RCT 或 Meta）。</div>';
+    return;
+  }
   const d=CASP[TYPE];
   document.getElementById("casp-name").textContent=d.name;
   let h="";
@@ -427,7 +489,54 @@ function assignedNums(){ return [...document.querySelectorAll("#assign-chips .ch
 
 /* ===================== 產生提示詞 ===================== */
 function val(id){ return document.getElementById(id).value.trim(); }
+function bothChecklists(){
+  let s="";
+  [["RCT","RCT（隨機對照試驗）→ CASP RCT 檢核表（11 題）"],["SR","系統回顧／Meta-analysis → CASP 系統性回顧檢核表（10 題）"]].forEach(([t,label])=>{
+    s+=`\n=== 若你判斷是 ${label} ===\n`;
+    CASP[t].sections.forEach(sec=>{ sec.qs.forEach(q=>{ s+=`  ${q.n}. ${q.zh}（提示：${q.hint}）${q.judge?" 【判斷題：只白話解釋，answer 填「請依病人情況判斷」】":""}\n`; }); });
+  });
+  return s;
+}
+function buildPromptUnknown(){
+  const title=val("f-title"),author=val("f-author"),journal=val("f-journal"),group=val("f-group"),context=val("f-context"),text=val("f-text"),mins=val("f-mins");
+  let meta="";
+  if(title)meta+=`標題：${title}\n`; if(author)meta+=`作者：${author}\n`; if(journal)meta+=`年份/期刊：${journal}\n`;
+  if(group)meta+=`組別：${group}\n`; if(context)meta+=`我的臨床情境：${context}\n`;
+  const src = text ? `以下是文獻內容（摘要或全文）：\n"""\n${text}\n"""` :
+    `※ 我會在對話框另外附上文獻 PDF，請依該檔評讀；看不到附檔就先提醒我，不要憑空編造。`;
+  const speechReq = MODE==="leader"
+    ? `,\n  "anticipatedQA":[{"q":"老師/長官可能問的問題","a":"建議怎麼答"}],\n  "speech":{"opening":"開場白逐字稿","perQuestion":{"1":"第1題上台要講的話"},"closing":"結尾逐字稿"}${mins?`（演講稿總長請抓約 ${mins}）`:""}`
+    : "";
+  const L=[];
+  L.push("你是一位資深的實證護理（EBN）專家，擅長用 CASP 檢核表評讀文獻。請協助我完成實證報告。");
+  L.push("");
+  L.push("⚠️ 我不確定這篇是哪一種研究，請你『先判斷』：它是 RCT（隨機對照試驗），還是 系統性回顧／Meta-analysis？");
+  L.push("－ 若是 RCT → 用 CASP RCT 檢核表（11 題）。");
+  L.push("－ 若是 系統回顧／Meta → 用 CASP 系統性回顧檢核表（10 題）。");
+  L.push("把判斷結果填在 JSON 的 studyType（\"RCT\" 或 \"SR\"）與 typeNote（一句話說明為何），然後『只用你選的那張表』的全部題目逐題評讀。");
+  L.push("");
+  if(meta) L.push(meta);
+  L.push(src);
+  L.push("");
+  L.push("兩張表的題目如下（只用你判斷的那一張、全部題目都要做）：");
+  L.push(bothChecklists());
+  L.push("== 輸出要求（重要）==");
+  L.push("只輸出一個 JSON 物件，前後不要任何說明文字，不要用 ``` 包起來。結構：");
+  L.push("{");
+  L.push('  "studyType":"RCT 或 SR", "typeNote":"為何這樣判斷（一句）",');
+  L.push('  "title":"文獻標題", "citation":"APA 引用", "group":"'+(group||"")+'",');
+  L.push('  "clinicalQuestion":"一句臨床問題（PICO 句型）",');
+  L.push('  "pico":{"P":"對象","I":"介入","C":"對照","O":"結果指標"},');
+  L.push('  "summary":"150~250字中文重點摘要", "evidenceLevel":"證據等級（Melnyk 七級，例 Level II）", "qualityGrade":"高/中/低＋半句說明",');
+  L.push('  "appraisal":[{"no":題號,"section":"A/B/C/D","question":"中文題目","answer":"是/否/不確定（判斷題填：請依病人情況判斷）","rationale":"2~4句具體理由","quote":"支持判斷的原文英文句（找不到留空）","plain":"一句人話版說明"}]'+speechReq+',');
+  L.push('  "clinicalApplication":"臨床應用建議'+(context?"，請扣緊我的臨床情境":"")+'", "conclusion":"3~5句整體結論"');
+  L.push("}");
+  L.push("");
+  L.push("規則：appraisal 要包含『你選的那張表』的全部題目（RCT 11 題或 SR 10 題），題號完整；判斷題不要替我下是/否；全部繁體中文（quote 可留英文）；只輸出 JSON。");
+  return L.join("\n");
+}
 function buildPrompt(){
+  if(TYPE==="UNK") return buildPromptUnknown();
   const d=CASP[TYPE];
   const title=val("f-title"),author=val("f-author"),journal=val("f-journal"),group=val("f-group"),context=val("f-context"),text=val("f-text"),mins=val("f-mins");
   let nums = MODE==="member" ? assignedNums() : allQs(TYPE).map(q=>q.n);
@@ -518,6 +627,7 @@ function renderReport(d, masterMap){
   if(d.evidenceLevel)h+=`<span class="badge lvl">證據等級：${esc(d.evidenceLevel)}</span>`;
   if(d.qualityGrade)h+=`<span class="badge grade">品質：${esc(d.qualityGrade)}</span>`;
   h+=`</div>`;
+  if(d.typeNote)h+=`<div style="font-size:12px;color:var(--muted);margin:-8px 0 14px">🤖 AI 判斷類型：${esc(d.typeNote)}</div>`;
   if(d.clinicalQuestion)h+=`<div class="rp-block"><div class="rp-h">臨床問題</div><div class="rp-text">${esc(d.clinicalQuestion)}</div></div>`;
   if(d.pico){ h+=`<div class="rp-block"><div class="rp-h">PICO</div><div class="pico">`;
     [["P","對象 P"],["I","介入 I"],["C","對照 C"],["O","結果 O"]].forEach(([k,l])=>{ h+=`<div class="pk">${l}</div><div class="pv">${esc(d.pico[k]||"—")}</div>`; });
