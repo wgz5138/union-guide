@@ -20,6 +20,9 @@ bash tools/cccswitch/scripts/install.sh
 
 它會偵測你裝了 `claude` 還是 `codex`，只裝對應模組，並印出後續設定步驟。
 
+> **💡 推薦改用一鍵安裝器** `tools/setup.sh`（見下）——它把相依工具、ccc、statusline、
+> settings.json、帳號槽全部一行裝好，並自動處理 OS 差異，可重複執行。
+
 ## 📂 statusline/ — 雙帳號額度 + context + git 狀態列
 
 兩行式狀態列：第一行顯示 5h/7d 額度進度條、context 剩餘、目前帳號；第二行
@@ -32,6 +35,19 @@ cp tools/statusline/statusline-command.sh ~/.claude/
 ```
 
 需求：`jq`、`bash ≥ 4`、支援 truecolor 的終端機。
+
+## 🚀 一鍵安裝器（推薦）
+
+```bash
+bash tools/setup.sh                 # 裝 ccc + statusline（帳號①）
+bash tools/setup.sh --accounts 3    # 另外預建帳號槽 ②③（空殼，等登入）
+bash tools/setup.sh --no-deps       # 跳過自動裝相依工具
+```
+
+一行完成：偵測 OS（mac/Linux/WSL）→ 自動裝相依（缺什麼裝什麼，用對的套件管理器）
+→ 沒有 `claude` 就跑官方安裝器 → 裝 ccc 腳本到 `~/bin` → 寫 PATH（不重複）
+→ 裝 statusline 並寫入 OS 對應的 `settings.json`（mac 自動用 brew bash）
+→ 選配建立帳號槽並鏡像設定。**可重複執行、不刪你的東西。**
 
 ## 🩺 體檢腳本
 
