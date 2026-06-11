@@ -96,6 +96,7 @@
 **臨床快查 `search.html`：**
 - **❓操作手冊**（`ebnq_seen_manual`，首次自動開）、上方按鈕與評讀工具一致。
 - **⚡ 付費一鍵**：①「直接生成查詢」(呼叫 Claude→填 `q-query`→自動 `doSearch()`)、③「直接綜合」(呼叫 Claude→結果顯示於 `#synth-result`)。
+- **📲 換裝置接力**：與 evidence 同機制，帶 q-desc/q-query/篩選/綜合結果（不含金鑰）；貼上後若有 query 自動 `doSearch()`。
 
 **共通（金鑰共用）：** 兩工具同源（github.io/union-guide），故 **API 金鑰共用同一把**（`ebn_api-key`/`ebn_api-model`），貼一次兩邊用、同一 Anthropic 帳戶扣款。金鑰只存本機、不外流、不入版本庫。成本：評讀一篇約 NT$1~10、查詢/綜合約 NT$0.1~0.5；額度約一年過期；偶爾用建議免費版。
 

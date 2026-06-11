@@ -85,6 +85,7 @@
 
   .toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(20px);background:#1A2433;color:#fff;border:1px solid var(--line);padding:.7rem 1.2rem;border-radius:30px;font-size:13px;opacity:0;pointer-events:none;transition:.25s;z-index:1100}
   .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+  .relay-toggle{font-size:12.5px;color:var(--blue);cursor:pointer;user-select:none;display:inline-block;margin:14px 0 4px}
   footer{text-align:center;padding:24px 16px 40px;font-size:11.5px;color:var(--muted);line-height:1.8;max-width:720px;margin:0 auto}
 
   /* 操作手冊 */
@@ -123,6 +124,15 @@
   </div>
 
   <main>
+    <!-- 📲 換裝置接力 -->
+    <div class="relay-toggle" id="relay-toggle">📲 換手機／電腦接力 ▾</div>
+    <div class="card" id="relay-body" style="display:none;margin-bottom:4px">
+      <div class="hint" style="margin-top:0">在 A 機按「複製進度」→ 傳到 LINE 給自己 → B 機貼進框框按「接力」。會帶過去：中文描述、查詢、AI 綜合結果（<b>不含金鑰</b>）。</div>
+      <button class="btn btn-ghost" id="relay-copy" style="width:100%;margin-top:10px">📋 複製這台的進度</button>
+      <textarea class="txt" id="relay-in" rows="3" placeholder="把另一台複製的進度碼整段貼這裡" style="margin-top:8px"></textarea>
+      <button class="btn btn-ghost" id="relay-apply" style="width:100%;margin-top:8px">📥 貼上進度，接力過來</button>
+    </div>
+
     <!-- 付費一鍵設定（選用） -->
     <div class="label"><span class="n">⚡</span>付費一鍵（選用・你自己的金鑰）</div>
     <div class="card">
@@ -458,6 +468,28 @@ document.getElementById("synth-auto-btn").addEventListener("click",async()=>{
 ["q-desc","q-query"].forEach(id=>{ const el=document.getElementById(id);
   const s=localStorage.getItem("ebnq_"+id); if(s)el.value=s;
   el.addEventListener("input",()=>localStorage.setItem("ebnq_"+id,el.value)); });
+
+/* ===== 📲 換裝置接力（不含金鑰） ===== */
+function collectState(){ return { v:1, app:"search", desc:val("q-desc"), query:val("q-query"),
+  type:document.getElementById("f-type").value, years:document.getElementById("f-years").value, coch:document.getElementById("f-coch").checked,
+  synth:(document.getElementById("synth-result").textContent||"") }; }
+function applyState(s){
+  if(s.desc!=null){ document.getElementById("q-desc").value=s.desc; localStorage.setItem("ebnq_q-desc",s.desc); }
+  if(s.query!=null){ document.getElementById("q-query").value=s.query; localStorage.setItem("ebnq_q-query",s.query); }
+  if(s.type!=null) document.getElementById("f-type").value=s.type;
+  if(s.years!=null) document.getElementById("f-years").value=s.years;
+  if(typeof s.coch==="boolean") document.getElementById("f-coch").checked=s.coch;
+  if(s.query && s.query.trim()) doSearch();
+  if(s.synth){ document.getElementById("synth-wrap").style.display="block"; const r=document.getElementById("synth-result"); r.style.display="block"; r.textContent=s.synth; }
+}
+document.getElementById("relay-toggle").addEventListener("click",()=>{ const b=document.getElementById("relay-body"); b.style.display=b.style.display==="none"?"block":"none"; });
+document.getElementById("relay-copy").addEventListener("click",()=>copy(JSON.stringify(collectState()),"已複製進度，傳到另一台貼上接力"));
+document.getElementById("relay-apply").addEventListener("click",()=>{
+  const raw=val("relay-in"); if(!raw){ toast("請先貼上進度碼"); return; }
+  let s=null; try{ s=JSON.parse(raw); }catch(e){ try{ s=JSON.parse(raw.slice(raw.indexOf("{"),raw.lastIndexOf("}")+1)); }catch(e2){} }
+  if(!s||typeof s!=="object"){ toast("進度碼看起來不對，請整段重貼"); return; }
+  applyState(s); toast("✅ 進度已接力過來");
+});
 </script>
 </body>
 </html>
