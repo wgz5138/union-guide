@@ -69,7 +69,11 @@
   .help-body em{color:var(--blue);font-style:normal}
 
   label.fld{display:block;font-size:12px;color:var(--txt2);font-weight:500;margin-bottom:5px}
-  input.txt,textarea.txt{width:100%;background:#0C131F;border:1px solid var(--line);border-radius:9px;color:var(--head);padding:.6rem .75rem;font-family:inherit;font-size:14px;resize:vertical}
+  input.txt,textarea.txt,select.txt{width:100%;background:#0C131F;border:1px solid var(--line);border-radius:9px;color:var(--head);padding:.6rem .75rem;font-family:inherit;font-size:14px;resize:vertical}
+  .oneclick-intro{font-size:13px;color:var(--txt2);line-height:1.75;margin-bottom:12px}
+  .drop{display:flex;align-items:center;justify-content:center;border:1.5px dashed var(--line);border-radius:10px;padding:18px;color:var(--muted);font-size:13px;cursor:pointer;background:#0C131F;text-align:center}
+  .drop.drag{border-color:var(--cyan);color:var(--cyan);background:rgba(63,214,208,.06)}
+  .drop.has{border-color:var(--green);color:var(--green)}
   input.txt:focus,textarea.txt:focus{outline:none;border-color:var(--blue-d);box-shadow:0 0 0 3px rgba(79,157,255,.12)}
   .fld-row{margin-bottom:12px}.fld-row:last-child{margin-bottom:0}
   .fld-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
@@ -293,6 +297,31 @@
         </div>
         <div class="note">💡 複製後到 AI 對話框貼上，<b>記得把文獻全文 PDF 一起附上</b>再送出。回覆若被截斷，補一句「請完整輸出 JSON，不要省略」。</div>
       </div>
+    </div>
+
+    <!-- 一鍵自動生成（付費・用自己的金鑰） -->
+    <div class="label"><span class="n">⚡</span>或：一鍵自動生成（付費・你自己的金鑰）</div>
+    <div class="card">
+      <div class="oneclick-intro">不想複製貼上？貼上<b>你自己的</b> API 金鑰、拖一個 PDF 進來，報告直接跑出來，費用算在你自己的帳戶。<b>想免費就用上面那個</b>，這裡可以不理。金鑰只存在這台裝置、不外流，別人看不到。</div>
+      <div class="fld-row">
+        <label class="fld">你的 Anthropic API 金鑰</label>
+        <input class="txt" id="api-key" type="password" placeholder="sk-ant-..." autocomplete="off">
+        <div class="fld-hint">沒有金鑰？<a href="https://console.anthropic.com/settings/keys" target="_blank" rel="noopener" style="color:var(--blue)">點此申請＋儲值</a>（約 US$5 起，可用很久）。</div>
+      </div>
+      <div class="fld-row">
+        <label class="fld">用哪個 AI（影響每篇花費）</label>
+        <select class="txt" id="api-model">
+          <option value="claude-sonnet-4-6">Sonnet — 平衡推薦（約 NT$4/篇）</option>
+          <option value="claude-haiku-4-5">Haiku — 最便宜（約 NT$1~2/篇）</option>
+          <option value="claude-opus-4-8">Opus — 最強（約 NT$6~10/篇）</option>
+        </select>
+      </div>
+      <div class="fld-row" style="margin-bottom:0">
+        <label class="fld">文獻 PDF<span style="color:var(--muted)">（拖進來或點選；或直接用上面第②步貼的摘要）</span></label>
+        <label class="drop" id="pdf-drop"><input type="file" id="pdf-file" accept="application/pdf" hidden><span id="pdf-label">＋ 拖 PDF 到這裡，或點一下選檔</span></label>
+      </div>
+      <button class="btn btn-primary" id="oneclick-btn" style="margin-top:12px">🚀 一鍵生成報告</button>
+      <div class="note" id="oneclick-status"></div>
     </div>
 
     <!-- ===== 主講者模式：匯入組員 ===== -->
@@ -780,6 +809,55 @@ document.getElementById("export-pptx").addEventListener("click",()=>{
 function toast(m){ const t=document.getElementById("toast"); t.textContent=m; t.classList.add("show"); clearTimeout(t._t); t._t=setTimeout(()=>t.classList.remove("show"),2200); }
 function copy(text,ok){ if(navigator.clipboard&&navigator.clipboard.writeText){ navigator.clipboard.writeText(text).then(()=>toast(ok)).catch(()=>fb(text,ok)); } else fb(text,ok); }
 function fb(text,ok){ const ta=document.createElement("textarea"); ta.value=text; ta.style.position="fixed"; ta.style.opacity="0"; document.body.appendChild(ta); ta.select(); try{document.execCommand("copy");toast(ok);}catch(e){toast("複製失敗，請手動選取");} document.body.removeChild(ta); }
+
+/* ===================== ⚡ 一鍵自動生成（直接呼叫 Claude API） ===================== */
+let PDF_B64=null, PDF_NAME="";
+function fileToB64(f){ return new Promise((res,rej)=>{ const r=new FileReader(); r.onload=()=>res(String(r.result).split(",")[1]); r.onerror=rej; r.readAsDataURL(f); }); }
+async function handlePdf(f){ if(!f) return; if(f.type!=="application/pdf"){ toast("請選 PDF 檔"); return; }
+  try{ PDF_B64=await fileToB64(f); PDF_NAME=f.name; document.getElementById("pdf-label").textContent="✅ "+f.name; document.getElementById("pdf-drop").classList.add("has"); }
+  catch(e){ toast("讀檔失敗"); } }
+(function(){
+  const drop=document.getElementById("pdf-drop"), fi=document.getElementById("pdf-file");
+  fi.addEventListener("change",e=>handlePdf(e.target.files[0]));
+  ["dragover","dragenter"].forEach(ev=>drop.addEventListener(ev,e=>{e.preventDefault();drop.classList.add("drag");}));
+  ["dragleave"].forEach(ev=>drop.addEventListener(ev,e=>{e.preventDefault();drop.classList.remove("drag");}));
+  drop.addEventListener("drop",e=>{ e.preventDefault(); drop.classList.remove("drag"); const f=e.dataTransfer.files&&e.dataTransfer.files[0]; if(f) handlePdf(f); });
+})();
+async function callClaude(prompt){
+  const key=val("api-key"), model=document.getElementById("api-model").value;
+  const content=[];
+  if(PDF_B64) content.push({type:"document",source:{type:"base64",media_type:"application/pdf",data:PDF_B64}});
+  content.push({type:"text",text:prompt});
+  const r=await fetch("https://api.anthropic.com/v1/messages",{
+    method:"POST",
+    headers:{"x-api-key":key,"anthropic-version":"2023-06-01","anthropic-dangerous-direct-browser-access":"true","content-type":"application/json"},
+    body:JSON.stringify({model,max_tokens:8000,messages:[{role:"user",content}]})
+  });
+  if(!r.ok){ let body=""; try{ body=await r.text(); }catch(e){} const err=new Error("HTTP "+r.status); err.status=r.status; err.body=body; throw err; }
+  const data=await r.json();
+  return (data.content||[]).filter(b=>b.type==="text").map(b=>b.text).join("\n");
+}
+document.getElementById("oneclick-btn").addEventListener("click",async()=>{
+  const st=document.getElementById("oneclick-status"), btn=document.getElementById("oneclick-btn");
+  if(!val("api-key")){ toast("請先貼上你的 API 金鑰"); return; }
+  if(!PDF_B64 && !val("f-text")){ toast("請拖一個 PDF 進來，或在第②步貼上摘要"); return; }
+  btn.disabled=true; st.textContent="⏳ AI 評讀中⋯⋯約 20～60 秒，請別關頁面。";
+  try{
+    const text=await callClaude(buildPrompt());
+    document.getElementById("ai-resp").value=text;
+    document.getElementById("render-btn").click();
+    st.textContent="✅ 報告完成，往下看 👇";
+  }catch(err){
+    const s=err&&err.status, b=(err&&err.body)||"";
+    if(s===401) st.textContent="❌ 金鑰不對（401）。請檢查 API 金鑰是否貼對。";
+    else if(s===400 && /credit|balance|billing/i.test(b)) st.textContent="❌ 金鑰沒額度。請到 console.anthropic.com 儲值後再試。";
+    else if(s===429) st.textContent="❌ 太頻繁（429），稍等一下再試。";
+    else if(s===529) st.textContent="❌ 伺服器忙線（529），稍後再試。";
+    else st.textContent="❌ 失敗"+(s?("（"+s+"）"):"")+"。可能是網路或金鑰問題；不想弄就改用上面免費的複製貼上。";
+  }finally{ btn.disabled=false; }
+});
+["api-key","api-model"].forEach(id=>{ const el=document.getElementById(id); const s=localStorage.getItem("ebn_"+id); if(s)el.value=s;
+  el.addEventListener("input",()=>localStorage.setItem("ebn_"+id,el.value)); el.addEventListener("change",()=>localStorage.setItem("ebn_"+id,el.value)); });
 
 /* 暫存 */
 ["f-title","f-author","f-journal","f-group","f-context","f-text","f-mins","ai-resp","member-imports"].forEach(id=>{
