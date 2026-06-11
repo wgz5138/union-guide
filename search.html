@@ -86,6 +86,18 @@
   .toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(20px);background:#1A2433;color:#fff;border:1px solid var(--line);padding:.7rem 1.2rem;border-radius:30px;font-size:13px;opacity:0;pointer-events:none;transition:.25s;z-index:1100}
   .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
   footer{text-align:center;padding:24px 16px 40px;font-size:11.5px;color:var(--muted);line-height:1.8;max-width:720px;margin:0 auto}
+
+  /* 操作手冊 */
+  #manual{position:fixed;inset:0;z-index:1200;background:rgba(6,10,18,.93);backdrop-filter:blur(4px);overflow-y:auto;display:none;padding:20px 16px 60px}
+  #manual.show{display:block}
+  .man-box{max-width:600px;margin:0 auto;background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:20px}
+  .man-box h2{font-size:18px;color:var(--head);margin-bottom:4px}
+  .man-close{background:var(--cyan);color:#06231f;border:none;border-radius:20px;padding:6px 14px;font-weight:700;cursor:pointer;font-family:inherit;float:right}
+  .man-box h3{font-size:14px;color:var(--cyan);margin:18px 0 8px;border-left:3px solid var(--cyan);padding-left:8px}
+  .man-box p,.man-box li{font-size:13.5px;color:var(--txt2);line-height:1.85}
+  .man-box ol,.man-box ul{padding-left:20px}.man-box li{margin-bottom:6px}
+  .man-box b{color:var(--head)}
+  .man-box .tip{background:rgba(79,157,255,.08);border:1px solid rgba(79,157,255,.25);border-radius:10px;padding:10px 12px;margin:10px 0;font-size:13px;line-height:1.8}
 </style>
 </head>
 <body class="locked">
@@ -104,6 +116,7 @@
     <div class="logo">🔎</div>
     <div><div class="ttl">臨床快查</div><div class="sub mono">Evidence Quick-Search</div></div>
     <div class="right">
+      <button class="link" id="manual-btn" type="button">❓ 怎麼用</button>
       <button class="link" id="chpw-btn" type="button">🔑 改密碼</button>
       <a class="link" href="evidence.html">→ 評讀工具</a>
     </div>
@@ -175,6 +188,41 @@
   <footer>臨床快查 · 私人研究用 · 只抓標題與摘要，全文請依各資料庫授權於醫院網路取得。</footer>
 </div>
 
+<!-- 操作手冊 -->
+<div id="manual">
+  <div class="man-box">
+    <button class="man-close" id="man-close">✕ 關閉</button>
+    <h2>📖 怎麼用（小白版）</h2>
+    <p style="font-size:13px;color:var(--muted)">臨床快查 — 兩三年用一次也不怕，照著走。</p>
+
+    <h3>這工具在幹嘛？</h3>
+    <p>幫你<b>快速找醫學文獻的「標題＋摘要」</b>。你認出對的那篇，再用<b>醫院網路</b>點連結拿全文。它不抓全文（標題＋摘要就夠你認出來）。</p>
+
+    <h3>不會下英文關鍵字？沒關係</h3>
+    <div class="tip">第①步用<b>中文</b>描述你的問題 → 按「🧠 幫我想英文關鍵字」→ 把提示詞貼給 ChatGPT/Claude → 它回你一行英文查詢 → 貼到第②步搜尋。</div>
+
+    <h3>三步驟</h3>
+    <ol>
+      <li>（選）中文描述問題 → 產生查詢 → 貼給 AI → 拿到英文查詢</li>
+      <li>把英文查詢貼進搜尋框 → 可篩「系統回顧／RCT、年份、只看 Cochrane」→ 按搜尋</li>
+      <li>跑出清單（標題＋摘要）→ 每篇可：看 PubMed／出版社全文、🔗 複製連結存 LINE、📋 帶去評讀</li>
+    </ol>
+
+    <h3>全文去哪拿？</h3>
+    <p>工具只給標題＋摘要。要全文 → 點結果裡的 <b>出版社全文 / PubMed / Google 學術</b> 連結，<b>在醫院網路打開就看得到</b>（醫院有訂閱）；在家可能只看到摘要。</p>
+
+    <h3>想要 AI 幫你綜合？</h3>
+    <div class="tip">勾選幾篇 → 第③步「產生綜合提示詞」→ 貼給 AI → 它<b>只根據這幾篇摘要、附出處</b>給你結論，不會唬爛。最終判斷仍由你／醫師。</div>
+
+    <h3>搜不出來？</h3>
+    <p>會自動跳「一鍵開好查詢的搜尋頁」，照樣能用。</p>
+
+    <h3>密碼</h3>
+    <p>按右上 <b>🔑 改密碼</b> 改成你好記的（存這台裝置）。這支是你最私密的，密碼<b>只給自己</b>。</p>
+    <button class="man-close" id="man-close2" style="float:none;display:block;width:100%;margin-top:18px;border-radius:10px;padding:10px">我懂了，開始用</button>
+  </div>
+</div>
+
 <div class="toast" id="toast"></div>
 
 <script>
@@ -184,7 +232,8 @@ const ACCESS_VERSION="1";
 const PW_HASH="2716985802763051", PW_KEY="ebnq_pw_v"+ACCESS_VERSION, UNLOCK_KEY="ebnq_unlocked_v"+ACCESS_VERSION;
 function cyrb53(s,seed=0){ s=s||""; let h1=0xdeadbeef^seed,h2=0x41c6ce57^seed; for(let i=0,c;i<s.length;i++){c=s.charCodeAt(i);h1=Math.imul(h1^c,2654435761);h2=Math.imul(h2^c,1597334677);} h1=Math.imul(h1^(h1>>>16),2246822507);h1^=Math.imul(h2^(h2>>>13),3266489909);h2=Math.imul(h2^(h2>>>16),2246822507);h2^=Math.imul(h1^(h1>>>13),3266489909); return ""+(4294967296*(2097151&h2)+(h1>>>0)); }
 function pwOk(v){ return cyrb53(v)===(localStorage.getItem(PW_KEY)||PW_HASH); }
-function unlock(){ document.body.classList.remove("locked"); document.body.classList.add("unlocked"); }
+function unlock(){ document.body.classList.remove("locked"); document.body.classList.add("unlocked"); if(!localStorage.getItem("ebnq_seen_manual")) setTimeout(()=>document.getElementById("manual").classList.add("show"),350); }
+function closeManual(){ document.getElementById("manual").classList.remove("show"); localStorage.setItem("ebnq_seen_manual","1"); }
 if(sessionStorage.getItem(UNLOCK_KEY)==="1") unlock();
 function tryUnlock(){ const v=document.getElementById("gate-pw").value;
   if(pwOk(v)){ sessionStorage.setItem(UNLOCK_KEY,"1"); unlock(); }
@@ -198,6 +247,9 @@ document.getElementById("chpw-btn").addEventListener("click",()=>{
   if(a.trim()!==b.trim()){ toast("兩次不一致"); return; }
   localStorage.setItem(PW_KEY,cyrb53(a.trim())); toast("✅ 密碼已更改（這台裝置）");
 });
+document.getElementById("manual-btn").addEventListener("click",()=>document.getElementById("manual").classList.add("show"));
+document.getElementById("man-close").addEventListener("click",closeManual);
+document.getElementById("man-close2").addEventListener("click",closeManual);
 
 /* ===== 小工具 ===== */
 function val(id){ return document.getElementById(id).value.trim(); }
