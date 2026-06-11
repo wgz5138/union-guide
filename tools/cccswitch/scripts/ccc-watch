@@ -1,0 +1,60 @@
+#!/usr/bin/env bash
+# ccc-watch — 包裝 Claude Code，rate limit 退出時自動提示切換帳號
+# Usage: ccc-watch [claude-args...]
+# 環境變數：CCC_ACCOUNT=1|2（當前帳號編號，由 ccc 設定）
+set -uo pipefail
+
+ACCOUNT="${CCC_ACCOUNT:-1}"
+CONFIG_DIR="${CLAUDE_CONFIG_DIR:-$HOME/.claude}"
+
+# 直接執行 claude，不用 pipe（保留 TTY）
+claude "$@"
+EXIT_CODE=$?
+
+# 正常退出或 Ctrl-C → 靜默結束
+if [ "$EXIT_CODE" -eq 0 ] || [ "$EXIT_CODE" -eq 130 ]; then
+  exit "$EXIT_CODE"
+fi
+
+# 從最近的 session jsonl 偵測 rate limit
+abs=$(pwd)
+proj="${abs//\//-}"
+proj_dir="$CONFIG_DIR/projects/$proj"
+
+rate_limited=false
+if [ -d "$proj_dir" ]; then
+  latest=$(ls -t "$proj_dir"/*.jsonl 2>/dev/null | head -1)
+  if [ -n "$latest" ]; then
+    # 檢查最後 30 行是否含 rate limit 信號
+    if tail -30 "$latest" | grep -qiE 'rate.?limit|too many requests|429|usage.?limit|plan limit|over_capacity'; then
+      rate_limited=true
+    fi
+  fi
+fi
+
+if [ "$rate_limited" = true ]; then
+  echo ""
+  echo "⚡ Rate limit hit（帳號 $ACCOUNT）。"
+
+  if [ "$ACCOUNT" = "1" ]; then
+    other=2
+  else
+    other=1
+  fi
+
+  printf '   切換到帳號 (%s) 繼續這場對話？(Y/n) ' "$other"
+  read -r -n1 ans </dev/tty
+  echo ""
+
+  case "${ans:-Y}" in
+    [Yy]|"")
+      exec ccc-resume2 .
+      ;;
+    *)
+      echo "好，下次可以用 ccc 手動接力。"
+      exit "$EXIT_CODE"
+      ;;
+  esac
+else
+  exit "$EXIT_CODE"
+fi

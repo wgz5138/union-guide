@@ -1,0 +1,85 @@
+#!/usr/bin/env bash
+# ccc-codex-resume — 用另一個 Codex 帳號的額度，resume 某帳號的對話
+# 精神同 ccc-resume2：選方向 → 挑對話 → 複製 session 檔到目標帳號 → resume
+# 預設兩個 home：a / b（可自己改名，數量不限）
+# 依賴：codex CLI、fzf、python3
+set -euo pipefail
+
+CODEX_HOMES="${CODEX_ACCOUNT_HOMES_DIR:-$HOME/.codex-homes}"
+BACK="← 上一頁"
+
+[ -d "$CODEX_HOMES" ] || { echo "❌ 找不到 $CODEX_HOMES（見 SKILL.md「Codex 模組」）"; exit 1; }
+
+fzf_pick() { fzf --height=~15 --border=none --pointer="▌" \
+  --color="pointer:#ff79c6,hl:#bd93f9,hl+:#ff79c6" "$@" 2>/dev/null; }
+
+# 列出所有 home
+homes=()
+for h in "$CODEX_HOMES"/*/; do homes+=("$(basename "$h")"); done
+[ ${#homes[@]} -ge 2 ] || { echo "❌ 至少要兩個 Codex home 才能接力（目前 ${#homes[@]} 個）"; exit 1; }
+
+# 組方向選單（跟 Claude 版一致：「用 X 額度 ← resume Y 的對話」）
+directions=()
+for (( i=0; i<${#homes[@]}; i++ )); do
+  for (( j=0; j<${#homes[@]}; j++ )); do
+    [ "$i" -ne "$j" ] && directions+=("用 (${homes[$j]}) 額度  ←  resume (${homes[$i]}) 的對話")
+  done
+done
+
+while true; do
+  # ── 1. 選方向 ──────────────────────────────────────────────────────────────
+  dir=$(printf '%s\n' "${directions[@]}" \
+        | fzf_pick --no-info --prompt="接力方向: ") || exit 130
+
+  # 解析方向：from = 對話來源, to = 額度提供者
+  from=$(echo "$dir" | sed 's/.*resume (\(.*\)) 的對話/\1/')
+  to=$(echo "$dir" | sed 's/用 (\(.*\)) 額度.*/\1/')
+
+  src_sessions="$CODEX_HOMES/$from/sessions"
+  [ -d "$src_sessions" ] || { echo "❌ ($from) 沒有 sessions 目錄"; continue; }
+
+  # ── 2. 挑對話（預覽：時間 + cwd + 第一句 user 訊息）─────────────────────────
+  sel=$( { echo -e "\t$BACK"; find "$src_sessions" -name 'rollout-*.jsonl' 2>/dev/null \
+        | sort -r | head -40 | while read -r f; do
+          meta=$(head -1 "$f" 2>/dev/null | python3 -c "
+import sys,json
+try:
+  d=json.loads(sys.stdin.readline()); p=d.get('payload',{})
+  print(p.get('id',''), '\t', (p.get('cwd','') or '').split('/')[-1])
+except: print('', '\t', '')" 2>/dev/null)
+          uuid=$(printf '%s' "$meta" | cut -f1 | tr -d ' ')
+          cwd=$(printf '%s' "$meta" | cut -f2)
+          ts=$(date -r "$f" "+%m/%d %H:%M")
+          first=$(grep -m1 '"role": *"user"' "$f" 2>/dev/null | python3 -c "
+import sys,json,re
+try:
+  d=json.loads(sys.stdin.readline()); c=d.get('payload',{}).get('content',[])
+  t=' '.join(x.get('text','') for x in c if isinstance(x,dict))
+  print(re.sub(r'\s+',' ',t)[:45])
+except: print('')" 2>/dev/null)
+          [ -n "$uuid" ] && printf '%s\t%s %s  %s\n' "$uuid" "$ts" "$cwd" "$first"
+        done; } \
+        | fzf_pick --prompt="挑 ($from) 的對話 → 用 ($to) 額度 resume: " \
+              --with-nth=2.. --delimiter='\t') || exit 130
+
+  uuid=$(printf '%s' "$sel" | cut -f1)
+
+  # 選了「上一頁」→ 回到選方向
+  if [ -z "$uuid" ] || [[ "$sel" == *"$BACK"* ]]; then
+    continue
+  fi
+
+  break
+done
+
+# ── 3. 找原檔，複製到目標帳號（保留 YYYY/MM/DD 相對路徑）→ resume ─────────────
+src_file=$(find "$src_sessions" -name "*$uuid.jsonl" 2>/dev/null | head -1)
+[ -n "$src_file" ] || { echo "❌ 找不到 session 檔"; exit 1; }
+rel="${src_file#"$src_sessions"/}"
+dst_file="$CODEX_HOMES/$to/sessions/$rel"
+mkdir -p "$(dirname "$dst_file")"
+cp -p "$src_file" "$dst_file"
+
+echo "✅ 對話 ${uuid}：($from) → ($to)，啟動中（吃 ($to) 額度）…"
+echo ""
+exec env CODEX_HOME="$CODEX_HOMES/$to" codex resume "$uuid"

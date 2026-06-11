@@ -1,0 +1,90 @@
+#!/usr/bin/env bash
+# ccc-resume2 — 跨 Claude 帳號 resume 對話（雙向）
+# 用途：某帳號額度爆了，把某串對話搬到另一帳號用它的額度接著做
+# Usage: ccc-resume2 [path]   (path 預設當前目錄)
+# 依賴：claude CLI、fzf、python3
+set -euo pipefail
+
+TARGET="${1:-.}"
+A1="$HOME/.claude"
+A2="${CLAUDE_CONFIG_DIR_2:-$HOME/.claude-2}"
+BACK="← 上一頁"
+
+FZF=(fzf --height=~15 --border=none --pointer="▌"
+     --color="pointer:#ff79c6,hl:#bd93f9,hl+:#ff79c6")
+
+while true; do
+  # ── 1. 選方向 ──────────────────────────────────────────────────────────────
+  dir=$(printf '%s\n' \
+        "用 (2) 額度  ←  resume (1) 的對話" \
+        "用 (1) 額度  ←  resume (2) 的對話" \
+        | "${FZF[@]}" --no-info --prompt="接力方向: " 2>/dev/null) || exit 130
+
+  case "$dir" in
+    *"(2) 額度"*) SRC="$A1"; DST="$A2"; src_n=1; dst_n=2 ;;
+    *"(1) 額度"*) SRC="$A2"; DST="$A1"; src_n=2; dst_n=1 ;;
+    *) exit 0 ;;
+  esac
+
+  # ── 2. 算出 project 目錄（cwd 絕對路徑，非英數字 → "-"）─────────────────────
+  abs=$(cd "$TARGET" && pwd)
+  proj="${abs//\//-}"
+  src_dir="$SRC/projects/$proj"
+  dst_dir="$DST/projects/$proj"
+
+  [ -d "$src_dir" ] || { echo "❌ 帳號 ($src_n) 沒有這個專案的對話：$src_dir"; exit 1; }
+
+  # ── 3. 挑要 resume 的對話（預覽第一句 user 訊息）─────────────────────────────
+  sel=$( { echo -e "\t$BACK"; ls -t "$src_dir"/*.jsonl 2>/dev/null | while read -r f; do
+          id=$(basename "$f" .jsonl)
+          ts=$(date -r "$f" "+%m/%d %H:%M")
+          first=$(grep -m1 '"role":"user"' "$f" 2>/dev/null \
+                  | python3 -c "import sys,json
+try:
+  d=json.loads(sys.stdin.readline())
+  c=d.get('message',{}).get('content',d.get('content',''))
+  t=c if isinstance(c,str) else ' '.join(p.get('text','') for p in c if isinstance(p,dict))
+  print(t.replace(chr(10),' ')[:50])
+except: print('')" 2>/dev/null)
+          printf '%s\t%s  %s\n' "$id" "$ts" "$first"
+        done; } \
+        | "${FZF[@]}" --with-nth=2.. --delimiter='\t' \
+              --prompt="挑要 resume 的帳號($src_n)對話: " 2>/dev/null) || exit 130
+
+  id=$(printf '%s' "$sel" | cut -f1)
+
+  # 選了「上一頁」→ 回到選方向
+  if [ -z "$id" ] || [[ "$sel" == *"$BACK"* ]]; then
+    continue
+  fi
+
+  break
+done
+
+# ── 4. 覆蓋保護：目標已有同 ID 且內容不同 → 問用戶 ─────────────────────────
+mkdir -p "$dst_dir"
+dst_file="$dst_dir/$id.jsonl"
+if [ -f "$dst_file" ]; then
+  src_lines=$(wc -l < "$src_dir/$id.jsonl")
+  dst_lines=$(wc -l < "$dst_file")
+  if ! diff -q <(grep -v '"type":"bridge-session"' "$src_dir/$id.jsonl") "$dst_file" >/dev/null 2>&1; then
+    echo "⚠️  帳號(${dst_n}) 已有此對話（${dst_lines} 行），來源是 ${src_lines} 行，內容不同。"
+    printf "覆蓋目標檔？(y/N) "
+    read -r ans
+    case "$ans" in [yY]*) ;; *) echo "已取消。"; exit 0 ;; esac
+  fi
+fi
+
+# ── 5. 複製 jsonl 到目標帳號（清除 bridge-session）→ 用目標額度 resume ────────
+grep -v '"type":"bridge-session"' "$src_dir/$id.jsonl" > "$dst_file"
+touch -r "$src_dir/$id.jsonl" "$dst_file"   # 保留原始時間戳
+echo "✅ 對話 ${id}：帳號(${src_n}) → 帳號(${dst_n})，啟動中（吃帳號(${dst_n})額度）…"
+echo ""
+
+cd "$TARGET" || exit 1
+RESUME_FLAGS="${CCC_CLAUDE_FLAGS:-}"
+if [ "$DST" = "$HOME/.claude" ]; then
+  exec claude $RESUME_FLAGS --resume "$id"
+else
+  exec env CLAUDE_CONFIG_DIR="$DST" claude $RESUME_FLAGS --resume "$id"
+fi

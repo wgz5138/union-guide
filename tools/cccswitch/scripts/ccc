@@ -1,0 +1,83 @@
+#!/usr/bin/env bash
+# ccc — 多帳號 AI agent 啟動選單（自動偵測你裝了什麼）
+# 只會顯示你電腦上實際存在的 agent。沒有的就不出現。
+# Usage: ccc [path]
+# 依賴：fzf（必要）；claude / codex / gemini 至少一個
+set -euo pipefail
+
+TARGET="${1:-.}"
+CLAUDE_FLAGS="${CCC_CLAUDE_FLAGS:-}"                    # 自訂 flag，例如 export CCC_CLAUDE_FLAGS="--dangerously-skip-permissions"
+A2="${CLAUDE_CONFIG_DIR_2:-$HOME/.claude-2}"
+CODEX_HOMES="${CODEX_ACCOUNT_HOMES_DIR:-$HOME/.codex-homes}"
+AGY="/Applications/Antigravity.app/Contents/MacOS/Antigravity"
+
+has() { command -v "$1" >/dev/null 2>&1; }
+
+# ── 依「實際安裝情況」組選單 ──────────────────────────────────────────────────
+items=()
+if has claude; then
+  items+=("Claude Code (1)  · 主帳號")
+  if [ -d "$A2" ]; then items+=("Claude Code (2)  · 第二帳號")
+  else items+=("Claude Code (2)  · 未設定（見 SKILL.md）"); fi
+  [ -d "$A2" ] && items+=("Claude 接力 · 跨帳號 resume 同一場對話 (1↔2)")
+fi
+if has codex; then
+  if [ -d "$CODEX_HOMES" ] && compgen -G "$CODEX_HOMES/*/" >/dev/null; then
+    for h in "$CODEX_HOMES"/*/; do items+=("Codex · $(basename "$h")"); done
+    items+=("Codex 接力 · 換帳號 resume 同一場對話")
+  else
+    items+=("Codex · 單一帳號")
+  fi
+fi
+has gemini && items+=("Google Gemini")
+[ -f "$AGY" ] && items+=("Antigravity")
+
+[ ${#items[@]} -gt 0 ] || { echo "找不到任何 agent（claude / codex / gemini）。先裝一個再用 ccc。"; exit 1; }
+
+while true; do
+  sel=$(printf '%s\n' "${items[@]}" | fzf \
+        --prompt="選擇要執行的 agent: " --height=~12 --border=none \
+        --no-info --pointer="▌" \
+        --color="pointer:#ff79c6,hl:#bd93f9,hl+:#ff79c6") || exit 0
+
+  # ── 啟動 ────────────────────────────────────────────────────────────────────
+  case "$sel" in
+    "Claude Code (1)"*)
+      cd "$TARGET" || exit 1
+      exec env CCC_ACCOUNT=1 ccc-watch $CLAUDE_FLAGS
+      ;;
+    Claude\ Code\ \(2\)*)
+      if [ ! -d "$A2" ]; then
+        echo "⚠  第二 Claude 帳號未設定。見 SKILL.md「Claude 模組」。"
+        continue  # 回主選單
+      fi
+      ccc-mirror-config "$A2" >/dev/null 2>&1 || true
+      cd "$TARGET" || exit 1
+      exec env CCC_ACCOUNT=2 CLAUDE_CONFIG_DIR="$A2" ccc-watch $CLAUDE_FLAGS
+      ;;
+    Claude\ 接力*)
+      ccc-resume2 "$TARGET" || true
+      # ccc-resume2 成功時 exec 取代進程不會回來；Esc 退出回主選單
+      continue
+      ;;
+    Codex\ 接力*)
+      ccc-codex-resume || true
+      continue
+      ;;
+    Codex\ ·\ 單一帳號)
+      cd "$TARGET" || exit 1
+      exec codex
+      ;;
+    Codex\ ·\ *)
+      name="${sel#Codex · }"
+      cd "$TARGET" || exit 1
+      exec env CODEX_HOME="$CODEX_HOMES/$name" codex
+      ;;
+    "Google Gemini")
+      exec gemini "$TARGET"
+      ;;
+    Antigravity)
+      open -a "Antigravity" "$TARGET"
+      ;;
+  esac
+done
