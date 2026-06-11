@@ -123,11 +123,26 @@
   </div>
 
   <main>
+    <!-- 付費一鍵設定（選用） -->
+    <div class="label"><span class="n">⚡</span>付費一鍵（選用・你自己的金鑰）</div>
+    <div class="card">
+      <div class="hint" style="margin-top:0">想省下複製貼上？貼你自己的 API 金鑰，下面「想查詢」和「綜合」就能<b>一鍵自動</b>。每次只送文字、很便宜（約 <b>NT$0.1~0.5</b>）。免費的複製貼上隨時都在；金鑰只存這台、不外流，跟評讀工具共用同一把。</div>
+      <input class="txt" id="api-key" type="password" placeholder="貼上 sk-ant-...（沒有？到 console.anthropic.com 申請＋儲值）" autocomplete="off" style="margin-top:10px">
+      <select class="txt" id="api-model" style="margin-top:8px">
+        <option value="claude-sonnet-4-6">Sonnet — 推薦</option>
+        <option value="claude-haiku-4-5">Haiku — 最便宜</option>
+        <option value="claude-opus-4-8">Opus — 最強</option>
+      </select>
+    </div>
+
     <!-- ① 中文描述 → 關鍵字 -->
     <div class="label"><span class="n">1</span>不會下關鍵字？用中文描述你的問題</div>
     <div class="card">
       <textarea class="txt" id="q-desc" rows="3" placeholder="例：糖尿病長期洗腎病人，洗腎中嚴重低血壓、水脫不掉，有什麼處理方式？"></textarea>
-      <div class="btn-row"><button class="btn btn-ghost" id="q-prompt-btn" style="flex:1">🧠 幫我想英文關鍵字＋查詢</button></div>
+      <div class="btn-row">
+        <button class="btn btn-ghost" id="q-prompt-btn">🧠 免費：複製貼給 AI</button>
+        <button class="btn btn-ghost" id="q-auto-btn">⚡ 付費：直接生成查詢</button>
+      </div>
       <div id="q-prompt-box" style="display:none;margin-top:10px">
         <textarea class="prompt-area" id="q-prompt-out" readonly></textarea>
         <div class="btn-row"><button class="btn btn-ghost" id="copy-qprompt">📋 複製，貼給 AI</button></div>
@@ -175,12 +190,16 @@
     <div id="synth-wrap" style="display:none">
       <div class="label"><span class="n">3</span>請 AI 綜合（勾選文獻後）</div>
       <div class="card">
-        <button class="btn btn-ghost" id="synth-btn" style="width:100%">🧪 用勾選的摘要，產生「實證綜合」提示詞</button>
+        <div class="btn-row">
+          <button class="btn btn-ghost" id="synth-btn">🧪 免費：產生綜合提示詞</button>
+          <button class="btn btn-ghost" id="synth-auto-btn">⚡ 付費：直接綜合</button>
+        </div>
         <div id="synth-box" style="display:none;margin-top:10px">
           <textarea class="prompt-area" id="synth-out" readonly></textarea>
           <div class="btn-row"><button class="btn btn-ghost" id="copy-synth">📋 複製，貼給 AI</button></div>
           <div class="hint">AI 只會根據你勾的這幾篇摘要回答、並標出處，不會憑空編造。最終臨床判斷仍由醫師／你決定。</div>
         </div>
+        <div id="synth-result" style="display:none;margin-top:12px;background:#0A111C;border:1px solid var(--line);border-radius:10px;padding:14px;font-size:13.5px;color:var(--txt2);line-height:1.85;white-space:pre-wrap"></div>
       </div>
     </div>
   </main>
@@ -372,10 +391,9 @@ function toEval(r){
   setTimeout(()=>location.href="evidence.html",700);
 }
 
-/* ===== ③ 綜合提示詞 ===== */
-document.getElementById("synth-btn").addEventListener("click",()=>{
-  const picks=[...document.querySelectorAll(".res-chk:checked")].map(c=>RESULTS[+c.dataset.i]);
-  if(!picks.length){ toast("請先勾選要綜合的文獻"); return; }
+/* ===== ③ 綜合 ===== */
+function pickedRefs(){ return [...document.querySelectorAll(".res-chk:checked")].map(c=>RESULTS[+c.dataset.i]); }
+function buildSynthPrompt(picks){
   const L=[];
   L.push("你是實證醫學專家。以下是我用 PubMed/Europe PMC 找到的數篇文獻（標題＋摘要）。");
   L.push("請『只根據這些摘要的內容』，用繁體中文回答我的臨床問題，做到：");
@@ -384,14 +402,57 @@ document.getElementById("synth-btn").addEventListener("click",()=>{
   L.push("3. 明確指出證據強弱、以及彼此是否一致／有無分歧。");
   L.push("4. 不要加入摘要裡沒有的資訊，找不到就說「這些摘要未提及」。最終臨床判斷由醫師決定。");
   if(val("q-desc")){ L.push(""); L.push("我的臨床問題："+val("q-desc")); }
-  L.push("");
-  L.push("文獻：");
+  L.push(""); L.push("文獻：");
   picks.forEach((r,i)=>{ L.push(`【第 ${i+1} 篇】${r.title||""}（${[r.authorString,r.pubYear].filter(Boolean).join(", ")}）`);
     L.push("摘要："+(r.abstractText||"（無摘要）")); L.push(""); });
-  document.getElementById("synth-out").value=L.join("\n");
+  return L.join("\n");
+}
+document.getElementById("synth-btn").addEventListener("click",()=>{
+  const picks=pickedRefs(); if(!picks.length){ toast("請先勾選要綜合的文獻"); return; }
+  document.getElementById("synth-out").value=buildSynthPrompt(picks);
   document.getElementById("synth-box").style.display="block";
 });
 document.getElementById("copy-synth").addEventListener("click",()=>copy(val("synth-out"),"已複製，貼給 AI 做實證綜合"));
+
+/* ===== ⚡ 付費一鍵：用自己的金鑰直接呼叫 Claude（金鑰與評讀工具共用 localStorage） ===== */
+const PRICE={"claude-sonnet-4-6":{in:3,out:15},"claude-haiku-4-5":{in:1,out:5},"claude-opus-4-8":{in:5,out:25}};
+const USD2NTD=31.5;
+function ntd(usd){ const v=usd*USD2NTD; return "NT$"+(v<100?v.toFixed(2):Math.round(v)); }
+function apiHeaders(key){ return {"x-api-key":key,"anthropic-version":"2023-06-01","anthropic-dangerous-direct-browser-access":"true","content-type":"application/json"}; }
+function apiKey(){ return val("api-key")||localStorage.getItem("ebn_api-key")||""; }
+function costOf(u){ const p=PRICE[document.getElementById("api-model").value]||PRICE["claude-sonnet-4-6"]; return ntd((u.input_tokens||0)/1e6*p.in+(u.output_tokens||0)/1e6*p.out); }
+function apiErr(err){ const s=err&&err.status,b=(err&&err.body)||""; if(s===401)return"金鑰不對(401)"; if(s===400&&/credit|balance|billing/i.test(b))return"金鑰沒額度，請先儲值"; if(s===429)return"太頻繁(429)，稍候再試"; return"失敗"+(s?("("+s+")"):"")+"，可改用免費複製貼上"; }
+async function callClaude(promptText,maxTok){
+  const key=apiKey(), model=document.getElementById("api-model").value;
+  const r=await fetch("https://api.anthropic.com/v1/messages",{method:"POST",headers:apiHeaders(key),
+    body:JSON.stringify({model,max_tokens:maxTok||4000,messages:[{role:"user",content:[{type:"text",text:promptText}]}]})});
+  if(!r.ok){ let body=""; try{body=await r.text();}catch(e){} const err=new Error("HTTP "+r.status); err.status=r.status; err.body=body; throw err; }
+  const data=await r.json();
+  return { text:(data.content||[]).filter(b=>b.type==="text").map(b=>b.text).join("\n"), usage:data.usage||{} };
+}
+document.getElementById("q-auto-btn").addEventListener("click",async()=>{
+  const desc=val("q-desc"); if(!desc){ toast("先用中文描述你的問題"); return; }
+  if(!apiKey()){ toast("先在上面貼你的 API 金鑰"); return; }
+  const st=document.getElementById("status"); st.textContent="⚡ 生成查詢中⋯⋯";
+  try{
+    const {text,usage}=await callClaude("把以下臨床問題轉成一行可直接貼進 PubMed / Europe PMC 的英文查詢字串（用 AND/OR、片語加引號、納入同義詞與 MeSH 概念）。只回那一行查詢字串本身，不要任何其他文字、不要 QUERY: 前綴。\n\n臨床問題："+desc, 300);
+    const q=text.trim().replace(/^QUERY[:：]\s*/i,"").split("\n")[0].trim();
+    document.getElementById("q-query").value=q; localStorage.setItem("ebnq_q-query",q);
+    st.textContent="⚡ 已生成查詢（花約 "+costOf(usage)+"），搜尋中⋯⋯";
+    doSearch();
+  }catch(err){ st.textContent="⚡ "+apiErr(err); }
+});
+document.getElementById("synth-auto-btn").addEventListener("click",async()=>{
+  const picks=pickedRefs(); if(!picks.length){ toast("請先勾選要綜合的文獻"); return; }
+  if(!apiKey()){ toast("先在上面貼你的 API 金鑰"); return; }
+  const res=document.getElementById("synth-result"); res.style.display="block"; res.textContent="⚡ AI 綜合中⋯⋯約 10～30 秒";
+  try{
+    const {text,usage}=await callClaude(buildSynthPrompt(picks));
+    res.textContent=text+"\n\n—— 這次花約 "+costOf(usage)+"（最終判斷仍由醫師／你決定）——";
+  }catch(err){ res.textContent="⚡ "+apiErr(err); }
+});
+["api-key","api-model"].forEach(id=>{ const el=document.getElementById(id); const s=localStorage.getItem("ebn_"+id); if(s)el.value=s;
+  el.addEventListener("input",()=>localStorage.setItem("ebn_"+id,el.value)); el.addEventListener("change",()=>localStorage.setItem("ebn_"+id,el.value)); });
 
 /* 暫存中文描述與查詢 */
 ["q-desc","q-query"].forEach(id=>{ const el=document.getElementById(id);
