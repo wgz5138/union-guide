@@ -840,6 +840,9 @@ async function handlePdf(f){ if(!f) return; if(f.type!=="application/pdf"){ toas
   ["dragover","dragenter"].forEach(ev=>drop.addEventListener(ev,e=>{e.preventDefault();drop.classList.add("drag");}));
   ["dragleave"].forEach(ev=>drop.addEventListener(ev,e=>{e.preventDefault();drop.classList.remove("drag");}));
   drop.addEventListener("drop",e=>{ e.preventDefault(); drop.classList.remove("drag"); const f=e.dataTransfer.files&&e.dataTransfer.files[0]; if(f) handlePdf(f); });
+  // 防呆：拖檔沒對準時，避免瀏覽器直接開啟 PDF、把頁面切走
+  window.addEventListener("dragover",e=>e.preventDefault());
+  window.addEventListener("drop",e=>e.preventDefault());
 })();
 const PRICE={"claude-sonnet-4-6":{in:3,out:15},"claude-haiku-4-5":{in:1,out:5},"claude-opus-4-8":{in:5,out:25}};
 const USD2NTD=31.5;
@@ -855,7 +858,7 @@ async function countTokens(){
 async function callClaude(){
   const key=val("api-key"), model=document.getElementById("api-model").value;
   const r=await fetch("https://api.anthropic.com/v1/messages",{method:"POST",headers:apiHeaders(key),
-    body:JSON.stringify({model,max_tokens:8000,messages:[{role:"user",content:apiContent()}]})});
+    body:JSON.stringify({model,max_tokens:16000,messages:[{role:"user",content:apiContent()}]})});
   if(!r.ok){ let body=""; try{ body=await r.text(); }catch(e){} const err=new Error("HTTP "+r.status); err.status=r.status; err.body=body; throw err; }
   const data=await r.json();
   return { text:(data.content||[]).filter(b=>b.type==="text").map(b=>b.text).join("\n"), usage:data.usage||{} };
