@@ -316,6 +316,7 @@
           <option value="claude-opus-4-8">Opus — 最強（約 NT$6~10/篇）</option>
         </select>
       </div>
+      <div id="cost-reminder" style="background:rgba(255,177,61,.08);border:1px solid rgba(255,177,61,.35);border-radius:10px;padding:10px 12px;font-size:12.5px;color:var(--amber);line-height:1.75;margin-bottom:12px">💰 提醒：每篇大約 <b id="cost-amt">NT$4</b>（看你選哪個 AI）。<b>儲值額度通常約一年會過期</b>——兩三年才用一篇的人，建議直接用上面的免費版，別白花錢。</div>
       <div class="fld-row" style="margin-bottom:0">
         <label class="fld">文獻 PDF<span style="color:var(--muted)">（拖進來或點選；或直接用上面第②步貼的摘要）</span></label>
         <label class="drop" id="pdf-drop"><input type="file" id="pdf-file" accept="application/pdf" hidden><span id="pdf-label">＋ 拖 PDF 到這裡，或點一下選檔</span></label>
@@ -397,6 +398,12 @@
 
     <h3>只是想看懂一篇、不交報告？</h3>
     <div class="tip">那<b>不用這個工具</b>～直接把 PDF 丟給 ChatGPT 或 Claude，問「用 CASP 幫我評讀這篇、逐題給答案和理由，並解釋它在講什麼」就好，還能一直追問，更全面。</div>
+
+    <h3>免費，還是付費一鍵？</h3>
+    <div class="tip">兩條路用的當下自己選：<br>
+    • <b>🆓 免費（複製貼上）</b>：零成本、沒金鑰要管。<b>偶爾才用的人（例如兩三年一篇）就用這個</b>。<br>
+    • <b>⚡ 付費一鍵</b>：貼自己的金鑰、拖 PDF 直接出報告，每篇約 <b>NT$1~10</b>（看選哪個 AI）。適合常常要用的人。<br>
+    ⚠️ <b>儲值的額度通常約一年會過期</b>，偶爾才用就別買、用免費的最划算。付費版的金鑰各人各存各的、各付各的。</div>
 
     <h3>密碼</h3>
     <p>按右上 <b>🔑 改密碼</b> 改成你好記的（存這台裝置）。</p>
@@ -856,8 +863,11 @@ document.getElementById("oneclick-btn").addEventListener("click",async()=>{
     else st.textContent="❌ 失敗"+(s?("（"+s+"）"):"")+"。可能是網路或金鑰問題；不想弄就改用上面免費的複製貼上。";
   }finally{ btn.disabled=false; }
 });
+const COST={"claude-sonnet-4-6":"NT$4","claude-haiku-4-5":"NT$1~2","claude-opus-4-8":"NT$6~10"};
+function updateCost(){ const m=document.getElementById("api-model").value; document.getElementById("cost-amt").textContent=COST[m]||"NT$4"; }
 ["api-key","api-model"].forEach(id=>{ const el=document.getElementById(id); const s=localStorage.getItem("ebn_"+id); if(s)el.value=s;
   el.addEventListener("input",()=>localStorage.setItem("ebn_"+id,el.value)); el.addEventListener("change",()=>localStorage.setItem("ebn_"+id,el.value)); });
+document.getElementById("api-model").addEventListener("change",updateCost); updateCost();
 
 /* 暫存 */
 ["f-title","f-author","f-journal","f-group","f-context","f-text","f-mins","ai-resp","member-imports"].forEach(id=>{
