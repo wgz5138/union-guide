@@ -321,7 +321,10 @@
         <label class="fld">文獻 PDF<span style="color:var(--muted)">（拖進來或點選；或直接用上面第②步貼的摘要）</span></label>
         <label class="drop" id="pdf-drop"><input type="file" id="pdf-file" accept="application/pdf" hidden><span id="pdf-label">＋ 拖 PDF 到這裡，或點一下選檔</span></label>
       </div>
-      <button class="btn btn-primary" id="oneclick-btn" style="margin-top:12px">🚀 一鍵生成報告</button>
+      <div class="btn-row" style="margin-top:12px">
+        <button class="btn btn-ghost" id="estimate-btn">🧮 先估這篇多少錢</button>
+        <button class="btn btn-primary" id="oneclick-btn">🚀 一鍵生成報告</button>
+      </div>
       <div class="note" id="oneclick-status"></div>
     </div>
 
@@ -830,30 +833,50 @@ async function handlePdf(f){ if(!f) return; if(f.type!=="application/pdf"){ toas
   ["dragleave"].forEach(ev=>drop.addEventListener(ev,e=>{e.preventDefault();drop.classList.remove("drag");}));
   drop.addEventListener("drop",e=>{ e.preventDefault(); drop.classList.remove("drag"); const f=e.dataTransfer.files&&e.dataTransfer.files[0]; if(f) handlePdf(f); });
 })();
-async function callClaude(prompt){
+const PRICE={"claude-sonnet-4-6":{in:3,out:15},"claude-haiku-4-5":{in:1,out:5},"claude-opus-4-8":{in:5,out:25}};
+const USD2NTD=31.5;
+function ntd(usd){ const v=usd*USD2NTD; return "NT$"+(v<100?v.toFixed(1):Math.round(v)); }
+function apiHeaders(key){ return {"x-api-key":key,"anthropic-version":"2023-06-01","anthropic-dangerous-direct-browser-access":"true","content-type":"application/json"}; }
+function apiContent(){ const c=[]; if(PDF_B64) c.push({type:"document",source:{type:"base64",media_type:"application/pdf",data:PDF_B64}}); c.push({type:"text",text:buildPrompt()}); return c; }
+async function countTokens(){
   const key=val("api-key"), model=document.getElementById("api-model").value;
-  const content=[];
-  if(PDF_B64) content.push({type:"document",source:{type:"base64",media_type:"application/pdf",data:PDF_B64}});
-  content.push({type:"text",text:prompt});
-  const r=await fetch("https://api.anthropic.com/v1/messages",{
-    method:"POST",
-    headers:{"x-api-key":key,"anthropic-version":"2023-06-01","anthropic-dangerous-direct-browser-access":"true","content-type":"application/json"},
-    body:JSON.stringify({model,max_tokens:8000,messages:[{role:"user",content}]})
-  });
+  const r=await fetch("https://api.anthropic.com/v1/messages/count_tokens",{method:"POST",headers:apiHeaders(key),body:JSON.stringify({model,messages:[{role:"user",content:apiContent()}]})});
+  if(!r.ok){ const e=new Error("HTTP "+r.status); e.status=r.status; throw e; }
+  return (await r.json()).input_tokens||0;
+}
+async function callClaude(){
+  const key=val("api-key"), model=document.getElementById("api-model").value;
+  const r=await fetch("https://api.anthropic.com/v1/messages",{method:"POST",headers:apiHeaders(key),
+    body:JSON.stringify({model,max_tokens:8000,messages:[{role:"user",content:apiContent()}]})});
   if(!r.ok){ let body=""; try{ body=await r.text(); }catch(e){} const err=new Error("HTTP "+r.status); err.status=r.status; err.body=body; throw err; }
   const data=await r.json();
-  return (data.content||[]).filter(b=>b.type==="text").map(b=>b.text).join("\n");
+  return { text:(data.content||[]).filter(b=>b.type==="text").map(b=>b.text).join("\n"), usage:data.usage||{} };
 }
+document.getElementById("estimate-btn").addEventListener("click",async()=>{
+  const st=document.getElementById("oneclick-status");
+  if(!val("api-key")){ toast("先貼金鑰才能估（估價免費、不扣錢）"); return; }
+  if(!PDF_B64 && !val("f-text")){ toast("先拖 PDF 或在第②步貼摘要"); return; }
+  st.textContent="🧮 估算中⋯⋯";
+  try{
+    const model=document.getElementById("api-model").value, p=PRICE[model]||PRICE["claude-sonnet-4-6"];
+    const inTok=await countTokens(), estOut=5000;
+    const usd=inTok/1e6*p.in + estOut/1e6*p.out;
+    st.innerHTML="🧮 這篇估約 <b>"+ntd(usd)+"</b>（輸入 "+inTok.toLocaleString()+" tokens＋估輸出約 5000）。估價免費、不扣錢；生成後會再顯示<b>實際</b>金額。";
+  }catch(err){ st.textContent="估價失敗"+(err&&err.status?("（"+err.status+"）"):"")+"，可能金鑰或網路問題。"; }
+});
 document.getElementById("oneclick-btn").addEventListener("click",async()=>{
   const st=document.getElementById("oneclick-status"), btn=document.getElementById("oneclick-btn");
   if(!val("api-key")){ toast("請先貼上你的 API 金鑰"); return; }
   if(!PDF_B64 && !val("f-text")){ toast("請拖一個 PDF 進來，或在第②步貼上摘要"); return; }
   btn.disabled=true; st.textContent="⏳ AI 評讀中⋯⋯約 20～60 秒，請別關頁面。";
   try{
-    const text=await callClaude(buildPrompt());
+    const {text,usage}=await callClaude();
     document.getElementById("ai-resp").value=text;
     document.getElementById("render-btn").click();
-    st.textContent="✅ 報告完成，往下看 👇";
+    const p=PRICE[document.getElementById("api-model").value]||PRICE["claude-sonnet-4-6"];
+    const inT=usage.input_tokens||0, outT=usage.output_tokens||0;
+    const usd=inT/1e6*p.in + outT/1e6*p.out;
+    st.innerHTML="✅ 報告完成 👇　這篇<b>實際花了約 "+ntd(usd)+"</b>（輸入 "+inT.toLocaleString()+"、輸出 "+outT.toLocaleString()+" tokens）— 跟人算錢就用這個數字。";
   }catch(err){
     const s=err&&err.status, b=(err&&err.body)||"";
     if(s===401) st.textContent="❌ 金鑰不對（401）。請檢查 API 金鑰是否貼對。";
