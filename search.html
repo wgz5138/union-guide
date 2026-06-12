@@ -313,6 +313,7 @@ document.getElementById("copy-qprompt").addEventListener("click",()=>copy(val("q
 const EPMC="https://www.ebi.ac.uk/europepmc/webservices/rest/search";
 function buildQuery(){
   let q=val("q-query"); if(!q) return null;
+  if(/%[0-9A-Fa-f]{2}/.test(q)){ try{ q=decodeURIComponent(q.replace(/\+/g," ")); }catch(e){} } // 還原網址編碼 %20/%22…
   q=q.replace(/^\s*QUERY\s*\d*\s*[:：]\s*/i,""); // 去掉 AI 給的 QUERY:/QUERY1: 前綴（貼進來常一起帶到）
   q=q.replace(/\[[^\]]*\]/g," ").replace(/\s{2,}/g," ").trim(); // 去掉 PubMed 欄位標籤 [tiab]/[Mesh]（Europe PMC 不吃）
   const t=document.getElementById("f-type").value;
