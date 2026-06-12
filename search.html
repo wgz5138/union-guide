@@ -179,7 +179,10 @@
         </div>
       </div>
       <label class="chk"><input type="checkbox" id="f-coch"> 只看 Cochrane 系統回顧（實證金標準）</label>
-      <div class="btn-row"><button class="btn btn-primary" id="search-btn">🔎 搜尋</button></div>
+      <div class="btn-row">
+        <button class="btn btn-ghost" id="clear-query" style="flex:0 0 auto">✕ 清空</button>
+        <button class="btn btn-primary" id="search-btn">🔎 搜尋</button>
+      </div>
       <div class="hint">資料來源：Europe PMC（涵蓋 PubMed＋更多，含 Cochrane）。只抓<b>標題＋摘要</b>，全文點下方連結、用<b>醫院網路</b>開即可看。</div>
     </div>
 
@@ -309,6 +312,7 @@ document.getElementById("copy-qprompt").addEventListener("click",()=>copy(val("q
 const EPMC="https://www.ebi.ac.uk/europepmc/webservices/rest/search";
 function buildQuery(){
   let q=val("q-query"); if(!q) return null;
+  q=q.replace(/^\s*QUERY\s*\d*\s*[:：]\s*/i,""); // 去掉 AI 給的 QUERY:/QUERY1: 前綴（貼進來常一起帶到）
   q=q.replace(/\[[^\]]*\]/g," ").replace(/\s{2,}/g," ").trim(); // 去掉 PubMed 欄位標籤 [tiab]/[Mesh]（Europe PMC 不吃）
   const t=document.getElementById("f-type").value;
   if(t==="SR") q+=' AND (PUB_TYPE:"systematic review" OR PUB_TYPE:"meta-analysis")';
@@ -320,6 +324,7 @@ function buildQuery(){
 }
 document.getElementById("search-btn").addEventListener("click",doSearch);
 document.getElementById("q-query").addEventListener("keydown",e=>{ if(e.key==="Enter") doSearch(); });
+document.getElementById("clear-query").addEventListener("click",()=>{ const el=document.getElementById("q-query"); el.value=""; localStorage.removeItem("ebnq_q-query"); el.focus(); });
 
 let RESULTS=[];
 async function doSearch(isRetry){
