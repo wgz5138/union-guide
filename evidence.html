@@ -192,6 +192,15 @@
   .man-box{max-width:600px;margin:0 auto;background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:20px}
   .man-box h2{font-size:18px;color:var(--head);margin-bottom:4px}
   .man-close{background:var(--cyan);color:#06231f;border:none;border-radius:20px;padding:6px 14px;font-weight:700;cursor:pointer;font-family:inherit;float:right}
+  #preview{position:fixed;inset:0;z-index:1260;background:rgba(6,10,18,.93);backdrop-filter:blur(4px);overflow-y:auto;display:none;padding:20px 16px 60px}
+  #preview.show{display:block}
+  .pv-paper{background:#fff;color:#1a1a1a;border-radius:10px;padding:20px 18px;font-size:14px;line-height:1.7;max-height:58vh;overflow-y:auto;margin-top:10px}
+  .pv-paper h3{color:#0a6b5f;font-size:15px;margin:16px 0 5px;border-bottom:1px solid #ddd;padding-bottom:3px}
+  .pv-paper .pv-q{font-weight:700;color:#111;margin-top:13px}
+  .pv-paper .pv-quote{color:#666;font-style:italic;font-size:13px}
+  .pv-paper .pv-speech{background:#eef5f2;border-left:3px solid #0a6b5f;padding:8px 10px;border-radius:6px;font-size:13px;color:#333;margin:6px 0}
+  .pv-paper .pv-meta{color:#555;font-size:13px}
+  @media print{#preview,#manual,#welcome,#tour-dim,#tour-bar{display:none!important}}
   .man-box h3{font-size:14px;color:var(--cyan);margin:18px 0 8px;border-left:3px solid var(--cyan);padding-left:8px}
   .man-box p,.man-box li{font-size:13.5px;color:var(--txt2);line-height:1.85}
   .man-box ol,.man-box ul{padding-left:20px}.man-box li{margin-bottom:6px}
@@ -419,6 +428,7 @@
         </div>
       </div>
       <div class="btn-row" style="margin-top:14px">
+        <button class="btn btn-primary" id="preview-btn" type="button">👁 先預覽內容</button>
         <button class="btn btn-ghost" id="plain-toggle" type="button">📄 切換樸素版</button>
         <button class="btn btn-ghost" id="export-pdf">🖨️ PDF</button>
         <button class="btn btn-ghost" id="export-pptx">📊 匯出 PPT（含演講稿）</button>
@@ -433,6 +443,20 @@
   </footer>
   <div style="text-align:center;margin:2px 0 30px">
     <a href="https://docs.google.com/forms/d/e/1FAIpQLSdd4R-JdKe7Cfqy7j9bhCRfBXa-B4ZODEvI_ZSfy2H5SQ_I6g/viewform" target="_blank" rel="noopener" style="display:inline-block;font-size:13px;color:#16C2A3;border:1px solid rgba(22,194,163,.4);border-radius:22px;padding:10px 18px;text-decoration:none">💬 用得順不順？花 30 秒給我建議 →</a>
+  </div>
+</div>
+
+<!-- 匯出前預覽 -->
+<div id="preview">
+  <div class="man-box" style="max-width:680px">
+    <button class="man-close" id="pv-close">✕ 關閉</button>
+    <h2>👁 預覽：產出內容</h2>
+    <p style="font-size:13px;color:var(--muted)">這就是會放進 <b>PDF / PPT</b> 的文字（PPT 的演講稿會放在備忘稿）。確認沒問題再按下面匯出。</p>
+    <div id="pv-paper" class="pv-paper"></div>
+    <div class="btn-row" style="margin-top:14px">
+      <button class="btn btn-primary" id="pv-pdf" type="button">🖨️ 確認，匯出 PDF</button>
+      <button class="btn btn-ghost" id="pv-pptx" type="button">📊 確認，匯出 PPT</button>
+    </div>
   </div>
 </div>
 
@@ -968,6 +992,50 @@ document.getElementById("export-pptx").addEventListener("click",()=>{
   p.writeFile({fileName:(group?group+"_":"")+"實證報告.pptx"}).then(()=>toast("PPT 已下載（演講稿在備忘稿）"));
 });
 
+/* ===================== 匯出前預覽 ===================== */
+function pvEsc(s){ return String(s==null?"":s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;"); }
+function buildPreview(){
+  if(!LAST){ toast("請先產生報告"); return false; }
+  const d=LAST; let h="";
+  h+='<div style="font-size:18px;font-weight:800">'+pvEsc(d.title||"實證文獻評讀報告")+'</div>';
+  const meta=[ d.studyType==="SR"?"系統回顧/Meta":"RCT" ];
+  if(d.evidenceLevel)meta.push(pvEsc(d.evidenceLevel));
+  if(d.qualityGrade)meta.push("品質："+pvEsc(d.qualityGrade));
+  h+='<div class="pv-meta">'+meta.join("　·　")+'</div>';
+  if(d.citation)h+='<div class="pv-meta">'+pvEsc(d.citation)+'</div>';
+  if(d.group)h+='<div class="pv-meta">組別：'+pvEsc(d.group)+'</div>';
+  if(d.clinicalQuestion){ h+='<h3>臨床問題</h3>'+pvEsc(d.clinicalQuestion); }
+  if(d.pico){ h+='<h3>PICO</h3>'; ["P","I","C","O"].forEach(k=>{ h+='<div><b>'+k+'</b>　'+pvEsc(d.pico[k]||"—")+'</div>'; }); }
+  if(d.summary){ h+='<h3>摘要</h3>'+pvEsc(d.summary); }
+  h+='<h3>逐題評讀</h3>';
+  (d.appraisal||[]).slice().sort((a,b)=>(+a.no)-(+b.no)).forEach(it=>{
+    h+='<div class="pv-q">Q'+pvEsc(it.no)+'　'+pvEsc(it.question)+'</div>';
+    const ans=String(it.answer||""); const col=/^是|yes/i.test(ans)?"#0a7a55":/^否|no/i.test(ans)?"#c0392b":"#6b4fbb";
+    h+='<div style="font-weight:700;color:'+col+'">答：'+pvEsc(it.answer)+'</div>';
+    if(it.rationale)h+='<div>理由：'+pvEsc(it.rationale)+'</div>';
+    if(it.quote)h+='<div class="pv-quote">原文：'+pvEsc(it.quote)+'</div>';
+  });
+  const sp=d.speech;
+  if(sp&&(sp.opening||sp.closing||(sp.perQuestion&&Object.keys(sp.perQuestion).length))){
+    h+='<h3>🎤 演講稿（會放進 PPT 備忘稿，投影片正面看不到）</h3>';
+    if(sp.opening)h+='<div class="pv-speech"><b>開場：</b>'+pvEsc(sp.opening)+'</div>';
+    if(sp.perQuestion)Object.keys(sp.perQuestion).sort((a,b)=>(+a)-(+b)).forEach(k=>{ h+='<div class="pv-speech"><b>Q'+pvEsc(k)+'：</b>'+pvEsc(sp.perQuestion[k])+'</div>'; });
+    if(sp.closing)h+='<div class="pv-speech"><b>結尾：</b>'+pvEsc(sp.closing)+'</div>';
+  }
+  if(Array.isArray(d.anticipatedQA)&&d.anticipatedQA.length){
+    h+='<h3>可能被問的問題</h3>';
+    d.anticipatedQA.forEach(qa=>{ h+='<div style="margin:6px 0"><b>Q：</b>'+pvEsc(qa.q)+'<br><b>A：</b>'+pvEsc(qa.a)+'</div>'; });
+  }
+  if(d.clinicalApplication){ h+='<h3>臨床應用</h3>'+pvEsc(d.clinicalApplication); }
+  if(d.conclusion){ h+='<h3>結論</h3>'+pvEsc(d.conclusion); }
+  document.getElementById("pv-paper").innerHTML=h;
+  return true;
+}
+document.getElementById("preview-btn").addEventListener("click",()=>{ if(buildPreview()) document.getElementById("preview").classList.add("show"); });
+document.getElementById("pv-close").addEventListener("click",()=>document.getElementById("preview").classList.remove("show"));
+document.getElementById("pv-pdf").addEventListener("click",()=>{ document.getElementById("preview").classList.remove("show"); setTimeout(()=>window.print(),250); });
+document.getElementById("pv-pptx").addEventListener("click",()=>{ document.getElementById("preview").classList.remove("show"); document.getElementById("export-pptx").click(); });
+
 /* ===================== 小工具 ===================== */
 function toast(m){ const t=document.getElementById("toast"); t.textContent=m; t.classList.add("show"); clearTimeout(t._t); t._t=setTimeout(()=>t.classList.remove("show"),2200); }
 function copy(text,ok){ if(navigator.clipboard&&navigator.clipboard.writeText){ navigator.clipboard.writeText(text).then(()=>toast(ok)).catch(()=>fb(text,ok)); } else fb(text,ok); }
@@ -981,7 +1049,7 @@ function showAppBanner(){ if(sessionStorage.getItem("hideAppBanner"))return; con
 (function(){ const x=document.getElementById("appbanner-x"); if(x)x.addEventListener("click",()=>{ document.getElementById("appbanner").classList.remove("show"); sessionStorage.setItem("hideAppBanner","1"); });
   if(/FBAN|FBAV|FBIOS|Instagram|Line\/|MicroMessenger|Twitter|TikTok|GSA\//i.test(navigator.userAgent||"")) showAppBanner(); })();
 // 🔄 自動偵測新版本：跟伺服器上的 ver.txt 比對，有新版就跳橫幅（使用者完全不用管 ?數字、不用刪圖示）
-const BUILD="2026061207";
+const BUILD="2026061208";
 (function(){
   try{ fetch("ver.txt?t="+Date.now(),{cache:"no-store"}).then(r=>r.ok?r.text():null).then(v=>{ if(!v)return; v=v.trim(); if(v && v!==BUILD){ const b=document.getElementById("updbanner"); if(b)b.classList.add("show"); } }).catch(()=>{}); }catch(e){}
   const ub=document.getElementById("updbtn"); if(ub)ub.addEventListener("click",()=>{ location.replace(location.pathname+"?v="+Date.now()); });
