@@ -327,8 +327,9 @@ document.getElementById("q-query").addEventListener("keydown",e=>{ if(e.key==="E
 document.getElementById("clear-query").addEventListener("click",()=>{ const el=document.getElementById("q-query"); el.value=""; localStorage.removeItem("ebnq_q-query"); el.focus(); });
 
 let RESULTS=[];
-async function doSearch(isRetry){
-  const q=buildQuery();
+function dropLastAndClause(q){ let depth=0,last=-1; for(let i=0;i<q.length;i++){ const c=q[i]; if(c==="(")depth++; else if(c===")")depth--; else if(depth===0 && q.substr(i,5).toUpperCase()===" AND ") last=i; } return last<0?null:q.slice(0,last).trim(); }
+async function doSearch(isRetry, overrideQ){
+  const q=(overrideQ!=null)?overrideQ:buildQuery();
   document.getElementById("fallback").classList.remove("show");
   if(!q){ toast("請先輸入查詢關鍵字"); return; }
   document.getElementById("status").textContent="搜尋中⋯⋯";
@@ -346,7 +347,9 @@ async function doSearch(isRetry){
         document.getElementById("f-type").value=""; document.getElementById("f-years").value=""; document.getElementById("f-coch").checked=false;
         document.getElementById("status").textContent="沒結果，自動放寬（拿掉篩選）再搜一次⋯⋯"; return doSearch(true);
       }
-      document.getElementById("status").textContent="還是沒有結果。試試：① 用更通用的英文詞 ② 減少 AND 條件 ③ 若查詢是 AI 給的，回 AI 說「在 Europe PMC 找不到，請給寬鬆、不含 [tiab]/[Mesh] 標籤的版本」。";
+      const broader=dropLastAndClause(q); // 查詢太窄 → 砍掉最後一段 AND(...) 再搜
+      if(broader && broader!==q){ document.getElementById("status").textContent="沒結果，自動放寬查詢（減少條件）再搜⋯⋯"; return doSearch(true,broader); }
+      document.getElementById("status").textContent="還是沒有結果。試更通用的英文詞，或用「⚡ 直接生成查詢」。";
       return;
     }
     document.getElementById("status").textContent=`找到約 ${data.hitCount} 篇，顯示前 ${RESULTS.length} 篇（標題＋摘要）：`;
