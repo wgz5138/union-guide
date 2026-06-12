@@ -4,8 +4,9 @@
 從「全國法規資料庫」官方 Open API 下載整包法規（ZIP），抽出我們關心的
 法條，產出精簡的 laws.json 供 lawyer.html 直接讀取。
 
-官方端點（回傳的是「全部法規打包成一個 ZIP」，內含一個 JSON）：
-  https://law.moj.gov.tw/api/Ch/Law/JSON
+官方端點（各自回傳「打包成一個 ZIP」，內含一個 JSON）：
+  https://law.moj.gov.tw/api/Ch/Law/JSON    （法律，如 勞動基準法）
+  https://law.moj.gov.tw/api/Ch/Order/JSON  （命令／施行細則，如 勞動基準法施行細則）
 
 JSON 結構（官方 schema，欄位名以官方為準，本程式對缺漏採容錯）：
   { "UpdateDate": "YYYYMMDD",
@@ -20,7 +21,10 @@ JSON 結構（官方 schema，欄位名以官方為準，本程式對缺漏採�
 """
 import io, json, re, ssl, sys, zipfile, urllib.request, datetime
 
-API_URL = "https://law.moj.gov.tw/api/Ch/Law/JSON"
+API_URLS = [
+    "https://law.moj.gov.tw/api/Ch/Law/JSON",     # 法律
+    "https://law.moj.gov.tw/api/Ch/Order/JSON",   # 命令／施行細則
+]
 OUT = "laws.json"
 
 # 法規 -> 要收的條（None = 整部；set = 只收這些條號的數字字串，如 "24"、"227-2"）
@@ -72,13 +76,13 @@ def clean(t):
     return t
 
 
-def _fetch(ctx):
-    req = urllib.request.Request(API_URL, headers={"User-Agent": "union-guide-law-updater/1.0"})
+def _fetch(url, ctx):
+    req = urllib.request.Request(url, headers={"User-Agent": "union-guide-law-updater/1.0"})
     with urllib.request.urlopen(req, timeout=120, context=ctx) as r:
         return r.read()
 
 
-def download_json():
+def download_json(url):
     # 一般驗證，但關掉過嚴的 X509_STRICT：台灣政府憑證鏈常缺 Subject Key Identifier，
     # 新版 OpenSSL 嚴格模式會擋下（仍保留主機名／信任鏈驗證）。
     ctx = ssl.create_default_context()
@@ -86,11 +90,11 @@ def download_json():
     if strict:
         ctx.verify_flags &= ~strict
     try:
-        raw = _fetch(ctx)
+        raw = _fetch(url, ctx)
     except ssl.SSLCertVerificationError as e:
         # 最後手段：公開、唯讀的官方法規資料，憑證鏈瑕疵時不驗證憑證重試（大聲記錄）。
         print("⚠ 憑證驗證仍失敗（%s）；改用『不驗證憑證』重試——公開法規、唯讀，可接受。" % e, file=sys.stderr)
-        raw = _fetch(ssl._create_unverified_context())
+        raw = _fetch(url, ssl._create_unverified_context())
     # 可能是 ZIP，也可能直接是 JSON
     if raw[:2] == b"PK":
         zf = zipfile.ZipFile(io.BytesIO(raw))
@@ -105,11 +109,26 @@ def download_json():
 
 
 def main():
-    print("下載：", API_URL)
-    doc = download_json()
-    laws_in = doc.get("Laws") or doc.get("laws") or []
-    update_date = doc.get("UpdateDate") or doc.get("updateDate") or datetime.date.today().strftime("%Y%m%d")
-    print("官方 UpdateDate：", update_date, "／法規筆數：", len(laws_in))
+    laws_in = []
+    update_date = ""
+    ok = 0
+    for url in API_URLS:
+        print("下載：", url)
+        try:
+            doc = download_json(url)
+        except Exception as e:
+            print("⚠ 下載失敗（%s）：%s" % (url, e), file=sys.stderr)
+            continue
+        part = doc.get("Laws") or doc.get("Orders") or doc.get("laws") or []
+        laws_in += part
+        update_date = doc.get("UpdateDate") or doc.get("updateDate") or update_date
+        ok += 1
+        print("  取得 %d 筆" % len(part))
+    if not ok:
+        raise RuntimeError("兩個官方端點都下載失敗，中止（不覆蓋 laws.json）。")
+    if not update_date:
+        update_date = datetime.date.today().strftime("%Y%m%d")
+    print("官方 UpdateDate：", update_date, "／合計法規筆數：", len(laws_in))
 
     by_name = {}
     for L in laws_in:
