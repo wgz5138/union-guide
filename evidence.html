@@ -769,11 +769,12 @@ function buildPromptUnknown(){
   L.push('  "clinicalQuestion":"一句臨床問題（PICO 句型）",');
   L.push('  "pico":{"P":"對象","I":"介入","C":"對照","O":"結果指標"},');
   L.push('  "summary":"150~250字中文重點摘要", "evidenceLevel":"證據等級（Melnyk 七級，例 Level II）", "qualityGrade":"高/中/低＋半句說明",');
-  L.push('  "appraisal":[{"no":題號,"section":"A/B/C/D","question":"中文題目","answer":"是/否/不確定（一般判斷題填：請依病人情況判斷；成本效益權衡題請依準則直接給是/否）","rationale":"'+wordCount()+'字的完整書面理由：具體說明判斷依據、研究方法/族群、主要結果（數據）與限制，要能直接放進書面報告，不可只寫一兩句","quote":"支持判斷的原文英文句（找不到留空）","plain":"投影片用的精簡重點，一句話、25字以內"}]'+speechReq+',');
+  L.push('  "appraisal":[{"no":題號,"section":"A/B/C/D","question":"中文題目","answer":"是/否/不確定（一般判斷題填：請依病人情況判斷；成本效益權衡題請依準則直接給是/否）","rationale":"'+wordCount()+'字的完整書面理由：具體說明判斷依據、研究方法/族群、主要結果（數據）與限制，要能直接放進書面報告，不可只寫一兩句","quote":"原文英文佐證句：要涵蓋本題判斷與 rationale 中每一個主要論點及數據的依據；請照抄原文（可多句、用 ; 分隔），找不到就留空，絕不可杜撰","plain":"投影片用的精簡重點，一句話、25字以內"}]'+speechReq+',');
   L.push('  "clinicalApplication":"臨床應用建議'+(context?"，請扣緊我的臨床情境":"")+'", "conclusion":"3~5句整體結論"');
   L.push("}");
   L.push("");
   L.push("規則：appraisal 要包含『你選的那張表』的全部題目（RCT 11 題或 SR 10 題），題號完整；判斷題不要替我下是/否（但『成本效益權衡題』例外，請依題目後標註的準則直接給是/否並說明）；每題 rationale 要寫 "+wordCount()+" 字（給 Word/PDF 書面報告，內容要充實具體）、plain 一句話精簡（25字內，給 PPT 投影片）；全部繁體中文（quote 可留英文）；只輸出 JSON。");
+  L.push("引用規範（重要）：整份評讀的每一個論點與數據都必須有文獻原文依據——rationale 與 summary 只能寫文獻真正支持的內容，並把支持這些論點與數據的原文英文句放進該題的 quote 欄（可多句、用 ; 分隔）。凡文獻沒有提到的，一律不要寫，更不可推測、估算或杜撰；無法從原文找到依據時，寧可不寫該點。數字（百分比、p 值、OR／RR／HR、95% CI、樣本數、追蹤時間等）尤其要逐一對應原文。");
   return L.join("\n");
 }
 function buildPrompt(){
@@ -825,11 +826,12 @@ function buildPrompt(){
     L.push('  "pico":{"P":"對象","I":"介入","C":"對照","O":"結果指標"},');
     L.push('  "summary":"150~250字中文重點摘要", "evidenceLevel":"證據等級（Melnyk 七級，例 Level II）", "qualityGrade":"高/中/低＋半句說明",');
   }
-  L.push('  "appraisal":[{"no":題號,"section":"A/B/C/D","question":"中文題目","answer":"是/否/不確定（一般判斷題填：請依病人情況判斷；成本效益權衡題請依準則直接給是/否）","rationale":"'+wordCount()+'字的完整書面理由：具體說明判斷依據、研究方法/族群、主要結果（數據）與限制，要能直接放進書面報告，不可只寫一兩句","quote":"支持判斷的原文英文句（找不到留空）","plain":"投影片用的精簡重點，一句話、25字以內"}]'+speechReq);
+  L.push('  "appraisal":[{"no":題號,"section":"A/B/C/D","question":"中文題目","answer":"是/否/不確定（一般判斷題填：請依病人情況判斷；成本效益權衡題請依準則直接給是/否）","rationale":"'+wordCount()+'字的完整書面理由：具體說明判斷依據、研究方法/族群、主要結果（數據）與限制，要能直接放進書面報告，不可只寫一兩句","quote":"原文英文佐證句：要涵蓋本題判斷與 rationale 中每一個主要論點及數據的依據；請照抄原文（可多句、用 ; 分隔），找不到就留空，絕不可杜撰","plain":"投影片用的精簡重點，一句話、25字以內"}]'+speechReq);
   if(MODE==="leader") L.push(',\n  "clinicalApplication":"臨床應用建議'+(context?"，請扣緊我的臨床情境":"")+'", "conclusion":"3~5句整體結論"');
   L.push("}");
   L.push("");
   L.push("規則：appraisal 只能包含第 "+nums.join("、")+" 題，題號完整對應；判斷題不要替我下是/否（但『成本效益權衡題』例外，請依題目後標註的準則直接給是/否並說明），只白話解釋；每題 rationale 要寫 "+wordCount()+" 字（給 Word/PDF 書面報告，內容要充實具體）、plain 一句話精簡（25字內，給 PPT 投影片）；全部繁體中文（quote 可留英文）；再次強調只輸出 JSON。");
+  L.push("引用規範（重要）：整份評讀的每一個論點與數據都必須有文獻原文依據——rationale 與 summary 只能寫文獻真正支持的內容，並把支持這些論點與數據的原文英文句放進該題的 quote 欄（可多句、用 ; 分隔）。凡文獻沒有提到的，一律不要寫，更不可推測、估算或杜撰；無法從原文找到依據時，寧可不寫該點。數字（百分比、p 值、OR／RR／HR、95% CI、樣本數、追蹤時間等）尤其要逐一對應原文。");
   return L.join("\n");
 }
 document.getElementById("gen-btn").addEventListener("click",()=>{
@@ -1168,9 +1170,10 @@ function showAppBanner(){ if(sessionStorage.getItem("hideAppBanner"))return; con
 (function(){ const x=document.getElementById("appbanner-x"); if(x)x.addEventListener("click",()=>{ document.getElementById("appbanner").classList.remove("show"); sessionStorage.setItem("hideAppBanner","1"); });
   if(/FBAN|FBAV|FBIOS|Instagram|Line\/|MicroMessenger|Twitter|TikTok|GSA\//i.test(navigator.userAgent||"")) showAppBanner(); })();
 // 🔄 自動偵測新版本：跟伺服器上的 ver.txt 比對，有新版就跳橫幅（使用者完全不用管 ?數字、不用刪圖示）
-const BUILD="2026061214";
+const BUILD="2026061215";
 const CASP_VERSION="CASP 2024";
 const CHANGELOG=[
+  "整份評讀的每個論點與數據都要有原文出處、禁止杜撰（提示詞已加引用規範）",
   "可自訂每題書面理由字數（填欄位，預設 180~300，改完重產即可）",
   "Word／PDF 書面理由加長、PPT 維持字少（提示詞已調整）",
   "新增「📝 Word（可改）」匯出，可在 Word／Pages 直接改字",
