@@ -99,6 +99,10 @@
   .man-box ol,.man-box ul{padding-left:20px}.man-box li{margin-bottom:6px}
   .man-box b{color:var(--head)}
   .man-box .tip{background:rgba(79,157,255,.08);border:1px solid rgba(79,157,255,.25);border-radius:10px;padding:10px 12px;margin:10px 0;font-size:13px;line-height:1.8}
+
+  /* 手機體驗強化 */
+  button,.btn,.link,.relay-toggle,select.txt{touch-action:manipulation} /* 拿掉點擊延遲 */
+  @media (max-width:600px){ input.txt,textarea.txt,select.txt,#gate input{font-size:16px} } /* 防 iOS 點輸入框自動放大 */
 </style>
 </head>
 <body class="locked">
@@ -107,7 +111,7 @@
   <div class="lock">🔒</div>
   <h2>臨床快查</h2>
   <p>請輸入通行密碼</p>
-  <input id="gate-pw" type="password" autocomplete="off" placeholder="••••••">
+  <input id="gate-pw" type="password" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" placeholder="••••••">
   <button id="gate-go">進入</button>
   <div class="err" id="gate-err"></div>
 </div>
@@ -167,7 +171,7 @@
     <!-- ② 搜尋 -->
     <div class="label"><span class="n">2</span>搜尋（標題＋摘要）</div>
     <div class="card">
-      <input class="txt" id="q-query" placeholder="英文關鍵字，例：intradialytic hypotension ultrafiltration">
+      <input class="txt" id="q-query" autocapitalize="off" autocorrect="off" spellcheck="false" placeholder="英文關鍵字，例：intradialytic hypotension ultrafiltration">
       <div class="filters">
         <div>
           <label>研究類型</label>
@@ -291,6 +295,10 @@ function cleanAbs(t){ return String(t||"").replace(/<h[1-6][^>]*>/gi,"\n").repla
 function toast(m){ const t=document.getElementById("toast"); t.textContent=m; t.classList.add("show"); clearTimeout(t._t); t._t=setTimeout(()=>t.classList.remove("show"),2400); }
 function copy(text,ok){ if(navigator.clipboard&&navigator.clipboard.writeText){ navigator.clipboard.writeText(text).then(()=>toast(ok)).catch(()=>fb(text,ok)); } else fb(text,ok); }
 function fb(text,ok){ const ta=document.createElement("textarea"); ta.value=text; ta.style.position="fixed"; ta.style.opacity="0"; document.body.appendChild(ta); ta.select(); try{document.execCommand("copy");toast(ok);}catch(e){toast("複製失敗");} document.body.removeChild(ta); }
+// 從可見的 textarea 複製：先選取（App 內建瀏覽器若擋複製，至少已幫使用者選好、可長按拷貝）
+function copyEl(id,ok){ const el=document.getElementById(id); el.focus(); el.select(); try{el.setSelectionRange(0,el.value.length);}catch(e){}
+  if(navigator.clipboard&&navigator.clipboard.writeText){ navigator.clipboard.writeText(el.value).then(()=>toast(ok)).catch(()=>{ let d=false; try{d=document.execCommand("copy");}catch(e){} toast(d?ok:"已幫你選取，長按選『拷貝』"); }); return; }
+  let d=false; try{d=document.execCommand("copy");}catch(e){} toast(d?ok:"已幫你選取，長按選『拷貝』"); }
 
 /* ===== ① 中文 → 查詢字串提示詞 ===== */
 document.getElementById("q-prompt-btn").addEventListener("click",()=>{
@@ -308,7 +316,7 @@ document.getElementById("q-prompt-btn").addEventListener("click",()=>{
   document.getElementById("q-prompt-out").value=L.join("\n");
   document.getElementById("q-prompt-box").style.display="block";
 });
-document.getElementById("copy-qprompt").addEventListener("click",()=>copy(val("q-prompt-out"),"已複製，貼給 AI 拿查詢字串"));
+document.getElementById("copy-qprompt").addEventListener("click",()=>copyEl("q-prompt-out","已複製，貼給 AI 拿查詢字串"));
 
 /* ===== ② 搜尋（Europe PMC API） ===== */
 const EPMC="https://www.ebi.ac.uk/europepmc/webservices/rest/search";
@@ -450,7 +458,7 @@ document.getElementById("synth-btn").addEventListener("click",()=>{
   document.getElementById("synth-out").value=buildSynthPrompt(picks);
   document.getElementById("synth-box").style.display="block";
 });
-document.getElementById("copy-synth").addEventListener("click",()=>copy(val("synth-out"),"已複製，貼給 AI 做實證綜合"));
+document.getElementById("copy-synth").addEventListener("click",()=>copyEl("synth-out","已複製，貼給 AI 做實證綜合"));
 
 /* ===== ⚡ 付費一鍵：用自己的金鑰直接呼叫 Claude（金鑰與評讀工具共用 localStorage） ===== */
 const PRICE={"claude-sonnet-4-6":{in:3,out:15},"claude-haiku-4-5":{in:1,out:5},"claude-opus-4-8":{in:5,out:25}};
