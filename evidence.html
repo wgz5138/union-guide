@@ -133,7 +133,7 @@
   .badge.grade{background:rgba(183,155,255,.14);color:var(--violet);border:1px solid rgba(183,155,255,.35)}
   .rp-block{margin-bottom:18px}
   .rp-h{font-size:14px;font-weight:700;color:var(--head);border-left:3px solid var(--cyan);padding-left:9px;margin-bottom:9px}
-  .rp-text{font-size:14px;color:var(--txt2);line-height:1.85;white-space:pre-wrap}
+  .rp-text{font-size:15px;color:var(--txt2);line-height:1.9;white-space:pre-wrap}
   .pico{display:grid;grid-template-columns:auto 1fr;border:1px solid var(--line);border-radius:10px;overflow:hidden}
   .pico .pk{background:rgba(63,214,208,.08);color:var(--cyan);font-weight:600;padding:8px 12px;font-size:13px;border-bottom:1px solid var(--line)}
   .pico .pv{padding:8px 12px;font-size:13.5px;color:var(--txt2);border-bottom:1px solid var(--line)}
@@ -150,8 +150,11 @@
   .ans.unsure,.ans.judge{background:rgba(183,155,255,.14);color:var(--violet);border:1px solid rgba(183,155,255,.4)}
   .appr-body{margin-top:9px;padding-left:34px}
   .appr-plain{font-size:12.5px;color:var(--blue);background:rgba(79,157,255,.07);border-radius:8px;padding:7px 10px;margin-bottom:7px;line-height:1.6}
-  .appr-rat{font-size:13.5px;color:var(--txt2);line-height:1.75}.appr-rat b{color:var(--cyan)}
-  .appr-quote{margin-top:7px;font-size:12px;color:var(--muted);background:#0A111C;border-left:2px solid var(--cyan);padding:6px 10px;border-radius:0 6px 6px 0;font-style:italic;line-height:1.6}
+  .appr-rat{font-size:14.5px;color:var(--txt2);line-height:1.8}.appr-rat b{color:var(--cyan)}
+  .appr-quote{margin-top:7px;font-size:13px;color:var(--muted);background:#0A111C;border-left:2px solid var(--cyan);padding:6px 10px;border-radius:0 6px 6px 0;font-style:italic;line-height:1.7}
+  .appr-quote .hl,.pv-quote .hl{background:#ffe96b;color:#1a1a1a;padding:0 3px;border-radius:2px;font-style:normal;box-decoration-break:clone;-webkit-box-decoration-break:clone}
+  .zoombtn{font-size:11px;background:#0F1622;border:1px solid var(--line);color:var(--txt2);border-radius:14px;padding:4px 10px;cursor:pointer;font-family:inherit;text-transform:none;letter-spacing:0}
+  .zoombtn.on{background:rgba(63,214,208,.14);color:var(--cyan);border-color:rgba(63,214,208,.4)}
   .appr-flag{margin-top:7px;font-size:12px;color:var(--amber);font-weight:600}
   .appr-by{font-size:11px;color:var(--muted);margin-left:auto;align-self:center}
 
@@ -194,7 +197,7 @@
   .man-close{background:var(--cyan);color:#06231f;border:none;border-radius:20px;padding:6px 14px;font-weight:700;cursor:pointer;font-family:inherit;float:right}
   #preview{position:fixed;inset:0;z-index:1260;background:rgba(6,10,18,.93);backdrop-filter:blur(4px);overflow-y:auto;display:none;padding:20px 16px 60px}
   #preview.show{display:block}
-  .pv-paper{background:#fff;color:#1a1a1a;border-radius:10px;padding:20px 18px;font-size:14px;line-height:1.7;max-height:58vh;overflow-y:auto;margin-top:10px}
+  .pv-paper{background:#fff;color:#1a1a1a;border-radius:10px;padding:20px 18px;font-size:15px;line-height:1.75;max-height:58vh;overflow-y:auto;margin-top:10px}
   .pv-paper h3{color:#0a6b5f;font-size:15px;margin:16px 0 5px;border-bottom:1px solid #ddd;padding-bottom:3px}
   .pv-paper .pv-q{font-weight:700;color:#111;margin-top:13px}
   .pv-paper .pv-quote{color:#666;font-style:italic;font-size:13px}
@@ -239,6 +242,7 @@
     .report .appr-q,.report .qa-q{color:#111}
     .report .appr-plain{color:#555;background:#f4f4f4}
     .report .appr-quote{background:#f6f6f6;border-left-color:#bbb;color:#666}
+    .report .appr-quote .hl{background:transparent;color:#444;padding:0}
     .report .pico .pk{background:#f0f0f0;color:#333}.report .pico .pv{color:#333}
     .report .conc{background:#f4f4f4;color:#222}
     .report .ans.yes{color:#1a7a4a}.report .ans.no{color:#c0392b}
@@ -428,7 +432,7 @@
 
     <!-- 報告輸出 -->
     <div id="report-wrap">
-      <div class="label" style="margin-top:22px"><span class="n">✓</span>報告</div>
+      <div class="label" style="margin-top:22px"><span class="n">✓</span>報告<span style="margin-left:auto;display:flex;gap:6px;align-items:center"><span style="color:var(--muted);text-transform:none;letter-spacing:0;font-weight:400">🔍字級</span><button type="button" class="zoombtn" data-z="1">標準</button><button type="button" class="zoombtn" data-z="1.3">大</button><button type="button" class="zoombtn" data-z="1.6">特大</button></span></div>
       <div id="report-inner"></div>
       <div class="member-only">
         <button class="btn btn-primary" id="export-part" style="margin-top:12px">📤 匯出我的部分（給主講者）</button>
@@ -888,7 +892,7 @@ function renderReport(d, masterMap){
       h+=`<div class="appr${mism}"><div class="appr-head"><span class="appr-no">${esc(it.no)}</span><span class="appr-q">${esc(it.question)}</span><span class="ans ${ansClass(it.answer)}">${esc(it.answer)}</span></div>
         <div class="appr-body">${it.plain?`<div class="appr-plain">🗣 ${esc(it.plain)}</div>`:""}
         <div class="appr-rat"><b>理由：</b>${esc(it.rationale)}</div>
-        ${it.quote?`<div class="appr-quote">原文：${esc(it.quote)}</div>`:""}${flag}</div></div>`;
+        ${it.quote?`<div class="appr-quote">原文：<mark class="hl">${esc(it.quote)}</mark></div>`:""}${flag}</div></div>`;
     });
     h+=`</div>`;
   }
@@ -928,6 +932,7 @@ document.getElementById("render-btn").addEventListener("click",()=>{
   LAST=main;
   document.getElementById("report-inner").innerHTML=renderReport(main, MODE==="leader"?masterMap:null);
   document.getElementById("report-wrap").style.display="block";
+  applyZoom(RPZOOM);
   document.getElementById("foot-group").textContent = main.group? main.group+" · 實證報告" : "";
   document.getElementById("report-wrap").scrollIntoView({behavior:"smooth",block:"start"});
 });
@@ -1040,7 +1045,7 @@ function buildPreview(){
     const ans=String(it.answer||""); const col=/^是|yes/i.test(ans)?"#0a7a55":/^否|no/i.test(ans)?"#c0392b":"#6b4fbb";
     h+='<div style="font-weight:700;color:'+col+'">答：'+pvEsc(it.answer)+'</div>';
     if(it.rationale)h+='<div>理由：'+pvEsc(it.rationale)+'</div>';
-    if(it.quote)h+='<div class="pv-quote">原文：'+pvEsc(it.quote)+'</div>';
+    if(it.quote)h+='<div class="pv-quote">原文：<mark class="hl">'+pvEsc(it.quote)+'</mark></div>';
   });
   const sp=d.speech;
   if(sp&&(sp.opening||sp.closing||(sp.perQuestion&&Object.keys(sp.perQuestion).length))){
@@ -1135,6 +1140,16 @@ function clearAll(){
 }
 document.getElementById("clear-btn").addEventListener("click",clearAll);
 
+/* ===================== 報告字級放大（記住選擇） ===================== */
+let RPZOOM=localStorage.getItem("ebn_zoom")||"1";
+function applyZoom(z){
+  RPZOOM=String(z); localStorage.setItem("ebn_zoom",RPZOOM);
+  const p=document.getElementById("report-paper"); if(p) p.style.zoom=RPZOOM;
+  document.querySelectorAll(".zoombtn").forEach(b=>b.classList.toggle("on",b.dataset.z===RPZOOM));
+}
+document.querySelectorAll(".zoombtn").forEach(b=>b.addEventListener("click",()=>applyZoom(b.dataset.z)));
+applyZoom(RPZOOM);
+
 /* ===================== 版本與更新說明 ===================== */
 function copyCaspUpdate(){
   const s="請先讀我 GitHub（wgz5138/union-guide）的 PLAN.md，了解架構後，把 evidence.html 裡的 CASP 題庫（CASP.RCT 與 CASP.SR 兩張表的題目）更新到 CASP 官網 casp-uk.net 公布的最新版；題目中文＋英文原文都更新，judge/costben 等標記沿用既有規則。改完幫我 commit 並 push，並把 footer 的 CASP 版本字樣與 CASP_VERSION 一起更新。";
@@ -1170,9 +1185,10 @@ function showAppBanner(){ if(sessionStorage.getItem("hideAppBanner"))return; con
 (function(){ const x=document.getElementById("appbanner-x"); if(x)x.addEventListener("click",()=>{ document.getElementById("appbanner").classList.remove("show"); sessionStorage.setItem("hideAppBanner","1"); });
   if(/FBAN|FBAV|FBIOS|Instagram|Line\/|MicroMessenger|Twitter|TikTok|GSA\//i.test(navigator.userAgent||"")) showAppBanner(); })();
 // 🔄 自動偵測新版本：跟伺服器上的 ver.txt 比對，有新版就跳橫幅（使用者完全不用管 ?數字、不用刪圖示）
-const BUILD="2026061215";
+const BUILD="2026061216";
 const CASP_VERSION="CASP 2024";
 const CHANGELOG=[
+  "原文加螢光筆標示、報告可放大字級（標準／大／特大）",
   "整份評讀的每個論點與數據都要有原文出處、禁止杜撰（提示詞已加引用規範）",
   "可自訂每題書面理由字數（填欄位，預設 180~300，改完重產即可）",
   "Word／PDF 書面理由加長、PPT 維持字少（提示詞已調整）",
