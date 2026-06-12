@@ -293,7 +293,7 @@ document.getElementById("q-prompt-btn").addEventListener("click",()=>{
   const L=[];
   L.push("你是醫學文獻檢索專家。我會用中文描述一個臨床問題，請幫我：");
   L.push("1. 用一句話點出核心 PICO（對象/介入/比較/結果）。");
-  L.push("2. 給我一行可直接貼進 PubMed / Europe PMC 的英文查詢字串（用 AND/OR、片語加引號、納入同義詞與 MeSH 概念），以精準命中相關文獻。");
+  L.push("2. 給我一行英文查詢字串，可直接貼進我的搜尋框（背後用 Europe PMC）。用 AND/OR（大寫）、片語加引號、納入同義詞；**絕對不要用 PubMed 欄位標籤如 [tiab]、[Mesh]、[Title/Abstract]**（這個搜尋框不吃、會找不到）。");
   L.push("只要那一行查詢字串用 `QUERY:` 開頭單獨一行，方便我複製。");
   L.push("");
   L.push("我的臨床問題：");
@@ -307,6 +307,7 @@ document.getElementById("copy-qprompt").addEventListener("click",()=>copy(val("q
 const EPMC="https://www.ebi.ac.uk/europepmc/webservices/rest/search";
 function buildQuery(){
   let q=val("q-query"); if(!q) return null;
+  q=q.replace(/\[[^\]]*\]/g," ").replace(/\s{2,}/g," ").trim(); // 去掉 PubMed 欄位標籤 [tiab]/[Mesh]（Europe PMC 不吃）
   const t=document.getElementById("f-type").value;
   if(t==="SR") q+=' AND (PUB_TYPE:"systematic review" OR PUB_TYPE:"meta-analysis")';
   else if(t==="RCT") q+=' AND PUB_TYPE:"Randomized Controlled Trial"';
@@ -319,7 +320,7 @@ document.getElementById("search-btn").addEventListener("click",doSearch);
 document.getElementById("q-query").addEventListener("keydown",e=>{ if(e.key==="Enter") doSearch(); });
 
 let RESULTS=[];
-async function doSearch(){
+async function doSearch(isRetry){
   const q=buildQuery();
   document.getElementById("fallback").classList.remove("show");
   if(!q){ toast("請先輸入查詢關鍵字"); return; }
@@ -332,7 +333,15 @@ async function doSearch(){
     if(!r.ok) throw new Error("HTTP "+r.status);
     const data=await r.json();
     RESULTS=(data.resultList&&data.resultList.result)||[];
-    if(!RESULTS.length){ document.getElementById("status").textContent="沒有結果，換個關鍵字試試。"; return; }
+    if(!RESULTS.length){
+      const hadFilter=document.getElementById("f-type").value||document.getElementById("f-years").value||document.getElementById("f-coch").checked;
+      if(hadFilter && !isRetry){ // 沒結果且有篩選 → 自動拿掉篩選再搜一次
+        document.getElementById("f-type").value=""; document.getElementById("f-years").value=""; document.getElementById("f-coch").checked=false;
+        document.getElementById("status").textContent="沒結果，自動放寬（拿掉篩選）再搜一次⋯⋯"; return doSearch(true);
+      }
+      document.getElementById("status").textContent="還是沒有結果。試試：① 用更通用的英文詞 ② 減少 AND 條件 ③ 若查詢是 AI 給的，回 AI 說「在 Europe PMC 找不到，請給寬鬆、不含 [tiab]/[Mesh] 標籤的版本」。";
+      return;
+    }
     document.getElementById("status").textContent=`找到約 ${data.hitCount} 篇，顯示前 ${RESULTS.length} 篇（標題＋摘要）：`;
     renderResults();
     document.getElementById("synth-wrap").style.display="block";
@@ -445,7 +454,7 @@ document.getElementById("q-auto-btn").addEventListener("click",async()=>{
   if(!apiKey()){ toast("先在上面貼你的 API 金鑰"); return; }
   const st=document.getElementById("status"); st.textContent="⚡ 生成查詢中⋯⋯";
   try{
-    const {text,usage}=await callClaude("把以下臨床問題轉成一行可直接貼進 PubMed / Europe PMC 的英文查詢字串（用 AND/OR、片語加引號、納入同義詞與 MeSH 概念）。只回那一行查詢字串本身，不要任何其他文字、不要 QUERY: 前綴。\n\n臨床問題："+desc, 300);
+    const {text,usage}=await callClaude("把以下臨床問題轉成一行英文查詢字串（給 Europe PMC 搜尋用）。用 AND/OR（大寫）、片語加引號、納入同義詞；不要用 PubMed 欄位標籤（[tiab]、[Mesh] 等）。只回那一行查詢字串本身，不要任何其他文字、不要 QUERY: 前綴。\n\n臨床問題："+desc, 300);
     const q=text.trim().replace(/^QUERY[:：]\s*/i,"").split("\n")[0].trim();
     document.getElementById("q-query").value=q; localStorage.setItem("ebnq_q-query",q);
     st.textContent="⚡ 已生成查詢（花約 "+costOf(usage)+"），搜尋中⋯⋯";
