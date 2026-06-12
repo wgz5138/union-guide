@@ -98,7 +98,19 @@
   .wel-box h2{font-size:24px;color:var(--head);margin-bottom:12px}
   .wel-box .lead{font-size:17px;color:var(--txt);line-height:1.75;margin-bottom:20px}
   .wel-go{width:100%;background:var(--cyan);color:#06231f;border:none;border-radius:12px;padding:15px;font-size:18px;font-weight:700;cursor:pointer;font-family:inherit}
-  .wel-more{margin-top:16px;font-size:15px;color:var(--blue);cursor:pointer;user-select:none}
+  .wel-more{margin-top:14px;font-size:15px;color:var(--blue);cursor:pointer;user-select:none}
+  /* 互動導覽 */
+  #tour-dim{position:fixed;inset:0;background:rgba(6,10,18,.72);z-index:1100;display:none}
+  #tour-dim.show{display:block}
+  .tour-hi{position:relative;z-index:1150;box-shadow:0 0 0 3px var(--cyan),0 0 22px rgba(63,214,208,.55);border-radius:12px}
+  #tour-bar{position:fixed;left:0;right:0;bottom:0;z-index:1160;background:var(--panel);border-top:1px solid var(--cyan);padding:14px 16px;display:none}
+  #tour-bar.show{display:block}
+  #tour-text{font-size:15px;color:var(--head);line-height:1.65;margin-bottom:10px}
+  #tour-text b{color:var(--cyan)}
+  .tour-btns{display:flex;gap:8px}
+  .tour-btns button{flex:1;border:none;border-radius:10px;padding:11px;font-size:15px;font-weight:600;cursor:pointer;font-family:inherit}
+  #tour-skip{background:#0F1622;color:var(--txt2);border:1px solid var(--line)}
+  #tour-next{background:var(--cyan);color:#06231f}
   .man-box{max-width:600px;margin:0 auto;background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:20px}
   .man-box h2{font-size:18px;color:var(--head);margin-bottom:4px}
   .man-close{background:var(--cyan);color:#06231f;border:none;border-radius:20px;padding:6px 14px;font-weight:700;cursor:pointer;font-family:inherit;float:right}
@@ -244,9 +256,17 @@
     <div class="em">🔎</div>
     <h2>歡迎 👋</h2>
     <p class="lead">這個工具幫你<b>快速找醫學文獻</b>（標題＋摘要），再用醫院網路拿全文。<br>不會用沒關係——右上角 <b>「❓怎麼用」</b> 隨時點開教學。</p>
-    <button class="wel-go" id="wel-go">開始用 👉</button>
-    <div class="wel-more" id="wel-more">先看完整教學</div>
+    <button class="wel-go" id="wel-tour">▶ 帶我走一遍（20 秒）</button>
+    <div class="wel-more" id="wel-go">直接開始用，不用導覽</div>
+    <div class="wel-more" id="wel-more" style="margin-top:8px">看完整文字教學</div>
   </div>
+</div>
+
+<!-- 互動導覽 -->
+<div id="tour-dim"></div>
+<div id="tour-bar">
+  <div id="tour-text"></div>
+  <div class="tour-btns"><button id="tour-skip">跳過</button><button id="tour-next">下一步 →</button></div>
 </div>
 
 <!-- 操作手冊 -->
@@ -255,6 +275,7 @@
     <button class="man-close" id="man-close">✕ 關閉</button>
     <h2>📖 怎麼用（小白版）</h2>
     <p style="font-size:13px;color:var(--muted)">臨床快查 — 兩三年用一次也不怕，照著走。</p>
+    <button id="man-tour" style="display:block;width:100%;margin:4px 0 6px;background:var(--cyan);color:#06231f;border:none;border-radius:10px;padding:11px;font-size:15px;font-weight:700;cursor:pointer;font-family:inherit">▶ 帶我走一遍（互動導覽）</button>
 
     <h3>這工具在幹嘛？</h3>
     <p>幫你<b>快速找醫學文獻的「標題＋摘要」</b>。你認出對的那篇，再用<b>醫院網路</b>點連結拿全文。它不抓全文（標題＋摘要就夠你認出來）。</p>
@@ -297,6 +318,24 @@ function unlock(){ document.body.classList.remove("locked"); document.body.class
 function closeManual(){ document.getElementById("manual").classList.remove("show"); localStorage.setItem("ebnq_seen_manual","1"); }
 document.getElementById("wel-go").addEventListener("click",()=>{ document.getElementById("welcome").classList.remove("show"); localStorage.setItem("ebnq_seen_manual","1"); });
 document.getElementById("wel-more").addEventListener("click",()=>{ document.getElementById("welcome").classList.remove("show"); localStorage.setItem("ebnq_seen_manual","1"); document.getElementById("manual").classList.add("show"); });
+document.getElementById("wel-tour").addEventListener("click",()=>{ document.getElementById("welcome").classList.remove("show"); startTour(); });
+/* ===== 互動導覽 ===== */
+const TOUR=[
+  {sel:"#q-desc", t:"① <b>用中文描述你的臨床問題</b>就好，不會下英文關鍵字沒關係。"},
+  {sel:"#demo-btn", t:"② 不想打字？點 <b>「🧪 一鍵試範例」</b> 直接看它能搜出文獻。"},
+  {sel:"#q-query", t:"③ 或把英文查詢貼這格按 <b>搜尋</b>；換查詢按 <b>「✕ 清空」</b> 再貼。"},
+  {sel:"#status", t:"④ 結果會列在下面：看到對的 → 點連結拿全文，或 <b>「📋 帶去評讀」</b>。走完囉 🎉"}
+];
+let _ti=0;
+function tourStep(){ document.querySelectorAll(".tour-hi").forEach(e=>e.classList.remove("tour-hi"));
+  const s=TOUR[_ti], el=document.querySelector(s.sel);
+  if(el){ el.classList.add("tour-hi"); el.scrollIntoView({behavior:"smooth",block:"center"}); }
+  document.getElementById("tour-text").innerHTML="（"+(_ti+1)+"/"+TOUR.length+"）"+s.t;
+  document.getElementById("tour-next").textContent=_ti===TOUR.length-1?"完成 ✓":"下一步 →"; }
+function startTour(){ _ti=0; document.getElementById("tour-dim").classList.add("show"); document.getElementById("tour-bar").classList.add("show"); tourStep(); }
+function endTour(){ document.querySelectorAll(".tour-hi").forEach(e=>e.classList.remove("tour-hi")); document.getElementById("tour-dim").classList.remove("show"); document.getElementById("tour-bar").classList.remove("show"); localStorage.setItem("ebnq_seen_manual","1"); window.scrollTo({top:0,behavior:"smooth"}); }
+document.getElementById("tour-next").addEventListener("click",()=>{ if(_ti<TOUR.length-1){_ti++;tourStep();}else endTour(); });
+document.getElementById("tour-skip").addEventListener("click",endTour);
 if(sessionStorage.getItem(UNLOCK_KEY)==="1") unlock();
 function tryUnlock(){ const v=document.getElementById("gate-pw").value;
   if(pwOk(v)){ sessionStorage.setItem(UNLOCK_KEY,"1"); unlock(); }
@@ -313,6 +352,7 @@ document.getElementById("chpw-btn").addEventListener("click",()=>{
 document.getElementById("manual-btn").addEventListener("click",()=>document.getElementById("manual").classList.add("show"));
 document.getElementById("man-close").addEventListener("click",closeManual);
 document.getElementById("man-close2").addEventListener("click",closeManual);
+document.getElementById("man-tour").addEventListener("click",()=>{ closeManual(); startTour(); });
 
 /* ===== 小工具 ===== */
 function val(id){ return document.getElementById(id).value.trim(); }
