@@ -441,8 +441,9 @@ function showAppBanner(){ if(sessionStorage.getItem("hideAppBanner"))return; con
   if(/FBAN|FBAV|FBIOS|Instagram|Line\/|MicroMessenger|Twitter|TikTok|GSA\//i.test(navigator.userAgent||"")) showAppBanner(); })();
 
 /* 🔄 自動偵測新版本 */
-const BUILD="2026061221";
+const BUILD="2026061222";
 const CHANGELOG=[
+  "法規庫擴充：加入就業服務法、勞保條例、職災保險法、大量解僱法、工會法、團體協約法、最低工資法、性騷擾／跟騷／家暴／性平教育法、道交法",
   "新增『🔎 查相關判決』：AI 想關鍵字→一鍵到司法院裁判書系統查真判決→貼回引用（AI 不編造字號）",
   "AI 對話改『只注入與本案最相關的法條』，省錢又不爆長（整套官方法規仍可在法規庫瀏覽）",
   "法規改用全國法規資料庫『官方真資料』（每週自動更新 laws.json，標『✅官方』）",
@@ -609,6 +610,7 @@ function selectRelevant(pool, focus, cap){
     let s=0;
     if(refNos.length && refNos.indexOf(lawNorm(l.art))>=0) s+=100;
     if(grams.size) grams.forEach(g=>{ if(g && hay.indexOf(g)>=0) s++; });
+    if(field && field!=="綜合" && l.cat===field) s+=1;               // 領域相符小加分
     if(useAnchors && anchorSet.has(l.law+"|"+lawNorm(l.art))) s+=4;
     return {l,s};
   });
@@ -619,10 +621,8 @@ function selectRelevant(pool, focus, cap){
   return top;
 }
 function lawContext(focus){
-  const field=document.getElementById("f-field").value;
-  const pool=LAWS.filter(l=> field==="綜合" ? true : (l.cat===field || l.cat==="勞動"));
-  const use=pool.length?pool:LAWS;
-  return selectRelevant(use, focus, 40).map(l=>`【${l.law} ${l.art}】${l.title?("（"+l.title+"）"):""}\n${l.text}`).join("\n\n");
+  // 從「全部載入的法規」依相關性挑（不再被領域硬篩），新加的法只要相關就會被取用。
+  return selectRelevant(LAWS, focus, 40).map(l=>`【${l.law} ${l.art}】${l.title?("（"+l.title+"）"):""}\n${l.text}`).join("\n\n");
 }
 
 /* 一鍵更新 */
