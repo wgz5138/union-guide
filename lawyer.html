@@ -236,8 +236,9 @@
       <button class="btn btn-ghost" id="demo-btn" style="width:100%;margin-top:10px">🧪 帶入「加班費補發爭議」範例（不用打字）</button>
       <div id="profile-toggle" style="font-size:12.5px;color:var(--blue);cursor:pointer;user-select:none;margin-top:12px">🪪 我的身分背景／本案文件（選填，只存這台・AI 每次都會參考）▾</div>
       <div id="profile-body" style="display:none;margin-top:8px">
+        <button class="btn btn-ghost btn-sm" id="profile-tpl" style="margin-bottom:8px">📋 帶入範本（照著把你的公告貼進去）</button>
         <textarea class="txt" id="profile" rows="4" placeholder="例：高雄榮總契約護理、94/4/1 入職、適用勞基法。↵把院方加班費補發公告、院內加班/約用規定的『原文』貼這裡。"></textarea>
-        <div class="hint">🔒 這欄<b>只存在你這台裝置、不會上傳、不會進公開網站</b>。AI 每次回覆都會自動參考它，讓建議貼合你的身分與<b>院內實際規定</b>（例如補發要件、逆算 5 年時效）。換手機可用下面「📲 接力」帶過去。</div>
+        <div class="hint">🔒 這欄<b>只存在你這台裝置、不會上傳、不會進公開網站</b>。AI 每次回覆都會自動參考它，讓建議貼合你的身分與<b>院內實際規定</b>（例如補發要件、逆算 5 年時效）。換手機可用下面「📲 接力」帶過去；要分享給同事也是用接力。</div>
       </div>
     </div>
 
@@ -449,8 +450,9 @@ function showAppBanner(){ if(sessionStorage.getItem("hideAppBanner"))return; con
   if(/FBAN|FBAV|FBIOS|Instagram|Line\/|MicroMessenger|Twitter|TikTok|GSA\//i.test(navigator.userAgent||"")) showAppBanner(); })();
 
 /* 🔄 自動偵測新版本 */
-const BUILD="2026061225";
+const BUILD="2026061226";
 const CHANGELOG=[
+  "身分背景欄加『📋 帶入範本』：照欄位把你的公告貼進去、填一次永久記住（只存這台），同事用『接力』分享",
   "新增『🪪 我的身分背景／本案文件』常駐欄：只存這台、不上傳，AI 每次自動參考（院內規定優先於通則）",
   "AI 律師改『不只報喜』：每次回覆強制加『⚠ 風險與弱點』——對方律師會怎麼打你、你哪裡會輸、要補強什麼",
   "加班費 5 年消滅時效（民法§126）等時效條文納入，AI 會主動幫你判斷能追溯到哪",
@@ -959,6 +961,28 @@ document.getElementById("pay-toggle").addEventListener("click",()=>{ const d=doc
 (function(){ const m=localStorage.getItem("law_mode"); if(m) setMode(m); })();
 document.getElementById("profile-toggle").addEventListener("click",()=>{ const b=document.getElementById("profile-body"); b.style.display=b.style.display==="none"?"block":"none"; });
 (function(){ if(localStorage.getItem("law_profile")) document.getElementById("profile-body").style.display="block"; })();
+/* 填空範本（不含任何院內公告原文；使用者照欄位把自己的公告貼進去，只存本機） */
+const PROFILE_TPL=
+`【我的身分】（例：醫院・契約/約用護理人員・○年入職・適用勞動基準法）：
+
+【本案是什麼】（一句話，例：院方開放補發某期間「以分計」加班費）：
+
+【★時效／期限規則】（把公告寫的「期限內申請追溯到哪、逾期怎麼算」整段貼這）：
+
+【申請條件】（哪些能補、哪些要「當時已有加班申請紀錄」，照公告貼）：
+
+【怎麼送件】（系統路徑、要填的表單，照公告貼）：
+
+【對方／主管說過的話】（之後遇到再補進來）：
+
+—— 把院方公告原文整段貼進對應欄位即可。此內容只存你這台裝置、不會上傳、不會進公開網站。`;
+document.getElementById("profile-tpl").addEventListener("click",()=>{
+  const el=document.getElementById("profile");
+  if(el.value.trim() && !confirm("用空白範本覆蓋目前內容？")) return;
+  el.value=PROFILE_TPL; localStorage.setItem("law_profile",el.value);
+  document.getElementById("profile-body").style.display="block"; el.focus();
+  toast("已帶入範本，把你的公告貼進各欄位（只存這台）");
+});
 
 /* ===== 📲 換裝置接力（不含金鑰） ===== */
 function collectState(){ return { v:1, app:"lawyer", mode:modeVal(), field:document.getElementById("f-field").value, side:document.getElementById("f-side").value,
