@@ -149,17 +149,22 @@ def main():
         update_date = datetime.date.today().strftime("%Y%m%d")
     print("官方 UpdateDate：", update_date, "／合計法規筆數：", len(laws_in))
 
+    def norm_name(s):
+        return re.sub(r"\s+", "", s or "")
+
+    # 以「去空白」的法規名為鍵，吸收官方資料中可能的空白差異
     by_name = {}
     for L in laws_in:
-        nm = (L.get("LawName") or "").strip()
-        if nm in WANT:
-            by_name[nm] = L
+        by_name[norm_name(L.get("LawName"))] = L
 
     out = []
     for nm, want in WANT.items():
-        L = by_name.get(nm)
+        L = by_name.get(norm_name(nm))
         if not L:
-            print("⚠ 找不到法規（可能更名）：", nm, file=sys.stderr)
+            # 診斷：列出官方名稱中「包含此關鍵字」的候選，方便對名（更名／別字）
+            key = norm_name(nm)
+            cand = [x.get("LawName") for x in laws_in if key in norm_name(x.get("LawName"))][:3]
+            print("⚠ 找不到法規：", nm, "｜官方近似名稱：", cand or "（無）", file=sys.stderr)
             continue
         modified = L.get("LawModifiedDate") or ""
         chapter = ""
