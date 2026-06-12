@@ -91,6 +91,14 @@
   /* 操作手冊 */
   #manual{position:fixed;inset:0;z-index:1200;background:rgba(6,10,18,.93);backdrop-filter:blur(4px);overflow-y:auto;display:none;padding:20px 16px 60px}
   #manual.show{display:block}
+  #welcome{position:fixed;inset:0;z-index:1250;background:rgba(6,10,18,.96);display:none;align-items:center;justify-content:center;padding:24px}
+  #welcome.show{display:flex}
+  .wel-box{max-width:380px;width:100%;text-align:center;background:var(--panel);border:1px solid var(--line);border-radius:18px;padding:28px 22px}
+  .wel-box .em{font-size:46px;margin-bottom:6px}
+  .wel-box h2{font-size:24px;color:var(--head);margin-bottom:12px}
+  .wel-box .lead{font-size:17px;color:var(--txt);line-height:1.75;margin-bottom:20px}
+  .wel-go{width:100%;background:var(--cyan);color:#06231f;border:none;border-radius:12px;padding:15px;font-size:18px;font-weight:700;cursor:pointer;font-family:inherit}
+  .wel-more{margin-top:16px;font-size:15px;color:var(--blue);cursor:pointer;user-select:none}
   .man-box{max-width:600px;margin:0 auto;background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:20px}
   .man-box h2{font-size:18px;color:var(--head);margin-bottom:4px}
   .man-close{background:var(--cyan);color:#06231f;border:none;border-radius:20px;padding:6px 14px;font-weight:700;cursor:pointer;font-family:inherit;float:right}
@@ -230,6 +238,17 @@
   <footer>臨床快查 · 私人研究用 · 只抓標題與摘要，全文請依各資料庫授權於醫院網路取得。</footer>
 </div>
 
+<!-- 首次歡迎卡（精簡） -->
+<div id="welcome">
+  <div class="wel-box">
+    <div class="em">🔎</div>
+    <h2>歡迎 👋</h2>
+    <p class="lead">這個工具幫你<b>快速找醫學文獻</b>（標題＋摘要），再用醫院網路拿全文。<br>不會用沒關係——右上角 <b>「❓怎麼用」</b> 隨時點開教學。</p>
+    <button class="wel-go" id="wel-go">開始用 👉</button>
+    <div class="wel-more" id="wel-more">先看完整教學</div>
+  </div>
+</div>
+
 <!-- 操作手冊 -->
 <div id="manual">
   <div class="man-box">
@@ -274,8 +293,10 @@ const ACCESS_VERSION="1";
 const PW_HASH="2716985802763051", PW_KEY="ebnq_pw_v"+ACCESS_VERSION, UNLOCK_KEY="ebnq_unlocked_v"+ACCESS_VERSION;
 function cyrb53(s,seed=0){ s=s||""; let h1=0xdeadbeef^seed,h2=0x41c6ce57^seed; for(let i=0,c;i<s.length;i++){c=s.charCodeAt(i);h1=Math.imul(h1^c,2654435761);h2=Math.imul(h2^c,1597334677);} h1=Math.imul(h1^(h1>>>16),2246822507);h1^=Math.imul(h2^(h2>>>13),3266489909);h2=Math.imul(h2^(h2>>>16),2246822507);h2^=Math.imul(h1^(h1>>>13),3266489909); return ""+(4294967296*(2097151&h2)+(h1>>>0)); }
 function pwOk(v){ return cyrb53(v)===(localStorage.getItem(PW_KEY)||PW_HASH); }
-function unlock(){ document.body.classList.remove("locked"); document.body.classList.add("unlocked"); if(!localStorage.getItem("ebnq_seen_manual")) setTimeout(()=>document.getElementById("manual").classList.add("show"),350); }
+function unlock(){ document.body.classList.remove("locked"); document.body.classList.add("unlocked"); if(!localStorage.getItem("ebnq_seen_manual")) setTimeout(()=>document.getElementById("welcome").classList.add("show"),350); }
 function closeManual(){ document.getElementById("manual").classList.remove("show"); localStorage.setItem("ebnq_seen_manual","1"); }
+document.getElementById("wel-go").addEventListener("click",()=>{ document.getElementById("welcome").classList.remove("show"); localStorage.setItem("ebnq_seen_manual","1"); });
+document.getElementById("wel-more").addEventListener("click",()=>{ document.getElementById("welcome").classList.remove("show"); localStorage.setItem("ebnq_seen_manual","1"); document.getElementById("manual").classList.add("show"); });
 if(sessionStorage.getItem(UNLOCK_KEY)==="1") unlock();
 function tryUnlock(){ const v=document.getElementById("gate-pw").value;
   if(pwOk(v)){ sessionStorage.setItem(UNLOCK_KEY,"1"); unlock(); }
