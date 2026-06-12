@@ -183,6 +183,7 @@
         <button class="btn btn-ghost" id="clear-query" style="flex:0 0 auto">✕ 清空</button>
         <button class="btn btn-primary" id="search-btn">🔎 搜尋</button>
       </div>
+      <button class="btn btn-ghost" id="demo-btn" style="width:100%;margin-top:8px">🧪 一鍵試範例（不用打字，直接看它能不能搜）</button>
       <div class="hint">資料來源：Europe PMC（涵蓋 PubMed＋更多，含 Cochrane）。只抓<b>標題＋摘要</b>，全文點下方連結、用<b>醫院網路</b>開即可看。</div>
     </div>
 
@@ -327,6 +328,12 @@ function buildQuery(){
 document.getElementById("search-btn").addEventListener("click",doSearch);
 document.getElementById("q-query").addEventListener("keydown",e=>{ if(e.key==="Enter") doSearch(); });
 document.getElementById("clear-query").addEventListener("click",()=>{ const el=document.getElementById("q-query"); el.value=""; localStorage.removeItem("ebnq_q-query"); el.focus(); });
+document.getElementById("demo-btn").addEventListener("click",()=>{
+  const ex='("intradialytic hypotension" OR "dialysis hypotension") AND (diabetes OR diabetic)';
+  document.getElementById("q-query").value=ex; localStorage.setItem("ebnq_q-query",ex);
+  document.getElementById("f-type").value=""; document.getElementById("f-years").value=""; document.getElementById("f-coch").checked=false;
+  doSearch();
+});
 
 let RESULTS=[];
 function dropLastAndClause(q){ let depth=0,last=-1; for(let i=0;i<q.length;i++){ const c=q[i]; if(c==="(")depth++; else if(c===")")depth--; else if(depth===0 && q.substr(i,5).toUpperCase()===" AND ") last=i; } return last<0?null:q.slice(0,last).trim(); }
