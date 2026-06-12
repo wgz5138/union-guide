@@ -213,10 +213,12 @@
           <label>法律領域</label>
           <select class="txt" id="f-field">
             <option value="勞動">勞動 / 勞資爭議（加班費・工時・資遣）</option>
-            <option value="民事">民事（契約・侵權・賠償）</option>
+            <option value="醫事">醫事（護理／醫師／藥師執業・公立醫院）</option>
+            <option value="人身">人身（性騷擾・跟騷・家暴）</option>
+            <option value="公務">公務員 / 公家機關</option>
+            <option value="民事">民事（契約・侵權・賠償・時效）</option>
             <option value="刑事">刑事（誹謗・恐嚇・強制等）</option>
             <option value="個資">個人資料保護</option>
-            <option value="商標">商標 / 智財</option>
             <option value="綜合">不確定 / 綜合</option>
           </select>
         </div>
@@ -441,9 +443,11 @@ function showAppBanner(){ if(sessionStorage.getItem("hideAppBanner"))return; con
   if(/FBAN|FBAV|FBIOS|Instagram|Line\/|MicroMessenger|Twitter|TikTok|GSA\//i.test(navigator.userAgent||"")) showAppBanner(); })();
 
 /* 🔄 自動偵測新版本 */
-const BUILD="2026061222";
+const BUILD="2026061223";
 const CHANGELOG=[
-  "法規庫擴充：加入就業服務法、勞保條例、職災保險法、大量解僱法、工會法、團體協約法、最低工資法、性騷擾／跟騷／家暴／性平教育法、道交法",
+  "加班費 5 年消滅時效（民法§126）等時效條文納入，AI 會主動幫你判斷能追溯到哪",
+  "法規庫擴充至醫事（護理/醫師/藥師/醫療法）、公務員服務法、退輔條例、勞工請假規則、勞資會議實施辦法、就業保險法等",
+  "開頁更快：法規改本機快取＋背景更新（不必每次下載近 1MB）；AI 回覆支援粗體/標題/清單排版",
   "新增『🔎 查相關判決』：AI 想關鍵字→一鍵到司法院裁判書系統查真判決→貼回引用（AI 不編造字號）",
   "AI 對話改『只注入與本案最相關的法條』，省錢又不爆長（整套官方法規仍可在法規庫瀏覽）",
   "法規改用全國法規資料庫『官方真資料』（每週自動更新 laws.json，標『✅官方』）",
@@ -572,12 +576,16 @@ function showLawStatus(){
     st.style.display="block"; wn.style.display="none";
   }else{ st.style.display="none"; wn.style.display="block"; }
 }
+const LAW_CACHE_KEY="law_official_cache";
 function applyOfficial(d,announce){
   const arr=Array.isArray(d)?d:(d&&d.laws);
   if(!Array.isArray(arr)||!arr.length) return false;
+  // 沒變就不重繪（背景刷新時避免閃動／白做工）
+  if(LAW_META && d && LAW_META.updated && LAW_META.updated===d.updated && LAWS.filter(l=>l.official).length===arr.length){ if(announce) toast("✓ 已是最新官方法規"); return true; }
   LAW_META=(d&&d.updated)?{updated:d.updated,source:d.source}:{updated:"",source:""};
   LAWS=arr.map(x=>({law:String(x.law||"").trim(),art:String(x.art||"").trim(),title:String(x.title||"").trim(),text:String(x.text||"").trim(),cat:String(x.cat||"其他").trim(),official:true,modified:x.modified||""}));
   renderCats(); renderLaws(); showLawStatus();
+  try{ localStorage.setItem(LAW_CACHE_KEY, JSON.stringify({updated:LAW_META.updated,laws:arr})); }catch(e){}
   if(announce) toast("✅ 已更新為官方法規（"+(LAW_META.updated||"")+"）");
   return true;
 }
@@ -586,7 +594,11 @@ function fetchOfficial(announce){
     if(!applyOfficial(d,announce)&&announce) toast("還沒有官方 laws.json（要等每週自動更新或手動跑一次 Action）");
   }).catch(()=>{ if(announce) toast("抓不到官方法規（可能沒網路）"); });
 }
-if(!localStorage.getItem("law_db")) fetchOfficial(false);
+/* 開頁：先用本機快取瞬間顯示（不必每次下載近 1MB），再背景抓最新、有變更才換。 */
+if(!localStorage.getItem("law_db")){
+  try{ const c=JSON.parse(localStorage.getItem(LAW_CACHE_KEY)||"null"); if(c&&Array.isArray(c.laws)&&c.laws.length) applyOfficial(c,false); }catch(e){}
+  fetchOfficial(false);
+}
 
 /* 注入給 AI 的法條：不把整套法典塞進提示詞，只挑「與本案最相關」的數十條
    （條號明確提及＋中文 bigram 關鍵字比對＋核心勞動錨點），省 token、避免超長。 */
@@ -594,14 +606,18 @@ const LAW_ANCHORS=[
   ["勞動事件法","第38條"],["勞動事件法","第37條"],
   ["勞動基準法","第24條"],["勞動基準法","第30條"],["勞動基準法","第32條"],
   ["勞動基準法","第36條"],["勞動基準法","第38條"],["勞動基準法","第39條"],
-  ["勞動基準法","第16條"],["勞動基準法","第17條"]
+  ["勞動基準法","第16條"],["勞動基準法","第17條"],
+  ["民法","第126條"],["民法","第129條"]   // 加班費 5 年消滅時效＋時效中斷，常被忽略
 ];
+const GRAM_STOP=new Set(["勞工","規定","可以","沒有","這個","因為","所以","如果","怎麼","什麼","公司","目前","問題","老闆","主管","他們","我們","已經","還有","以及","這樣","那個","知道","應該","可能","一個","就是","這些","很多"]);
 function selectRelevant(pool, focus, cap){
   cap=cap||40;
-  const q=String(focus||"").toLowerCase();
+  let q=String(focus||"");
+  if(q.length>1500) q=q.slice(0,1500);                 // 只看案情＋當前提問，避免對話一長就失準
+  q=q.toLowerCase();
   const refNos=(q.match(/第\s*[0-9]+(?:-[0-9]+)?\s*條/g)||[]).map(s=>s.replace(/\s/g,""));
   const grams=new Set();
-  q.replace(/[a-z0-9]+/g," ").split(/[^一-鿿]+/).forEach(seg=>{ for(let i=0;i+2<=seg.length;i++) grams.add(seg.slice(i,i+2)); });
+  q.replace(/[a-z0-9]+/g," ").split(/[^一-鿿]+/).forEach(seg=>{ for(let i=0;i+2<=seg.length;i++){ const g=seg.slice(i,i+2); if(!GRAM_STOP.has(g)) grams.add(g); } });
   const field=document.getElementById("f-field").value;
   const useAnchors = field==="勞動"||field==="綜合";
   const anchorSet=new Set(LAW_ANCHORS.map(a=>a[0]+"|"+a[1]));
@@ -732,11 +748,20 @@ async function callClaude(messages,maxTok,system){
 }
 /* 對話歷史（不含金鑰；可接力／暫存） */
 let CHAT=[];
+/* 輕量 Markdown：先 escape，再把 **粗體**、# 標題、- 清單轉好讀（白名單，安全） */
+function mdLite(t){
+  let s=esc(t);
+  s=s.replace(/^\s*#{1,6}\s*(.+)$/gm,'<b>$1</b>');                    // 標題 → 粗體
+  s=s.replace(/\*\*([^*\n]+)\*\*/g,'<b>$1</b>');                       // **粗體**
+  s=s.replace(/(^|\n)\s*[*-]\s+/g,'$1・');                             // - 項目 → ・
+  s=s.replace(/⚠ 待查（[^）]*）/g,'<span class="vflag">⚠ 待查</span>').replace(/⚠ 待查/g,'<span class="vflag">⚠ 待查</span>');
+  return s;
+}
 function renderChat(){
   const box=document.getElementById("chat");
   box.innerHTML=CHAT.map(m=>{
     const who=m.role==="user"?"你":"AI 律師";
-    let html=esc(m.text).replace(/⚠ 待查（[^）]*）/g,'<span class="vflag">⚠ 待查</span>').replace(/⚠ 待查/g,'<span class="vflag">⚠ 待查</span>');
+    let html=mdLite(m.text);
     return `<div class="bub ${m.role==="user"?"me":"ai"}"><div class="who">${who}</div>${html}${m.cost?`<div class="cost">本次花約 ${esc(m.cost)}</div>`:""}</div>`;
   }).join("");
   document.getElementById("chat-wrap").style.display=CHAT.length?"block":"none";
@@ -754,7 +779,7 @@ async function askLawyer(turnText,displayText){
   renderChat();
   CHAT.push({role:"assistant",text:"⚡ AI 律師思考中⋯⋯約 10～30 秒"});
   renderChat();
-  const focus=[val("situation"), CHAT.filter(m=>m.role==="user").map(m=>m.text).join(" "), turnText].join(" ");
+  const focus=[val("situation"), turnText, CHAT.filter(m=>m.role==="user").map(m=>m.text).join(" ")].join(" ");
   const sys=systemPrompt(focus);
   // 把最後那則 placeholder 拿掉再送（送真正的 user turn）
   const msgs=CHAT.slice(0,-1).map((m,i,arr)=> (i===arr.length-1)?{role:"user",content:[{type:"text",text:turnText}]}:{role:m.role,content:[{type:"text",text:m.text}]});
