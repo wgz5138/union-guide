@@ -164,6 +164,7 @@
       <button class="link" id="manual-btn" type="button">❓ 怎麼用</button>
       <a class="link" id="share-btn" href="share.html" target="_blank" rel="noopener">📲 分享</a>
       <button class="link" id="chpw-btn" type="button">🔑 改密碼</button>
+      <a class="link" href="lawyer.html">⚖️ AI 律師</a>
       <a class="link" href="evidence.html">→ 評讀工具</a>
     </div>
   </div>
@@ -405,8 +406,9 @@ function showAppBanner(){ if(sessionStorage.getItem("hideAppBanner"))return; con
 (function(){ const x=document.getElementById("appbanner-x"); if(x)x.addEventListener("click",()=>{ document.getElementById("appbanner").classList.remove("show"); sessionStorage.setItem("hideAppBanner","1"); });
   if(/FBAN|FBAV|FBIOS|Instagram|Line\/|MicroMessenger|Twitter|TikTok|GSA\//i.test(navigator.userAgent||"")) showAppBanner(); })();
 // 🔄 自動偵測新版本：跟伺服器上的 ver.txt 比對，有新版就跳橫幅（使用者完全不用管 ?數字、不用刪圖示）
-const BUILD="2026061218";
+const BUILD="2026061219";
 const CHANGELOG=[
+  "新增「⚖️ AI 律師」工具（勞動法主場，會引法條、判斷對方說法、列證據；上方可進）",
   "新增「🗑 一鍵清除」，換下一題免逐格手刪",
   "掃碼分享頁 ＋ 30 秒回饋問卷",
   "可加到主畫面變 App、沒網路也能開（離線）",

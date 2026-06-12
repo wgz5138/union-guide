@@ -68,6 +68,15 @@
       <p class="hint">📷 手機相機掃我</p>
       <p class="url"><a href="https://wgz5138.github.io/union-guide/search.html">wgz5138.github.io/union-guide/search.html</a></p>
     </div>
+
+    <div class="card">
+      <span class="tag">勞資爭議用</span>
+      <p class="name">⚖️ AI 律師</p>
+      <p class="use">貼狀況／對方的話，引法條、找破綻、列證據</p>
+      <div class="qrbox"><div id="qr4"></div></div>
+      <p class="hint">📷 手機相機掃我</p>
+      <p class="url"><a href="https://wgz5138.github.io/union-guide/lawyer.html">wgz5138.github.io/union-guide/lawyer.html</a></p>
+    </div>
   </div>
 
   <div class="card" style="margin-top:18px">
@@ -95,6 +104,7 @@
 (function(){
   var E="https://wgz5138.github.io/union-guide/evidence.html";
   var S="https://wgz5138.github.io/union-guide/search.html";
+  var L="https://wgz5138.github.io/union-guide/lawyer.html";
   var F="https://docs.google.com/forms/d/e/1FAIpQLSdd4R-JdKe7Cfqy7j9bhCRfBXa-B4ZODEvI_ZSfy2H5SQ_I6g/viewform";
   function make(id,url){
     try{
@@ -104,7 +114,7 @@
   }
   function go(){
     if(typeof QRCode==="undefined"){ document.getElementById("fail").style.display="block"; return; }
-    make("qr1",E); make("qr2",S); make("qr3",F);
+    make("qr1",E); make("qr2",S); make("qr4",L); make("qr3",F);
   }
   // 給 CDN 一點時間載入
   if(typeof QRCode!=="undefined"){ go(); }
