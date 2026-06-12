@@ -234,6 +234,11 @@
         </div>
       </div>
       <button class="btn btn-ghost" id="demo-btn" style="width:100%;margin-top:10px">🧪 帶入「加班費補發爭議」範例（不用打字）</button>
+      <div id="profile-toggle" style="font-size:12.5px;color:var(--blue);cursor:pointer;user-select:none;margin-top:12px">🪪 我的身分背景／本案文件（選填，只存這台・AI 每次都會參考）▾</div>
+      <div id="profile-body" style="display:none;margin-top:8px">
+        <textarea class="txt" id="profile" rows="4" placeholder="例：高雄榮總契約護理、94/4/1 入職、適用勞基法。↵把院方加班費補發公告、院內加班/約用規定的『原文』貼這裡。"></textarea>
+        <div class="hint">🔒 這欄<b>只存在你這台裝置、不會上傳、不會進公開網站</b>。AI 每次回覆都會自動參考它，讓建議貼合你的身分與<b>院內實際規定</b>（例如補發要件、逆算 5 年時效）。換手機可用下面「📲 接力」帶過去。</div>
+      </div>
     </div>
 
     <!-- 描述情況 -->
@@ -444,8 +449,9 @@ function showAppBanner(){ if(sessionStorage.getItem("hideAppBanner"))return; con
   if(/FBAN|FBAV|FBIOS|Instagram|Line\/|MicroMessenger|Twitter|TikTok|GSA\//i.test(navigator.userAgent||"")) showAppBanner(); })();
 
 /* 🔄 自動偵測新版本 */
-const BUILD="2026061224";
+const BUILD="2026061225";
 const CHANGELOG=[
+  "新增『🪪 我的身分背景／本案文件』常駐欄：只存這台、不上傳，AI 每次自動參考（院內規定優先於通則）",
   "AI 律師改『不只報喜』：每次回覆強制加『⚠ 風險與弱點』——對方律師會怎麼打你、你哪裡會輸、要補強什麼",
   "加班費 5 年消滅時效（民法§126）等時效條文納入，AI 會主動幫你判斷能追溯到哪",
   "法規庫擴充至醫事（護理/醫師/藥師/醫療法）、公務員服務法、退輔條例、勞工請假規則、勞資會議實施辦法、就業保險法等",
@@ -719,7 +725,7 @@ function systemPrompt(focus){
 - 使用者貼來的真實判決，才據以摘要、引用其字號與要旨。
 
 〈可用法條原文〉
-${lawContext(focus)}`;
+${lawContext(focus)}${(function(){ var p=val("profile"); return p?("\n\n〈本案背景與院內文件（當事人提供，務必納入判斷；**院內具體規定／要件優先於通則**，例如補發要件、逆算時效）〉\n"+p):""; })()}`;
 }
 function userTurnText(situation){
   const m=modeVal()==="nego"?"（這是要拿去『協商／談判』用）":"（這是要拿去『打官司／申訴』用）";
@@ -786,7 +792,7 @@ async function askLawyer(turnText,displayText){
   renderChat();
   CHAT.push({role:"assistant",text:"⚡ AI 律師思考中⋯⋯約 10～30 秒"});
   renderChat();
-  const focus=[val("situation"), turnText, CHAT.filter(m=>m.role==="user").map(m=>m.text).join(" ")].join(" ");
+  const focus=[val("situation"), val("profile"), turnText, CHAT.filter(m=>m.role==="user").map(m=>m.text).join(" ")].join(" ");
   const sys=systemPrompt(focus);
   // 把最後那則 placeholder 拿掉再送（送真正的 user turn）
   const msgs=CHAT.slice(0,-1).map((m,i,arr)=> (i===arr.length-1)?{role:"user",content:[{type:"text",text:turnText}]}:{role:m.role,content:[{type:"text",text:m.text}]});
@@ -948,18 +954,21 @@ document.getElementById("pay-toggle").addEventListener("click",()=>{ const d=doc
 /* 暫存欄位 */
 ["api-key","api-model"].forEach(id=>{ const el=document.getElementById(id); const s=localStorage.getItem("ebn_"+id); if(s)el.value=s;
   el.addEventListener("input",()=>localStorage.setItem("ebn_"+id,el.value)); el.addEventListener("change",()=>localStorage.setItem("ebn_"+id,el.value)); });
-["f-field","f-side","situation"].forEach(id=>{ const el=document.getElementById(id); const s=localStorage.getItem("law_"+id); if(s!=null)el.value=s;
+["f-field","f-side","situation","profile"].forEach(id=>{ const el=document.getElementById(id); const s=localStorage.getItem("law_"+id); if(s!=null)el.value=s;
   el.addEventListener("input",()=>localStorage.setItem("law_"+id,el.value)); el.addEventListener("change",()=>localStorage.setItem("law_"+id,el.value)); });
 (function(){ const m=localStorage.getItem("law_mode"); if(m) setMode(m); })();
+document.getElementById("profile-toggle").addEventListener("click",()=>{ const b=document.getElementById("profile-body"); b.style.display=b.style.display==="none"?"block":"none"; });
+(function(){ if(localStorage.getItem("law_profile")) document.getElementById("profile-body").style.display="block"; })();
 
 /* ===== 📲 換裝置接力（不含金鑰） ===== */
 function collectState(){ return { v:1, app:"lawyer", mode:modeVal(), field:document.getElementById("f-field").value, side:document.getElementById("f-side").value,
-  situation:val("situation"), chat:CHAT, ev:EV, evDone:EV_DONE }; }
+  situation:val("situation"), profile:val("profile"), chat:CHAT, ev:EV, evDone:EV_DONE }; }
 function applyState(s){
   if(s.mode) setMode(s.mode);
   if(s.field){ document.getElementById("f-field").value=s.field; localStorage.setItem("law_f-field",s.field); }
   if(s.side){ document.getElementById("f-side").value=s.side; localStorage.setItem("law_f-side",s.side); }
   if(s.situation!=null){ document.getElementById("situation").value=s.situation; localStorage.setItem("law_situation",s.situation); }
+  if(s.profile!=null){ document.getElementById("profile").value=s.profile; localStorage.setItem("law_profile",s.profile); if(s.profile) document.getElementById("profile-body").style.display="block"; }
   if(Array.isArray(s.chat)){ CHAT=s.chat; renderChat(); }
   if(Array.isArray(s.ev)){ EV=s.ev; EV_DONE=s.evDone||{}; localStorage.setItem("law_ev_done",JSON.stringify(EV_DONE)); renderEv(); }
 }
