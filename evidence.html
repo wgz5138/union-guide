@@ -343,6 +343,13 @@
     <div class="card">
       <div class="oneclick-intro">不想複製貼上？貼上<b>你自己的</b> API 金鑰、拖一個 PDF 進來，報告直接跑出來。<b>想免費就用上面那個</b>，這裡可以不理。金鑰只存在這台裝置、不外流，別人看不到。</div>
       <div style="background:rgba(46,213,160,.08);border:1px solid rgba(46,213,160,.3);border-radius:10px;padding:10px 12px;font-size:12.5px;color:#bdeede;line-height:1.75;margin-bottom:12px">💡 <b>錢不是付給這個網站</b>——這工具完全免費、不收任何錢、也不經手你的錢。你是儲值到<b>你自己在 Anthropic（做 AI 的公司）的帳戶</b>，金鑰跟餘額都是<b>你自己的、可以帶著走</b>。這工具只是借用你的金鑰幫你呼叫 AI 而已。</div>
+      <div id="pay-toggle" style="font-size:13px;color:var(--blue);cursor:pointer;user-select:none;margin-bottom:10px">❓ 想了解付費怎麼回事？（點開看說明）</div>
+      <div id="pay-detail" style="display:none;background:#0C131F;border:1px solid var(--line);border-radius:10px;padding:12px 14px;font-size:13px;color:var(--txt2);line-height:1.85;margin-bottom:12px">
+        <p style="margin-bottom:8px"><b style="color:var(--head)">「Anthropic」是什麼？</b><br>一間做 AI 的公司，它的 AI 叫 <b>Claude</b>（跟 ChatGPT 同一類）。付費版就是用它的 AI 幫你跑。</p>
+        <p style="margin-bottom:8px"><b style="color:var(--head)">5 美金大約多少台幣？</b><br>約 <b>NT$160</b>（1 美元≈31.5 台幣）。而且很耐用——評讀一篇約 NT$1~10、查詢/綜合約 NT$0.1~0.5，能跑<b>幾十到上百次</b>。</p>
+        <p style="margin-bottom:8px"><b style="color:var(--head)">這把金鑰還能用在哪？</b><br>它是<b>你自己 Anthropic 帳戶</b>的鑰匙，不綁這個網站。<b>任何「支援 Claude」的工具、App、網站</b>都能用同一把。你買的是「AI 使用權」，<b>跟著你走</b>。</p>
+        <p style="margin-bottom:0"><b style="color:var(--head)">怎麼申請＋儲值？</b><br>到 <a href="https://console.anthropic.com/" target="_blank" rel="noopener" style="color:var(--blue)">console.anthropic.com</a> 註冊 → 加值（最低約 US$5）→ 建立金鑰（<b>sk-ant-</b> 開頭）→ 貼回上面。設定一次，以後即用。</p>
+      </div>
       <div class="fld-row">
         <label class="fld">你的 Anthropic API 金鑰</label>
         <input class="txt" id="api-key" type="password" placeholder="sk-ant-..." autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false">
@@ -1024,6 +1031,7 @@ function updateCost(){ const m=document.getElementById("api-model").value; docum
 ["api-key","api-model"].forEach(id=>{ const el=document.getElementById(id); const s=localStorage.getItem("ebn_"+id); if(s)el.value=s;
   el.addEventListener("input",()=>localStorage.setItem("ebn_"+id,el.value)); el.addEventListener("change",()=>localStorage.setItem("ebn_"+id,el.value)); });
 document.getElementById("api-model").addEventListener("change",updateCost); updateCost();
+document.getElementById("pay-toggle").addEventListener("click",()=>{ const d=document.getElementById("pay-detail"); d.style.display=d.style.display==="none"?"block":"none"; });
 
 /* 暫存 */
 ["f-title","f-author","f-journal","f-group","f-context","f-text","f-mins","ai-resp","member-imports"].forEach(id=>{
