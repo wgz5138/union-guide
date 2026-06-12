@@ -286,6 +286,7 @@ document.getElementById("man-close2").addEventListener("click",closeManual);
 /* ===== 小工具 ===== */
 function val(id){ return document.getElementById(id).value.trim(); }
 function esc(t){ return String(t==null?"":t).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;"); }
+function cleanAbs(t){ return String(t||"").replace(/<h[1-6][^>]*>/gi,"\n").replace(/<\/h[1-6]>/gi,"：").replace(/<[^>]+>/g," ").replace(/[ \t]{2,}/g," ").replace(/\s*\n\s*/g,"\n").trim(); }
 function toast(m){ const t=document.getElementById("toast"); t.textContent=m; t.classList.add("show"); clearTimeout(t._t); t._t=setTimeout(()=>t.classList.remove("show"),2400); }
 function copy(text,ok){ if(navigator.clipboard&&navigator.clipboard.writeText){ navigator.clipboard.writeText(text).then(()=>toast(ok)).catch(()=>fb(text,ok)); } else fb(text,ok); }
 function fb(text,ok){ const ta=document.createElement("textarea"); ta.value=text; ta.style.position="fixed"; ta.style.opacity="0"; document.body.appendChild(ta); ta.select(); try{document.execCommand("copy");toast(ok);}catch(e){toast("複製失敗");} document.body.removeChild(ta); }
@@ -381,7 +382,7 @@ function renderResults(){
     const full = doi?("https://doi.org/"+doi) : pmid?("https://pubmed.ncbi.nlm.nih.gov/"+pmid+"/") : (r.fullTextUrlList&&"#");
     const meta=[r.authorString,r.journalTitle,r.pubYear].filter(Boolean).join(" · ");
     const oa = r.isOpenAccess==="Y" ? '<span class="b oa">免費全文</span>' : "";
-    const abs = r.abstractText ? esc(r.abstractText) : "（這篇沒有提供摘要）";
+    const abs = r.abstractText ? esc(cleanAbs(r.abstractText)) : "（這篇沒有提供摘要）";
     return `<div class="res">
       <div class="res-top">
         <input type="checkbox" class="res-chk" data-i="${i}">
