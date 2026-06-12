@@ -156,6 +156,8 @@
   .zoombtn{font-size:11px;background:#0F1622;border:1px solid var(--line);color:var(--txt2);border-radius:14px;padding:4px 10px;cursor:pointer;font-family:inherit;text-transform:none;letter-spacing:0}
   .zoombtn.on{background:rgba(63,214,208,.14);color:var(--cyan);border-color:rgba(63,214,208,.4)}
   .rp-disclaimer{font-size:12px;color:#d8b06a;background:rgba(255,177,61,.08);border:1px solid rgba(255,177,61,.3);border-radius:8px;padding:8px 11px;margin:4px 0 16px;line-height:1.6}.rp-disclaimer b{color:#ffce80}
+  .vflag{font-size:10.5px;color:#1a1a1a;background:#ffce80;border-radius:10px;padding:2px 8px;margin-left:6px;font-weight:700;white-space:nowrap}
+  .appr-verify{margin-top:7px;font-size:12.5px;color:#ffd89a;background:rgba(255,177,61,.12);border:1px solid rgba(255,177,61,.4);border-radius:8px;padding:7px 10px;line-height:1.6}.appr-verify b{color:#ffce80}
   .appr-flag{margin-top:7px;font-size:12px;color:var(--amber);font-weight:600}
   .appr-by{font-size:11px;color:var(--muted);margin-left:auto;align-self:center}
 
@@ -244,7 +246,7 @@
     .report .appr-plain{color:#555;background:#f4f4f4}
     .report .appr-quote{background:#f6f6f6;border-left-color:#bbb;color:#666}
     .report .appr-quote .hl{background:transparent;color:#444;padding:0}
-    .report .rp-disclaimer{display:none}
+    .report .rp-disclaimer,.report .appr-verify,.report .vflag{display:none}
     .report .pico .pk{background:#f0f0f0;color:#333}.report .pico .pv{color:#333}
     .report .conc{background:#f4f4f4;color:#222}
     .report .ans.yes{color:#1a7a4a}.report .ans.no{color:#c0392b}
@@ -370,6 +372,7 @@
       <button class="btn btn-primary" id="gen-btn">⚙️ 產生提示詞</button>
       <div id="prompt-box" style="display:none;margin-top:12px">
         <textarea class="prompt-area" id="prompt-out" readonly></textarea>
+        <div class="note" style="border-color:rgba(255,177,61,.4);background:rgba(255,177,61,.08);color:#d8b06a">⚠ 貼給 AI 時，<b>務必把整篇論文 PDF 一起附上</b>；只貼摘要，AI 最容易「補空」出錯。</div>
         <div class="btn-row"><button class="btn btn-ghost" id="copy-prompt">📋 複製提示詞</button></div>
         <div class="ai-links">
           <a class="btn btn-ghost" href="https://chatgpt.com/" target="_blank" rel="noopener">↗ ChatGPT</a>
@@ -620,9 +623,10 @@ const TOUR=[
   {sel:".type-grid", t:"① <b>選文獻類型</b>：RCT 還是 Meta？看不懂就點下面「🤖 我不確定」讓 AI 判斷。"},
   {sel:"#f-text", t:"② <b>填文獻資訊</b>：標題可跳過；摘要貼這格（整篇 PDF 等下附給 AI 就好）。"},
   {sel:"#assign-chips", t:"③ <b>選你負責的題</b>：點你被分到的題號（可多選；全部做就不用選）。"},
-  {sel:"#gen-btn", t:"④ 按 <b>「產生提示詞」</b>，會生出一段指令。"},
-  {sel:"#ai-resp", t:"⑤ 把指令貼給 ChatGPT/Claude＋附 PDF，再把 AI 回覆<b>整段貼回這格</b>。"},
-  {sel:"#render-btn", t:"⑥ 按 <b>「產生報告」</b>，報告就出來了！🎉 走完囉，開始用吧。"}
+  {sel:"#f-words", t:"④ <b>每題理由字數</b>：Word／PDF 想長就改大、想短就改小（PPT 不受影響）。覺得不滿意，改這格再重跑一次即可。"},
+  {sel:"#gen-btn", t:"⑤ 按 <b>「產生提示詞」</b>，會生出一段指令。"},
+  {sel:"#ai-resp", t:"⑥ 把指令貼給 ChatGPT/Claude＋<b>附整篇 PDF</b>，再把 AI 回覆<b>整段貼回這格</b>。"},
+  {sel:"#render-btn", t:"⑦ 按 <b>「產生報告」</b>，報告就出來了！🎉<br><br>📌 <b>字數或內容不滿意怎麼辦？</b>改一改，再走一次 ⑤→⑥→⑦：<b>免費版每改一次要回 AI 跑一趟</b>；有貼付費金鑰的話，改完按「🚀一鍵生成」就好，不用來回。"}
 ];
 let _ti=0;
 function tourStep(){ document.querySelectorAll(".tour-hi").forEach(e=>e.classList.remove("tour-hi"));
@@ -776,12 +780,13 @@ function buildPromptUnknown(){
   L.push('  "clinicalQuestion":"一句臨床問題（PICO 句型）",');
   L.push('  "pico":{"P":"對象","I":"介入","C":"對照","O":"結果指標"},');
   L.push('  "summary":"150~250字中文重點摘要", "evidenceLevel":"證據等級（Melnyk 七級，例 Level II）", "qualityGrade":"高/中/低＋半句說明",');
-  L.push('  "appraisal":[{"no":題號,"section":"A/B/C/D","question":"中文題目","answer":"是/否/不確定（一般判斷題填：請依病人情況判斷；成本效益權衡題請依準則直接給是/否）","rationale":"'+wordCount()+'字的完整書面理由：具體說明判斷依據、研究方法/族群、主要結果（數據）與限制，要能直接放進書面報告，不可只寫一兩句","quote":"原文英文佐證句：要涵蓋本題判斷與 rationale 中每一個主要論點及數據的依據；請照抄原文（可多句、用 ; 分隔），找不到就留空，絕不可杜撰","plain":"投影片用的精簡重點，一句話、25字以內"}]'+speechReq+',');
+  L.push('  "appraisal":[{"no":題號,"section":"A/B/C/D","question":"中文題目","answer":"是/否/不確定（一般判斷題填：請依病人情況判斷；成本效益權衡題請依準則直接給是/否）","rationale":"'+wordCount()+'字的完整書面理由：具體說明判斷依據、研究方法/族群、主要結果（數據）與限制，要能直接放進書面報告，不可只寫一兩句","quote":"原文英文佐證句：要涵蓋本題判斷與 rationale 中每一個主要論點及數據的依據；請照抄原文（可多句、用 ; 分隔），找不到就留空，絕不可杜撰","plain":"投影片用的精簡重點，一句話、25字以內","verify":"若你對本題判斷或數據沒有十足把握、或原文未明確支持，填一句『待查原因』（例：原文只提到整體成本、未分項）；很有把握且原文明確支持就填空字串"}]'+speechReq+',');
   L.push('  "clinicalApplication":"臨床應用建議'+(context?"，請扣緊我的臨床情境":"")+'", "conclusion":"3~5句整體結論"');
   L.push("}");
   L.push("");
   L.push("規則：appraisal 要包含『你選的那張表』的全部題目（RCT 11 題或 SR 10 題），題號完整；判斷題不要替我下是/否（但『成本效益權衡題』例外，請依題目後標註的準則直接給是/否並說明）；每題 rationale 要寫 "+wordCount()+" 字（給 Word/PDF 書面報告，內容要充實具體）、plain 一句話精簡（25字內，給 PPT 投影片）；全部繁體中文（quote 可留英文）；只輸出 JSON。");
   L.push("引用規範（重要）：整份評讀的每一個論點與數據都必須有文獻原文依據——rationale 與 summary 只能寫文獻真正支持的內容，並把支持這些論點與數據的原文英文句放進該題的 quote 欄（可多句、用 ; 分隔）。凡文獻沒有提到的，一律不要寫，更不可推測、估算或杜撰；無法從原文找到依據時，寧可不寫該點。數字（百分比、p 值、OR／RR／HR、95% CI、樣本數、追蹤時間等）尤其要逐一對應原文。");
+  L.push("自我標記（重要）：對任何你沒有十足把握、或原文未明確支持的判斷與數據，請在該題 verify 欄寫一句待查原因（寧可標記、也不要假裝確定）；完全確定且原文明確支持的才留空。");
   return L.join("\n");
 }
 function buildPrompt(){
@@ -833,12 +838,13 @@ function buildPrompt(){
     L.push('  "pico":{"P":"對象","I":"介入","C":"對照","O":"結果指標"},');
     L.push('  "summary":"150~250字中文重點摘要", "evidenceLevel":"證據等級（Melnyk 七級，例 Level II）", "qualityGrade":"高/中/低＋半句說明",');
   }
-  L.push('  "appraisal":[{"no":題號,"section":"A/B/C/D","question":"中文題目","answer":"是/否/不確定（一般判斷題填：請依病人情況判斷；成本效益權衡題請依準則直接給是/否）","rationale":"'+wordCount()+'字的完整書面理由：具體說明判斷依據、研究方法/族群、主要結果（數據）與限制，要能直接放進書面報告，不可只寫一兩句","quote":"原文英文佐證句：要涵蓋本題判斷與 rationale 中每一個主要論點及數據的依據；請照抄原文（可多句、用 ; 分隔），找不到就留空，絕不可杜撰","plain":"投影片用的精簡重點，一句話、25字以內"}]'+speechReq);
+  L.push('  "appraisal":[{"no":題號,"section":"A/B/C/D","question":"中文題目","answer":"是/否/不確定（一般判斷題填：請依病人情況判斷；成本效益權衡題請依準則直接給是/否）","rationale":"'+wordCount()+'字的完整書面理由：具體說明判斷依據、研究方法/族群、主要結果（數據）與限制，要能直接放進書面報告，不可只寫一兩句","quote":"原文英文佐證句：要涵蓋本題判斷與 rationale 中每一個主要論點及數據的依據；請照抄原文（可多句、用 ; 分隔），找不到就留空，絕不可杜撰","plain":"投影片用的精簡重點，一句話、25字以內","verify":"若你對本題判斷或數據沒有十足把握、或原文未明確支持，填一句『待查原因』（例：原文只提到整體成本、未分項）；很有把握且原文明確支持就填空字串"}]'+speechReq);
   if(MODE==="leader") L.push(',\n  "clinicalApplication":"臨床應用建議'+(context?"，請扣緊我的臨床情境":"")+'", "conclusion":"3~5句整體結論"');
   L.push("}");
   L.push("");
   L.push("規則：appraisal 只能包含第 "+nums.join("、")+" 題，題號完整對應；判斷題不要替我下是/否（但『成本效益權衡題』例外，請依題目後標註的準則直接給是/否並說明），只白話解釋；每題 rationale 要寫 "+wordCount()+" 字（給 Word/PDF 書面報告，內容要充實具體）、plain 一句話精簡（25字內，給 PPT 投影片）；全部繁體中文（quote 可留英文）；再次強調只輸出 JSON。");
   L.push("引用規範（重要）：整份評讀的每一個論點與數據都必須有文獻原文依據——rationale 與 summary 只能寫文獻真正支持的內容，並把支持這些論點與數據的原文英文句放進該題的 quote 欄（可多句、用 ; 分隔）。凡文獻沒有提到的，一律不要寫，更不可推測、估算或杜撰；無法從原文找到依據時，寧可不寫該點。數字（百分比、p 值、OR／RR／HR、95% CI、樣本數、追蹤時間等）尤其要逐一對應原文。");
+  L.push("自我標記（重要）：對任何你沒有十足把握、或原文未明確支持的判斷與數據，請在該題 verify 欄寫一句待查原因（寧可標記、也不要假裝確定）；完全確定且原文明確支持的才留空。");
   return L.join("\n");
 }
 document.getElementById("gen-btn").addEventListener("click",()=>{
@@ -878,7 +884,7 @@ function renderReport(d, masterMap){
   if(d.qualityGrade)h+=`<span class="badge grade">品質：${esc(d.qualityGrade)}</span>`;
   h+=`</div>`;
   if(d.typeNote)h+=`<div style="font-size:12px;color:var(--muted);margin:-8px 0 14px">🤖 AI 判斷類型：${esc(d.typeNote)}</div>`;
-  h+=`<div class="rp-disclaimer">⚠️ AI 評讀可能有誤或遺漏，請用下方<b>原文螢光筆</b>逐項對照查證；數據與結論最終以原文與你的專業判斷為準。</div>`;
+  h+=`<div class="rp-disclaimer">⚠️ AI 評讀可能有誤或遺漏。標有 <b>⚠ 待查</b> 的項目＝AI 自己沒把握、最該你核對的地方；其餘也請用下方<b>原文螢光筆</b>對照查證。最終以原文與你的專業判斷為準。</div>`;
   if(d.clinicalQuestion)h+=`<div class="rp-block"><div class="rp-h">臨床問題</div><div class="rp-text">${esc(d.clinicalQuestion)}</div></div>`;
   if(d.pico){ h+=`<div class="rp-block"><div class="rp-h">PICO</div><div class="pico">`;
     [["P","對象 P"],["I","介入 I"],["C","對照 C"],["O","結果 O"]].forEach(([k,l])=>{ h+=`<div class="pk">${l}</div><div class="pv">${esc(d.pico[k]||"—")}</div>`; });
@@ -893,10 +899,10 @@ function renderReport(d, masterMap){
         if(m && norm(m.answer)!==norm(it.answer) && !/判斷/.test(String(it.answer))){
           mism=" mismatch"; flag=`<div class="appr-flag">⚠ 與正確版不一致：正確版為「${esc(m.answer)}」，此處為「${esc(it.answer)}」</div>`; }
       }
-      h+=`<div class="appr${mism}"><div class="appr-head"><span class="appr-no">${esc(it.no)}</span><span class="appr-q">${esc(it.question)}</span><span class="ans ${ansClass(it.answer)}">${esc(it.answer)}</span></div>
+      h+=`<div class="appr${mism}"><div class="appr-head"><span class="appr-no">${esc(it.no)}</span><span class="appr-q">${esc(it.question)}</span><span class="ans ${ansClass(it.answer)}">${esc(it.answer)}</span>${it.verify?`<span class="vflag">⚠ 待查</span>`:""}</div>
         <div class="appr-body">${it.plain?`<div class="appr-plain">🗣 ${esc(it.plain)}</div>`:""}
         <div class="appr-rat"><b>理由：</b>${esc(it.rationale)}</div>
-        ${it.quote?`<div class="appr-quote">原文：<mark class="hl">${esc(it.quote)}</mark></div>`:""}${flag}</div></div>`;
+        ${it.quote?`<div class="appr-quote">原文：<mark class="hl">${esc(it.quote)}</mark></div>`:""}${it.verify?`<div class="appr-verify"><b>⚠ 待查</b>（AI 自己沒把握、最該你核對的地方，核對後請刪掉這行）：${esc(it.verify)}</div>`:""}${flag}</div></div>`;
     });
     h+=`</div>`;
   }
@@ -1009,7 +1015,7 @@ document.getElementById("export-pptx").addEventListener("click",()=>{
     s.addText(String(it.plain||it.rationale||""),{x:0.5,y:2.5,w:9,h:2.0,fontSize:16,color:TXT});
     if(it.quote)s.addText("原文："+String(it.quote),{x:0.5,y:4.4,w:9,h:0.6,fontSize:11,italic:true,color:MUT});
     const sp = d.speech&&d.speech.perQuestion&&d.speech.perQuestion[String(it.no)];
-    s.addNotes(note((sp?sp+"\n\n":"")+(it.rationale||"")));
+    s.addNotes(note((it.verify?"⚠ 待查（請核對）："+it.verify+"\n\n":"")+(sp?sp+"\n\n":"")+(it.rationale||"")));
   });
 
   // 結論
@@ -1050,6 +1056,7 @@ function buildPreview(){
     h+='<div style="font-weight:700;color:'+col+'">答：'+pvEsc(it.answer)+'</div>';
     if(it.rationale)h+='<div>理由：'+pvEsc(it.rationale)+'</div>';
     if(it.quote)h+='<div class="pv-quote">原文：<mark class="hl">'+pvEsc(it.quote)+'</mark></div>';
+    if(it.verify)h+='<div style="font-size:13px;color:#9a6a00;background:#fff6e0;border:1px solid #f0d18a;border-radius:6px;padding:6px 9px;margin-top:5px">⚠ 待查（AI 沒把握，請核對）：'+pvEsc(it.verify)+'</div>';
   });
   const sp=d.speech;
   if(sp&&(sp.opening||sp.closing||(sp.perQuestion&&Object.keys(sp.perQuestion).length))){
@@ -1092,6 +1099,7 @@ function exportWord(){
     b+='<p class="a">答：'+e(it.answer)+'</p>';
     if(it.rationale)b+='<p>理由：'+e(it.rationale)+'</p>';
     if(it.quote)b+='<p class="quote">原文：'+e(it.quote)+'</p>';
+    if(it.verify)b+='<p class="verify">⚠ 待查（AI 沒把握，請核對後刪除此行）：'+e(it.verify)+'</p>';
   });
   const sp=d.speech;
   if(sp&&(sp.opening||sp.closing||(sp.perQuestion&&Object.keys(sp.perQuestion).length))){
@@ -1111,6 +1119,7 @@ function exportWord(){
     +"h1{font-size:18pt;text-align:center}h2{font-size:14pt;border-bottom:1px solid #000;margin-top:18pt}"
     +".meta{color:#333;font-size:10.5pt;margin:2pt 0;text-align:center}"
     +".q{font-weight:bold;margin-top:12pt}.a{font-weight:bold}.quote{color:#555;font-style:italic;font-size:10.5pt}"
+    +".verify{color:#7a5200;background:#fff6e0;border:1px solid #e7c66a;padding:3pt 6pt;font-size:10.5pt}"
     +"table{border-collapse:collapse}td{border:1px solid #999;padding:3pt 8pt}td.k{font-weight:bold;background:#eee;width:48pt}"
     +".wm{color:#888;font-size:9pt;margin-top:24pt}";
   const html='<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:w="urn:schemas-microsoft-com:office:word" xmlns="http://www.w3.org/TR/REC-html40">'
@@ -1189,9 +1198,10 @@ function showAppBanner(){ if(sessionStorage.getItem("hideAppBanner"))return; con
 (function(){ const x=document.getElementById("appbanner-x"); if(x)x.addEventListener("click",()=>{ document.getElementById("appbanner").classList.remove("show"); sessionStorage.setItem("hideAppBanner","1"); });
   if(/FBAN|FBAV|FBIOS|Instagram|Line\/|MicroMessenger|Twitter|TikTok|GSA\//i.test(navigator.userAgent||"")) showAppBanner(); })();
 // 🔄 自動偵測新版本：跟伺服器上的 ver.txt 比對，有新版就跳橫幅（使用者完全不用管 ?數字、不用刪圖示）
-const BUILD="2026061217";
+const BUILD="2026061218";
 const CASP_VERSION="CASP 2024";
 const CHANGELOG=[
+  "AI 沒把握的地方會自我標「⚠ 待查」提醒你核對；導覽加入重產流程說明",
   "底部可看「✓ 已是最新版」並有「🔄 檢查更新」按鈕；報告加查證提醒",
   "原文加螢光筆標示、報告可放大字級（標準／大／特大）",
   "整份評讀的每個論點與數據都要有原文出處、禁止杜撰（提示詞已加引用規範）",
