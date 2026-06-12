@@ -18,7 +18,7 @@ JSON 結構（官方 schema，欄位名以官方為準，本程式對缺漏採�
 - 找不到的法規只警告、不讓整個流程失敗（法規可能更名）。
 - 此程式不在開發容器跑（無外網）；由 GitHub Action 在有網路的 runner 執行。
 """
-import io, json, re, sys, zipfile, urllib.request, datetime
+import io, json, re, ssl, sys, zipfile, urllib.request, datetime
 
 API_URL = "https://law.moj.gov.tw/api/Ch/Law/JSON"
 OUT = "laws.json"
@@ -72,10 +72,25 @@ def clean(t):
     return t
 
 
-def download_json():
+def _fetch(ctx):
     req = urllib.request.Request(API_URL, headers={"User-Agent": "union-guide-law-updater/1.0"})
-    with urllib.request.urlopen(req, timeout=120) as r:
-        raw = r.read()
+    with urllib.request.urlopen(req, timeout=120, context=ctx) as r:
+        return r.read()
+
+
+def download_json():
+    # 一般驗證，但關掉過嚴的 X509_STRICT：台灣政府憑證鏈常缺 Subject Key Identifier，
+    # 新版 OpenSSL 嚴格模式會擋下（仍保留主機名／信任鏈驗證）。
+    ctx = ssl.create_default_context()
+    strict = getattr(ssl, "VERIFY_X509_STRICT", 0)
+    if strict:
+        ctx.verify_flags &= ~strict
+    try:
+        raw = _fetch(ctx)
+    except ssl.SSLCertVerificationError as e:
+        # 最後手段：公開、唯讀的官方法規資料，憑證鏈瑕疵時不驗證憑證重試（大聲記錄）。
+        print("⚠ 憑證驗證仍失敗（%s）；改用『不驗證憑證』重試——公開法規、唯讀，可接受。" % e, file=sys.stderr)
+        raw = _fetch(ssl._create_unverified_context())
     # 可能是 ZIP，也可能直接是 JSON
     if raw[:2] == b"PK":
         zf = zipfile.ZipFile(io.BytesIO(raw))
