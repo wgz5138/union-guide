@@ -104,6 +104,8 @@
 **🔄 自動更新偵測（兩支，已上線）：** 解決使用者最大痛點——加在主畫面的圖示/瀏覽器快取常停在舊版，她不知道手上是不是最新、又不想手動加 `?數字`、不想刪圖示重加。做法：repo 根目錄放 **`ver.txt`**（內容是一串版本號，如 `2026061201`）；兩支 HTML 各內嵌 `const BUILD="…"`（與當下 `ver.txt` 同值）。一開頁就 `fetch("ver.txt?t="+Date.now(),{cache:"no-store"})` 抓伺服器版本，**和內嵌 BUILD 不一樣＝有新版** → 上方跳青色橫幅「🔄 有新版本了！」＋「立即更新」鈕，按下 `location.replace(pathname+"?v="+Date.now())` 強制繞過快取載入最新；沒新版什麼都不跳。`#updbanner`/`#updbtn`，✕ 可關。抓不到 ver.txt（離線/被擋）就靜默不跳，不影響使用。
 > ⚠️ **未來每次改完要部署時，務必同時做兩件事：**(1) 把 `ver.txt` 改成新版本號；(2) 把兩支 HTML 裡的 `const BUILD` 改成同一個新號。**漏改 BUILD ＝偵測失效**（會一直以為沒新版或一直跳）。建議用日期＋流水號，如 `2026061202`。
 
+**📱 PWA（加到主畫面變正式 App，兩支已上線）：** 各自有 `*.webmanifest`（name/short_name/start_url/`display:standalone`/`theme_color:#0E1626`/icon 512）＋ head 內 apple-touch-icon、`apple-mobile-web-app-capable`、`apple-mobile-web-app-title`、`theme-color`。圖示是純前端用 Python(zlib) 程式畫的 PNG：評讀＝青色勾、快查＝青色放大鏡，皆深藍底（冷感科技風，刻意不像使用者本人風格）。加到主畫面後有正式 App 名稱與圖示、全螢幕無網址列。**改圖示**＝重畫 `icon-evidence.png`/`icon-search.png`（腳本邏輯見 commit）。
+
 **共通（金鑰共用）：** 兩工具同源（github.io/union-guide），故 **API 金鑰共用同一把**（`ebn_api-key`/`ebn_api-model`），貼一次兩邊用、同一 Anthropic 帳戶扣款。金鑰只存本機、不外流、不入版本庫。成本：評讀一篇約 NT$1~10、查詢/綜合約 NT$0.1~0.5；額度約一年過期；偶爾用建議免費版。
 
 ---
@@ -121,6 +123,8 @@
 - `evidence.html` — 評讀工具（第一批，冷感科技風，含交報告樸素版）
 - `search.html` — 臨床快查（第二批，獨立檔，Europe PMC live 搜尋）
 - `ver.txt` — 線上版本號（自動更新偵測用，每次部署要 +1，並同步改兩支 HTML 的 `const BUILD`）
+- `evidence.webmanifest` / `search.webmanifest` — PWA 設定（加到主畫面的 App 名稱/圖示/全螢幕）
+- `icon-evidence.png` / `icon-search.png` — App 圖示（青色勾／放大鏡，深藍底，程式畫的）
 - `使用小抄.md` — 給使用者本人的小抄（網址/密碼/用法/費用/趕人/給未來 AI 的開場白）
 - `demo-*.html` — 風格樣板（選色用，已完成任務，可留存）
 - `index.html` — 高雄榮總護理工會加班費頁（**與本工具無關**，另一個專案）
