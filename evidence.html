@@ -331,7 +331,7 @@
       <div class="label"><span class="n">3</span>我被分配到的題目</div>
       <div class="card">
         <div class="chips" id="assign-chips"></div>
-        <div class="chip-legend">點選你負責的題號（可多選）。<b>紫色＝判斷題</b>（應用題），AI 只會白話解釋、答案留給你自己填。</div>
+        <div class="chip-legend">點選你負責的題號（可多選）。<b>紫色＝判斷題</b>（應用題），AI 只白話解釋、答案留給你自己填；其中「好處 vs 成本」題，遇感染類介入 AI 會先傾向「是」再交給你定奪。</div>
       </div>
     </div>
 
@@ -530,7 +530,7 @@ const CASP = {
     {sec:"C · 結果是什麼？", qs:[
       {n:7,zh:"介入的效果是否完整呈現？",hint:"檢力、主次要結果、數據、p值/CI",en:"Effects reported comprehensively?",plain:"該報的數據有沒有都報出來。"},
       {n:8,zh:"是否報告了效果估計值的精確度？",hint:"信賴區間 CI",en:"Precision reported (CI)?",plain:"有沒有給信賴區間（CI）。"},
-      {n:9,zh:"好處是否大於壞處與成本？",hint:"效益 vs 副作用、成本",en:"Benefits outweigh harms/costs?",plain:"值不值得——這要你看情況判斷。",judge:true}]},
+      {n:9,zh:"好處是否大於壞處與成本？",hint:"效益 vs 副作用、成本",en:"Benefits outweigh harms/costs?",plain:"值不值得——感染類介入通常算值得，AI 會先給判斷你再定。",judge:true,costben:true}]},
     {sec:"D · 結果對你的臨床有幫助嗎？", qs:[
       {n:10,zh:"結果能否套用到你的臨床對象/情境？",hint:"你的病人是否夠相似",en:"Applicable locally?",plain:"你的病人跟研究對象像不像——你判斷。",judge:true},
       {n:11,zh:"與現有做法相比，是否帶來更大價值？",hint:"和常規比較",en:"Greater value than existing?",plain:"比現在的做法好不好——你判斷。",judge:true}]}
@@ -548,7 +548,7 @@ const CASP = {
     {sec:"C · 結果對你的臨床有幫助嗎？", qs:[
       {n:8,zh:"結果能否套用到你的臨床對象？",hint:"病人是否夠相似",en:"Applicable locally?",plain:"你的病人跟研究對象像不像——你判斷。",judge:true},
       {n:9,zh:"是否考量了所有重要的結果指標？",hint:"有沒有漏掉重要好處/壞處",en:"All important outcomes considered?",plain:"重要的好處壞處有沒有都看——你判斷。",judge:true},
-      {n:10,zh:"好處是否值得壞處與成本？",hint:"效益 vs 風險、成本",en:"Benefits worth harms/costs?",plain:"值不值得——你判斷。",judge:true}]}
+      {n:10,zh:"好處是否值得壞處與成本？",hint:"效益 vs 風險、成本",en:"Benefits worth harms/costs?",plain:"值不值得——感染類介入通常算值得，AI 會先給判斷你再定。",judge:true,costben:true}]}
   ]}
 };
 
@@ -675,11 +675,17 @@ document.getElementById("relay-apply").addEventListener("click",()=>{
 
 /* ===================== 產生提示詞 ===================== */
 function val(id){ return document.getElementById(id).value.trim(); }
+// 後台評判標準：題目後面附給 AI 的指引。成本效益權衡題套用「感染 vs 成本」準則。
+function qNote(q){
+  if(q.costben) return " 【成本效益權衡題：請直接給「是/否」並說明理由，不要只留白。判斷準則：當介入屬於『感染預防／控制』（如皮膚消毒、手部衛生、導管／管路照護等），原則上傾向「是」（好處值得），因為一旦發生醫療照護相關感染，其臨床代價與後續處置成本，遠高於該預防措施（耗材／藥劑）本身的成本；除非研究明確顯示有顯著傷害、或單位資源確實極度受限，才考慮「否」。若非感染類介入，則依實證的效益 vs 風險／成本權衡給「是/否」，並提醒仍須評估單位資源。】";
+  if(q.judge) return " 【判斷題：只白話解釋，answer 填「請依病人情況判斷」，不要替我下是/否】";
+  return "";
+}
 function bothChecklists(){
   let s="";
   [["RCT","RCT（隨機對照試驗）→ CASP RCT 檢核表（11 題）"],["SR","系統回顧／Meta-analysis → CASP 系統性回顧檢核表（10 題）"]].forEach(([t,label])=>{
     s+=`\n=== 若你判斷是 ${label} ===\n`;
-    CASP[t].sections.forEach(sec=>{ sec.qs.forEach(q=>{ s+=`  ${q.n}. ${q.zh}（提示：${q.hint}）${q.judge?" 【判斷題：只白話解釋，answer 填「請依病人情況判斷」】":""}\n`; }); });
+    CASP[t].sections.forEach(sec=>{ sec.qs.forEach(q=>{ s+=`  ${q.n}. ${q.zh}（提示：${q.hint}）${qNote(q)}\n`; }); });
   });
   return s;
 }
@@ -714,11 +720,11 @@ function buildPromptUnknown(){
   L.push('  "clinicalQuestion":"一句臨床問題（PICO 句型）",');
   L.push('  "pico":{"P":"對象","I":"介入","C":"對照","O":"結果指標"},');
   L.push('  "summary":"150~250字中文重點摘要", "evidenceLevel":"證據等級（Melnyk 七級，例 Level II）", "qualityGrade":"高/中/低＋半句說明",');
-  L.push('  "appraisal":[{"no":題號,"section":"A/B/C/D","question":"中文題目","answer":"是/否/不確定（判斷題填：請依病人情況判斷）","rationale":"2~4句具體理由","quote":"支持判斷的原文英文句（找不到留空）","plain":"一句人話版說明"}]'+speechReq+',');
+  L.push('  "appraisal":[{"no":題號,"section":"A/B/C/D","question":"中文題目","answer":"是/否/不確定（一般判斷題填：請依病人情況判斷；成本效益權衡題請依準則直接給是/否）","rationale":"2~4句具體理由","quote":"支持判斷的原文英文句（找不到留空）","plain":"一句人話版說明"}]'+speechReq+',');
   L.push('  "clinicalApplication":"臨床應用建議'+(context?"，請扣緊我的臨床情境":"")+'", "conclusion":"3~5句整體結論"');
   L.push("}");
   L.push("");
-  L.push("規則：appraisal 要包含『你選的那張表』的全部題目（RCT 11 題或 SR 10 題），題號完整；判斷題不要替我下是/否；全部繁體中文（quote 可留英文）；只輸出 JSON。");
+  L.push("規則：appraisal 要包含『你選的那張表』的全部題目（RCT 11 題或 SR 10 題），題號完整；判斷題不要替我下是/否（但『成本效益權衡題』例外，請依題目後標註的準則直接給是/否並說明）；全部繁體中文（quote 可留英文）；只輸出 JSON。");
   return L.join("\n");
 }
 function buildPrompt(){
@@ -730,7 +736,7 @@ function buildPrompt(){
   const qs = nums.map(n=>qById(TYPE,n));
 
   let qLines="";
-  qs.forEach(q=>{ qLines += `  ${q.n}. ${q.zh}（提示：${q.hint}）${q.judge?" 【判斷題：只白話解釋，answer 填「請依病人情況判斷」，不要替我下是/否】":""} / 原文：${q.en}\n`; });
+  qs.forEach(q=>{ qLines += `  ${q.n}. ${q.zh}（提示：${q.hint}）${qNote(q)} / 原文：${q.en}\n`; });
 
   let meta="";
   if(title)meta+=`標題：${title}\n`; if(author)meta+=`作者：${author}\n`; if(journal)meta+=`年份/期刊：${journal}\n`;
@@ -770,11 +776,11 @@ function buildPrompt(){
     L.push('  "pico":{"P":"對象","I":"介入","C":"對照","O":"結果指標"},');
     L.push('  "summary":"150~250字中文重點摘要", "evidenceLevel":"證據等級（Melnyk 七級，例 Level II）", "qualityGrade":"高/中/低＋半句說明",');
   }
-  L.push('  "appraisal":[{"no":題號,"section":"A/B/C/D","question":"中文題目","answer":"是/否/不確定（判斷題填：請依病人情況判斷）","rationale":"2~4句具體理由","quote":"支持判斷的原文英文句（找不到留空）","plain":"一句人話版說明"}]'+speechReq);
+  L.push('  "appraisal":[{"no":題號,"section":"A/B/C/D","question":"中文題目","answer":"是/否/不確定（一般判斷題填：請依病人情況判斷；成本效益權衡題請依準則直接給是/否）","rationale":"2~4句具體理由","quote":"支持判斷的原文英文句（找不到留空）","plain":"一句人話版說明"}]'+speechReq);
   if(MODE==="leader") L.push(',\n  "clinicalApplication":"臨床應用建議'+(context?"，請扣緊我的臨床情境":"")+'", "conclusion":"3~5句整體結論"');
   L.push("}");
   L.push("");
-  L.push("規則：appraisal 只能包含第 "+nums.join("、")+" 題，題號完整對應；判斷題不要替我下是/否，只白話解釋；全部繁體中文（quote 可留英文）；再次強調只輸出 JSON。");
+  L.push("規則：appraisal 只能包含第 "+nums.join("、")+" 題，題號完整對應；判斷題不要替我下是/否（但『成本效益權衡題』例外，請依題目後標註的準則直接給是/否並說明），只白話解釋；全部繁體中文（quote 可留英文）；再次強調只輸出 JSON。");
   return L.join("\n");
 }
 document.getElementById("gen-btn").addEventListener("click",()=>{
@@ -975,7 +981,7 @@ function showAppBanner(){ if(sessionStorage.getItem("hideAppBanner"))return; con
 (function(){ const x=document.getElementById("appbanner-x"); if(x)x.addEventListener("click",()=>{ document.getElementById("appbanner").classList.remove("show"); sessionStorage.setItem("hideAppBanner","1"); });
   if(/FBAN|FBAV|FBIOS|Instagram|Line\/|MicroMessenger|Twitter|TikTok|GSA\//i.test(navigator.userAgent||"")) showAppBanner(); })();
 // 🔄 自動偵測新版本：跟伺服器上的 ver.txt 比對，有新版就跳橫幅（使用者完全不用管 ?數字、不用刪圖示）
-const BUILD="2026061206";
+const BUILD="2026061207";
 (function(){
   try{ fetch("ver.txt?t="+Date.now(),{cache:"no-store"}).then(r=>r.ok?r.text():null).then(v=>{ if(!v)return; v=v.trim(); if(v && v!==BUILD){ const b=document.getElementById("updbanner"); if(b)b.classList.add("show"); } }).catch(()=>{}); }catch(e){}
   const ub=document.getElementById("updbtn"); if(ub)ub.addEventListener("click",()=>{ location.replace(location.pathname+"?v="+Date.now()); });
