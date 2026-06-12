@@ -203,6 +203,9 @@
     .report .ans.yes{color:#1a7a4a}.report .ans.no{color:#c0392b}
     *{-webkit-print-color-adjust:exact;print-color-adjust:exact}
   }
+  /* 手機體驗強化 */
+  button,.btn,.tab,.type-opt,.chip,.help,.relay-toggle,select.txt,.user{touch-action:manipulation} /* 拿掉點擊延遲 */
+  @media (max-width:600px){ input.txt,textarea.txt,select.txt,#gate input{font-size:16px} } /* 防 iOS 點輸入框自動放大 */
   @media (max-width:430px){.type-grid,.fld-grid{grid-template-columns:1fr}}
 </style>
 </head>
@@ -213,7 +216,7 @@
   <div class="lock">🔒</div>
   <h2>實證評讀工作台</h2>
   <p>請輸入通行密碼</p>
-  <input id="gate-pw" type="password" inputmode="text" autocomplete="off" placeholder="••••••">
+  <input id="gate-pw" type="password" inputmode="text" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" placeholder="••••••">
   <button id="gate-go">進入</button>
   <div class="err" id="gate-err"></div>
 </div>
@@ -315,7 +318,7 @@
       <div class="oneclick-intro">不想複製貼上？貼上<b>你自己的</b> API 金鑰、拖一個 PDF 進來，報告直接跑出來，費用算在你自己的帳戶。<b>想免費就用上面那個</b>，這裡可以不理。金鑰只存在這台裝置、不外流，別人看不到。</div>
       <div class="fld-row">
         <label class="fld">你的 Anthropic API 金鑰</label>
-        <input class="txt" id="api-key" type="password" placeholder="sk-ant-..." autocomplete="off">
+        <input class="txt" id="api-key" type="password" placeholder="sk-ant-..." autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false">
         <div class="fld-hint">沒有金鑰？<a href="https://console.anthropic.com/settings/keys" target="_blank" rel="noopener" style="color:var(--blue)">點此申請＋儲值</a>（約 US$5 起，可用很久）。</div>
       </div>
       <div class="fld-row">
@@ -681,7 +684,7 @@ document.getElementById("gen-btn").addEventListener("click",()=>{
   document.getElementById("prompt-out").value=buildPrompt();
   document.getElementById("prompt-box").style.display="block";
 });
-document.getElementById("copy-prompt").addEventListener("click",()=>copy(val("prompt-out"),"已複製，貼到 AI 並附上 PDF"));
+document.getElementById("copy-prompt").addEventListener("click",()=>copyEl("prompt-out","已複製，貼到 AI 並附上 PDF"));
 
 /* ===================== 解析 + 比對 + 報告 ===================== */
 function extractAllJSON(raw){
@@ -792,7 +795,7 @@ document.getElementById("export-part").addEventListener("click",()=>{
   document.getElementById("part-out").value=L.join("\n");
   document.getElementById("part-box").style.display="block";
 });
-document.getElementById("copy-part").addEventListener("click",()=>copy(val("part-out"),"已複製，把這段傳給主講者"));
+document.getElementById("copy-part").addEventListener("click",()=>copyEl("part-out","已複製，把這段傳給主講者"));
 
 /* ===================== 匯出 ===================== */
 // PDF：靠 @media print 一律輸出樸素白底黑字（畫面不受影響）。
@@ -865,6 +868,10 @@ document.getElementById("export-pptx").addEventListener("click",()=>{
 /* ===================== 小工具 ===================== */
 function toast(m){ const t=document.getElementById("toast"); t.textContent=m; t.classList.add("show"); clearTimeout(t._t); t._t=setTimeout(()=>t.classList.remove("show"),2200); }
 function copy(text,ok){ if(navigator.clipboard&&navigator.clipboard.writeText){ navigator.clipboard.writeText(text).then(()=>toast(ok)).catch(()=>fb(text,ok)); } else fb(text,ok); }
+// 從可見 textarea 複製：先選取（App 內建瀏覽器若擋複製，至少已選好、可長按拷貝）
+function copyEl(id,ok){ const el=document.getElementById(id); el.focus(); el.select(); try{el.setSelectionRange(0,el.value.length);}catch(e){}
+  if(navigator.clipboard&&navigator.clipboard.writeText){ navigator.clipboard.writeText(el.value).then(()=>toast(ok)).catch(()=>{ let d=false; try{d=document.execCommand("copy");}catch(e){} toast(d?ok:"已幫你選取，長按選『拷貝』"); }); return; }
+  let d=false; try{d=document.execCommand("copy");}catch(e){} toast(d?ok:"已幫你選取，長按選『拷貝』"); }
 function fb(text,ok){ const ta=document.createElement("textarea"); ta.value=text; ta.style.position="fixed"; ta.style.opacity="0"; document.body.appendChild(ta); ta.select(); try{document.execCommand("copy");toast(ok);}catch(e){toast("複製失敗，請手動選取");} document.body.removeChild(ta); }
 
 /* ===================== ⚡ 一鍵自動生成（直接呼叫 Claude API） ===================== */
