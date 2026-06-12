@@ -206,10 +206,15 @@
   /* 手機體驗強化 */
   button,.btn,.tab,.type-opt,.chip,.help,.relay-toggle,select.txt,.user{touch-action:manipulation} /* 拿掉點擊延遲 */
   @media (max-width:600px){ input.txt,textarea.txt,select.txt,#gate input{font-size:16px} } /* 防 iOS 點輸入框自動放大 */
+  #appbanner{position:fixed;top:0;left:0;right:0;z-index:1400;background:#FFB13D;color:#1A1A1A;font-size:12.5px;line-height:1.5;padding:10px 36px 10px 12px;display:none}
+  #appbanner.show{display:block}
+  #appbanner b{font-weight:700}
+  #appbanner .x{position:absolute;top:4px;right:9px;font-size:20px;line-height:1;cursor:pointer;font-weight:700}
   @media (max-width:430px){.type-grid,.fld-grid{grid-template-columns:1fr}}
 </style>
 </head>
 <body class="locked">
+<div id="appbanner"><span class="x" id="appbanner-x">✕</span>⚠️ 你好像是從 App（如 LINE）內建瀏覽器開的，這種視窗常<b>不能複製、按鈕卡卡</b>。建議用真瀏覽器開：<b>iPhone</b> 點下方分享/羅盤圖示→「用 Safari 開啟」；<b>Android</b> 點右上「⋮」→「用瀏覽器開啟」。</div>
 
 <!-- ===== 密碼鎖 ===== -->
 <div id="gate">
@@ -870,8 +875,13 @@ function toast(m){ const t=document.getElementById("toast"); t.textContent=m; t.
 function copy(text,ok){ if(navigator.clipboard&&navigator.clipboard.writeText){ navigator.clipboard.writeText(text).then(()=>toast(ok)).catch(()=>fb(text,ok)); } else fb(text,ok); }
 // 從可見 textarea 複製：先選取（App 內建瀏覽器若擋複製，至少已選好、可長按拷貝）
 function copyEl(id,ok){ const el=document.getElementById(id); el.focus(); el.select(); try{el.setSelectionRange(0,el.value.length);}catch(e){}
-  if(navigator.clipboard&&navigator.clipboard.writeText){ navigator.clipboard.writeText(el.value).then(()=>toast(ok)).catch(()=>{ let d=false; try{d=document.execCommand("copy");}catch(e){} toast(d?ok:"已幫你選取，長按選『拷貝』"); }); return; }
-  let d=false; try{d=document.execCommand("copy");}catch(e){} toast(d?ok:"已幫你選取，長按選『拷貝』"); }
+  const failMsg="已幫你選取，長按選『拷貝』";
+  if(navigator.clipboard&&navigator.clipboard.writeText){ navigator.clipboard.writeText(el.value).then(()=>toast(ok)).catch(()=>{ let d=false; try{d=document.execCommand("copy");}catch(e){} if(d)toast(ok); else{toast(failMsg);showAppBanner();} }); return; }
+  let d=false; try{d=document.execCommand("copy");}catch(e){} if(d)toast(ok); else{toast(failMsg);showAppBanner();} }
+// App 內建瀏覽器提醒橫幅
+function showAppBanner(){ if(sessionStorage.getItem("hideAppBanner"))return; const b=document.getElementById("appbanner"); if(b)b.classList.add("show"); }
+(function(){ const x=document.getElementById("appbanner-x"); if(x)x.addEventListener("click",()=>{ document.getElementById("appbanner").classList.remove("show"); sessionStorage.setItem("hideAppBanner","1"); });
+  if(/FBAN|FBAV|FBIOS|Instagram|Line\/|MicroMessenger|Twitter|TikTok|GSA\//i.test(navigator.userAgent||"")) showAppBanner(); })();
 function fb(text,ok){ const ta=document.createElement("textarea"); ta.value=text; ta.style.position="fixed"; ta.style.opacity="0"; document.body.appendChild(ta); ta.select(); try{document.execCommand("copy");toast(ok);}catch(e){toast("複製失敗，請手動選取");} document.body.removeChild(ta); }
 
 /* ===================== ⚡ 一鍵自動生成（直接呼叫 Claude API） ===================== */
