@@ -436,9 +436,10 @@
         <button class="btn btn-primary" id="preview-btn" type="button">👁 先預覽內容</button>
         <button class="btn btn-ghost" id="plain-toggle" type="button">📄 切換樸素版</button>
         <button class="btn btn-ghost" id="export-pdf">🖨️ PDF</button>
+        <button class="btn btn-ghost" id="export-word">📝 Word（可改）</button>
         <button class="btn btn-ghost" id="export-pptx">📊 匯出 PPT（含演講稿）</button>
       </div>
-      <div class="note">畫面維持科技風（看著舒服）。<b>PDF 一律輸出樸素低調版</b>（交報告用、不亮眼）。這顆按鈕只切換 <b>PPT</b> 配色：自己上台用科技、要交上去再切樸素。</div>
+      <div class="note">畫面維持科技風（看著舒服）。<b>PDF 一律輸出樸素低調版</b>（交報告用、不亮眼）；想<b>自己改字</b>就用 <b>📝 Word</b>（樸素可編輯，用 Word／Pages／Google 文件打開）。「切換樸素版」只影響 <b>PPT</b> 配色：自己上台用科技、要交上去再切樸素。</div>
     </div>
   </main>
 
@@ -461,7 +462,8 @@
     <div id="pv-paper" class="pv-paper"></div>
     <div class="btn-row" style="margin-top:14px">
       <button class="btn btn-primary" id="pv-pdf" type="button">🖨️ 確認，匯出 PDF</button>
-      <button class="btn btn-ghost" id="pv-pptx" type="button">📊 確認，匯出 PPT</button>
+      <button class="btn btn-ghost" id="pv-word" type="button">📝 匯出 Word</button>
+      <button class="btn btn-ghost" id="pv-pptx" type="button">📊 匯出 PPT</button>
     </div>
   </div>
 </div>
@@ -1051,6 +1053,59 @@ document.getElementById("pv-close").addEventListener("click",()=>document.getEle
 document.getElementById("pv-pdf").addEventListener("click",()=>{ document.getElementById("preview").classList.remove("show"); setTimeout(()=>window.print(),250); });
 document.getElementById("pv-pptx").addEventListener("click",()=>{ document.getElementById("preview").classList.remove("show"); document.getElementById("export-pptx").click(); });
 
+/* ===================== 匯出 Word（.doc，可在 Word 直接編輯） ===================== */
+function exportWord(){
+  if(!LAST){ toast("請先產生報告"); return; }
+  const d=LAST, e=pvEsc; let b="";
+  b+='<h1>'+e(d.title||"實證文獻評讀報告")+'</h1>';
+  const meta=[ d.studyType==="SR"?"系統性回顧 / Meta-analysis":"隨機對照試驗（RCT）" ];
+  if(d.evidenceLevel)meta.push("證據等級："+e(d.evidenceLevel));
+  if(d.qualityGrade)meta.push("品質："+e(d.qualityGrade));
+  b+='<p class="meta">'+meta.join("　｜　")+'</p>';
+  if(d.citation)b+='<p class="meta">'+e(d.citation)+'</p>';
+  if(d.group)b+='<p class="meta">組別：'+e(d.group)+'</p>';
+  if(d.clinicalQuestion)b+='<h2>臨床問題</h2><p>'+e(d.clinicalQuestion)+'</p>';
+  if(d.pico){ b+='<h2>PICO</h2><table>'; ["P","I","C","O"].forEach(k=>{ b+='<tr><td class="k">'+k+'</td><td>'+e(d.pico[k]||"—")+'</td></tr>'; }); b+='</table>'; }
+  if(d.summary)b+='<h2>摘要</h2><p>'+e(d.summary)+'</p>';
+  b+='<h2>逐題評讀</h2>';
+  (d.appraisal||[]).slice().sort((a,b2)=>(+a.no)-(+b2.no)).forEach(it=>{
+    b+='<p class="q">Q'+e(it.no)+'　'+e(it.question)+'</p>';
+    b+='<p class="a">答：'+e(it.answer)+'</p>';
+    if(it.rationale)b+='<p>理由：'+e(it.rationale)+'</p>';
+    if(it.quote)b+='<p class="quote">原文：'+e(it.quote)+'</p>';
+  });
+  const sp=d.speech;
+  if(sp&&(sp.opening||sp.closing||(sp.perQuestion&&Object.keys(sp.perQuestion).length))){
+    b+='<h2>演講稿（上台講稿）</h2>';
+    if(sp.opening)b+='<p><b>開場：</b>'+e(sp.opening)+'</p>';
+    if(sp.perQuestion)Object.keys(sp.perQuestion).sort((a,b2)=>(+a)-(+b2)).forEach(k=>{ b+='<p><b>Q'+e(k)+'：</b>'+e(sp.perQuestion[k])+'</p>'; });
+    if(sp.closing)b+='<p><b>結尾：</b>'+e(sp.closing)+'</p>';
+  }
+  if(Array.isArray(d.anticipatedQA)&&d.anticipatedQA.length){
+    b+='<h2>可能被問的問題</h2>';
+    d.anticipatedQA.forEach(qa=>{ b+='<p><b>Q：</b>'+e(qa.q)+'<br/><b>A：</b>'+e(qa.a)+'</p>'; });
+  }
+  if(d.clinicalApplication)b+='<h2>臨床應用</h2><p>'+e(d.clinicalApplication)+'</p>';
+  if(d.conclusion)b+='<h2>結論</h2><p>'+e(d.conclusion)+'</p>';
+  if(d.group)b+='<p class="wm">'+e(d.group)+' 實證報告</p>';
+  const css="body{font-family:'Times New Roman','PMingLiU','新細明體',serif;font-size:12pt;line-height:1.6;color:#000}"
+    +"h1{font-size:18pt;text-align:center}h2{font-size:14pt;border-bottom:1px solid #000;margin-top:18pt}"
+    +".meta{color:#333;font-size:10.5pt;margin:2pt 0;text-align:center}"
+    +".q{font-weight:bold;margin-top:12pt}.a{font-weight:bold}.quote{color:#555;font-style:italic;font-size:10.5pt}"
+    +"table{border-collapse:collapse}td{border:1px solid #999;padding:3pt 8pt}td.k{font-weight:bold;background:#eee;width:48pt}"
+    +".wm{color:#888;font-size:9pt;margin-top:24pt}";
+  const html='<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:w="urn:schemas-microsoft-com:office:word" xmlns="http://www.w3.org/TR/REC-html40">'
+    +'<head><meta charset="utf-8"><title>'+e(d.title||"實證報告")+'</title><style>'+css+'</style></head><body>'+b+'</body></html>';
+  const blob=new Blob(['﻿'+html],{type:"application/msword"});
+  const a=document.createElement("a"); a.href=URL.createObjectURL(blob);
+  a.download=(d.group?d.group+"_":"")+"實證報告.doc";
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  setTimeout(()=>URL.revokeObjectURL(a.href),1500);
+  toast("Word 檔已下載（.doc，可用 Word／Pages 直接改字）");
+}
+document.getElementById("export-word").addEventListener("click",exportWord);
+document.getElementById("pv-word").addEventListener("click",()=>{ document.getElementById("preview").classList.remove("show"); exportWord(); });
+
 /* ===================== 一鍵清除（換下一篇） ===================== */
 function clearAll(){
   if(!confirm("清除目前這篇、換下一篇？\n\n會清除：標題／作者／摘要／臨床情境／AI 回覆／報告／附的 PDF／選的題號。\n會保留：組別、目前模式與類型、API 金鑰。")) return;
@@ -1105,9 +1160,10 @@ function showAppBanner(){ if(sessionStorage.getItem("hideAppBanner"))return; con
 (function(){ const x=document.getElementById("appbanner-x"); if(x)x.addEventListener("click",()=>{ document.getElementById("appbanner").classList.remove("show"); sessionStorage.setItem("hideAppBanner","1"); });
   if(/FBAN|FBAV|FBIOS|Instagram|Line\/|MicroMessenger|Twitter|TikTok|GSA\//i.test(navigator.userAgent||"")) showAppBanner(); })();
 // 🔄 自動偵測新版本：跟伺服器上的 ver.txt 比對，有新版就跳橫幅（使用者完全不用管 ?數字、不用刪圖示）
-const BUILD="2026061211";
+const BUILD="2026061212";
 const CASP_VERSION="CASP 2024";
 const CHANGELOG=[
+  "新增「📝 Word（可改）」匯出，可在 Word／Pages 直接改字",
   "新增「🗑 一鍵清除」，換下一篇免逐格手刪",
   "匯出 PDF／PPT 前可先「👁 預覽內容」（連演講稿都攤開看）",
   "「好處 vs 成本」評判準則：感染預防類介入傾向「值得」",
