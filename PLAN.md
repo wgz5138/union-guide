@@ -127,6 +127,7 @@
 - `ver.txt` — 線上版本號（自動更新偵測用，每次部署要 +1，並同步改兩支 HTML 的 `const BUILD`）
 - `sw.js` — service worker（離線快取外殼；改快取內容時 `CACHE` 版本要 +1）
 - `share.html` — 掃碼分享看板（兩支工具的 QR Code，可投影/列印貼桌上；QR 用 davidshimjs/qrcodejs CDN 前端生成，載不到時退回顯示純網址）
+- `回饋表單-一鍵建立.gs` — Google Apps Script，使用者貼到 script.google.com 按執行一次，**自動生出**「使用回饋」Google 表單（含「手機卡卡→追問卡在哪」分支），連結自動寄到她信箱。回覆匯整在表單、登入 Google 一次看完。**待辦**：她建好後把表單填寫網址給我 → 在兩支工具加「💬 給建議」按鈕直連（入口擬放 #app 底部 footer，鎖定時隱藏）。為什麼走這條：純前端無後台、我無她 Google 帳號權限，此法是「我寫好整張表、她只按一次執行」、零新帳號、資料全在她自己 Google。
 - `evidence.webmanifest` / `search.webmanifest` — PWA 設定（加到主畫面的 App 名稱/圖示/全螢幕）
 - `icon-evidence.png` / `icon-search.png` — App 圖示（青色勾／放大鏡，深藍底，程式畫的）
 - `使用小抄.md` — 給使用者本人的小抄（網址/密碼/用法/費用/趕人/給未來 AI 的開場白）
