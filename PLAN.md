@@ -103,6 +103,8 @@
 
 **ℹ️ 版本號＋更新說明（兩支）：** footer 顯示「工具版本 YYYY-MM-DD（版號 nn）」(由 `BUILD` 經 `verLabel()` 格式化，單一真實來源)，旁邊「ℹ️ 版本與更新說明」開 `#verinfo` modal：工具版本、採用標準（評讀＝CASP 2024：RCT11/SR10＋Melnyk七級；快查＝Europe PMC 即時來源）、近期更新（`CHANGELOG` 陣列）。**CASP 自動更新的誠實說明**：CASP UK 以 PDF 發布、無 API，程式無法自動抓題；跟上的方式＝叫 AI 更新題庫，更新後靠既有 app 自動更新送達。版本選擇：目前僅 2024 一版，待有新版再做切換（已在說明中告知使用者）。**未來部署別忘了**：除 ver.txt+BUILD+CACHE，視情況把新功能補一句進兩支的 `CHANGELOG`。
 
+**🔗 CASP 標準保鮮（使用者兩年才用一次、不能靠她記）：** 真自動抓做不到（CASP 是 PDF、無 API；瀏覽器 CORS 也擋跨站抓；GitHub Actions 排程又會因 repo 閒置 60 天被停用，正好命中她的休眠模式）。故採「**用的當下提醒＋一鍵更新**」：評讀工具最上面「套用 CASP」卡片常駐一條「🔗 對照官網看有沒有新版」(casp-uk.net)；`#verinfo` 面板的 CASP 段落加官網連結＋「📋 複製更新指令給 AI」(`copyCaspUpdate()` 複製一段叫 AI 讀 PLAN.md 並更新 CASP.RCT/CASP.SR 題庫的指令)。理由：她只有「使用當下」才需要最新 CASP，把檢查擺在那一刻＝零記憶負擔；更新本身是 AI 幾分鐘的一次性工作，改完靠既有 app 自動更新送達。（若日後要更主動：可加 GitHub Action watcher＋keepalive，但對 2 年休眠 repo 不可靠，未採用。）
+
 **🗑 一鍵清除（換下一篇／下一題，兩支）：** 評讀工具「文獻資訊」標題列右側紅色「🗑 清除換下一篇」(`clearAll()`)：清標題/作者/期刊/情境/摘要/演講長度/AI回覆/組員匯入/報告/選題chip/附的PDF/提示詞框/匯出框、`LAST=null`，**保留組別、模式、類型、API金鑰**，含 confirm 防誤觸。臨床快查「描述問題」列右側「🗑 清除換下一題」(`clearSearch()`)：清描述/查詢/結果/狀態/綜合框。解決討論文獻時工具↔AI 來回切換、要換下一篇卻得逐格手刪的痛點。
 
 **手機體驗強化（兩支）：** 防 iOS 點輸入框自動放大（@media ≤600px 輸入字 16px）；複製改用 `copyEl()`（先選取可見 textarea，App 內建瀏覽器擋複製時至少已選好可長按拷貝）；密碼/金鑰/查詢輸入關 autocapitalize/autocorrect/spellcheck；按鈕 `touch-action:manipulation` 去點擊延遲；臨床快查搜尋框自動清 `QUERY:`前綴/`[tiab][Mesh]`標籤/網址編碼、0筆自動放寬、加「🧪一鍵試範例」、摘要去 HTML 標籤。**已知限制**：App 內建小視窗(in-app webview)仍可能擋程式化複製→建議用 Safari 開（copyEl 已退而求其次幫使用者選好）。
