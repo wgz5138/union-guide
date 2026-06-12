@@ -167,7 +167,19 @@
   .wel-box h2{font-size:24px;color:var(--head);margin-bottom:12px}
   .wel-box .lead{font-size:17px;color:var(--txt);line-height:1.75;margin-bottom:20px}
   .wel-go{width:100%;background:var(--cyan);color:#06231f;border:none;border-radius:12px;padding:15px;font-size:18px;font-weight:700;cursor:pointer;font-family:inherit}
-  .wel-more{margin-top:16px;font-size:15px;color:var(--blue);cursor:pointer;user-select:none}
+  .wel-more{margin-top:14px;font-size:15px;color:var(--blue);cursor:pointer;user-select:none}
+  /* 互動導覽 */
+  #tour-dim{position:fixed;inset:0;background:rgba(6,10,18,.72);z-index:1100;display:none}
+  #tour-dim.show{display:block}
+  .tour-hi{position:relative;z-index:1150;box-shadow:0 0 0 3px var(--cyan),0 0 22px rgba(63,214,208,.55);border-radius:12px}
+  #tour-bar{position:fixed;left:0;right:0;bottom:0;z-index:1160;background:var(--panel);border-top:1px solid var(--cyan);padding:14px 16px;display:none}
+  #tour-bar.show{display:block}
+  #tour-text{font-size:15px;color:var(--head);line-height:1.65;margin-bottom:10px}
+  #tour-text b{color:var(--cyan)}
+  .tour-btns{display:flex;gap:8px}
+  .tour-btns button{flex:1;border:none;border-radius:10px;padding:11px;font-size:15px;font-weight:600;cursor:pointer;font-family:inherit}
+  #tour-skip{background:#0F1622;color:var(--txt2);border:1px solid var(--line)}
+  #tour-next{background:var(--cyan);color:#06231f}
   .man-box{max-width:600px;margin:0 auto;background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:20px}
   .man-box h2{font-size:18px;color:var(--head);margin-bottom:4px}
   .man-close{background:var(--cyan);color:#06231f;border:none;border-radius:20px;padding:6px 14px;font-weight:700;cursor:pointer;font-family:inherit;float:right}
@@ -402,10 +414,18 @@
   <div class="wel-box">
     <div class="em">📄</div>
     <h2>歡迎 👋</h2>
-    <p class="lead">這個工具幫你把論文用 CASP <b>逐題評讀、寫成交差報告</b>。<br>不會用沒關係——右上角 <b>「❓怎麼用」</b> 隨時點開教學。</p>
-    <button class="wel-go" id="wel-go">開始用 👉</button>
-    <div class="wel-more" id="wel-more">先看完整教學</div>
+    <p class="lead">這個工具幫你把論文用 CASP <b>逐題評讀、寫成交差報告</b>。</p>
+    <button class="wel-go" id="wel-tour">▶ 帶我走一遍（30 秒）</button>
+    <div class="wel-more" id="wel-go">直接開始用，不用導覽</div>
+    <div class="wel-more" id="wel-more" style="margin-top:8px">看完整文字教學</div>
   </div>
+</div>
+
+<!-- 互動導覽 -->
+<div id="tour-dim"></div>
+<div id="tour-bar">
+  <div id="tour-text"></div>
+  <div class="tour-btns"><button id="tour-skip">跳過</button><button id="tour-next">下一步 →</button></div>
 </div>
 
 <!-- 操作手冊 -->
@@ -414,6 +434,7 @@
     <button class="man-close" id="man-close">✕ 關閉</button>
     <h2>📖 怎麼用（小白版）</h2>
     <p style="font-size:13px;color:var(--muted)">兩年用一次也沒關係，照著走就好。</p>
+    <button id="man-tour" style="display:block;width:100%;margin:4px 0 6px;background:var(--cyan);color:#06231f;border:none;border-radius:10px;padding:11px;font-size:15px;font-weight:700;cursor:pointer;font-family:inherit">▶ 帶我走一遍（互動導覽）</button>
 
     <h3>這工具在幹嘛？</h3>
     <p>它<b>不會自己讀論文</b>。它幫你<b>寫好一份指令</b>，你拿去貼給 <b>ChatGPT 或 Claude</b>、附上論文，AI 逐題評讀；再把 AI 回覆貼回來，它幫你<b>排版成報告</b>。</p>
@@ -512,6 +533,26 @@ function unlock(){ document.body.classList.remove("locked"); document.body.class
 function closeManual(){ document.getElementById("manual").classList.remove("show"); localStorage.setItem("ebn_seen_manual","1"); }
 document.getElementById("wel-go").addEventListener("click",()=>{ document.getElementById("welcome").classList.remove("show"); localStorage.setItem("ebn_seen_manual","1"); });
 document.getElementById("wel-more").addEventListener("click",()=>{ document.getElementById("welcome").classList.remove("show"); localStorage.setItem("ebn_seen_manual","1"); document.getElementById("manual").classList.add("show"); });
+document.getElementById("wel-tour").addEventListener("click",()=>{ document.getElementById("welcome").classList.remove("show"); startTour(); });
+/* ===== 互動導覽 ===== */
+const TOUR=[
+  {sel:".type-grid", t:"① <b>選文獻類型</b>：RCT 還是 Meta？看不懂就點下面「🤖 我不確定」讓 AI 判斷。"},
+  {sel:"#f-text", t:"② <b>填文獻資訊</b>：標題可跳過；摘要貼這格（整篇 PDF 等下附給 AI 就好）。"},
+  {sel:"#assign-chips", t:"③ <b>選你負責的題</b>：點你被分到的題號（可多選；全部做就不用選）。"},
+  {sel:"#gen-btn", t:"④ 按 <b>「產生提示詞」</b>，會生出一段指令。"},
+  {sel:"#ai-resp", t:"⑤ 把指令貼給 ChatGPT/Claude＋附 PDF，再把 AI 回覆<b>整段貼回這格</b>。"},
+  {sel:"#render-btn", t:"⑥ 按 <b>「產生報告」</b>，報告就出來了！🎉 走完囉，開始用吧。"}
+];
+let _ti=0;
+function tourStep(){ document.querySelectorAll(".tour-hi").forEach(e=>e.classList.remove("tour-hi"));
+  const s=TOUR[_ti], el=document.querySelector(s.sel);
+  if(el){ el.classList.add("tour-hi"); el.scrollIntoView({behavior:"smooth",block:"center"}); }
+  document.getElementById("tour-text").innerHTML="（"+(_ti+1)+"/"+TOUR.length+"）"+s.t;
+  document.getElementById("tour-next").textContent=_ti===TOUR.length-1?"完成 ✓":"下一步 →"; }
+function startTour(){ _ti=0; document.getElementById("tour-dim").classList.add("show"); document.getElementById("tour-bar").classList.add("show"); tourStep(); }
+function endTour(){ document.querySelectorAll(".tour-hi").forEach(e=>e.classList.remove("tour-hi")); document.getElementById("tour-dim").classList.remove("show"); document.getElementById("tour-bar").classList.remove("show"); localStorage.setItem("ebn_seen_manual","1"); window.scrollTo({top:0,behavior:"smooth"}); }
+document.getElementById("tour-next").addEventListener("click",()=>{ if(_ti<TOUR.length-1){_ti++;tourStep();}else endTour(); });
+document.getElementById("tour-skip").addEventListener("click",endTour);
 if(sessionStorage.getItem(UNLOCK_KEY)==="1") unlock();
 document.getElementById("gate-go").addEventListener("click",tryUnlock);
 document.getElementById("gate-pw").addEventListener("keydown",e=>{ if(e.key==="Enter") tryUnlock(); });
@@ -533,6 +574,7 @@ document.getElementById("chpw-btn").addEventListener("click",()=>{
 document.getElementById("manual-btn").addEventListener("click",()=>document.getElementById("manual").classList.add("show"));
 document.getElementById("man-close").addEventListener("click",closeManual);
 document.getElementById("man-close2").addEventListener("click",closeManual);
+document.getElementById("man-tour").addEventListener("click",()=>{ closeManual(); startTour(); });
 
 /* ===================== 模式切換 ===================== */
 document.body.dataset.mode="member";
