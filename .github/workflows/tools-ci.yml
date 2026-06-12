@@ -1,0 +1,22 @@
+name: tools-ci
+
+# 只在動到 tools/ 或本工作流程時跑，不打擾網站內容。
+on:
+  push:
+    paths:
+      - 'tools/**'
+      - '.github/workflows/tools-ci.yml'
+  pull_request:
+    paths:
+      - 'tools/**'
+      - '.github/workflows/tools-ci.yml'
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install shellcheck + jq
+        run: sudo apt-get update && sudo apt-get install -y shellcheck jq
+      - name: Run tools/ci-check.sh
+        run: bash tools/ci-check.sh
