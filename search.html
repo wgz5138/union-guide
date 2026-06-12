@@ -160,7 +160,7 @@
           <a class="btn btn-ghost btn-sm" href="https://chatgpt.com/" target="_blank" rel="noopener">↗ ChatGPT</a>
           <a class="btn btn-ghost btn-sm" href="https://claude.ai/new" target="_blank" rel="noopener">↗ Claude</a>
         </div>
-        <div class="hint">AI 會回你一行英文查詢字串，把它貼到下面第②步的框框裡按搜尋。</div>
+        <div class="hint">AI 會回你兩行查詢（精準版＋寬鬆版）。先把 <b>QUERY1（精準）</b> 貼到下面第②步搜尋；沒結果就改貼 <b>QUERY2（寬鬆）</b>。記得開新分頁、別按上一頁，AI 對話才不會消失。</div>
       </div>
     </div>
 
@@ -293,8 +293,10 @@ document.getElementById("q-prompt-btn").addEventListener("click",()=>{
   const L=[];
   L.push("你是醫學文獻檢索專家。我會用中文描述一個臨床問題，請幫我：");
   L.push("1. 用一句話點出核心 PICO（對象/介入/比較/結果）。");
-  L.push("2. 給我一行英文查詢字串，可直接貼進我的搜尋框（背後用 Europe PMC）。用 AND/OR（大寫）、片語加引號、納入同義詞；**絕對不要用 PubMed 欄位標籤如 [tiab]、[Mesh]、[Title/Abstract]**（這個搜尋框不吃、會找不到）。");
-  L.push("只要那一行查詢字串用 `QUERY:` 開頭單獨一行，方便我複製。");
+  L.push("2. 給我【兩行】英文查詢字串，給 Europe PMC 用（用 AND/OR 大寫、片語加引號、同義詞；**絕對不要用 PubMed 欄位標籤 [tiab]/[Mesh]/[Title/Abstract]**，這個搜尋框不吃、會找不到）：");
+  L.push("   - 第一行用 `QUERY1:` 開頭 = 精準版");
+  L.push("   - 第二行用 `QUERY2:` 開頭 = 寬鬆版（少幾個 AND 條件、命中率更高）");
+  L.push("這樣我精準版若沒結果，可直接改貼寬鬆版，不用再回來問你。兩行各自單獨一行方便我複製。");
   L.push("");
   L.push("我的臨床問題：");
   L.push(desc);
