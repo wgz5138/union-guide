@@ -321,7 +321,7 @@
     </div>
 
     <!-- 文獻資訊（共用） -->
-    <div class="label"><span class="n">2</span>文獻資訊</div>
+    <div class="label"><span class="n">2</span>文獻資訊<button id="clear-btn" type="button" style="margin-left:auto;font-size:11px;text-transform:none;letter-spacing:0;background:rgba(255,122,122,.12);color:#ff9a9a;border:1px solid rgba(255,122,122,.35);border-radius:16px;padding:5px 12px;cursor:pointer;font-family:inherit">🗑 清除換下一篇</button></div>
     <div class="card">
       <div class="fld-row"><label class="fld">文獻標題</label><input class="txt" id="f-title" placeholder="可留白"></div>
       <div class="fld-grid">
@@ -1036,6 +1036,25 @@ document.getElementById("pv-close").addEventListener("click",()=>document.getEle
 document.getElementById("pv-pdf").addEventListener("click",()=>{ document.getElementById("preview").classList.remove("show"); setTimeout(()=>window.print(),250); });
 document.getElementById("pv-pptx").addEventListener("click",()=>{ document.getElementById("preview").classList.remove("show"); document.getElementById("export-pptx").click(); });
 
+/* ===================== 一鍵清除（換下一篇） ===================== */
+function clearAll(){
+  if(!confirm("清除目前這篇、換下一篇？\n\n會清除：標題／作者／摘要／臨床情境／AI 回覆／報告／附的 PDF／選的題號。\n會保留：組別、目前模式與類型、API 金鑰。")) return;
+  ["f-title","f-author","f-journal","f-context","f-text","f-mins","ai-resp","member-imports"].forEach(id=>{ const el=document.getElementById(id); if(el) el.value=""; });
+  const pb=document.getElementById("prompt-box"); if(pb) pb.style.display="none";
+  const po=document.getElementById("prompt-out"); if(po) po.value="";
+  const xb=document.getElementById("part-box"); if(xb) xb.style.display="none";
+  document.getElementById("report-inner").innerHTML=""; LAST=null;
+  document.querySelectorAll("#assign-chips .chip.on").forEach(c=>c.classList.remove("on"));
+  PDF_B64=null; PDF_NAME="";
+  const pl=document.getElementById("pdf-label"); if(pl) pl.textContent="＋ 拖 PDF 到這裡，或點一下選檔";
+  const pd=document.getElementById("pdf-drop"); if(pd) pd.classList.remove("has");
+  const pf=document.getElementById("pdf-file"); if(pf) pf.value="";
+  const pv=document.getElementById("preview"); if(pv) pv.classList.remove("show");
+  window.scrollTo({top:0,behavior:"smooth"});
+  toast("已清除，可以開始下一篇 👍");
+}
+document.getElementById("clear-btn").addEventListener("click",clearAll);
+
 /* ===================== 小工具 ===================== */
 function toast(m){ const t=document.getElementById("toast"); t.textContent=m; t.classList.add("show"); clearTimeout(t._t); t._t=setTimeout(()=>t.classList.remove("show"),2200); }
 function copy(text,ok){ if(navigator.clipboard&&navigator.clipboard.writeText){ navigator.clipboard.writeText(text).then(()=>toast(ok)).catch(()=>fb(text,ok)); } else fb(text,ok); }
@@ -1049,7 +1068,7 @@ function showAppBanner(){ if(sessionStorage.getItem("hideAppBanner"))return; con
 (function(){ const x=document.getElementById("appbanner-x"); if(x)x.addEventListener("click",()=>{ document.getElementById("appbanner").classList.remove("show"); sessionStorage.setItem("hideAppBanner","1"); });
   if(/FBAN|FBAV|FBIOS|Instagram|Line\/|MicroMessenger|Twitter|TikTok|GSA\//i.test(navigator.userAgent||"")) showAppBanner(); })();
 // 🔄 自動偵測新版本：跟伺服器上的 ver.txt 比對，有新版就跳橫幅（使用者完全不用管 ?數字、不用刪圖示）
-const BUILD="2026061208";
+const BUILD="2026061209";
 (function(){
   try{ fetch("ver.txt?t="+Date.now(),{cache:"no-store"}).then(r=>r.ok?r.text():null).then(v=>{ if(!v)return; v=v.trim(); if(v && v!==BUILD){ const b=document.getElementById("updbanner"); if(b)b.classList.add("show"); } }).catch(()=>{}); }catch(e){}
   const ub=document.getElementById("updbtn"); if(ub)ub.addEventListener("click",()=>{ location.replace(location.pathname+"?v="+Date.now()); });

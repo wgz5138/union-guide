@@ -101,6 +101,8 @@
 - **📲 換裝置接力**：與 evidence 同機制，帶 q-desc/q-query/篩選/綜合結果（不含金鑰）；貼上後若有 query 自動 `doSearch()`。
 - **⚠️ 查詢語法（已修坑）**：搜尋框後端是 **Europe PMC，不吃 PubMed 的 `[tiab]`/`[Mesh]` 欄位標籤**。`buildQuery()` 會自動 `replace(/\[[^\]]*\]/g)` 去掉標籤；兩個產查詢的提示詞也已要求 AI 不要產欄位標籤。0 筆時若有篩選會**自動拿掉篩選重搜一次**(`doSearch(true)`)。
 
+**🗑 一鍵清除（換下一篇／下一題，兩支）：** 評讀工具「文獻資訊」標題列右側紅色「🗑 清除換下一篇」(`clearAll()`)：清標題/作者/期刊/情境/摘要/演講長度/AI回覆/組員匯入/報告/選題chip/附的PDF/提示詞框/匯出框、`LAST=null`，**保留組別、模式、類型、API金鑰**，含 confirm 防誤觸。臨床快查「描述問題」列右側「🗑 清除換下一題」(`clearSearch()`)：清描述/查詢/結果/狀態/綜合框。解決討論文獻時工具↔AI 來回切換、要換下一篇卻得逐格手刪的痛點。
+
 **手機體驗強化（兩支）：** 防 iOS 點輸入框自動放大（@media ≤600px 輸入字 16px）；複製改用 `copyEl()`（先選取可見 textarea，App 內建瀏覽器擋複製時至少已選好可長按拷貝）；密碼/金鑰/查詢輸入關 autocapitalize/autocorrect/spellcheck；按鈕 `touch-action:manipulation` 去點擊延遲；臨床快查搜尋框自動清 `QUERY:`前綴/`[tiab][Mesh]`標籤/網址編碼、0筆自動放寬、加「🧪一鍵試範例」、摘要去 HTML 標籤。**已知限制**：App 內建小視窗(in-app webview)仍可能擋程式化複製→建議用 Safari 開（copyEl 已退而求其次幫使用者選好）。
 
 **🔄 自動更新偵測（兩支，已上線）：** 解決使用者最大痛點——加在主畫面的圖示/瀏覽器快取常停在舊版，她不知道手上是不是最新、又不想手動加 `?數字`、不想刪圖示重加。做法：repo 根目錄放 **`ver.txt`**（內容是一串版本號，如 `2026061201`）；兩支 HTML 各內嵌 `const BUILD="…"`（與當下 `ver.txt` 同值）。一開頁就 `fetch("ver.txt?t="+Date.now(),{cache:"no-store"})` 抓伺服器版本，**和內嵌 BUILD 不一樣＝有新版** → 上方跳青色橫幅「🔄 有新版本了！」＋「立即更新」鈕，按下 `location.replace(pathname+"?v="+Date.now())` 強制繞過快取載入最新；沒新版什麼都不跳。`#updbanner`/`#updbtn`，✕ 可關。抓不到 ver.txt（離線/被擋）就靜默不跳，不影響使用。
