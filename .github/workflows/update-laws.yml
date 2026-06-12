@@ -32,12 +32,13 @@ jobs:
         run: python3 tools/update-laws.py
       - name: 有變更才提交
         run: |
-          if git diff --quiet -- laws.json; then
+          git config user.name  "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add laws.json
+          # 用 --cached 才能同時偵測「新檔」與「改檔」（git diff 不認未追蹤的新檔）
+          if git diff --cached --quiet; then
             echo "laws.json 無變更，略過提交。"
           else
-            git config user.name  "github-actions[bot]"
-            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-            git add laws.json
-            git commit -m "chore(laws): 自動更新法規快照（全國法規資料庫）"
+            git commit -m "chore(laws): 自動更新法規（全國法規資料庫）"
             git push
           fi
