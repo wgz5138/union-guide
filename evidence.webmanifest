@@ -1,0 +1,13 @@
+{
+  "name": "實證評讀工具",
+  "short_name": "評讀工具",
+  "start_url": "./evidence.html",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#0E1626",
+  "theme_color": "#0E1626",
+  "icons": [
+    { "src": "icon-evidence.png", "sizes": "512x512", "type": "image/png", "purpose": "any" }
+  ]
+}

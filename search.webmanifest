@@ -1,0 +1,13 @@
+{
+  "name": "臨床快查",
+  "short_name": "臨床快查",
+  "start_url": "./search.html",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#0E1626",
+  "theme_color": "#0E1626",
+  "icons": [
+    { "src": "icon-search.png", "sizes": "512x512", "type": "image/png", "purpose": "any" }
+  ]
+}
