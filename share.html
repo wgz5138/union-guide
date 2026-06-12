@@ -70,6 +70,15 @@
     </div>
   </div>
 
+  <div class="card" style="margin-top:18px">
+    <span class="tag">用完給點建議</span>
+    <p class="name">💬 30 秒回饋問卷</p>
+    <p class="use">用得順不順？點幾個選項就好，匿名不記名</p>
+    <div class="qrbox"><div id="qr3"></div></div>
+    <p class="hint">📷 掃我填問卷</p>
+    <p class="url"><a href="https://docs.google.com/forms/d/e/1FAIpQLSdd4R-JdKe7Cfqy7j9bhCRfBXa-B4ZODEvI_ZSfy2H5SQ_I6g/viewform">填回饋表單</a></p>
+  </div>
+
   <div class="note">
     🔑 掃進去後第一次要輸入<b>進場密碼</b>（你私下給對方就好，不要寫在這張上面）。<br>
     📌 <b>評讀工具</b>可以分享給信任的同仁；<b>臨床快查</b>建議只給自己用。
@@ -86,6 +95,7 @@
 (function(){
   var E="https://wgz5138.github.io/union-guide/evidence.html";
   var S="https://wgz5138.github.io/union-guide/search.html";
+  var F="https://docs.google.com/forms/d/e/1FAIpQLSdd4R-JdKe7Cfqy7j9bhCRfBXa-B4ZODEvI_ZSfy2H5SQ_I6g/viewform";
   function make(id,url){
     try{
       new QRCode(document.getElementById(id),{ text:url, width:240, height:240,
@@ -94,7 +104,7 @@
   }
   function go(){
     if(typeof QRCode==="undefined"){ document.getElementById("fail").style.display="block"; return; }
-    make("qr1",E); make("qr2",S);
+    make("qr1",E); make("qr2",S); make("qr3",F);
   }
   // 給 CDN 一點時間載入
   if(typeof QRCode!=="undefined"){ go(); }
