@@ -394,12 +394,14 @@ function showAppBanner(){ if(sessionStorage.getItem("hideAppBanner"))return; con
 (function(){ const x=document.getElementById("appbanner-x"); if(x)x.addEventListener("click",()=>{ document.getElementById("appbanner").classList.remove("show"); sessionStorage.setItem("hideAppBanner","1"); });
   if(/FBAN|FBAV|FBIOS|Instagram|Line\/|MicroMessenger|Twitter|TikTok|GSA\//i.test(navigator.userAgent||"")) showAppBanner(); })();
 // 🔄 自動偵測新版本：跟伺服器上的 ver.txt 比對，有新版就跳橫幅（使用者完全不用管 ?數字、不用刪圖示）
-const BUILD="2026061202";
+const BUILD="2026061203";
 (function(){
   try{ fetch("ver.txt?t="+Date.now(),{cache:"no-store"}).then(r=>r.ok?r.text():null).then(v=>{ if(!v)return; v=v.trim(); if(v && v!==BUILD){ const b=document.getElementById("updbanner"); if(b)b.classList.add("show"); } }).catch(()=>{}); }catch(e){}
   const ub=document.getElementById("updbtn"); if(ub)ub.addEventListener("click",()=>{ location.replace(location.pathname+"?v="+Date.now()); });
   const ux=document.getElementById("updbanner-x"); if(ux)ux.addEventListener("click",()=>{ const b=document.getElementById("updbanner"); if(b)b.classList.remove("show"); });
 })();
+// 🛜 離線支援：註冊 service worker（沒網路也能打開工具畫面）
+if("serviceWorker" in navigator){ window.addEventListener("load",()=>{ navigator.serviceWorker.register("sw.js").catch(()=>{}); }); }
 
 /* ===== ① 中文 → 查詢字串提示詞 ===== */
 document.getElementById("q-prompt-btn").addEventListener("click",()=>{

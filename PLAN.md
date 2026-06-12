@@ -106,6 +106,8 @@
 
 **📱 PWA（加到主畫面變正式 App，兩支已上線）：** 各自有 `*.webmanifest`（name/short_name/start_url/`display:standalone`/`theme_color:#0E1626`/icon 512）＋ head 內 apple-touch-icon、`apple-mobile-web-app-capable`、`apple-mobile-web-app-title`、`theme-color`。圖示是純前端用 Python(zlib) 程式畫的 PNG：評讀＝青色勾、快查＝青色放大鏡，皆深藍底（冷感科技風，刻意不像使用者本人風格）。加到主畫面後有正式 App 名稱與圖示、全螢幕無網址列。**改圖示**＝重畫 `icon-evidence.png`/`icon-search.png`（腳本邏輯見 commit）。
 
+**🛜 離線可開（service worker，兩支已上線）：** `sw.js`（同源、共用）把外殼（兩支 HTML、圖示、manifest、PptxGenJS CDN）precache。策略：**HTML 網路優先**（有網路永遠拿最新，自動更新偵測照常）、失敗退快取（離線也打得開畫面）；靜態資源快取優先；**`ver.txt` 完全不攔**（永遠即時比對版本）。兩支 head 後的 script 用 `navigator.serviceWorker.register("sw.js")` 註冊。離線時：畫面可開、免費複製貼上路徑可用；但 live 搜尋(Europe PMC)與付費一鍵(Claude API)本就需要網路。**改離線快取內容**＝改 `sw.js` 的 `SHELL` 清單並把 `CACHE` 版本號 +1。
+
 **共通（金鑰共用）：** 兩工具同源（github.io/union-guide），故 **API 金鑰共用同一把**（`ebn_api-key`/`ebn_api-model`），貼一次兩邊用、同一 Anthropic 帳戶扣款。金鑰只存本機、不外流、不入版本庫。成本：評讀一篇約 NT$1~10、查詢/綜合約 NT$0.1~0.5；額度約一年過期；偶爾用建議免費版。
 
 ---
@@ -123,6 +125,7 @@
 - `evidence.html` — 評讀工具（第一批，冷感科技風，含交報告樸素版）
 - `search.html` — 臨床快查（第二批，獨立檔，Europe PMC live 搜尋）
 - `ver.txt` — 線上版本號（自動更新偵測用，每次部署要 +1，並同步改兩支 HTML 的 `const BUILD`）
+- `sw.js` — service worker（離線快取外殼；改快取內容時 `CACHE` 版本要 +1）
 - `evidence.webmanifest` / `search.webmanifest` — PWA 設定（加到主畫面的 App 名稱/圖示/全螢幕）
 - `icon-evidence.png` / `icon-search.png` — App 圖示（青色勾／放大鏡，深藍底，程式畫的）
 - `使用小抄.md` — 給使用者本人的小抄（網址/密碼/用法/費用/趕人/給未來 AI 的開場白）
