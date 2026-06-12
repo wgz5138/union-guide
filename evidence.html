@@ -1199,10 +1199,10 @@ function showAppBanner(){ if(sessionStorage.getItem("hideAppBanner"))return; con
 (function(){ const x=document.getElementById("appbanner-x"); if(x)x.addEventListener("click",()=>{ document.getElementById("appbanner").classList.remove("show"); sessionStorage.setItem("hideAppBanner","1"); });
   if(/FBAN|FBAV|FBIOS|Instagram|Line\/|MicroMessenger|Twitter|TikTok|GSA\//i.test(navigator.userAgent||"")) showAppBanner(); })();
 // 🔄 自動偵測新版本：跟伺服器上的 ver.txt 比對，有新版就跳橫幅（使用者完全不用管 ?數字、不用刪圖示）
-const BUILD="2026061219";
+const BUILD="2026061220";
 const CASP_VERSION="CASP 2024";
 const CHANGELOG=[
-  "新增「⚖️ AI 律師」工具（勞動法主場，會引法條、判斷對方說法、列證據；右上可進）",
+  "新增「⚖️ AI 律師」工具（勞動法主場，引法條／判斷對方說法／列證據；法規用全國法規資料庫官方真資料；右上可進）",
   "AI 沒把握的地方會自我標「⚠ 待查」提醒你核對；導覽加入重產流程說明",
   "底部可看「✓ 已是最新版」並有「🔄 檢查更新」按鈕；報告加查證提醒",
   "原文加螢光筆標示、報告可放大字級（標準／大／特大）",

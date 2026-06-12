@@ -1,0 +1,43 @@
+name: update-laws
+
+# 從全國法規資料庫官方 API 抓最新法條，產生 laws.json 供 AI 律師讀取。
+# 觸發：每週一次（排程）＋ 手動（Actions 頁面按 Run workflow）＋ 改腳本時。
+# ⚠️ GitHub 排程工作流程在 repo 連續 60 天無提交後會被自動停用；
+#    需要時可到 Actions 頁面手動「Run workflow」，或重新啟用排程。
+on:
+  schedule:
+    - cron: '17 19 * * 1'   # 每週一 19:17 UTC（台灣週二 03:17）
+  workflow_dispatch:
+  push:
+    paths:
+      - 'tools/update-laws.py'
+      - '.github/workflows/update-laws.yml'
+
+permissions:
+  contents: write
+
+concurrency:
+  group: update-laws
+  cancel-in-progress: false
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.x'
+      - name: 抓官方法規，產生 laws.json
+        run: python3 tools/update-laws.py
+      - name: 有變更才提交
+        run: |
+          if git diff --quiet -- laws.json; then
+            echo "laws.json 無變更，略過提交。"
+          else
+            git config user.name  "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git add laws.json
+            git commit -m "chore(laws): 自動更新法規快照（全國法規資料庫）"
+            git push
+          fi

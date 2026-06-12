@@ -102,6 +102,7 @@
   .law-b{display:none;padding:0 .8rem .8rem;font-size:13px;color:var(--txt2);line-height:1.85;border-top:1px solid var(--line)}
   .law-row.open .law-b{display:block}
   .badge-seed{font-size:10px;background:rgba(230,201,122,.14);color:var(--gold);border:1px solid rgba(230,201,122,.35);border-radius:20px;padding:1px 7px;white-space:nowrap}
+  .badge-official{font-size:10px;background:rgba(46,213,160,.14);color:var(--green);border:1px solid rgba(46,213,160,.4);border-radius:20px;padding:1px 7px;white-space:nowrap}
   .cat-pill{font-size:11px;padding:5px 11px;border-radius:20px;background:#0C131F;border:1px solid var(--line);color:var(--txt2);cursor:pointer}
   .cat-pill.on{background:rgba(79,157,255,.14);border-color:var(--blue-d);color:var(--blue);font-weight:700}
 
@@ -280,7 +281,8 @@
     <!-- 法規庫 -->
     <div class="label"><span class="n">5</span>法規庫（AI 引用的依據）</div>
     <div class="card">
-      <div class="note warn" style="margin-bottom:10px">📌 內建的是<b>法條快照</b>，方便開箱即用。<b>法律會修</b>，正式引用前請按下方「🔄 一鍵更新」核對<b>全國法規資料庫</b>最新版。AI 對<b>沒載入</b>的條號會自動標 <span class="vflag">⚠ 待查</span>，不會憑空捏造條號。</div>
+      <div id="law-status" class="note ok" style="display:none;margin-bottom:10px"></div>
+      <div id="law-warn" class="note warn" style="margin-bottom:10px">📌 目前是<b>內建法條快照</b>（官方資料還沒抓到時的後備）。<b>法律會修</b>，正式引用前請核對<b>全國法規資料庫</b>。AI 對<b>沒載入</b>的條號會自動標 <span class="vflag">⚠ 待查</span>，不會憑空捏造條號。</div>
       <input class="txt" id="law-search" placeholder="🔎 搜尋法條（輸入：加班費、第38條、勞動事件、誹謗…）">
       <div id="law-cats" style="display:flex;gap:6px;flex-wrap:wrap;margin-top:10px"></div>
       <div id="law-list" style="margin-top:12px"></div>
@@ -289,11 +291,11 @@
         <button class="btn btn-ghost" id="law-import-toggle" style="flex:1">➕ 匯入 / 貼上法條</button>
       </div>
       <div id="law-update-box" style="display:none;margin-top:10px">
-        <div class="note ok" style="margin-bottom:10px">全國法規資料庫沒有對瀏覽器友善的公開介面，<b>直接抓常被擋</b>。最可靠的更新法（跟更新 CASP 一樣）：按「📋 複製更新指令」→ 貼給任何 AI → 它依官網吐出最新法條（已排好格式）→ 整段複製，貼到下面「匯入」框按套用。</div>
+        <div class="note ok" style="margin-bottom:10px"><b>主要更新（官方真資料）：</b>本工具每週由 GitHub Action 從<b>全國法規資料庫官方 API</b> 自動抓最新法條（產生 <code>laws.json</code>），開頁就會自動載入並標「✅官方」。按下面「🔄 重新抓官方法規」可立刻重抓。<br><br><b>備援更新（AI 輔助）：</b>若官方檔還沒產生、或想加官方沒收錄的條文，按「📋 複製更新指令給 AI」→ 貼給 AI 拿法條 → 貼到下面「匯入」框套用。</div>
+        <button class="btn btn-ghost" id="law-refresh-official" style="width:100%;margin-bottom:8px">🔄 重新抓官方法規（laws.json）</button>
         <div class="btn-row" style="margin-top:0">
           <button class="btn btn-ghost btn-sm" id="law-copy-cmd">📋 複製更新指令給 AI</button>
           <a class="btn btn-ghost btn-sm" href="https://law.moj.gov.tw/" target="_blank" rel="noopener">↗ 開全國法規資料庫</a>
-          <button class="btn btn-ghost btn-sm" id="law-try-fetch">🧪 試著直接抓（可能被擋）</button>
         </div>
         <div id="law-fetch-status" class="hint"></div>
       </div>
@@ -410,8 +412,9 @@ function showAppBanner(){ if(sessionStorage.getItem("hideAppBanner"))return; con
   if(/FBAN|FBAV|FBIOS|Instagram|Line\/|MicroMessenger|Twitter|TikTok|GSA\//i.test(navigator.userAgent||"")) showAppBanner(); })();
 
 /* 🔄 自動偵測新版本 */
-const BUILD="2026061219";
+const BUILD="2026061220";
 const CHANGELOG=[
+  "法規改用全國法規資料庫『官方真資料』（每週自動更新 laws.json，標『✅官方』）",
   "全新「AI 律師」：勞動法主場，會引法條、判斷對方說法、列證據",
   "內建勞動／民／刑／個資／商標法條快照，可一鍵更新",
   "免費複製提示詞 ＋ 付費一鍵多輪辯論，金鑰與其他工具共用",
@@ -445,7 +448,7 @@ if("serviceWorker" in navigator){ window.addEventListener("load",()=>{ navigator
   if(vb) vb.addEventListener("click",function(e){ e.preventDefault();
     const h=
       "<h3>工具版本</h3><p><b>"+verLabel()+"</b><br>會自動更新；有新版時上方會跳「🔄 有新版本」，按一下就換到最新。</p>"+
-      "<h3>法條來源（重要）</h3><p>正式依據是<b>全國法規資料庫</b>（law.moj.gov.tw）。本工具內建一份<b>法條快照</b>方便開箱即用，每條標 📌；<b>法律會修</b>，正式引用前請按第⑤區「🔄 一鍵更新」核對最新版。AI 對沒載入的條號會標 <span class='vflag'>⚠ 待查</span>，不會捏造。</p><p><a href='https://law.moj.gov.tw/' target='_blank' rel='noopener' style='color:var(--cyan)'>🔗 開啟全國法規資料庫</a></p>"+
+      "<h3>法條來源（重要）</h3><p>正式依據是<b>全國法規資料庫</b>（law.moj.gov.tw）。本工具每週由 GitHub Action 從<b>官方 API</b> 自動抓最新法條（<code>laws.json</code>），開頁自動載入、標「✅官方」。抓不到時退回內建快照（標 📌）。<b>法律會修</b>，具體金額／期間請以最新條文為準；AI 對沒載入的條號會標 <span class='vflag'>⚠ 待查</span>，不會捏造。</p><p><a href='https://law.moj.gov.tw/' target='_blank' rel='noopener' style='color:var(--cyan)'>🔗 開啟全國法規資料庫</a></p>"+
       "<h3>誠實限制</h3><p>AI（Claude）是通用語言模型、不是法律資料庫，可能出錯。本工具<b>不是正式法律意見、不能取代律師</b>。重大爭議請洽勞工局 1955 或委任律師。</p>"+
       "<h3>近期更新內容</h3><ul>"+CHANGELOG.map(function(x){return "<li>"+x+"</li>";}).join("")+"</ul>";
     document.getElementById("verinfo-body").innerHTML=h;
@@ -499,6 +502,7 @@ function loadLaws(){
   return db;
 }
 let LAWS=loadLaws();
+let LAW_META=null; // 官方 laws.json 的 metadata（updated/source）
 function saveLaws(){ try{ localStorage.setItem("law_db",JSON.stringify(LAWS)); }catch(e){} }
 let LAW_CAT="全部";
 function lawCats(){ const s=["全部"]; LAWS.forEach(l=>{ if(s.indexOf(l.cat)<0) s.push(l.cat); }); return s; }
@@ -517,13 +521,39 @@ function renderLaws(){
   });
   if(!list.length){ box.innerHTML='<div class="hint">沒有符合的法條。可按「➕ 匯入 / 貼上法條」加入，或換關鍵字。</div>'; return; }
   box.innerHTML=list.map((l,i)=>`<div class="law-row" data-i="${i}">
-    <div class="law-h"><span class="nm">${esc(l.law)}</span><span class="ar">${esc(l.art)}</span><span class="tt">${esc(l.title||"")}</span>${l.seed?'<span class="badge-seed">📌快照</span>':''}</div>
+    <div class="law-h"><span class="nm">${esc(l.law)}</span><span class="ar">${esc(l.art)}</span><span class="tt">${esc(l.title||"")}</span>${l.official?'<span class="badge-official">✅官方</span>':l.seed?'<span class="badge-seed">📌快照</span>':''}</div>
     <div class="law-b">${esc(l.text)}</div></div>`).join("");
   box._list=list;
   box.querySelectorAll(".law-h").forEach(h=>h.addEventListener("click",()=>h.parentElement.classList.toggle("open")));
 }
 document.getElementById("law-search").addEventListener("input",renderLaws);
 renderCats(); renderLaws();
+
+/* 載入官方 laws.json（GitHub Action 由全國法規資料庫官方 API 產生）。
+   使用者自己匯入過（law_db）就尊重其客製、不自動覆蓋。 */
+function showLawStatus(){
+  const st=document.getElementById("law-status"), wn=document.getElementById("law-warn");
+  if(LAW_META){
+    const d=LAW_META.updated||"", ds=d.length===8?(d.slice(0,4)+"-"+d.slice(4,6)+"-"+d.slice(6,8)):d;
+    st.innerHTML="✅ 已載入<b>官方法規</b>（全國法規資料庫，更新日 <b>"+esc(ds)+"</b>，共 "+LAWS.filter(l=>l.official).length+" 條）。仍請對具體金額／期間以最新條文為準。";
+    st.style.display="block"; wn.style.display="none";
+  }else{ st.style.display="none"; wn.style.display="block"; }
+}
+function applyOfficial(d,announce){
+  const arr=Array.isArray(d)?d:(d&&d.laws);
+  if(!Array.isArray(arr)||!arr.length) return false;
+  LAW_META=(d&&d.updated)?{updated:d.updated,source:d.source}:{updated:"",source:""};
+  LAWS=arr.map(x=>({law:String(x.law||"").trim(),art:String(x.art||"").trim(),title:String(x.title||"").trim(),text:String(x.text||"").trim(),cat:String(x.cat||"其他").trim(),official:true,modified:x.modified||""}));
+  renderCats(); renderLaws(); showLawStatus();
+  if(announce) toast("✅ 已更新為官方法規（"+(LAW_META.updated||"")+"）");
+  return true;
+}
+function fetchOfficial(announce){
+  return fetch("laws.json?t="+Date.now(),{cache:"no-store"}).then(r=>r.ok?r.json():null).then(d=>{
+    if(!applyOfficial(d,announce)&&announce) toast("還沒有官方 laws.json（要等每週自動更新或手動跑一次 Action）");
+  }).catch(()=>{ if(announce) toast("抓不到官方法規（可能沒網路）"); });
+}
+if(!localStorage.getItem("law_db")) fetchOfficial(false);
 
 /* 法條注入給 AI 的文字（只給目前領域＋全部勞動，避免過長） */
 function lawContext(){
@@ -548,16 +578,14 @@ document.getElementById("law-copy-cmd").addEventListener("click",()=>{
 如某條近期有修正，請在 text 末標註「（YYYY 修正）」。輸出後我會整段貼回工具匯入。`;
   copy(cmd,"已複製更新指令，貼給 AI 拿最新法條");
 });
-document.getElementById("law-try-fetch").addEventListener("click",async()=>{
-  const st=document.getElementById("law-fetch-status"); st.textContent="嘗試連線全國法規資料庫…";
-  try{
-    const r=await fetch("https://law.moj.gov.tw/api/Ch/Law/LawSearchResult?type=law&kw=%E5%8B%9E%E5%8B%95%E5%9F%BA%E6%BA%96%E6%B3%95",{cache:"no-store"});
-    if(!r.ok) throw new Error("HTTP "+r.status);
-    await r.text();
-    st.innerHTML="✅ 居然連得上！但官方資料格式複雜，建議仍用「📋 複製更新指令給 AI」這條穩定路徑取得整理好的條文。";
-  }catch(e){
-    st.innerHTML="⚠ 直接抓被擋住了（CORS／網路，意料之中）。請改用「📋 複製更新指令給 AI」→ 貼回下面匯入；或點「↗ 開全國法規資料庫」自己核對。";
+document.getElementById("law-refresh-official").addEventListener("click",async()=>{
+  if(localStorage.getItem("law_db")){
+    if(!confirm("你之前匯入過自訂法條（優先採用）。要改用官方 laws.json、捨棄自訂嗎？")) return;
+    localStorage.removeItem("law_db");
   }
+  const st=document.getElementById("law-fetch-status"); st.textContent="重新抓官方法規中…";
+  await fetchOfficial(true);
+  st.textContent = LAW_META ? ("✅ 官方更新日 "+(LAW_META.updated||"")) : "還沒有官方 laws.json（要等每週自動更新，或到 GitHub Actions 手動 Run workflow 一次）。";
 });
 function importLaws(raw){
   let arr=null;
@@ -575,7 +603,7 @@ function importLaws(raw){
   toast(`✅ 已更新 ${upd} 條、新增 ${add} 條（已去掉快照標記）`);
 }
 document.getElementById("law-import-apply").addEventListener("click",()=>{ const raw=val("law-import-in"); if(!raw){ toast("先貼上法條 JSON"); return; } importLaws(raw); });
-document.getElementById("law-reset").addEventListener("click",()=>{ if(!confirm("還原成內建快照？你匯入／更新的法條會被清掉。")) return; localStorage.removeItem("law_db"); LAWS=loadLaws(); LAW_CAT="全部"; renderCats(); renderLaws(); toast("已還原內建法條快照"); });
+document.getElementById("law-reset").addEventListener("click",()=>{ if(!confirm("還原成官方／內建法條？你匯入的自訂法條會被清掉。")) return; localStorage.removeItem("law_db"); LAWS=loadLaws(); LAW_META=null; LAW_CAT="全部"; renderCats(); renderLaws(); showLawStatus(); fetchOfficial(true); toast("已還原；重新抓官方法規中…"); });
 
 /* ===================== AI 律師：提示詞 ===================== */
 function modeVal(){ const on=document.querySelector("#seg-mode button.on"); return on?on.dataset.v:"litig"; }
