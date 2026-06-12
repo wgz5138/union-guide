@@ -267,6 +267,32 @@
       </div>
     </div>
 
+    <!-- 查相關判決（真實案例橋接） -->
+    <div id="cases-wrap" style="display:none">
+      <div class="label"><span class="n">🔎</span>查相關判決（真實案例，引用實務見解）</div>
+      <div class="card">
+        <div class="hint" style="margin-top:0">判決一定要<b>真的</b>。流程：① AI 依案情幫你想<b>查詢關鍵字</b> → ② 一鍵到官方<b>司法院裁判書系統</b>查到<b>真判決</b> → ③ 把判決<b>字號＋裁判要旨</b>貼回來，AI 幫你摘要、判斷能否當對你有利的引用。<b>AI 不會自己編造判決字號。</b></div>
+        <input class="txt" id="case-query" placeholder="判決查詢關鍵字（可留空，按下面讓 AI 依案情幫你想）" style="margin-top:10px">
+        <div class="btn-row">
+          <button class="btn btn-ghost" id="caseq-free" style="flex:1">🧠 免費：想關鍵字（複製）</button>
+          <button class="btn btn-ghost" id="caseq-auto" style="flex:1">⚡ 付費：AI 幫想關鍵字</button>
+        </div>
+        <div id="caseq-free-box" style="display:none;margin-top:8px">
+          <textarea class="prompt-area" id="caseq-out" readonly></textarea>
+          <div class="btn-row"><button class="btn btn-ghost" id="caseq-copy">📋 複製，貼給 AI</button></div>
+        </div>
+        <div class="btn-row">
+          <button class="btn btn-primary" id="case-open" style="flex:1">🔎 用這組關鍵字查真判決</button>
+        </div>
+        <div class="ai-links">
+          <a class="btn btn-ghost btn-sm" id="case-fjud" href="https://judgment.judicial.gov.tw/FJUD/default.aspx" target="_blank" rel="noopener">↗ 司法院裁判書系統</a>
+        </div>
+        <div class="hint" style="margin-top:12px">找到判決後，把<b>判決字號＋裁判要旨</b>貼這裡：</div>
+        <textarea class="txt" id="case-paste" rows="4" placeholder="例：最高法院 112 年度台上字第 OOOO 號 ＋ 你抄下的『裁判要旨』段落"></textarea>
+        <button class="btn btn-ghost" id="case-send" style="width:100%;margin-top:8px">↪︎ 把這個真判決帶給 AI 律師（摘要＋能否引用）</button>
+      </div>
+    </div>
+
     <!-- 證據清單 -->
     <div id="ev-wrap" style="display:none">
       <div class="label"><span class="n">4</span>該準備的證據（點一下打勾）</div>
@@ -361,6 +387,9 @@
     <h3>法條會過期嗎？怎麼更新？</h3>
     <p>內建的是<b>法條快照</b>（標 📌）。法律會修，按第⑤區「🔄 一鍵更新」→「📋 複製更新指令給 AI」→ 貼給 AI 拿最新法條 → 貼回「匯入」框套用。AI 對<b>沒載入</b>的條號會標 <span class="vflag">⚠ 待查</span> 提醒你核對，<b>不會亂編條號</b>。</p>
 
+    <h3>想引用判決／案例？</h3>
+    <div class="tip">用第「🔎 查相關判決」：按 <b>AI 幫想關鍵字</b> → <b>一鍵查真判決</b>（開官方司法院裁判書系統）→ 把找到的<b>判決字號＋裁判要旨貼回來</b>，AI 幫你摘要、判斷能不能當對你有利的引用。<b>AI 不會自己編判決字號</b>（那很危險）。</div>
+
     <h3>重要</h3>
     <p>這是 AI <b>輔助</b>，不是正式法律意見、不能取代律師。引用的條號、金額一定要自己核對。重大爭議請洽<b>勞工局 1955</b>或律師。</p>
     <button class="man-close" id="man-close2" style="float:none;display:block;width:100%;margin-top:18px;border-radius:10px;padding:10px">我懂了，開始用</button>
@@ -412,8 +441,10 @@ function showAppBanner(){ if(sessionStorage.getItem("hideAppBanner"))return; con
   if(/FBAN|FBAV|FBIOS|Instagram|Line\/|MicroMessenger|Twitter|TikTok|GSA\//i.test(navigator.userAgent||"")) showAppBanner(); })();
 
 /* 🔄 自動偵測新版本 */
-const BUILD="2026061220";
+const BUILD="2026061221";
 const CHANGELOG=[
+  "新增『🔎 查相關判決』：AI 想關鍵字→一鍵到司法院裁判書系統查真判決→貼回引用（AI 不編造字號）",
+  "AI 對話改『只注入與本案最相關的法條』，省錢又不爆長（整套官方法規仍可在法規庫瀏覽）",
   "法規改用全國法規資料庫『官方真資料』（每週自動更新 laws.json，標『✅官方』）",
   "全新「AI 律師」：勞動法主場，會引法條、判斷對方說法、列證據",
   "內建勞動／民／刑／個資／商標法條快照，可一鍵更新",
@@ -449,6 +480,7 @@ if("serviceWorker" in navigator){ window.addEventListener("load",()=>{ navigator
     const h=
       "<h3>工具版本</h3><p><b>"+verLabel()+"</b><br>會自動更新；有新版時上方會跳「🔄 有新版本」，按一下就換到最新。</p>"+
       "<h3>法條來源（重要）</h3><p>正式依據是<b>全國法規資料庫</b>（law.moj.gov.tw）。本工具每週由 GitHub Action 從<b>官方 API</b> 自動抓最新法條（<code>laws.json</code>），開頁自動載入、標「✅官方」。抓不到時退回內建快照（標 📌）。<b>法律會修</b>，具體金額／期間請以最新條文為準；AI 對沒載入的條號會標 <span class='vflag'>⚠ 待查</span>，不會捏造。</p><p><a href='https://law.moj.gov.tw/' target='_blank' rel='noopener' style='color:var(--cyan)'>🔗 開啟全國法規資料庫</a></p>"+
+      "<h3>判決／判例</h3><p>判決一定要<b>真的</b>，所以工具<b>不讓 AI 編造判決字號</b>。用第「🔎 查相關判決」：AI 依案情想關鍵字 → 一鍵到官方<b>司法院裁判書系統</b>查真判決 → 把字號＋裁判要旨貼回，AI 才據以摘要、引用。</p>"+
       "<h3>誠實限制</h3><p>AI（Claude）是通用語言模型、不是法律資料庫，可能出錯。本工具<b>不是正式法律意見、不能取代律師</b>。重大爭議請洽勞工局 1955 或委任律師。</p>"+
       "<h3>近期更新內容</h3><ul>"+CHANGELOG.map(function(x){return "<li>"+x+"</li>";}).join("")+"</ul>";
     document.getElementById("verinfo-body").innerHTML=h;
@@ -555,14 +587,43 @@ function fetchOfficial(announce){
 }
 if(!localStorage.getItem("law_db")) fetchOfficial(false);
 
-/* 法條注入給 AI 的文字（只給目前領域＋全部勞動，避免過長） */
-function lawContext(){
+/* 注入給 AI 的法條：不把整套法典塞進提示詞，只挑「與本案最相關」的數十條
+   （條號明確提及＋中文 bigram 關鍵字比對＋核心勞動錨點），省 token、避免超長。 */
+const LAW_ANCHORS=[
+  ["勞動事件法","第38條"],["勞動事件法","第37條"],
+  ["勞動基準法","第24條"],["勞動基準法","第30條"],["勞動基準法","第32條"],
+  ["勞動基準法","第36條"],["勞動基準法","第38條"],["勞動基準法","第39條"],
+  ["勞動基準法","第16條"],["勞動基準法","第17條"]
+];
+function selectRelevant(pool, focus, cap){
+  cap=cap||40;
+  const q=String(focus||"").toLowerCase();
+  const refNos=(q.match(/第\s*[0-9]+(?:-[0-9]+)?\s*條/g)||[]).map(s=>s.replace(/\s/g,""));
+  const grams=new Set();
+  q.replace(/[a-z0-9]+/g," ").split(/[^一-鿿]+/).forEach(seg=>{ for(let i=0;i+2<=seg.length;i++) grams.add(seg.slice(i,i+2)); });
   const field=document.getElementById("f-field").value;
-  const picked=LAWS.filter(l=> field==="綜合" ? true : (l.cat===field || l.cat==="勞動"));
-  const use=picked.length?picked:LAWS;
-  return use.map(l=>`【${l.law} ${l.art}】${l.title?("（"+l.title+"）"):""}\n${l.text}`).join("\n\n");
+  const useAnchors = field==="勞動"||field==="綜合";
+  const anchorSet=new Set(LAW_ANCHORS.map(a=>a[0]+"|"+a[1]));
+  const scored=pool.map(l=>{
+    const hay=l.law+l.art+(l.title||"")+l.text;
+    let s=0;
+    if(refNos.length && refNos.indexOf(lawNorm(l.art))>=0) s+=100;
+    if(grams.size) grams.forEach(g=>{ if(g && hay.indexOf(g)>=0) s++; });
+    if(useAnchors && anchorSet.has(l.law+"|"+lawNorm(l.art))) s+=4;
+    return {l,s};
+  });
+  scored.sort((a,b)=>b.s-a.s);
+  let top=scored.filter(o=>o.s>0).slice(0,cap).map(o=>o.l);
+  if(useAnchors) LAW_ANCHORS.forEach(a=>{ const hit=pool.find(l=>l.law===a[0]&&lawNorm(l.art)===a[1]); if(hit && top.indexOf(hit)<0) top.push(hit); });
+  if(!top.length) top=pool.slice(0,cap);
+  return top;
 }
-function lawCiteList(){ return LAWS.map(l=>l.law+" "+l.art).join("、"); }
+function lawContext(focus){
+  const field=document.getElementById("f-field").value;
+  const pool=LAWS.filter(l=> field==="綜合" ? true : (l.cat===field || l.cat==="勞動"));
+  const use=pool.length?pool:LAWS;
+  return selectRelevant(use, focus, 40).map(l=>`【${l.law} ${l.art}】${l.title?("（"+l.title+"）"):""}\n${l.text}`).join("\n\n");
+}
 
 /* 一鍵更新 */
 document.getElementById("law-update-btn").addEventListener("click",()=>{ const b=document.getElementById("law-update-box"); b.style.display=b.style.display==="none"?"block":"none"; });
@@ -610,7 +671,7 @@ function modeVal(){ const on=document.querySelector("#seg-mode button.on"); retu
 function setMode(v){ document.querySelectorAll("#seg-mode button").forEach(b=>b.classList.toggle("on",b.dataset.v===v)); }
 document.querySelectorAll("#seg-mode button").forEach(b=>b.addEventListener("click",()=>{ setMode(b.dataset.v); localStorage.setItem("law_mode",b.dataset.v); }));
 
-function systemPrompt(){
+function systemPrompt(focus){
   const mode=modeVal()==="nego"?"勞資協商／談判（目標：在不撕破臉前提下爭取最大權益、留下對我方有利的書面紀錄、避免口頭放棄權利）":"訴訟／申訴（目標：站穩法律請求權基礎、預判對方抗辯並反駁、把證據與舉證責任講清楚）";
   const field=document.getElementById("f-field").value, side=document.getElementById("f-side").value;
   return `你是一位台灣的執業律師，最擅長「勞動法」（尤其加班費、工時、資遣、勞資爭議），同時熟悉民法、刑法、個人資料保護法、商標法。請全程使用繁體中文，像真正的律師那樣替當事人攻防、條理清楚、可直接照著做。
@@ -625,12 +686,17 @@ function systemPrompt(){
 5. 結尾用一行提醒：本回覆為 AI 輔助分析、非正式法律意見，重大爭議仍應洽勞工局 1955 或委任律師。
 
 【引用紀律｜非常重要，避免唬爛】
-- 下方〈可用法條原文〉是已載入工具的條文，你『引用其中條文』時可視為已核實，照實引用。
+- 下方〈可用法條原文〉是依本案挑出的相關條文「節選」（來自工具載入的全國法規資料庫官方資料）。你『引用其中條文』時可視為已核實，照實引用。
 - 若你要引用〈可用法條原文〉裡『沒有』的條號或內容，必須在該處明確標註「⚠ 待查（請核對全國法規資料庫最新版）」，且只能依專業知識謹慎敘述、不得杜撰不存在的條號、罰則或金額。
 - 法律會修正；涉及具體數字（期間、費率、罰鍰）時，提醒使用者以最新條文為準。
 
+【判決／判例紀律｜絕不捏造】
+- 不得自行編造任何判決字號（如「最高法院○○年度台上字第○○號」）。除非該判決是使用者在對話中提供、或出現在訊息裡，否則一律不要寫出具體字號。
+- 要談實務見解時，請以「實務多數見解傾向…」「法院通常認為…」表述，並提醒使用者可到『司法院裁判書系統』以關鍵字查證；需要時主動給 3~5 組查詢關鍵字。
+- 使用者貼來的真實判決，才據以摘要、引用其字號與要旨。
+
 〈可用法條原文〉
-${lawContext()}`;
+${lawContext(focus)}`;
 }
 function userTurnText(situation){
   const m=modeVal()==="nego"?"（這是要拿去『協商／談判』用）":"（這是要拿去『打官司／申訴』用）";
@@ -640,9 +706,10 @@ function userTurnText(situation){
 /* 免費：複製整段提示詞 */
 document.getElementById("free-btn").addEventListener("click",()=>{
   const s=val("situation"); if(!s){ toast("先在上面描述狀況或貼對方的話"); return; }
-  const out=systemPrompt()+"\n\n=============\n"+userTurnText(s);
+  const out=systemPrompt(s)+"\n\n=============\n"+userTurnText(s);
   document.getElementById("free-out").value=out;
   document.getElementById("free-box").style.display="block";
+  showCases();
   toast("已產生提示詞，可複製貼給任何 AI");
 });
 document.getElementById("copy-free").addEventListener("click",()=>copyEl("free-out","已複製，貼給 Claude／ChatGPT"));
@@ -673,8 +740,10 @@ function renderChat(){
     return `<div class="bub ${m.role==="user"?"me":"ai"}"><div class="who">${who}</div>${html}${m.cost?`<div class="cost">本次花約 ${esc(m.cost)}</div>`:""}</div>`;
   }).join("");
   document.getElementById("chat-wrap").style.display=CHAT.length?"block":"none";
+  if(CHAT.length) showCases();
   saveChat();
 }
+function showCases(){ const c=document.getElementById("cases-wrap"); if(c) c.style.display="block"; }
 function saveChat(){ try{ localStorage.setItem("law_chat",JSON.stringify(CHAT)); }catch(e){} }
 (function(){ try{ const c=JSON.parse(localStorage.getItem("law_chat")||"[]"); if(Array.isArray(c)&&c.length){ CHAT=c; renderChat(); } }catch(e){} })();
 function apiMessages(){ return CHAT.map(m=>({role:m.role,content:[{type:"text",text:m.text}]})); }
@@ -685,7 +754,8 @@ async function askLawyer(turnText,displayText){
   renderChat();
   CHAT.push({role:"assistant",text:"⚡ AI 律師思考中⋯⋯約 10～30 秒"});
   renderChat();
-  const sys=systemPrompt();
+  const focus=[val("situation"), CHAT.filter(m=>m.role==="user").map(m=>m.text).join(" "), turnText].join(" ");
+  const sys=systemPrompt(focus);
   // 把最後那則 placeholder 拿掉再送（送真正的 user turn）
   const msgs=CHAT.slice(0,-1).map((m,i,arr)=> (i===arr.length-1)?{role:"user",content:[{type:"text",text:turnText}]}:{role:m.role,content:[{type:"text",text:m.text}]});
   try{
@@ -699,6 +769,7 @@ async function askLawyer(turnText,displayText){
 }
 document.getElementById("send-btn").addEventListener("click",()=>{
   const s=val("situation"); if(!s){ toast("先描述狀況或貼對方的話"); return; }
+  showCases();
   askLawyer(userTurnText(s), s);
 });
 document.getElementById("follow-btn").addEventListener("click",()=>{
@@ -707,6 +778,57 @@ document.getElementById("follow-btn").addEventListener("click",()=>{
   askLawyer(f);
 });
 document.getElementById("chat-clear").addEventListener("click",()=>{ if(!confirm("清空與 AI 律師的對話？")) return; CHAT=[]; localStorage.removeItem("law_chat"); renderChat(); });
+
+/* ===================== 判決查詢橋（真實案例，零捏造） ===================== */
+function caseQueryPrompt(){
+  const s=val("situation");
+  return `你是台灣訴訟／勞動律師。依下列案情，幫我準備到「司法院裁判書系統」查相關判決：
+1) 給我 3~5 組查詢關鍵字（每組單獨一行，混用法院實務用語與相關法條，例：加班費 出勤紀錄 推定 勞動事件法第38條）。
+2) 列出我應在判決裡找的 2~3 個爭點／見解方向。
+重要：不要列出任何具體判決字號（避免記錯）；只給關鍵字與爭點方向。
+
+案情：
+${s||"（未填，請就一般加班費／勞資爭議給通用關鍵字）"}`;
+}
+function firstKeywordLine(text){
+  const lines=(text||"").split("\n").map(x=>x.replace(/^[\s\-*•\d.)、）]+/,"").trim());
+  return lines.find(x=>x && x.length<=40 && !/爭點|見解|方向|關鍵字|以下|如下|查詢|建議/.test(x)) || "";
+}
+document.getElementById("caseq-free").addEventListener("click",()=>{
+  document.getElementById("caseq-out").value=caseQueryPrompt();
+  document.getElementById("caseq-free-box").style.display="block";
+  toast("已產生，可複製貼給 AI 拿查詢關鍵字");
+});
+document.getElementById("caseq-copy").addEventListener("click",()=>copyEl("caseq-out","已複製，貼給 AI 拿查詢關鍵字"));
+document.getElementById("caseq-auto").addEventListener("click",async()=>{
+  if(!apiKey()){ toast("這功能要金鑰；沒有可按「🧠 免費」複製貼給 AI"); return; }
+  toast("⚡ 想關鍵字中⋯⋯");
+  try{
+    const {text,usage}=await callClaude([{role:"user",content:[{type:"text",text:caseQueryPrompt()}]}],700);
+    document.getElementById("caseq-out").value=text; document.getElementById("caseq-free-box").style.display="block";
+    const kw=firstKeywordLine(text); if(kw) document.getElementById("case-query").value=kw;
+    toast("✅ AI 給了查詢關鍵字（花約 "+costOf(usage)+"）");
+  }catch(err){ toast("⚡ "+apiErr(err)); }
+});
+document.getElementById("case-open").addEventListener("click",()=>{
+  let q=val("case-query");
+  if(!q){ const s=val("situation"); q = s? (s.slice(0,40)+" 加班費") : "勞動事件法 第38條 加班費"; }
+  // 用 Google 限定司法院網域，最穩定能落在「真判決」頁
+  const url="https://www.google.com/search?q="+encodeURIComponent(q+" 判決 site:judicial.gov.tw");
+  window.open(url,"_blank","noopener");
+  toast("已開查詢；也可點「↗ 司法院裁判書系統」自己查");
+});
+document.getElementById("case-send").addEventListener("click",()=>{
+  const c=val("case-paste"); if(!c){ toast("先貼上你找到的判決（字號＋裁判要旨）"); return; }
+  if(!apiKey()){ toast("帶給 AI 需要金鑰；沒有可把判決連同案情一起貼給 ChatGPT/Claude"); return; }
+  showCases();
+  const turn=`以下是我從『司法院裁判書系統』找到的真實判決，請：①白話摘要其裁判要旨；②說明與本案爭點的關聯；③判斷能否、以及如何引用對我方有利（或對方可能怎麼反過來用）；④資訊不足就明說、並告訴我還要補查什麼。只依我貼的內容，不要自行補充其他判決字號。
+
+【我找到的判決】
+${c}`;
+  askLawyer(turn, "（貼入判決）"+c.slice(0,50)+(c.length>50?"…":""));
+  document.getElementById("case-paste").value="";
+});
 
 /* ===================== 證據羅列 ===================== */
 let EV=[];
@@ -782,6 +904,9 @@ document.getElementById("clear-btn").addEventListener("click",()=>{
   document.getElementById("free-out").value=""; document.getElementById("free-box").style.display="none";
   CHAT=[]; localStorage.removeItem("law_chat"); renderChat();
   EV=[]; localStorage.removeItem(evKey()); localStorage.removeItem("law_ev_done"); EV_DONE={}; document.getElementById("ev-wrap").style.display="none";
+  ["case-query","case-paste","caseq-out"].forEach(id=>{ const el=document.getElementById(id); if(el) el.value=""; });
+  document.getElementById("caseq-free-box").style.display="none";
+  document.getElementById("cases-wrap").style.display="none";
   localStorage.removeItem("law_situation");
   window.scrollTo({top:0,behavior:"smooth"});
   toast("已清除，可以換下一案 👍");
