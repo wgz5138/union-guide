@@ -320,6 +320,9 @@
     <div class="card casp-preview" style="margin-top:12px">
       <div style="font-size:13px;font-weight:600;color:var(--cyan)">套用：<span id="casp-name"></span></div>
       <div id="casp-list"></div>
+      <div style="font-size:11.5px;color:var(--muted);margin-top:9px;border-top:1px solid var(--line);padding-top:8px">
+        評判標準：<b>CASP 2024</b> · <a href="https://casp-uk.net/casp-tools-checklists/" target="_blank" rel="noopener" style="color:var(--cyan)">🔗 對照官網看有沒有新版</a>
+      </div>
     </div>
 
     <!-- 文獻資訊（共用） -->
@@ -1068,6 +1071,11 @@ function clearAll(){
 document.getElementById("clear-btn").addEventListener("click",clearAll);
 
 /* ===================== 版本與更新說明 ===================== */
+function copyCaspUpdate(){
+  const s="請先讀我 GitHub（wgz5138/union-guide）的 PLAN.md，了解架構後，把 evidence.html 裡的 CASP 題庫（CASP.RCT 與 CASP.SR 兩張表的題目）更新到 CASP 官網 casp-uk.net 公布的最新版；題目中文＋英文原文都更新，judge/costben 等標記沿用既有規則。改完幫我 commit 並 push，並把 footer 的 CASP 版本字樣與 CASP_VERSION 一起更新。";
+  if(navigator.clipboard&&navigator.clipboard.writeText){ navigator.clipboard.writeText(s).then(()=>toast("已複製更新指令，貼給任何 AI 即可")).catch(()=>toast("複製失敗，請長按上面文字選取")); }
+  else toast("此瀏覽器不支援自動複製，請長按選取");
+}
 (function(){
   const vl=document.getElementById("ver-line"); if(vl) vl.textContent="工具版本 "+verLabel();
   const vb=document.getElementById("verinfo-btn");
@@ -1075,7 +1083,7 @@ document.getElementById("clear-btn").addEventListener("click",clearAll);
     const h=
       "<h3>工具版本</h3><p><b>"+verLabel()+"</b><br>會自動更新；有新版時上方會跳「🔄 有新版本」提醒你，按一下就換到最新。</p>"+
       "<h3>採用的評判標準</h3><p>"+CASP_VERSION+" 版檢核表（RCT 11 題／系統回顧·Meta 10 題）。<br>證據等級：Melnyk 七級。</p>"+
-      "<h3>CASP 改版了，工具能跟上嗎？</h3><p>能。但要先講清楚：CASP 由英國 CASP UK 維護，是用 <b>PDF 發布、沒有自動下載介面</b>，所以程式沒辦法自己上網把新題目抓下來。<br>跟上的方法很簡單——CASP 出新版時，跟任何 AI 說一句「<b>CASP 出新版了，幫我更新題庫</b>」，改好後你的工具會<b>自動</b>送達（就是上面那個自動更新）。</p>"+
+      "<h3>CASP 改版了怎麼跟上？（你不用記）</h3><p>你兩年才用一次、不可能隨時盯著——所以這樣設計：<b>每次你打開工具用，最上面「套用 CASP」那張卡就有一條『🔗 對照官網看有沒有新版』</b>，用的當下花 10 秒點開比對就好（CASP 公布在 casp-uk.net，Google 得到）。</p><p>真的出新版要更新時，按下面這顆把指令複製、貼給<b>任何 AI</b> 就行，改完你的工具會<b>自動送達</b>：</p><p><a href='https://casp-uk.net/casp-tools-checklists/' target='_blank' rel='noopener' style='color:var(--cyan)'>🔗 開啟 CASP 官網</a>　<button onclick='copyCaspUpdate()' style='background:var(--cyan);color:#06231f;border:none;border-radius:14px;padding:6px 12px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit'>📋 複製更新指令給 AI</button></p><p style='color:var(--muted);font-size:12px'>技術現實：CASP 是 PDF、沒有資料介面，程式無法自己抓題自動改題庫；但「用的當下提醒＋一鍵更新」已把這件事做到最省力。</p>"+
       "<h3>可以選用舊版標準嗎？</h3><p>目前 CASP 只有現行的 2024 版，還沒有需要二選一的舊版。等日後出新版，可以保留舊版讓你切換選擇——要的時候跟 AI 說一聲就能開。</p>"+
       "<h3>近期更新內容</h3><ul>"+CHANGELOG.map(function(x){return "<li>"+x+"</li>";}).join("")+"</ul>";
     document.getElementById("verinfo-body").innerHTML=h;
@@ -1097,7 +1105,7 @@ function showAppBanner(){ if(sessionStorage.getItem("hideAppBanner"))return; con
 (function(){ const x=document.getElementById("appbanner-x"); if(x)x.addEventListener("click",()=>{ document.getElementById("appbanner").classList.remove("show"); sessionStorage.setItem("hideAppBanner","1"); });
   if(/FBAN|FBAV|FBIOS|Instagram|Line\/|MicroMessenger|Twitter|TikTok|GSA\//i.test(navigator.userAgent||"")) showAppBanner(); })();
 // 🔄 自動偵測新版本：跟伺服器上的 ver.txt 比對，有新版就跳橫幅（使用者完全不用管 ?數字、不用刪圖示）
-const BUILD="2026061210";
+const BUILD="2026061211";
 const CASP_VERSION="CASP 2024";
 const CHANGELOG=[
   "新增「🗑 一鍵清除」，換下一篇免逐格手刪",

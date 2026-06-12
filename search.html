@@ -405,7 +405,7 @@ function showAppBanner(){ if(sessionStorage.getItem("hideAppBanner"))return; con
 (function(){ const x=document.getElementById("appbanner-x"); if(x)x.addEventListener("click",()=>{ document.getElementById("appbanner").classList.remove("show"); sessionStorage.setItem("hideAppBanner","1"); });
   if(/FBAN|FBAV|FBIOS|Instagram|Line\/|MicroMessenger|Twitter|TikTok|GSA\//i.test(navigator.userAgent||"")) showAppBanner(); })();
 // 🔄 自動偵測新版本：跟伺服器上的 ver.txt 比對，有新版就跳橫幅（使用者完全不用管 ?數字、不用刪圖示）
-const BUILD="2026061210";
+const BUILD="2026061211";
 const CHANGELOG=[
   "新增「🗑 一鍵清除」，換下一題免逐格手刪",
   "掃碼分享頁 ＋ 30 秒回饋問卷",
@@ -443,7 +443,7 @@ function clearSearch(){
     const h=
       "<h3>工具版本</h3><p><b>"+verLabel()+"</b><br>會自動更新；有新版時上方會跳「🔄 有新版本」提醒你，按一下就換到最新。</p>"+
       "<h3>文獻來源</h3><p>即時搜尋 <b>Europe PMC</b>（涵蓋 PubMed、Cochrane 等），所以查到的<b>永遠是最新文獻</b>，不需要更新資料庫。</p>"+
-      "<h3>評讀標準（CASP）在另一支工具</h3><p>逐題評讀用的 CASP 檢核表在「評讀工具」裡（目前 CASP 2024 版）。CASP 改版時，跟任何 AI 說「<b>CASP 出新版了，幫我更新題庫</b>」即可跟上，更新後會自動送達。</p>"+
+      "<h3>評讀標準（CASP）在另一支工具</h3><p>逐題評讀用的 CASP 檢核表在「評讀工具」裡（目前 CASP 2024 版）。CASP 公布在官網，<b>用評讀工具的當下會提醒你對照</b>；要更新跟任何 AI 說「CASP 出新版了，幫我更新題庫」即可，改完自動送達。</p><p><a href='https://casp-uk.net/casp-tools-checklists/' target='_blank' rel='noopener' style='color:var(--cyan)'>🔗 開啟 CASP 官網</a></p>"+
       "<h3>近期更新內容</h3><ul>"+CHANGELOG.map(function(x){return "<li>"+x+"</li>";}).join("")+"</ul>";
     document.getElementById("verinfo-body").innerHTML=h;
     document.getElementById("verinfo").classList.add("show");
