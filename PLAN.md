@@ -99,6 +99,8 @@
 - **📲 換裝置接力**：與 evidence 同機制，帶 q-desc/q-query/篩選/綜合結果（不含金鑰）；貼上後若有 query 自動 `doSearch()`。
 - **⚠️ 查詢語法（已修坑）**：搜尋框後端是 **Europe PMC，不吃 PubMed 的 `[tiab]`/`[Mesh]` 欄位標籤**。`buildQuery()` 會自動 `replace(/\[[^\]]*\]/g)` 去掉標籤；兩個產查詢的提示詞也已要求 AI 不要產欄位標籤。0 筆時若有篩選會**自動拿掉篩選重搜一次**(`doSearch(true)`)。
 
+**手機體驗強化（兩支）：** 防 iOS 點輸入框自動放大（@media ≤600px 輸入字 16px）；複製改用 `copyEl()`（先選取可見 textarea，App 內建瀏覽器擋複製時至少已選好可長按拷貝）；密碼/金鑰/查詢輸入關 autocapitalize/autocorrect/spellcheck；按鈕 `touch-action:manipulation` 去點擊延遲；臨床快查搜尋框自動清 `QUERY:`前綴/`[tiab][Mesh]`標籤/網址編碼、0筆自動放寬、加「🧪一鍵試範例」、摘要去 HTML 標籤。**已知限制**：App 內建小視窗(in-app webview)仍可能擋程式化複製→建議用 Safari 開（copyEl 已退而求其次幫使用者選好）。
+
 **共通（金鑰共用）：** 兩工具同源（github.io/union-guide），故 **API 金鑰共用同一把**（`ebn_api-key`/`ebn_api-model`），貼一次兩邊用、同一 Anthropic 帳戶扣款。金鑰只存本機、不外流、不入版本庫。成本：評讀一篇約 NT$1~10、查詢/綜合約 NT$0.1~0.5；額度約一年過期；偶爾用建議免費版。
 
 ---
