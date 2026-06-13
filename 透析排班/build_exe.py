@@ -30,6 +30,19 @@ NEW_MAIN = (
     '    except Exception: pass'
 )
 
+# 印藥水(排班.py)預設抓最後一個分頁；若最後是空白頁會報錯 → 改成抓「最後一個有卡號/姓名表頭」的分頁
+OLD_SHEET = "    if sheet is None: sheet=xls.sheet_names[-1]"
+NEW_SHEET = (
+    "    if sheet is None:\n"
+    "        sheet=xls.sheet_names[-1]\n"
+    "        for _sn in reversed(xls.sheet_names):\n"
+    "            try:\n"
+    "                _df=pd.read_excel(path,sheet_name=_sn,header=None)\n"
+    "                if any((_cell(_df,_i,0)=='卡號' and _cell(_df,_i,1)=='姓名') for _i in range(len(_df))):\n"
+    "                    sheet=_sn; break\n"
+    "            except Exception: pass"
+)
+
 # 在 frozen(exe) 環境，pandas 有時判不出 .xls 格式 → 直接依副檔名指定引擎
 SHIM = (
     "import pandas as pd\n"
@@ -69,6 +82,8 @@ def make_patched(src_path, ascii_name):
         s = s.replace(OLD_MAIN, NEW_MAIN)
     if "import pandas as pd" in s and "_xl_engine" not in s:
         s = s.replace("import pandas as pd", SHIM, 1)   # 注入 Excel 引擎相容修正
+    if OLD_SHEET in s:                                   # 印藥水:自動跳過空白分頁
+        s = s.replace(OLD_SHEET, NEW_SHEET)
     out = os.path.join(HERE, "_%s_build.py" % ascii_name)   # 純英文暫存檔名
     open(out, "w", encoding="utf-8").write(s)
     return out
@@ -98,10 +113,16 @@ def find_extra_binary_args():
     return args
 
 def main():
-    print("== Dialysis: build EXE ==\n")
+    print("==================================================")
+    print("====  build_exe  版本 v4 (xlrd 引擎修正)  ====")
+    print("==================================================\n")
     print("確認/安裝必要套件(pyinstaller, xlrd, openpyxl)，需要網路，第一次較久…")
     subprocess.run([sys.executable, "-m", "pip", "install",
                     "pyinstaller", "xlrd", "openpyxl"], check=False)
+    try:
+        import xlrd as _x; print("   xlrd 狀態：OK  版本 %s" % _x.__version__)
+    except Exception as e:
+        print("   ⚠ xlrd 仍無法載入：%s" % e)
 
     extra = find_extra_binary_args()
     built = []
