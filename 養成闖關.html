@@ -1,0 +1,304 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<meta name="theme-color" content="#0ea5a4" />
+<!-- 低調用:不讓搜尋引擎收錄這一頁 -->
+<meta name="robots" content="noindex, nofollow" />
+<title>高榮企業工會 ・ 養成闖關</title>
+<style>
+  /* ===== 顏色（從 teal 主題延伸出來的調色盤）===== */
+  :root{
+    --paper:#eef5f2;      /* 背景：薄荷紙感，不是常見的米色 */
+    --card:#ffffff;
+    --ink:#13322e;        /* 文字：深墨綠，比純黑柔和 */
+    --muted:#5c7a73;
+    --teal:#0ea5a4;       /* 主色（沿用原本的主題色）*/
+    --teal-deep:#0f766e;
+    --teal-soft:#cdeae6;
+    --amber:#f4a259;      /* 暖色點綴：只用在「長大/通關」的獎勵時刻 */
+    --line:#d6e7e2;
+    --shadow:0 10px 30px rgba(15,118,110,.10);
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;}
+  body{
+    background:
+      radial-gradient(1200px 500px at 50% -200px, #e2f1ec 0%, var(--paper) 60%);
+    color:var(--ink);
+    font-family:"PingFang TC","Microsoft JhengHei","Noto Sans TC",system-ui,-apple-system,sans-serif;
+    line-height:1.6;
+    -webkit-font-smoothing:antialiased;
+    min-height:100vh;
+  }
+  .wrap{max-width:540px;margin:0 auto;padding:28px 18px 56px;}
+
+  /* ===== 頁首 ===== */
+  .eyebrow{
+    font-size:12px;letter-spacing:.22em;text-transform:none;
+    color:var(--teal-deep);font-weight:700;margin:0 0 6px;
+  }
+  h1{
+    font-size:30px;line-height:1.25;margin:0 0 8px;font-weight:800;
+    letter-spacing:-.01em;
+  }
+  .tagline{margin:0;color:var(--muted);font-size:15px;}
+
+  /* ===== 成長視覺（招牌元素：植物隨完成度長大）===== */
+  .stage{
+    margin:22px auto 6px;width:170px;height:190px;position:relative;
+    display:flex;align-items:flex-end;justify-content:center;
+  }
+  .plant{width:100%;height:100%;overflow:visible;}
+  #stem{transform-origin:100px 175px;transform:scaleY(.12);
+    transition:transform .8s cubic-bezier(.2,.8,.2,1);}
+  .leaf{opacity:0;transform-origin:100px 150px;
+    transition:opacity .5s ease, transform .8s cubic-bezier(.2,.8,.2,1);}
+  .leaf.on{opacity:1;}
+  #bloom{opacity:0;transform-origin:100px 50px;transform:scale(.3);
+    transition:opacity .5s ease .15s, transform .7s cubic-bezier(.2,.9,.2,1.4) .15s;}
+  #bloom.on{opacity:1;transform:scale(1);}
+  @keyframes sway{0%,100%{transform:rotate(-2deg);}50%{transform:rotate(2deg);}}
+  .leafgroup{animation:sway 6s ease-in-out infinite;transform-origin:100px 175px;}
+
+  /* ===== 進度 ===== */
+  .pct{text-align:center;font-size:34px;font-weight:800;color:var(--teal-deep);
+    letter-spacing:-.02em;margin:2px 0 0;}
+  .pct small{font-size:15px;font-weight:700;color:var(--muted);margin-left:6px;}
+  .bar{height:12px;border-radius:99px;background:var(--teal-soft);
+    overflow:hidden;margin:10px 0 4px;}
+  .bar > i{display:block;height:100%;width:0;border-radius:99px;
+    background:linear-gradient(90deg,var(--teal),var(--teal-deep));
+    transition:width .8s cubic-bezier(.2,.8,.2,1);}
+  .count{text-align:center;color:var(--muted);font-size:13px;}
+
+  /* ===== 暱稱 ===== */
+  .who{display:flex;align-items:center;justify-content:center;gap:10px;
+    margin:18px 0 6px;font-size:14px;color:var(--muted);}
+  .who b{color:var(--ink);}
+  .linkbtn{background:none;border:none;color:var(--teal-deep);
+    font-weight:700;cursor:pointer;font-size:14px;padding:4px 6px;border-radius:8px;}
+  .linkbtn:hover{background:var(--teal-soft);}
+
+  /* ===== 任務卡 ===== */
+  .tasks{list-style:none;padding:0;margin:18px 0 0;display:grid;gap:12px;}
+  .task{
+    background:var(--card);border:1px solid var(--line);border-radius:16px;
+    padding:14px 16px;display:flex;gap:13px;align-items:flex-start;
+    cursor:pointer;box-shadow:var(--shadow);
+    transition:border-color .2s ease, transform .08s ease;
+  }
+  .task:hover{border-color:var(--teal);}
+  .task:active{transform:scale(.992);}
+  .check{
+    flex:0 0 26px;width:26px;height:26px;border-radius:50%;
+    border:2px solid var(--teal);display:grid;place-items:center;
+    margin-top:2px;transition:background .2s ease;
+  }
+  .check svg{width:14px;height:14px;opacity:0;transform:scale(.4);
+    transition:opacity .2s ease, transform .2s ease;}
+  .task.done .check{background:var(--teal);}
+  .task.done .check svg{opacity:1;transform:scale(1);}
+  .task .body h3{margin:0 0 2px;font-size:16px;font-weight:700;}
+  .task .body p{margin:0;font-size:13.5px;color:var(--muted);}
+  .task.done .body h3{color:var(--muted);text-decoration:line-through;}
+  .num{font-size:12px;font-weight:800;color:var(--teal);
+    margin-right:6px;font-variant-numeric:tabular-nums;}
+
+  /* ===== 通關訊息 ===== */
+  .clear{
+    margin-top:18px;padding:16px 18px;border-radius:16px;
+    background:linear-gradient(180deg,#fff,#fff7ee);
+    border:1px solid #f3d9b8;color:#8a5a1e;font-weight:700;
+    text-align:center;display:none;
+  }
+  .clear.show{display:block;}
+
+  /* ===== 怎麼玩 / 頁尾 ===== */
+  details{margin-top:22px;border-top:1px dashed var(--line);padding-top:16px;}
+  summary{cursor:pointer;font-weight:700;color:var(--teal-deep);font-size:14px;
+    list-style:none;}
+  summary::-webkit-details-marker{display:none;}
+  details p{font-size:13.5px;color:var(--muted);}
+  .privacy{margin-top:18px;font-size:12px;color:var(--muted);text-align:center;
+    line-height:1.7;}
+  .reset{background:none;border:none;color:var(--muted);font-size:12px;
+    text-decoration:underline;cursor:pointer;}
+
+  :focus-visible{outline:3px solid var(--teal);outline-offset:2px;border-radius:6px;}
+  @media (prefers-reduced-motion: reduce){
+    *{transition:none !important;animation:none !important;}
+  }
+</style>
+</head>
+<body>
+  <main class="wrap">
+    <p class="eyebrow">高榮企業工會</p>
+    <h1>養成闖關 🎮</h1>
+    <p class="tagline">每完成一關，工會就長大一點。一起把它養起來。</p>
+
+    <!-- 招牌：會長大的小苗 -->
+    <div class="stage" aria-hidden="true">
+      <svg class="plant" viewBox="0 0 200 200">
+        <!-- 盆子 -->
+        <path d="M62 168 h76 l-10 26 h-56 z" fill="#caa472"/>
+        <rect x="58" y="160" width="84" height="12" rx="4" fill="#b98c54"/>
+        <ellipse cx="100" cy="161" rx="40" ry="6" fill="#7a5a35"/>
+        <g class="leafgroup">
+          <!-- 莖 -->
+          <rect id="stem" x="97" y="60" width="6" height="115" rx="3" fill="#2f8f74"/>
+          <!-- 葉子（隨進度長出來）-->
+          <ellipse class="leaf" data-th="0.18" cx="78"  cy="140" rx="20" ry="9" transform="rotate(-28 78 140)"  fill="#3fae8c"/>
+          <ellipse class="leaf" data-th="0.38" cx="122" cy="122" rx="20" ry="9" transform="rotate(28 122 122)"  fill="#46baa0"/>
+          <ellipse class="leaf" data-th="0.60" cx="76"  cy="104" rx="18" ry="8" transform="rotate(-30 76 104)"  fill="#3fae8c"/>
+          <ellipse class="leaf" data-th="0.80" cx="124" cy="88"  rx="18" ry="8" transform="rotate(30 124 88)"   fill="#46baa0"/>
+          <!-- 開花（全通關才出現）-->
+          <g id="bloom">
+            <circle cx="100" cy="56" r="11" fill="#f4a259"/>
+            <circle cx="100" cy="40" r="8" fill="#ffd28a"/>
+            <circle cx="86"  cy="52" r="8" fill="#ffd28a"/>
+            <circle cx="114" cy="52" r="8" fill="#ffd28a"/>
+            <circle cx="91"  cy="64" r="8" fill="#ffd28a"/>
+            <circle cx="109" cy="64" r="8" fill="#ffd28a"/>
+            <circle cx="100" cy="52" r="6" fill="#e8852f"/>
+          </g>
+        </g>
+      </svg>
+    </div>
+
+    <p class="pct"><span id="pctNum">0</span>%<small id="grow">剛發芽</small></p>
+    <div class="bar"><i id="barFill"></i></div>
+    <p class="count">完成 <span id="doneN">0</span> / <span id="totalN">0</span> 關</p>
+
+    <div class="who">
+      你是：<b id="nick">（還沒取暱稱）</b>
+      <button class="linkbtn" id="rename">改名</button>
+    </div>
+
+    <ul class="tasks" id="taskList"></ul>
+
+    <div class="clear" id="clear">🎉 全關通關！謝謝你讓工會又長大了一點。</div>
+
+    <details>
+      <summary>❓ 怎麼玩</summary>
+      <p>點任務卡片代表「完成」，再點一次可以取消。每完成一關，上面的小苗就會長大、進度條往前；全部完成它就會開花。進度只記在你這台裝置上。</p>
+    </details>
+
+    <p class="privacy">
+      這裡只記錄「任務狀態」和你取的「暱稱」，<b>不會儲存任何個資</b>。<br/>
+      <button class="reset" id="reset">清除我的進度</button>
+    </p>
+  </main>
+
+<script>
+/* =======================================================================
+   ★★★ 想改關卡？只要改下面這個清單就好 ★★★
+   - 每一關是一個 { } 區塊
+   - id：每關的代號，不要重複（用來記住有沒有完成）
+   - title：關卡名稱
+   - desc：說明文字
+   ======================================================================= */
+const 關卡清單 = [
+  { id:"t1", title:"認識工會",   desc:"花 1 分鐘了解「我們為什麼要組企業工會」。" },
+  { id:"t2", title:"確認資格",   desc:"確認自己是勞工身分（約用／契約／派遣可加入；正式公職走公務人員協會）。" },
+  { id:"t3", title:"了解保障",   desc:"知道《工會法》§35：因組／入工會被報復屬不當勞動行為，可申請裁決。" },
+  { id:"t4", title:"邀一位夥伴", desc:"找 1 位你信任的同仁，私下聊聊工會在做什麼。" },
+  { id:"t5", title:"表達意願",   desc:"填寫連署／入會意願（連結之後補上）。" },
+  { id:"t6", title:"一起達標",   desc:"幫忙把連署人數往 30 人推進——湊滿才能正式成立。" },
+];
+
+/* =======================================================================
+   下面是程式邏輯，一般不用動。
+   進度儲存：優先用瀏覽器 localStorage；若不支援就用記憶體（重新整理會歸零）。
+   ★ 之後若想做「全工會進度合在一起長大」，需要接後端（例如免費的 Supabase），
+     可請 Claude Code 把「讀/寫進度」這兩個函式改成連到後端即可。
+   ======================================================================= */
+const KEY = "gaorong-union-quest-v1";
+let mem = { nick:"", done:{} };          // 記憶體後備
+let useLS = false;
+try { localStorage.setItem("_t","1"); localStorage.removeItem("_t"); useLS = true; } catch(e){}
+
+function load(){
+  if(!useLS) return mem;
+  try { return JSON.parse(localStorage.getItem(KEY)) || { nick:"", done:{} }; }
+  catch(e){ return { nick:"", done:{} }; }
+}
+function save(state){
+  if(useLS){ try{ localStorage.setItem(KEY, JSON.stringify(state)); }catch(e){} }
+  else { mem = state; }
+}
+
+let state = load();
+
+const el = (id)=>document.getElementById(id);
+const list = el("taskList");
+
+function growLabel(r){
+  if(r>=1)   return "開花了！";
+  if(r>=0.8) return "快開花了";
+  if(r>=0.5) return "長得不錯";
+  if(r>=0.2) return "冒新葉";
+  if(r>0)    return "正在發芽";
+  return "剛發芽";
+}
+
+function render(){
+  // 任務卡
+  list.innerHTML = "";
+  關卡清單.forEach((t, i)=>{
+    const done = !!state.done[t.id];
+    const li = document.createElement("li");
+    li.className = "task" + (done ? " done" : "");
+    li.tabIndex = 0;
+    li.setAttribute("role","button");
+    li.setAttribute("aria-pressed", done ? "true" : "false");
+    li.innerHTML =
+      '<span class="check"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 13l4 4L19 7"/></svg></span>'
+      + '<div class="body"><h3><span class="num">'+String(i+1).padStart(2,"0")+'</span>'+t.title+'</h3><p>'+t.desc+'</p></div>';
+    const toggle = ()=>{ state.done[t.id] = !state.done[t.id]; save(state); render(); };
+    li.addEventListener("click", toggle);
+    li.addEventListener("keydown", (e)=>{ if(e.key==="Enter"||e.key===" "){ e.preventDefault(); toggle(); } });
+    list.appendChild(li);
+  });
+
+  // 進度
+  const total = 關卡清單.length;
+  const done = 關卡清單.filter(t=>state.done[t.id]).length;
+  const r = total ? done/total : 0;
+  const pct = Math.round(r*100);
+  el("doneN").textContent = done;
+  el("totalN").textContent = total;
+  el("pctNum").textContent = pct;
+  el("grow").textContent = growLabel(r);
+  el("barFill").style.width = pct + "%";
+
+  // 植物成長
+  el("stem").setAttribute("transform","scaleY(" + (0.12 + 0.88*r).toFixed(3) + ")");
+  document.querySelectorAll(".leaf").forEach(leaf=>{
+    const th = parseFloat(leaf.dataset.th);
+    leaf.classList.toggle("on", r > th);
+  });
+  el("bloom").classList.toggle("on", r >= 1);
+  el("clear").classList.toggle("show", r >= 1 && total > 0);
+
+  // 暱稱
+  el("nick").textContent = state.nick ? state.nick : "（還沒取暱稱）";
+}
+
+function askName(){
+  const name = prompt("幫自己取個暱稱（只記在這台裝置，不會外傳）：", state.nick || "");
+  if(name !== null){ state.nick = name.trim().slice(0,20); save(state); render(); }
+}
+el("rename").addEventListener("click", askName);
+
+el("reset").addEventListener("click", ()=>{
+  if(confirm("確定清除這台裝置上的進度與暱稱？")){
+    state = { nick:"", done:{} }; save(state); render();
+  }
+});
+
+render();
+</script>
+</body>
+</html>
