@@ -1,0 +1,383 @@
+<!DOCTYPE html>
+<!--
+  ============================================================================
+  高榮企業工會 ｜ 籌備說明網站 v1（純前端、手機 RWD、規則式 FAQ、不上 AI）
+  ----------------------------------------------------------------------------
+  給小巫（程式小白）的說明：
+  - 這是「一個檔案」就能跑的網站，用瀏覽器直接打開 gaorong.html 即可看。
+  - 不需要 Anaconda / Python / 任何安裝。要上線時放到 GitHub Pages 就好。
+  - 想改文字：直接找對應段落改中文即可，不會動到版面。
+  - ⚠️ 凡是法條編號 / 人數 / 天數，畫面上都標了「⚠待核對」，定稿前請對勞工局範本。
+  - 🔧 之後要把「連署按鈕」連到 LINE 或 Google 表單：搜尋本檔的【★連署連結★】
+       把那行的 href="#contact" 換成你的網址即可（只有一處，很好換）。
+  - 目前先「不公開」：<head> 放了 noindex，Google 不會收錄；要正式公開時再拿掉。
+  ============================================================================
+-->
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<!-- 先不公開：暫不讓搜尋引擎收錄。正式公開時刪掉下面這行 -->
+<meta name="robots" content="noindex, nofollow">
+<title>高榮企業工會（籌備中）｜團結，從這裡開始</title>
+<meta name="description" content="高雄榮總勞工身分同仁籌組企業工會的說明、入會資格、成立進度與常見問答。籌備中，內容以勞工局範本為準。">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@400;600;700&family=Noto+Sans+TC:wght@300;400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --red: #C0392B; --red-light: #FDECEA; --red-deep: #7B1818;
+    --gold: #B7860B; --gold-light: #FEF9E7;
+    --ink: #1A1A1A; --ink-mid: #444; --ink-soft: #777; --bg: #FAFAF8;
+    --card: #FFFFFF; --border: #E8E4DE;
+    --green: #1A7A4A; --green-light: #EAFAF1; --green-mid: #2D9D6E; --green-deep: #0F5C36;
+    --blue: #2E5C8A; --blue-light: #EAF1F8;
+    --gray-tag: #8A8A85; --gray-bg: #F0EEEA;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html { scroll-behavior: smooth; }
+  body { font-family: 'Noto Sans TC', sans-serif; background: var(--bg); color: var(--ink); font-size: 15px; line-height: 1.75; -webkit-text-size-adjust: 100%; }
+
+  /* ---------- 頁首 ---------- */
+  .header { background: var(--red); color: #fff; padding: 2.2rem 1.25rem 1.8rem; text-align: center; position: relative; overflow: hidden; }
+  .header::before { content: ''; position: absolute; top: -40px; right: -40px; width: 180px; height: 180px; border-radius: 50%; background: rgba(255,255,255,0.06); }
+  .header::after { content: ''; position: absolute; bottom: -60px; left: -30px; width: 200px; height: 200px; border-radius: 50%; background: rgba(255,255,255,0.05); }
+  .header-label { font-size: 11px; letter-spacing: 0.18em; opacity: 0.8; margin-bottom: 10px; }
+  .header h1 { font-family: 'Noto Serif TC', serif; font-size: 25px; font-weight: 700; line-height: 1.35; margin-bottom: 10px; position: relative; }
+  .header-sub { font-size: 14px; opacity: 0.9; line-height: 1.7; position: relative; }
+  .status-pill { display: inline-flex; align-items: center; gap: 6px; margin-top: 1.1rem; background: rgba(255,255,255,0.16); border: 1px solid rgba(255,255,255,0.28); border-radius: 99px; padding: 0.4rem 0.95rem; font-size: 12.5px; position: relative; }
+  .status-pill .dot { width: 8px; height: 8px; border-radius: 50%; background: #FFD54F; box-shadow: 0 0 0 0 rgba(255,213,79,0.7); animation: pulse 2s infinite; }
+  @keyframes pulse { 0%{box-shadow:0 0 0 0 rgba(255,213,79,0.6);} 70%{box-shadow:0 0 0 7px rgba(255,213,79,0);} 100%{box-shadow:0 0 0 0 rgba(255,213,79,0);} }
+
+  /* ---------- 免責 / 籌備 提示帶 ---------- */
+  .disclaimer-bar { background: var(--red-deep); color: #FFE0E0; padding: 0.65rem 1.25rem; text-align: center; font-size: 12px; line-height: 1.6; font-weight: 300; }
+  .disclaimer-bar strong { font-weight: 500; color: #fff; }
+
+  /* ---------- 頁尾固定 CTA（手機最顯眼）---------- */
+  .cta-fixed { position: fixed; left: 0; right: 0; bottom: 0; z-index: 80; padding: 0.7rem 1rem calc(0.7rem + env(safe-area-inset-bottom)); background: linear-gradient(to top, rgba(250,250,248,0.98) 70%, rgba(250,250,248,0)); display: flex; justify-content: center; }
+  .cta-fixed a { display: flex; align-items: center; justify-content: center; gap: 8px; width: 100%; max-width: 560px; background: var(--red); color: #fff; text-decoration: none; font-size: 16px; font-weight: 700; padding: 0.95rem; border-radius: 14px; box-shadow: 0 6px 18px rgba(192,57,43,0.35); transition: transform 0.12s, box-shadow 0.2s; }
+  .cta-fixed a:active { transform: scale(0.98); box-shadow: 0 3px 10px rgba(192,57,43,0.3); }
+
+  /* ---------- 主體 ---------- */
+  main { max-width: 600px; margin: 0 auto; padding: 1.6rem 1.25rem 6rem; }
+  .section { margin-bottom: 2rem; scroll-margin-top: 16px; }
+  .section-header { display: flex; align-items: center; gap: 10px; margin-bottom: 1rem; }
+  .section-num { width: 30px; height: 30px; background: var(--red); color: #fff; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 14px; font-weight: 500; flex-shrink: 0; }
+  .section-num.green { background: var(--green); }
+  .section-num.gold { background: var(--gold); }
+  .section-num.blue { background: var(--blue); }
+  .section-title { font-family: 'Noto Serif TC', serif; font-size: 18px; font-weight: 600; color: var(--ink); }
+
+  .card { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 1.15rem 1.25rem; }
+  .card + .card { margin-top: 10px; }
+  .card p { font-size: 14.5px; color: var(--ink-mid); }
+  .card p + p { margin-top: 0.7rem; }
+  .card strong { font-weight: 500; color: var(--ink); }
+
+  .lead { font-size: 15px; color: var(--ink-mid); line-height: 1.85; }
+
+  /* 可加入 / 不可加入 清單 */
+  .who-list { list-style: none; display: flex; flex-direction: column; gap: 10px; margin-top: 4px; }
+  .who-list li { display: flex; align-items: flex-start; gap: 11px; font-size: 14.5px; line-height: 1.6; }
+  .who-list .badge { flex-shrink: 0; width: 22px; height: 22px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 700; margin-top: 1px; }
+  .badge.yes { background: var(--green-light); color: var(--green-deep); }
+  .badge.no  { background: var(--red-light); color: var(--red); }
+  .who-list small { display: block; color: var(--ink-soft); font-size: 12.5px; font-weight: 300; }
+
+  /* 好處 grid */
+  .benefits { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .benefit { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 1rem 0.9rem; text-align: center; }
+  .benefit .ic { font-size: 26px; line-height: 1; display: block; margin-bottom: 8px; }
+  .benefit .bt { font-size: 14px; font-weight: 500; color: var(--ink); margin-bottom: 4px; }
+  .benefit .bd { font-size: 12px; color: var(--ink-soft); line-height: 1.6; }
+
+  /* 時間軸 */
+  .timeline { list-style: none; position: relative; padding-left: 8px; }
+  .timeline li { position: relative; padding: 0 0 1.1rem 28px; border-left: 2px solid var(--border); }
+  .timeline li:last-child { border-left-color: transparent; padding-bottom: 0; }
+  .timeline li::before { content: ''; position: absolute; left: -8px; top: 2px; width: 14px; height: 14px; border-radius: 50%; background: #fff; border: 3px solid var(--border); }
+  .timeline li.done::before { background: var(--green); border-color: var(--green); }
+  .timeline li.active::before { background: var(--gold); border-color: var(--gold); box-shadow: 0 0 0 4px var(--gold-light); }
+  .tl-title { font-size: 14.5px; font-weight: 600; color: var(--ink); }
+  .tl-title .tl-state { font-size: 11px; font-weight: 500; padding: 1px 8px; border-radius: 20px; margin-left: 6px; vertical-align: middle; }
+  .tl-state.s-done { background: var(--green-light); color: var(--green-deep); }
+  .tl-state.s-active { background: var(--gold-light); color: var(--gold); }
+  .tl-state.s-wait { background: var(--gray-bg); color: var(--gray-tag); }
+  .tl-desc { font-size: 12.5px; color: var(--ink-soft); line-height: 1.6; margin-top: 2px; }
+
+  /* 保障（綠色強調卡） */
+  .shield-card { background: linear-gradient(135deg, #E8F6EE 0%, #D7EFE0 100%); border: 1px solid #B8DCC4; border-radius: 12px; padding: 1.1rem 1.2rem; }
+  .shield-card .sh-head { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
+  .shield-card .sh-tag { background: var(--green-deep); color: #fff; font-size: 11px; padding: 2px 9px; border-radius: 20px; font-weight: 500; }
+  .shield-card .sh-title { font-size: 14.5px; font-weight: 600; color: var(--green-deep); }
+  .shield-card p { font-size: 13.5px; color: #1A5C38; line-height: 1.8; }
+
+  /* FAQ 手風琴 */
+  .faq-cat { font-size: 12px; font-weight: 700; letter-spacing: 0.08em; color: var(--red); margin: 1.1rem 0 0.5rem; padding-left: 2px; }
+  .faq-cat:first-child { margin-top: 0; }
+  .faq { background: var(--card); border: 1px solid var(--border); border-radius: 12px; overflow: hidden; }
+  .faq + .faq { margin-top: 8px; }
+  .faq summary { list-style: none; cursor: pointer; padding: 0.95rem 1.1rem; font-size: 14.5px; font-weight: 500; color: var(--ink); display: flex; align-items: flex-start; gap: 10px; -webkit-tap-highlight-color: transparent; }
+  .faq summary::-webkit-details-marker { display: none; }
+  .faq summary .q { color: var(--red); font-weight: 700; flex-shrink: 0; }
+  .faq summary .arrow { margin-left: auto; flex-shrink: 0; color: var(--ink-soft); transition: transform 0.2s; font-size: 13px; }
+  .faq[open] summary .arrow { transform: rotate(180deg); }
+  .faq[open] summary { border-bottom: 1px solid var(--border); }
+  .faq .ans { padding: 0.9rem 1.1rem 1.05rem; font-size: 14px; color: var(--ink-mid); line-height: 1.85; }
+  .faq .ans strong { color: var(--ink); font-weight: 500; }
+
+  /* ⚠待核對 標記 */
+  .check-flag { display: inline-block; background: var(--gold-light); color: var(--gold); font-size: 11px; font-weight: 500; padding: 0px 6px; border-radius: 5px; border: 1px solid #EBD89A; white-space: nowrap; vertical-align: baseline; }
+
+  /* 法規連結 */
+  .law-links { list-style: none; display: flex; flex-direction: column; gap: 8px; }
+  .law-links a { display: flex; align-items: center; gap: 10px; background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 0.85rem 1rem; text-decoration: none; color: var(--ink); font-size: 14px; transition: border-color 0.2s, background 0.15s; }
+  .law-links a:active { background: #F7F4F0; }
+  .law-links a .lic { font-size: 18px; }
+  .law-links a .larr { margin-left: auto; color: var(--ink-soft); font-size: 13px; }
+  .law-links a .lsub { display:block; font-size: 11.5px; color: var(--ink-soft); font-weight: 300; }
+
+  /* 聯絡 */
+  .contact-card { text-align: center; }
+  .contact-btns { display: flex; flex-direction: column; gap: 10px; margin-top: 0.9rem; }
+  .contact-btns a { display: flex; align-items: center; justify-content: center; gap: 8px; padding: 0.85rem; border-radius: 12px; text-decoration: none; font-size: 15px; font-weight: 500; }
+  .btn-line { background: #06C755; color: #fff; }
+  .btn-form { background: var(--blue); color: #fff; }
+  .btn-ghost { background: var(--card); color: var(--ink-mid); border: 1px solid var(--border); }
+  .todo-note { font-size: 11.5px; color: var(--gold); background: var(--gold-light); border: 1px dashed #EBD89A; border-radius: 8px; padding: 6px 10px; margin-top: 10px; line-height: 1.6; }
+
+  .note-soft { font-size: 12.5px; color: var(--ink-soft); line-height: 1.7; margin-top: 8px; }
+
+  /* 頁尾 */
+  footer { text-align: center; padding: 1.5rem 1.25rem 2rem; font-size: 11.5px; color: var(--ink-soft); line-height: 1.8; border-top: 1px solid var(--border); margin-top: 1rem; }
+
+  @media (min-width: 620px) {
+    .header h1 { font-size: 28px; }
+  }
+</style>
+</head>
+<body>
+
+  <!-- ========== 頁首 ========== -->
+  <header class="header">
+    <div class="header-label">高 雄 榮 民 總 醫 院</div>
+    <h1>高榮企業工會<br>團結，從這裡開始</h1>
+    <p class="header-sub">由院內「勞工身分」同仁發起籌組<br>一起爭取更好的勞動條件與保障</p>
+    <span class="status-pill"><span class="dot"></span>目前狀態：籌備中 · 公開徵求連署</span>
+  </header>
+
+  <!-- ========== 免責 / 籌備 提示帶 ========== -->
+  <div class="disclaimer-bar">
+    <strong>※ 籌備中</strong>　本網站為籌備說明，標示「<strong>⚠待核對</strong>」的法條與數字尚需以
+    <strong>高雄市政府勞工局範本／律師意見</strong>為準，僅供參考，非正式法律意見。
+  </div>
+
+  <main>
+
+    <!-- ===== 1. 我們是誰 ===== -->
+    <section class="section" id="about">
+      <div class="section-header">
+        <div class="section-num">1</div>
+        <div class="section-title">我們是誰</div>
+      </div>
+      <div class="card">
+        <p class="lead">我們是高雄榮總院內一群「<strong>勞工身分</strong>」的同仁（約用、契約、派遣等），希望依《工會法》籌組一個屬於我們自己的「<strong>企業工會</strong>」。</p>
+        <p>企業工會＝同一個事業單位（同一家醫院）的勞工所組成的工會。有了工會，我們才能用「團結」的力量，跟院方就薪資、工時、權益等事項<strong>對等協商</strong>，而不是一個人單打獨鬥。</p>
+      </div>
+    </section>
+
+    <!-- ===== 2. 誰可以加入 ===== -->
+    <section class="section" id="who">
+      <div class="section-header">
+        <div class="section-num green">2</div>
+        <div class="section-title">誰可以加入</div>
+      </div>
+      <div class="card">
+        <ul class="who-list">
+          <li>
+            <span class="badge yes">✓</span>
+            <div><strong>約用、契約、派遣等「勞工身分」者</strong>
+              <small>可以發起、可以加入企業工會。</small></div>
+          </li>
+          <li>
+            <span class="badge no">✕</span>
+            <div><strong>正式公務人員（公職）</strong>
+              <small>不能加入企業工會；他們適用《公務人員協會法》的「公務人員協會」。</small></div>
+          </li>
+          <li>
+            <span class="badge no">✕</span>
+            <div><strong>代表雇主行使管理權的主管</strong> <span class="check-flag">⚠待核對 工會法§14</span>
+              <small>依工會法規定，這類主管不得加入該工會。</small></div>
+          </li>
+        </ul>
+        <p class="note-soft">不確定自己算哪一種身分？沒關係，<a href="#contact" style="color:var(--red)">私訊我們</a>幫你確認，資料只用於確認資格、會保密。</p>
+      </div>
+    </section>
+
+    <!-- ===== 3. 加入的好處 ===== -->
+    <section class="section" id="why">
+      <div class="section-header">
+        <div class="section-num gold">3</div>
+        <div class="section-title">為什麼要團結？加入的好處</div>
+      </div>
+      <div class="benefits">
+        <div class="benefit"><span class="ic">🤝</span><div class="bt">對等協商</div><div class="bd">工會可代表大家跟院方協商，比個人更有份量。</div></div>
+        <div class="benefit"><span class="ic">🛡️</span><div class="bt">法律保護傘</div><div class="bd">因組工會被打壓屬不當勞動行為，法律會保護你。</div></div>
+        <div class="benefit"><span class="ic">📢</span><div class="bt">有人發聲</div><div class="bd">不合理的制度，有正式管道反映、不再被當空氣。</div></div>
+        <div class="benefit"><span class="ic">📚</span><div class="bt">資訊互助</div><div class="bd">勞動法令、權益問題，大家一起搞懂、互相幫忙。</div></div>
+      </div>
+    </section>
+
+    <!-- ===== 4. 成立進度 ===== -->
+    <section class="section" id="progress">
+      <div class="section-header">
+        <div class="section-num">4</div>
+        <div class="section-title">成立進度</div>
+      </div>
+      <div class="card">
+        <ul class="timeline">
+          <li class="active">
+            <div class="tl-title">① 公開徵求連署 <span class="tl-state s-active">進行中</span></div>
+            <div class="tl-desc">召集 <strong>30 位以上</strong>勞工身分同仁連署發起。<span class="check-flag">⚠待核對 工會法§11</span></div>
+          </li>
+          <li>
+            <div class="tl-title">② 組成籌備會 <span class="tl-state s-wait">尚未</span></div>
+            <div class="tl-desc">連署足額後成立籌備會，分工：法律、技術、財務窗口。</div>
+          </li>
+          <li>
+            <div class="tl-title">③ 擬章程・開成立大會 <span class="tl-state s-wait">尚未</span></div>
+            <div class="tl-desc">公開徵求會員、擬定章程、召開成立大會、選理監事。</div>
+          </li>
+          <li>
+            <div class="tl-title">④ 向勞工局登記 <span class="tl-state s-wait">尚未</span></div>
+            <div class="tl-desc">成立大會後 <strong>30 日內</strong>備齊文件，向高雄市政府勞工局請領登記證書。<span class="check-flag">⚠待核對</span></div>
+          </li>
+        </ul>
+      </div>
+    </section>
+
+    <!-- ===== 5. 怎麼加入／連署 ===== -->
+    <section class="section" id="join">
+      <div class="section-header">
+        <div class="section-num green">5</div>
+        <div class="section-title">怎麼加入／連署</div>
+      </div>
+      <div class="card">
+        <p>現在最重要的一步是<strong>連署發起</strong>。你只要表達「我願意連署」，我們會在連署足額後通知你後續（籌備會、成立大會等）。</p>
+        <p class="note-soft">📄 正式連署書、入會申請書等文件，會在勞工局範本確認後放上來，敬請稍候。<span class="check-flag">🕓 待文件</span></p>
+        <div style="margin-top:0.9rem">
+          <!-- 【★連署連結★】之後把 href 換成 LINE 或 Google 表單網址（這是同一顆按鈕的源頭） -->
+          <a href="#contact" style="display:flex;align-items:center;justify-content:center;gap:8px;background:var(--red);color:#fff;text-decoration:none;font-weight:700;padding:0.9rem;border-radius:12px;">✊ 我願意連署／想加入籌備</a>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===== 6. 常見問答 FAQ（規則式，11 題）===== -->
+    <section class="section" id="faq">
+      <div class="section-header">
+        <div class="section-num gold">6</div>
+        <div class="section-title">常見問答 FAQ</div>
+      </div>
+
+      <div class="faq-cat">A · 入會資格</div>
+
+      <details class="faq"><summary><span class="q">Q1</span><span>我是約用／契約人員，可以加入嗎？</span><span class="arrow">▾</span></summary>
+        <div class="ans"><strong>可以。</strong>約用、契約、派遣等「勞工身分」的同仁，正是企業工會的發起人與會員。歡迎你一起來！</div></details>
+
+      <details class="faq"><summary><span class="q">Q2</span><span>我是正式公務人員（公職），可以加入嗎？</span><span class="arrow">▾</span></summary>
+        <div class="ans"><strong>不行喔。</strong>正式公職不能加入企業工會，但你們可以依《公務人員協會法》組「公務人員協會」，那是屬於公職的管道。</div></details>
+
+      <details class="faq"><summary><span class="q">Q3</span><span>我是主管，可以加入嗎？</span><span class="arrow">▾</span></summary>
+        <div class="ans">依《工會法》規定，<strong>代表雇主行使管理權的主管</strong>不得加入該工會。 <span class="check-flag">⚠待核對 §14</span> 是否屬於這類主管，建議個別向勞工局或我們確認。</div></details>
+
+      <div class="faq-cat">B · 成立流程</div>
+
+      <details class="faq"><summary><span class="q">Q4</span><span>要多少人、多久才能成立？</span><span class="arrow">▾</span></summary>
+        <div class="ans">需要 <strong>30 位以上</strong>勞工連署發起，組籌備會 → 公開徵求會員、擬章程 → 開成立大會 → 成立後 <strong>30 日內</strong>向勞工局登記領證。 <span class="check-flag">⚠待核對 §11</span> 時間長短看籌備進度，連署越踴躍越快。</div></details>
+
+      <details class="faq"><summary><span class="q">Q5</span><span>目前進度到哪了？</span><span class="arrow">▾</span></summary>
+        <div class="ans">目前在<strong>「公開徵求連署」</strong>階段（見上方成立進度）。你的一個連署，就是讓它往前走一步的關鍵。</div></details>
+
+      <div class="faq-cat">C · 保障與隱私</div>
+
+      <details class="faq"><summary><span class="q">Q6</span><span>參加工會，會不會被秋後算帳？</span><span class="arrow">▾</span></summary>
+        <div class="ans">法律站在你這邊。雇主若因為你組織／加入工會而拒僱、解僱、降調、減薪或妨礙，屬於<strong>「不當勞動行為」</strong>，違法處分無效，可向勞動部申請裁決。 <span class="check-flag">⚠待核對 工會法§35</span> 籌組期間我們也會保留紀錄、互相照應。</div></details>
+
+      <details class="faq"><summary><span class="q">Q7</span><span>會費要多少？</span><span class="arrow">▾</span></summary>
+        <div class="ans">會費金額與收法<strong>籌備中</strong>，會在<strong>成立大會由會員表決後公告</strong>，不會私下亂收。</div></details>
+
+      <details class="faq"><summary><span class="q">Q8</span><span>我的個資安全嗎？</span><span class="arrow">▾</span></summary>
+        <div class="ans">我們依《個人資料保護法》，<strong>只收必要資料</strong>（確認身分與聯絡用），並做好保護措施，不會挪作他用。</div></details>
+
+      <div class="faq-cat">D · 大家最在意的</div>
+
+      <details class="faq"><summary><span class="q">Q9</span><span>跟現有的護理工會／職業工會有什麼不同？</span><span class="arrow">▾</span></summary>
+        <div class="ans"><strong>企業工會</strong>是「同一家醫院的勞工」組成的，能直接針對<strong>本院</strong>的問題跟院方協商；職業／產業工會是跨單位的同職業者組成。兩者性質不同，<strong>加入企業工會通常不影響你既有的其他工會身分</strong>。 <span class="check-flag">⚠待核對</span></div></details>
+
+      <details class="faq"><summary><span class="q">Q10</span><span>連署／入會，我的名字會被醫院看到嗎？保密嗎？</span><span class="arrow">▾</span></summary>
+        <div class="ans">連署書與會員名冊依法需交「<strong>主管機關（勞工局）</strong>」登記，<strong>不會主動公開給雇主</strong>。而且就算院方知道，因組工會而打壓你是違法的（見 Q6 保護傘）。 <span class="check-flag">⚠待核對 §35</span> 我們會謹慎保管名單。</div></details>
+
+      <details class="faq"><summary><span class="q">Q11</span><span>參加工會，會不會影響我的工作或排班？</span><span class="arrow">▾</span></summary>
+        <div class="ans"><strong>不應該、也不合法。</strong>雇主不得因你參加工會而在工作、排班、考核上給你不利對待，否則同樣屬不當勞動行為。 <span class="check-flag">⚠待核對 §35</span> 若遇到這種狀況，請保留紀錄並告訴我們。</div></details>
+    </section>
+
+    <!-- ===== 7. 你的保障 ===== -->
+    <section class="section" id="protect">
+      <div class="section-header">
+        <div class="section-num green">7</div>
+        <div class="section-title">你的保障</div>
+      </div>
+      <div class="shield-card">
+        <div class="sh-head"><span class="sh-tag">保護傘</span><span class="sh-title">組工會，法律保護你</span></div>
+        <p>雇主若因為你<strong>發起、加入或參與工會活動</strong>，而對你拒僱、解僱、降調、減薪、調職或施以其他不利對待、或妨礙工會運作 —— 都屬於<strong>「不當勞動行為」</strong>，違法處分無效，可向勞動部申請裁決救濟。 <span class="check-flag">⚠待核對 工會法§35</span></p>
+        <p style="margin-top:0.7rem">👉 籌組期間，<strong>請保留相關紀錄</strong>（對話、公告、處分通知等），萬一需要時就是有力證據。</p>
+      </div>
+    </section>
+
+    <!-- ===== 8. 法規連結 ===== -->
+    <section class="section" id="laws">
+      <div class="section-header">
+        <div class="section-num blue">8</div>
+        <div class="section-title">相關法規（全國法規資料庫）</div>
+      </div>
+      <ul class="law-links">
+        <li><a href="https://law.moj.gov.tw/LawClass/LawAll.aspx?pcode=N0020001" target="_blank" rel="noopener"><span class="lic">⚖️</span><span>工會法<span class="lsub">成立、入會資格、保護傘的主要依據</span></span><span class="larr">↗</span></a></li>
+        <li><a href="https://law.moj.gov.tw/LawClass/LawAll.aspx?pcode=N0030001" target="_blank" rel="noopener"><span class="lic">⏰</span><span>勞動基準法<span class="lsub">工時、加班費、特休、資遣等基本權益</span></span><span class="larr">↗</span></a></li>
+        <li><a href="https://law.moj.gov.tw/LawClass/LawAll.aspx?pcode=N0030014" target="_blank" rel="noopener"><span class="lic">⚧️</span><span>性別平等工作法<span class="lsub">性別平等、產假、育嬰、職場性騷擾防治</span></span><span class="larr">↗</span></a></li>
+        <li><a href="https://law.moj.gov.tw/LawClass/LawAll.aspx?pcode=J0070001" target="_blank" rel="noopener"><span class="lic">™️</span><span>商標法<span class="lsub">日後保護工會名稱／Logo 會用到</span></span><span class="larr">↗</span></a></li>
+      </ul>
+      <p class="note-soft">※ 法條會修正，點連結看全國法規資料庫的最新版本最準。 <span class="check-flag">⚠待核對</span> 連結的法規代碼。</p>
+    </section>
+
+    <!-- ===== 9. 聯絡我們 ===== -->
+    <section class="section" id="contact">
+      <div class="section-header">
+        <div class="section-num gold">9</div>
+        <div class="section-title">聯絡我們／加入連署</div>
+      </div>
+      <div class="card contact-card">
+        <p>有任何問題，或想要連署、加入籌備，歡迎用下面的方式找我們 👇</p>
+        <div class="contact-btns">
+          <!-- 【★連署連結★】之後把這兩顆按鈕的 href 換成真正的 LINE / Google 表單網址 -->
+          <a class="btn-line" href="#" onclick="return false;">💬 加入 LINE（連署／詢問）</a>
+          <a class="btn-form" href="#" onclick="return false;">📝 填寫連署表單</a>
+        </div>
+        <div class="todo-note">🔧 給管理者：上面兩顆按鈕、以及第 5 段的連署鈕，網址都還沒設定（規格書待辦 10-6：要用 LINE 還是 Google 表單）。決定後把 href="#" 換成實際網址即可。</div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- ========== 固定行動按鈕（手機底部，最顯眼）========== -->
+  <div class="cta-fixed">
+    <!-- 【★連署連結★】點了會捲到「聯絡我們」；之後可直接改成 LINE/表單網址 -->
+    <a href="#contact">✊ 我想連署／加入籌備</a>
+  </div>
+
+  <!-- ========== 頁尾 ========== -->
+  <footer>
+    高榮企業工會（籌備中）<br>
+    本網站內容僅供參考，非正式法律意見；標示「⚠待核對」處以勞工局範本／律師意見為準。<br>
+    收集之個人資料依《個人資料保護法》僅作必要使用並妥善保護。
+  </footer>
+
+</body>
+</html>
