@@ -234,7 +234,7 @@ def classify(members, month_status, first_week_status):
         area=_area_of(c, src)
         if area=="未知": area=_area_of_month(c, month_status)
         info[c]={"type":typ,"area":area,"w135":w135,"w246":w246,
-                 "white":white,"night":night}
+                 "white":white,"night":night,"name":m["name"]}
     return info
 
 def _area_of(card, week_status):
@@ -271,50 +271,57 @@ def load_history(skip_month=None):
 AREAS=["一區","二區"]; GROUPS=["W135","W246"]; SHIFTS=[1,2,3]
 
 def assign(members, info, hist_cnt):
-    idx={m["card"]:i for i,m in enumerate(members)}
-    cost={m["card"]:hist_cnt.get(m["card"],0) for m in members}  # 過去稽核次數(少者先排)
-    # 先看當月小夜人數，決定「小夜是否補第二班」
-    night_pool=[m["card"] for m in members if info[m["card"]]["type"]=="夜"]
-    white_pool=[m["card"] for m in members if info[m["card"]]["type"]=="白"]
-    # 需求：班次3 共 4 格(夜)，班次1+2 共 8 格(白)。
-    # 若夜>4：多出來的夜可補第二班(共 4 個第二班格)。
-    extra_night_to_band2 = max(0, len(night_pool)-4)
+    """依玉繡規則排：W135/W246『都可以』(不硬綁)；本區排不出可『跨區借人』。"""
+    cards=[m["card"] for m in members]
+    idx={c:i for i,c in enumerate(cards)}
+    cost={c:hist_cnt.get(c,0) for c in cards}        # 過去稽核次數(少者先排=較常休息者先補)
+    # 當月小夜人數 → 決定「小夜是否補第二班」(夜>4 時多的補二班)
+    n_night=sum(1 for c in cards if info[c]["type"]=="夜")
+    extra_night_to_band2 = max(0, n_night-4)
 
     slots=[(a,g,s) for a in AREAS for g in GROUPS for s in SHIFTS]  # 12 格
-    def need_type(s):  # 該班次需要的班別
+    def need_type(s):
         if s==3: return "夜"
         if s==2: return "白或夜" if extra_night_to_band2>0 else "白"
         return "白"
-    def w_ok(c,g):
-        return info[c]["w135"] if g=="W135" else info[c]["w246"]
     def type_ok(c,s):
         t=info[c]["type"]; nt=need_type(s)
         if t is None: return False
-        if nt=="白": return t=="白"
         if nt=="夜": return t=="夜"
+        if nt=="白": return t=="白"
         return True   # 白或夜
-    def cands(a,g,s):
+    def cands(a,s,cross):
+        """cross=False 取本區、True 取他區；W 組不限(玉繡:都可以)。"""
         res=[]
-        for m in members:
-            c=m["card"]
-            if info[c]["area"]!=a: continue
+        for c in cards:
+            if c in used: continue
             if not type_ok(c,s): continue
-            if not w_ok(c,g): continue
+            if (info[c]["area"]==a) == cross: continue   # 同區/他區篩選
             res.append(c)
         return res
+    def pick(a,s,cross):
+        pool=cands(a,s,cross)
+        pool.sort(key=lambda c:(cost[c], idx[c]))     # 公平→穩定
+        return pool[0] if pool else None
 
-    assigned={}; used=set()
-    # 先排限制最緊的(候選最少的)格子，避免卡死
-    order=sorted(slots, key=lambda sl: len(cands(*sl)))
-    for (a,g,s) in order:
-        pool=[c for c in cands(a,g,s) if c not in used]
-        # 公平：過去稽核少的先(= 較常休息者先補)，再看穩定順序
-        pool.sort(key=lambda c:(cost[c], idx[c]))
-        if pool:
-            c=pool[0]; assigned[(a,g,s)]=c; used.add(c)
-        else:
-            warn(f"❌ {a} {g} 第{s}班 排不出人(看區域/白夜/該組有無上班)，請人工處理")
-    return slots, assigned, used
+    assigned={}; used=set(); crossed=set()
+    # 回合1：本區優先(先排候選最少的格子，避免卡死)
+    order=sorted(slots, key=lambda sl: len(cands(sl[0],sl[2],False)))
+    for sl in order:
+        c=pick(sl[0],sl[2],False)
+        if c is not None: assigned[sl]=c; used.add(c)
+    # 回合2：本區排不出 → 跨區借人
+    for sl in slots:
+        if sl in assigned: continue
+        c=pick(sl[0],sl[2],True)
+        if c is not None:
+            assigned[sl]=c; used.add(c); crossed.add(sl)
+            warn(f"※ {sl[0]} 第{sl[2]}班 本區排不出 → 跨區借「{info[c].get('name','')}」")
+    # 仍排不出
+    for sl in slots:
+        if sl not in assigned:
+            warn(f"❌ {sl[0]} {sl[1]} 第{sl[2]}班 完全排不出人，請人工處理")
+    return slots, assigned, used, crossed
 
 # ===================== 顯示 / 輸出 =====================
 BAND=["","第一班","第二班","第三班"]
@@ -350,8 +357,12 @@ def run():
     info=classify(members, month_status, fw_status)
     tag=f"{yy}-{mm:02d}"
     hist_cnt,hist_rest=load_history(skip_month=tag)
-    slots,assigned,used=assign(members, info, hist_cnt)
+    slots,assigned,used,crossed=assign(members, info, hist_cnt)
     nm=lambda c: name_of.get(c,c)
+    def disp(a,g,s):
+        c=assigned.get((a,g,s))
+        if not c: return "❌排不出"
+        return nm(c) + ("(跨區)" if (a,g,s) in crossed else "")
     rest_members=[m["card"] for m in members if m["card"] not in used]
 
     # ---------- 螢幕 ----------
@@ -362,10 +373,7 @@ def run():
         print(f"\n【{a}】")
         for g in GROUPS:
             gl = "週一三五" if g=="W135" else "週二四六"
-            cells=[]
-            for s in SHIFTS:
-                c=assigned.get((a,g,s))
-                cells.append(f"{BAND[s]}:{nm(c) if c else '❌排不出'}")
+            cells=[f"{BAND[s]}:{disp(a,g,s)}" for s in SHIFTS]
             print(f"  {gl}　"+"　".join(cells))
     print("\n本月休息(輪流公平):", "、".join(nm(c) for c in rest_members) or "無",
           f"（{len(rest_members)} 人）")
@@ -390,8 +398,7 @@ def run():
         for g in GROUPS:
             gl="週一三五" if g=="W135" else "週二四六"
             for s in SHIFTS:
-                c=assigned.get((a,g,s))
-                rows.append({"區":a,"組":gl,"班次":BAND[s],"稽核者":(nm(c) if c else "❌排不出")})
+                rows.append({"區":a,"組":gl,"班次":BAND[s],"稽核者":disp(a,g,s)})
     out_x=os.path.join(OUT_DIR,f"稽核名單_{tag}.xlsx")
     try:
         pd.DataFrame(rows).to_excel(out_x, index=False); print(f"\n✔ Excel：{out_x}")
@@ -402,7 +409,7 @@ def run():
         lines.append(f"《{a}》")
         for g in GROUPS:
             gl="週一三五" if g=="W135" else "週二四六"
-            parts=[f"{BAND[s]}:{nm(assigned.get((a,g,s))) if assigned.get((a,g,s)) else '❌'}" for s in SHIFTS]
+            parts=[f"{BAND[s]}:{disp(a,g,s)}" for s in SHIFTS]
             lines.append(f"　{gl}　"+"　".join(parts))
     lines+=["","休息:"+("、".join(nm(c) for c in rest_members) or "無")]
     out_t=os.path.join(OUT_DIR,f"稽核名單_{tag}.txt")
