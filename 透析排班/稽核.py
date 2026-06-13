@@ -209,30 +209,30 @@ W135_WD={0,2,4}   # 週一三五 (Mon=0)
 W246_WD={1,3,5}   # 週二四六
 
 def classify(members, month_status, first_week_status):
-    """回傳 info[card] = {type:'白'/'夜'/None, area:'一區'/'二區'/'未知', w135:bool, w246:bool}"""
+    """回傳 info[card] = {type:'白'/'夜'/None, area:'一區'/'二區'/'未知', w135:bool, w246:bool}
+       依實測：以『第一週小班』判白/夜＋區域最準(對 6 月答案 10/12)。
+       第一週沒有該員資料時，才退而用整月。"""
     info={}
     for m in members:
-        c=m["card"]; days=month_status.get(c,{})
-        white=night=0; w135=w246=False; area_count={}
-        for d,(cat,shift,zone) in days.items():
+        c=m["card"]
+        # 主要資料來源 = 第一週；第一週查無此人才用整月
+        src = first_week_status if first_week_status.get(c) else month_status
+        white=night=0; w135=w246=False
+        for d,(cat,shift,zone) in src.get(c,{}).items():
             s=(shift or "").strip()
             if is_excluded_shift(s):   # 大夜/勤務/休假等不算「有效上班」
                 continue
-            # 白/夜
             if s.startswith("D"): white+=1
             elif s.startswith("E"): night+=1
-            # 在哪組有上班日
             if d.weekday() in W135_WD: w135=True
             if d.weekday() in W246_WD: w246=True
-        # 整月白/夜(多數；平手算白)
-        typ = None
+        # 白/夜(多數；平手算白)
         if white==0 and night==0: typ=None
         elif white>=night: typ="白"
         else: typ="夜"
-        # 區域：優先看第一週
-        area=_area_of(c, first_week_status)
-        if area=="未知" or area in ("空",):
-            area=_area_of_month(c, month_status)
+        # 區域：同樣以第一週(src)為準，查無再退整月
+        area=_area_of(c, src)
+        if area=="未知": area=_area_of_month(c, month_status)
         info[c]={"type":typ,"area":area,"w135":w135,"w246":w246,
                  "white":white,"night":night}
     return info
