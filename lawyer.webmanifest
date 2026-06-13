@@ -1,0 +1,13 @@
+{
+  "name": "AI 律師",
+  "short_name": "AI 律師",
+  "start_url": "./lawyer.html",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#0E1626",
+  "theme_color": "#0E1626",
+  "icons": [
+    { "src": "icon-lawyer.png", "sizes": "512x512", "type": "image/png", "purpose": "any" }
+  ]
+}

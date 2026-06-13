@@ -114,7 +114,7 @@
 **手機體驗強化（兩支）：** 防 iOS 點輸入框自動放大（@media ≤600px 輸入字 16px）；複製改用 `copyEl()`（先選取可見 textarea，App 內建瀏覽器擋複製時至少已選好可長按拷貝）；密碼/金鑰/查詢輸入關 autocapitalize/autocorrect/spellcheck；按鈕 `touch-action:manipulation` 去點擊延遲；臨床快查搜尋框自動清 `QUERY:`前綴/`[tiab][Mesh]`標籤/網址編碼、0筆自動放寬、加「🧪一鍵試範例」、摘要去 HTML 標籤。**已知限制**：App 內建小視窗(in-app webview)仍可能擋程式化複製→建議用 Safari 開（copyEl 已退而求其次幫使用者選好）。
 
 **🔄 自動更新偵測（兩支，已上線）：** 解決使用者最大痛點——加在主畫面的圖示/瀏覽器快取常停在舊版，她不知道手上是不是最新、又不想手動加 `?數字`、不想刪圖示重加。做法：repo 根目錄放 **`ver.txt`**（內容是一串版本號，如 `2026061201`）；兩支 HTML 各內嵌 `const BUILD="…"`（與當下 `ver.txt` 同值）。一開頁就 `fetch("ver.txt?t="+Date.now(),{cache:"no-store"})` 抓伺服器版本，**和內嵌 BUILD 不一樣＝有新版** → 上方跳青色橫幅「🔄 有新版本了！」＋「立即更新」鈕，按下 `location.replace(pathname+"?v="+Date.now())` 強制繞過快取載入最新；沒新版什麼都不跳。`#updbanner`/`#updbtn`，✕ 可關。抓不到 ver.txt（離線/被擋）就靜默不跳，不影響使用。
-> ⚠️ **未來每次改完要部署時，務必同時做兩件事：**(1) 把 `ver.txt` 改成新版本號；(2) 把兩支 HTML 裡的 `const BUILD` 改成同一個新號。**漏改 BUILD ＝偵測失效**（會一直以為沒新版或一直跳）。建議用日期＋流水號，如 `2026061202`。
+> ⚠️ **未來每次改完要部署時，務必同時做兩件事：**(1) 把 `ver.txt` 改成新版本號；(2) 把**三支** HTML（evidence／search／lawyer）裡的 `const BUILD` 改成同一個新號（並視需要把 `sw.js` 的 `CACHE` 同步）。**漏改 BUILD ＝偵測失效**（會一直以為沒新版或一直跳）。建議用日期＋流水號，如 `2026061219`。
 
 **📱 PWA（加到主畫面變正式 App，兩支已上線）：** 各自有 `*.webmanifest`（name/short_name/start_url/`display:standalone`/`theme_color:#0E1626`/icon 512）＋ head 內 apple-touch-icon、`apple-mobile-web-app-capable`、`apple-mobile-web-app-title`、`theme-color`。圖示是純前端用 Python(zlib) 程式畫的 PNG：評讀＝青色勾、快查＝青色放大鏡，皆深藍底（冷感科技風，刻意不像使用者本人風格）。加到主畫面後有正式 App 名稱與圖示、全螢幕無網址列。**改圖示**＝重畫 `icon-evidence.png`/`icon-search.png`（腳本邏輯見 commit）。
 
@@ -123,6 +123,36 @@
 **共通（金鑰共用）：** 兩工具同源（github.io/union-guide），故 **API 金鑰共用同一把**（`ebn_api-key`/`ebn_api-model`），貼一次兩邊用、同一 Anthropic 帳戶扣款。金鑰只存本機、不外流、不入版本庫。成本：評讀一篇約 NT$1~10、查詢/綜合約 NT$0.1~0.5；額度約一年過期；偶爾用建議免費版。
 
 ---
+
+## 三之三、第三批 — 「⚖️ AI 律師」→ 已建立 `lawyer.html`（獨立檔）
+
+**定位（使用者澄清）：本專案核心是「加班費補發專案」，不只是泛工會工具。** 故 AI 律師以**勞動法／勞資爭議（加班費・工時・資遣・協商）為主場**，同時涵蓋使用者點名的刑法、民法、商標法、個資法。獨立檔、獨立密碼（進場 `lawyer2026`，可右上改）、ACCESS_VERSION 趕人機制同其他兩支。**API 金鑰共用同一把**（`ebn_api-key`/`ebn_api-model`，同源）。
+
+### 使用者要的四件事 → 對應實作
+1. **引經據典**：系統提示詞要求每個主張都搬出【法規名稱 第X條】＋條文重點，且只把「載入的法條原文」當已核實依據注入（`lawContext()` 依目前領域＋全部勞動條文）。
+2. **像律師辯論、判斷對方對話**：使用者可貼「對方（主管／資方／對造）說的話」，AI 逐點判斷有無法律依據、哪裡站不住腳、給可直接回覆的反駁；多輪對話（`CHAT[]`、`askLawyer()` 帶 system＋history 呼叫 Claude），可「↩︎ 繼續問／反駁」。
+3. **提建議＋羅列證據**：「📋 羅列我需要的證據」一鍵叫 AI 回「項目｜為什麼｜核心/加分/程序」逐行，`parseEvidence()` 解析成**可打勾清單**（同 index.html 證據三組概念，localStorage 記憶＋進度條），可一鍵複製存 LINE。並針對勞動事件法 §38 提醒「核心其實只要出勤紀錄＋班表」。
+4. **法規會過期、一鍵更新**：見下。
+
+### 法規庫與「一鍵更新」的誠實設計（最關鍵的限制）
+- **全國法規資料庫（law.moj.gov.tw）無瀏覽器友善公開 API、CORS 會擋**；純前端＋GitHub Pages 直接抓不可靠（開發容器亦無法實測）。**這跟 CASP 的處境一樣**，故採同一套「用的當下＋一鍵更新」策略，而非假裝能自動同步。
+- **內建法條快照 `LAW_SEED`**（勞動群為主：勞基法 §16/17/22/24/30/32/36/38/39/79、施行細則 §2/7、勞動事件法 §37/38；個資 §5/19/20/29；民法 §148/184/487；刑法 §304/305/310；商標 §68/69）。**每條標 `seed:true` → 畫面顯示「📌 快照」徽章**，並在卡片與版本說明明白告知「法律會修，正式引用前請核對最新版」。**刻意不誇稱權威**，延續本專案防杜撰立場。
+- **一鍵更新 — 已升級為「官方真資料」（使用者選 B）**：
+  - **主路（官方）**：`tools/update-laws.py` 由 GitHub Action `update-laws.yml`（每週排程＋手動 workflow_dispatch）在有網路的 runner 上，從**全國法規資料庫官方 API** `https://law.moj.gov.tw/api/Ch/Law/JSON`（回傳整包 ZIP→內含 JSON）抽出我們關心的法條，產出精簡 `laws.json` 並自動 commit。`lawyer.html` 開頁 `fetch("laws.json")`（`fetchOfficial()`），成功就以官方資料取代內建快照、標「✅官方」並顯示官方更新日；抓不到（還沒產生／離線）則退回內建 `LAW_SEED`（標「📌快照」）。`law-refresh-official` 鈕可手動重抓。
+  - **收錄策略**：勞動法群（勞基法、施行細則、勞動事件法、勞退條例、性別平等工作法、職安法、勞資爭議處理法）＋個資法＋商標法＝**整部**；民法、刑法為**巨型法典只收常用條**（WANT 名單，易擴充）。找不到的法規只警告不中止（防更名）；抽不到任何條則中止、不覆蓋舊檔。
+  - **備路（AI 輔助，保留）**：官方檔還沒產生、或要加官方沒收錄的條 → 「📋 複製更新指令給 AI」→ 貼回「匯入」框（`importLaws()`，同法規名＋條號**覆蓋更新**；存 `law_db` 後優先於官方，按「↺ 還原」可丟掉自訂改回官方）。
+  - **SW 不攔 `laws.json`**（同 `ver.txt`），永遠拿最新官方版。
+  - **誠實限制**：GitHub 排程工作流程在 repo 連續 60 天無提交會被停用（PLAN 既有提醒）；屆時 `laws.json` 會停在最後更新日（畫面有顯示日期），AI 對未更新條仍標 ⚠ 待查，可到 Actions 手動 Run。官方 API 形態是「整包 ZIP、非逐條 REST、CORS 不友善」，故走 Action 後端抓取而非前端直抓。
+- **防幻覺護欄**：系統提示詞明訂——引用〈可用法條原文〉內的條文視為已核實；引用**清單外**條號／內容**必須標 `⚠ 待查（請核對全國法規資料庫最新版）`**、不得杜撰條號／罰則／金額；`renderChat()` 把「⚠ 待查」轉成 `.vflag` 徽章凸顯。
+
+### 介面與共通機制（與另兩支一致）
+- 冷感科技風、密碼 gate、`#updbanner` 版本偵測（`BUILD`＝ver.txt）、PWA（`lawyer.webmanifest`＋`icon-lawyer.png` 程式畫的青色天秤）、service worker 外殼快取、footer 版本／更新說明 modal、💬 回饋按鈕、📲 換裝置接力（`collectState/applyState` 帶案件設定＋對話＋證據，**不含金鑰**）、🗑 一鍵清除換下一案、🧪 帶入「加班費補發爭議」範例。
+- 三支互相在 topbar 加了 → 連結；`share.html` 加第 4 張 QR（AI 律師）。
+
+### 待驗證 / TODO
+- [ ] **實機測 `law-try-fetch`**（容器無網路；幾乎必被 CORS 擋，已有 fallback，使用者照①更新即可）。
+- [ ] 內建 `LAW_SEED` 條文為求開箱即用憑知識整理、**標為快照**；正式使用前以「一鍵更新」校正最新條文（尤其金額／期間／罰鍰）。
+- [ ] 若日後想擴充法規範圍，直接 `importLaws()` 即可，無需改原始碼。
 
 ## 四、貫穿全案的關鍵決策
 
@@ -136,7 +166,12 @@
 ## 五、檔案清單
 - `evidence.html` — 評讀工具（第一批，冷感科技風，含交報告樸素版）
 - `search.html` — 臨床快查（第二批，獨立檔，Europe PMC live 搜尋）
-- `ver.txt` — 線上版本號（自動更新偵測用，每次部署要 +1，並同步改兩支 HTML 的 `const BUILD`）
+- `lawyer.html` — ⚖️ AI 律師（第三批，獨立檔，勞動法主場；官方法規 laws.json＋備援 AI 更新＋多輪辯論＋證據羅列）
+- `lawyer.webmanifest` / `icon-lawyer.png` — AI 律師的 PWA 設定與圖示（程式畫的青色天秤）
+- `laws.json` — 由 GitHub Action 從全國法規資料庫官方 API 產生的法條（**Action 自動 commit，勿手改**；不存在時工具退回內建快照）
+- `tools/update-laws.py` — 抓官方 ZIP→抽條→產 `laws.json` 的腳本（無外網的開發容器不跑，靠 Action）
+- `.github/workflows/update-laws.yml` — 每週＋手動觸發跑上面腳本、有變更才提交
+- `ver.txt` — 線上版本號（自動更新偵測用，每次部署要 +1，並同步改三支 HTML：evidence／search／lawyer 的 `const BUILD`）
 - `sw.js` — service worker（離線快取外殼；改快取內容時 `CACHE` 版本要 +1）
 - `share.html` — 掃碼分享看板（兩支工具的 QR Code，可投影/列印貼桌上；QR 用 davidshimjs/qrcodejs CDN 前端生成，載不到時退回顯示純網址）
 - `回饋表單-一鍵建立.gs` — Google Apps Script，使用者貼到 script.google.com 按執行一次，**自動生出**「使用回饋」Google 表單（含「手機卡卡→追問卡在哪」分支），連結自動寄到她信箱。回覆匯整在表單、登入 Google 一次看完。為什麼走這條：純前端無後台、我無她 Google 帳號權限，此法是「我寫好整張表、她只按一次執行」、零新帳號、資料全在她自己 Google。

@@ -2,11 +2,11 @@
    策略：HTML 走「網路優先」——有網路永遠拿最新（自動更新偵測照常運作），沒網路才退回快取。
         圖示/設定/CDN 走「快取優先」。ver.txt 完全不攔，保持每次連線即時比對版本。
    ⚠️ 每次部署若想讓離線快取也更新，把下面 CACHE 後面的版本號改成跟 ver.txt 一樣。 */
-const CACHE = "ebn-2026061218";
+const CACHE = "ebn-2026061228";
 const SHELL = [
-  "./evidence.html", "./search.html", "./share.html",
-  "./icon-evidence.png", "./icon-search.png",
-  "./evidence.webmanifest", "./search.webmanifest",
+  "./evidence.html", "./search.html", "./lawyer.html", "./share.html",
+  "./icon-evidence.png", "./icon-search.png", "./icon-lawyer.png",
+  "./evidence.webmanifest", "./search.webmanifest", "./lawyer.webmanifest",
   "https://cdn.jsdelivr.net/npm/pptxgenjs@3.12.0/dist/pptxgen.bundle.js",
   "https://cdn.jsdelivr.net/gh/davidshimjs/qrcodejs@master/qrcode.min.js"
 ];
@@ -28,13 +28,15 @@ self.addEventListener("fetch", e => {
   if (req.method !== "GET") return;
   const url = new URL(req.url);
   if (url.pathname.endsWith("/ver.txt") || url.pathname.endsWith("ver.txt")) return; // 版本檔不攔，永遠走網路
+  if (url.pathname.endsWith("/laws.json") || url.pathname.endsWith("laws.json")) return; // 法規檔不攔，永遠拿最新官方版
 
   // HTML / 導覽：網路優先，失敗退快取（離線也能開）
   if (req.mode === "navigate" || req.destination === "document") {
     e.respondWith(
       fetch(req).then(r => { const cp = r.clone(); caches.open(CACHE).then(c => c.put(req, cp)); return r; })
         .catch(() => caches.match(req).then(m => m ||
-          caches.match(url.pathname.indexOf("search") >= 0 ? "./search.html" : "./evidence.html")))
+          caches.match(url.pathname.indexOf("lawyer") >= 0 ? "./lawyer.html"
+            : url.pathname.indexOf("search") >= 0 ? "./search.html" : "./evidence.html")))
     );
     return;
   }
