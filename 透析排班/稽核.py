@@ -355,7 +355,7 @@ def run():
     rest_members=[m["card"] for m in members if m["card"] not in used]
 
     # ---------- 螢幕 ----------
-    print(f"\n■ 檔案：{os.path.basename(path)}　月份：{tag}（第一週起 {fw_mon}）")
+    print(f"\n■ 檔案：{'、'.join(os.path.basename(p) for p in files)}　月份：{tag}（第一週起 {fw_mon}）")
     print(f"■ 規則：每月12位｜白班→一二班、小夜→三班｜分區看第一週小班\n")
     print("="*14+f"  {tag} 稽核藥水 AK 名單  "+"="*14)
     for a in AREAS:
