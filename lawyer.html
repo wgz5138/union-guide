@@ -315,8 +315,8 @@
     </div>
 
     <!-- 法規庫 -->
-    <div class="label"><span class="n">5</span>法規庫（AI 引用的依據）</div>
-    <div class="card">
+    <div class="label" id="law-sec-toggle" style="cursor:pointer"><span class="n">5</span>法規庫（AI 引用的依據）<span id="law-sec-arrow" style="margin-left:auto;text-transform:none;letter-spacing:0;color:var(--blue);font-weight:600">點開查詢 ▾</span></div>
+    <div class="card" id="law-card" style="display:none">
       <div id="law-status" class="note ok" style="display:none;margin-bottom:10px"></div>
       <div id="law-warn" class="note warn" style="margin-bottom:10px">📌 目前是<b>內建法條快照</b>（官方資料還沒抓到時的後備）。<b>法律會修</b>，正式引用前請核對<b>全國法規資料庫</b>。AI 對<b>沒載入</b>的條號會自動標 <span class="vflag">⚠ 待查</span>，不會憑空捏造條號。</div>
       <input class="txt" id="law-search" placeholder="🔎 搜尋法條（輸入：加班費、第38條、勞動事件、誹謗…）">
@@ -452,8 +452,9 @@ function showAppBanner(){ if(sessionStorage.getItem("hideAppBanner"))return; con
   if(/FBAN|FBAV|FBIOS|Instagram|Line\/|MicroMessenger|Twitter|TikTok|GSA\//i.test(navigator.userAgent||"")) showAppBanner(); })();
 
 /* 🔄 自動偵測新版本 */
-const BUILD="2026061228";
+const BUILD="2026061229";
 const CHANGELOG=[
+  "法規庫改可摺疊＋預設不全攤（手機不再被上千條洗很長）；搜尋或點分類才列出、超過60條提示縮小範圍",
   "付費說明寫清楚：不是訂閱、是儲值用多少扣多少、額度會過期、一題大概多少、怎麼拿金鑰；強調免費路隨時在",
   "身分背景欄加『📋 帶入範本』：照欄位把你的公告貼進去、填一次永久記住（只存這台），同事用『接力』分享",
   "新增『🪪 我的身分背景／本案文件』常駐欄：只存這台、不上傳，AI 每次自動參考（院內規定優先於通則）",
@@ -564,19 +565,32 @@ function renderCats(){
 function renderLaws(){
   const q=lawNorm(val("law-search")).toLowerCase();
   const box=document.getElementById("law-list");
-  const list=LAWS.filter(l=>{
+  // 預設不全攤（避免上千條把手機洗到很長）：沒搜尋又選「全部」時，只給提示
+  if(!q && LAW_CAT==="全部"){
+    box.innerHTML='<div class="hint">📚 共 '+LAWS.length+' 條法規。<b>輸入關鍵字</b>（如：加班費、第38條、資遣、時效、性騷擾）<b>或點上方分類</b>即可查詢。</div>';
+    return;
+  }
+  let list=LAWS.filter(l=>{
     if(LAW_CAT!=="全部" && l.cat!==LAW_CAT) return false;
     if(!q) return true;
     return (lawNorm(l.law)+lawNorm(l.art)+lawNorm(l.title)+lawNorm(l.text)).toLowerCase().indexOf(q)>=0;
   });
   if(!list.length){ box.innerHTML='<div class="hint">沒有符合的法條。可按「➕ 匯入 / 貼上法條」加入，或換關鍵字。</div>'; return; }
+  const CAP=60, total=list.length, more=total-CAP;
+  if(total>CAP) list=list.slice(0,CAP);
   box.innerHTML=list.map((l,i)=>`<div class="law-row" data-i="${i}">
     <div class="law-h"><span class="nm">${esc(l.law)}</span><span class="ar">${esc(l.art)}</span><span class="tt">${esc(l.title||"")}</span>${l.official?'<span class="badge-official">✅官方</span>':l.seed?'<span class="badge-seed">📌快照</span>':''}</div>
-    <div class="law-b">${esc(l.text)}</div></div>`).join("");
-  box._list=list;
+    <div class="law-b">${esc(l.text)}</div></div>`).join("")
+    + (total>CAP?('<div class="hint">只顯示前 '+CAP+' 條，還有 '+more+' 條——請<b>輸入更精確的關鍵字</b>縮小範圍。</div>'):"");
   box.querySelectorAll(".law-h").forEach(h=>h.addEventListener("click",()=>h.parentElement.classList.toggle("open")));
 }
 document.getElementById("law-search").addEventListener("input",renderLaws);
+/* 法規庫整段預設摺疊，手機才不會被洗很長；點標題展開／收合 */
+document.getElementById("law-sec-toggle").addEventListener("click",()=>{
+  const c=document.getElementById("law-card"), a=document.getElementById("law-sec-arrow");
+  const open=c.style.display!=="none"; c.style.display=open?"none":"block";
+  if(a) a.textContent=open?"點開查詢 ▾":"收合 ▴";
+});
 renderCats(); renderLaws();
 
 /* 載入官方 laws.json（GitHub Action 由全國法規資料庫官方 API 產生）。
