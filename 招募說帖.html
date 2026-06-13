@@ -14,7 +14,7 @@
   - 🔧 連署表單按鈕：搜尋【★表單連結★】，把 href 換成你的「填寫用」公開連結
        （forms.gle/xxxx，不是 /edit 編輯連結！只有一處要換）。
   - 📊 招募進度數字：搜尋【★人數★】，改 data-now（目前人數）即可。
-  - 凡法條編號都標「⚠待核對」，定稿前對勞工局範本。
+  - 每條法條都附「全國法規資料庫」官方深連結（綠色鈕），點了直達該條最新原文。
   - 這份請「私下分享給受邀同仁」，勿公開貼網路（低調）。
   ============================================================================
 -->
@@ -118,6 +118,8 @@
   .faq .ans strong { color: var(--ink); font-weight: 500; }
 
   .check-flag { display: inline-block; background: var(--gold-light); color: var(--gold); font-size: 11px; font-weight: 500; padding: 0px 6px; border-radius: 5px; border: 1px solid #EBD89A; white-space: nowrap; }
+  .law-src { display: inline-block; background: var(--green-light); color: var(--green-deep); font-size: 11px; font-weight: 500; padding: 0px 6px; border-radius: 5px; border: 1px solid #B8DCC4; white-space: nowrap; text-decoration: none; }
+  .law-src:active { background: #D7EFE0; }
 
   /* 連署 CTA 區 */
   .join-card { background: var(--red); color: #fff; border-radius: 14px; padding: 1.4rem 1.3rem; text-align: center; }
@@ -159,7 +161,7 @@
       <div class="opening">
         <p>嘿，會看到這份，是因為<strong>我們信任你</strong>。</p>
         <p>這些年，排班、加班費、人力、權益……很多不合理，我們一個人去反映，往往石沉大海，甚至怕被針對。</p>
-        <p>但<strong>《工會法》給了我們一個合法的方法</strong>：只要同一家醫院、有 <strong>30 位</strong>勞工身分的同仁站出來，就能成立「企業工會」，用團結的力量跟院方<strong>對等協商</strong>。 <span class="check-flag">⚠待核對 §11</span></p>
+        <p>但<strong>《工會法》給了我們一個合法的方法</strong>：只要同一家醫院、有 <strong>30 位</strong>勞工身分的同仁站出來，就能成立「企業工會」，用團結的力量跟院方<strong>對等協商</strong>。 <a class="law-src" href="https://law.moj.gov.tw/LawClass/LawSingle.aspx?pcode=N0020001&amp;flno=11" target="_blank" rel="noopener">📖 工會法§11 ↗</a></p>
         <p>我們現在差的，就是<strong>人</strong>。你願不願意，成為其中一個？</p>
       </div>
     </section>
@@ -189,7 +191,7 @@
       </div>
       <div class="shield-card">
         <div class="sh-head"><span class="sh-tag">法律保護傘</span><span class="sh-title">這正是法律保護你的地方</span></div>
-        <p>雇主若因為你<strong>發起、加入或參與工會</strong>，而對你拒僱、解僱、降調、減薪、調職、影響排班考核、或妨礙工會 —— 全都屬於<strong>「不當勞動行為」</strong>，違法處分<strong>無效</strong>，可向勞動部申請裁決救濟。 <span class="check-flag">⚠待核對 §35</span></p>
+        <p>雇主若因為你<strong>發起、加入或參與工會</strong>，而對你拒僱、解僱、降調、減薪、調職、影響排班考核、或妨礙工會 —— 全都屬於<strong>「不當勞動行為」</strong>，違法處分<strong>無效</strong>，可向勞動部申請裁決救濟。 <a class="law-src" href="https://law.moj.gov.tw/LawClass/LawSingle.aspx?pcode=N0020001&amp;flno=35" target="_blank" rel="noopener">📖 工會法§35 ↗</a></p>
         <p>👉 也因為這樣，我們<strong>現階段低調</strong>、名單謹慎保管；等人數到位、籌備會成立，就站在法律的保護下進行。組織期間請保留相關紀錄。</p>
       </div>
     </section>
@@ -204,7 +206,7 @@
         <ul class="who-list">
           <li><span class="badge yes">✓</span><div><strong>約用、契約、派遣等「勞工身分」者</strong><small>可以發起、可以加入企業工會。（如果你是，太好了！）</small></div></li>
           <li><span class="badge no">✕</span><div><strong>正式公務人員（公職）</strong><small>不能加入企業工會，他們適用《公務人員協會法》的公務人員協會。</small></div></li>
-          <li><span class="badge no">✕</span><div><strong>代表雇主行使管理權的主管</strong> <span class="check-flag">⚠待核對 §14</span><small>依工會法規定不得加入該工會。</small></div></li>
+          <li><span class="badge no">✕</span><div><strong>代表雇主行使管理權的主管</strong> <a class="law-src" href="https://law.moj.gov.tw/LawClass/LawSingle.aspx?pcode=N0020001&amp;flno=14" target="_blank" rel="noopener">📖 工會法§14 ↗</a><small>依工會法規定不得加入該工會。</small></div></li>
         </ul>
         <p class="note-soft">不確定自己算哪一種？<strong>私訊我們幫你確認</strong>，資料只用於確認資格、會保密。</p>
       </div>
@@ -232,10 +234,10 @@
       </div>
 
       <details class="faq"><summary><span class="q">Q</span><span>我的名字會曝光嗎？院方會知道嗎？</span><span class="arrow">▾</span></summary>
-        <div class="ans">連署書與名冊依法是交給「<strong>主管機關（勞工局）</strong>」登記，<strong>不會主動公開給雇主</strong>；現階段我們也低調保管名單。而且就算院方知道，因組工會打壓你是<strong>違法的</strong>（見上方保護傘）。 <span class="check-flag">⚠待核對 §35</span></div></details>
+        <div class="ans">連署書與名冊依法是交給「<strong>主管機關（勞工局）</strong>」登記，<strong>不會主動公開給雇主</strong>；現階段我們也低調保管名單。而且就算院方知道，因組工會打壓你是<strong>違法的</strong>（見上方保護傘）。 <a class="law-src" href="https://law.moj.gov.tw/LawClass/LawSingle.aspx?pcode=N0020001&amp;flno=35" target="_blank" rel="noopener">📖 工會法§35 ↗</a></div></details>
 
       <details class="faq"><summary><span class="q">Q</span><span>會影響我的工作或排班嗎？</span><span class="arrow">▾</span></summary>
-        <div class="ans"><strong>不應該、也不合法。</strong>雇主不得因你參加工會而在工作、排班、考核上給你不利對待，否則屬不當勞動行為。 <span class="check-flag">⚠待核對 §35</span> 真遇到，請保留紀錄並告訴我們。</div></details>
+        <div class="ans"><strong>不應該、也不合法。</strong>雇主不得因你參加工會而在工作、排班、考核上給你不利對待，否則屬不當勞動行為。 <a class="law-src" href="https://law.moj.gov.tw/LawClass/LawSingle.aspx?pcode=N0020001&amp;flno=35" target="_blank" rel="noopener">📖 工會法§35 ↗</a> 真遇到，請保留紀錄並告訴我們。</div></details>
 
       <details class="faq"><summary><span class="q">Q</span><span>要花錢嗎？會費多少？</span><span class="arrow">▾</span></summary>
         <div class="ans">會費金額與收法<strong>籌備中</strong>，會在<strong>成立大會由會員表決後公告</strong>，不會私下亂收。現在連署，<strong>不用先繳任何錢</strong>。</div></details>
@@ -244,10 +246,10 @@
         <div class="ans"><strong>可以！</strong>約用、契約、派遣等勞工身分的同仁，正是企業工會的發起人與會員。</div></details>
 
       <details class="faq"><summary><span class="q">Q</span><span>現在「連署」是要我做什麼？有約束力嗎？</span><span class="arrow">▾</span></summary>
-        <div class="ans">現在只是請你<strong>填一份意願表單</strong>，表達「我支持、我願意連署發起」。這是成立工會的法定第一步（湊滿 30 人）。後續籌備會、章程、會費等，都會再一起討論與表決。 <span class="check-flag">⚠待核對 §11</span></div></details>
+        <div class="ans">現在只是請你<strong>填一份意願表單</strong>，表達「我支持、我願意連署發起」。這是成立工會的法定第一步（湊滿 30 人）。後續籌備會、章程、會費等，都會再一起討論與表決。 <a class="law-src" href="https://law.moj.gov.tw/LawClass/LawSingle.aspx?pcode=N0020001&amp;flno=11" target="_blank" rel="noopener">📖 工會法§11 ↗</a></div></details>
 
       <details class="faq"><summary><span class="q">Q</span><span>跟現有的護理工會／職業工會有什麼不同？</span><span class="arrow">▾</span></summary>
-        <div class="ans"><strong>企業工會</strong>是「本院勞工」組成，能直接針對<strong>我們醫院</strong>的問題跟院方協商；職業／產業工會是跨單位的同職業者組成。性質不同，<strong>通常不影響你既有的其他工會身分</strong>。 <span class="check-flag">⚠待核對</span></div></details>
+        <div class="ans"><strong>企業工會</strong>是「本院勞工」組成，能直接針對<strong>我們醫院</strong>的問題跟院方協商；職業／產業工會是跨單位的同職業者組成。性質不同，<strong>通常不影響你既有的其他工會身分</strong>。 <a class="law-src" href="https://law.moj.gov.tw/LawClass/LawSingle.aspx?pcode=N0020001&amp;flno=6" target="_blank" rel="noopener">📖 工會法§6 ↗</a></div></details>
     </section>
 
     <!-- 7. 怎麼連署（CTA）-->
@@ -283,7 +285,7 @@
 
   <footer>
     高榮企業工會（籌備中）· <strong>請勿外傳</strong><br>
-    本說帖內容僅供參考，非正式法律意見；標「⚠待核對」處以勞工局範本／律師意見為準。<br>
+    本說帖內容僅供參考，非正式法律意見；綠色法條鈕直接連到全國法規資料庫官方最新原文，正式引用以官方／勞工局範本／律師意見為準。<br>
     蒐集之個人資料依《個人資料保護法》僅作必要使用並妥善保護。
   </footer>
 
