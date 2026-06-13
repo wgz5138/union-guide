@@ -28,8 +28,10 @@
   ⑤ 公平：依「過去稽核次數」少的先排(= 之前較常休息的人，這個月先補上稽核)，
      剩下 3 個沒排到的就是本月休息 → 長期休息次數自然平均。
 
-用法:  python 稽核.py <班表.xls> [月份 例 2026-06]
-        月份不填 → 自動用「最後一個分頁所在的月份」
+用法:  python 稽核.py <週班1.xls> [週班2.xls ...] [月份 例 2026-06]
+        • 小班是「週班」(一週一檔)，稽核要看整月 → 可一次給多個週班檔，程式自動合併成整月。
+        • 也支援「一檔多分頁(每頁一週)」的格式。
+        • 月份不填 → 自動用「最後那一週所在的月份」。
 """
 import os, sys, csv, re, traceback
 from datetime import date, datetime, timedelta
@@ -147,17 +149,19 @@ def parse_sheet(df):
     monday=bdates[0] if bdates and bdates[0] else None
     return status, name_of, by_name, monday
 
-def parse_month(path, want_month):
-    """讀整本(多分頁)，合併出『目標月份』的整月資料。
-       want_month = (year,month) 或 None(自動用最後分頁的月份)。"""
-    xls=pd.ExcelFile(path)
-    sheets=[]   # (monday, status, name_of, by_name, sheet_name)
-    for sn in xls.sheet_names:
-        try: df=pd.read_excel(path, sheet_name=sn, header=None)
-        except Exception as e: warn(f"⚠ 分頁「{sn}」讀取失敗({e})"); continue
-        st,no,bn,mon=parse_sheet(df)
-        if mon: sheets.append((mon,st,no,bn,sn))
-    if not sheets: raise RuntimeError("整本都抓不到『卡號/姓名』表頭或日期，請確認檔案格式")
+def parse_month(paths, want_month):
+    """讀一個或多個週班檔(每檔可含多分頁)，合併出『目標月份』的整月資料。
+       paths = [檔案路徑,...]； want_month = (year,month) 或 None(自動用最後一週的月份)。"""
+    sheets=[]   # (monday, status, name_of, by_name, 來源標籤)
+    for path in paths:
+        try: xls=pd.ExcelFile(path)
+        except Exception as e: warn(f"⚠ 打不開檔案 {os.path.basename(path)}({e})"); continue
+        for sn in xls.sheet_names:
+            try: df=pd.read_excel(path, sheet_name=sn, header=None)
+            except Exception as e: warn(f"⚠ {os.path.basename(path)} 分頁「{sn}」讀取失敗({e})"); continue
+            st,no,bn,mon=parse_sheet(df)
+            if mon: sheets.append((mon,st,no,bn,f"{os.path.basename(path)}#{sn}"))
+    if not sheets: raise RuntimeError("所有檔案都抓不到『卡號/姓名』表頭或日期，請確認是正確的小班檔")
     sheets.sort(key=lambda x:x[0])
     # 決定目標月份
     if want_month is None:
@@ -315,24 +319,31 @@ def assign(members, info, hist_cnt):
 # ===================== 顯示 / 輸出 =====================
 BAND=["","第一班","第二班","第三班"]
 def run():
-    path  = sys.argv[1] if len(sys.argv)>1 else None
-    marg  = sys.argv[2] if len(sys.argv)>2 else None
-    if not path or not os.path.exists(path):
-        print("用法: python 稽核.py <班表.xls> [月份 例 2026-06]"); return
+    args=sys.argv[1:]
+    # 參數分兩種：檔案路徑(.xls/.xlsx) 與 月份(像 2026-06)
+    files=[a for a in args if a.lower().endswith((".xls",".xlsx"))]
+    month_args=[a for a in args if re.fullmatch(r"\d{4}\D?\d{1,2}", a)]
+    missing=[f for f in files if not os.path.exists(f)]
+    if not files or missing:
+        if missing: print("❌ 找不到這些檔案：" + "、".join(missing))
+        print("用法: python 稽核.py <週班1.xls> [週班2.xls ...] [月份 例 2026-06]")
+        print("（小班是週班，可一次給多個週班檔，程式自動合併成整月）")
+        return
 
     global ZONE2AREA, SHIFT_EXCLUDE, HOLIDAYS
     ZONE2AREA=load_beds(); SHIFT_EXCLUDE=load_shifts(); HOLIDAYS=load_holidays()
 
     want=None
-    if marg:
-        mm=re.search(r"(\d{4})\D?(\d{1,2})", marg)
-        if mm: want=(int(mm.group(1)), int(mm.group(2)))
-        else: warn(f"⚠ 月份『{marg}』看不懂，改用自動判斷")
+    if month_args:
+        mm=re.search(r"(\d{4})\D?(\d{1,2})", month_args[0])
+        want=(int(mm.group(1)), int(mm.group(2)))
 
     try:
-        month_status,name_of,by_name,(yy,mm),fw_mon,fw_status=parse_month(path, want)
+        month_status,name_of,by_name,(yy,mm),fw_mon,fw_status=parse_month(files, want)
     except Exception as e:
         print(f"❌ 讀班表失敗：{e}"); return
+    if len(files)>1:
+        print(f"ℹ 已合併 {len(files)} 個週班檔")
 
     roster=load_roster()
     members=match_members(roster, month_status, name_of, by_name)
