@@ -30,6 +30,34 @@ NEW_MAIN = (
     '    except Exception: pass'
 )
 
+# 在 frozen(exe) 環境，pandas 有時判不出 .xls 格式 → 直接依副檔名指定引擎
+SHIM = (
+    "import pandas as pd\n"
+    "# === exe 相容修正：.xls→xlrd, .xlsx→openpyxl ===\n"
+    "def _xl_engine(_io):\n"
+    "    try:\n"
+    "        _t = str(_io).lower()\n"
+    "        if _t.endswith('.xlsx') or _t.endswith('.xlsm'): return 'openpyxl'\n"
+    "        if _t.endswith('.xls'): return 'xlrd'\n"
+    "    except Exception: pass\n"
+    "    return None\n"
+    "_ORIG_EF = pd.ExcelFile\n"
+    "_ORIG_RE = pd.read_excel\n"
+    "def _EF(io, *a, **k):\n"
+    "    if not k.get('engine'):\n"
+    "        e=_xl_engine(io)\n"
+    "        if e: k['engine']=e\n"
+    "    return _ORIG_EF(io, *a, **k)\n"
+    "def _RE(io, *a, **k):\n"
+    "    if not k.get('engine'):\n"
+    "        e=_xl_engine(io)\n"
+    "        if e: k['engine']=e\n"
+    "    return _ORIG_RE(io, *a, **k)\n"
+    "pd.ExcelFile = _EF\n"
+    "pd.read_excel = _RE\n"
+    "# === 修正結束 ==="
+)
+
 def make_patched(src_path, ascii_name):
     s = open(src_path, encoding="utf-8").read()
     if OLD_BASE in s:
@@ -39,6 +67,8 @@ def make_patched(src_path, ascii_name):
               % os.path.basename(src_path))
     if OLD_MAIN in s:
         s = s.replace(OLD_MAIN, NEW_MAIN)
+    if "import pandas as pd" in s and "_xl_engine" not in s:
+        s = s.replace("import pandas as pd", SHIM, 1)   # 注入 Excel 引擎相容修正
     out = os.path.join(HERE, "_%s_build.py" % ascii_name)   # 純英文暫存檔名
     open(out, "w", encoding="utf-8").write(s)
     return out
@@ -69,11 +99,9 @@ def find_extra_binary_args():
 
 def main():
     print("== Dialysis: build EXE ==\n")
-    try:
-        import PyInstaller  # noqa
-    except Exception:
-        print("First time: installing PyInstaller (needs internet)...")
-        subprocess.run([sys.executable, "-m", "pip", "install", "pyinstaller"], check=False)
+    print("確認/安裝必要套件(pyinstaller, xlrd, openpyxl)，需要網路，第一次較久…")
+    subprocess.run([sys.executable, "-m", "pip", "install",
+                    "pyinstaller", "xlrd", "openpyxl"], check=False)
 
     extra = find_extra_binary_args()
     built = []
@@ -87,7 +115,7 @@ def main():
         cmd = [sys.executable, "-m", "PyInstaller", "--onefile",
                "--noconfirm", "--clean", "--name", aname,
                "--distpath", DIST, "--workpath", WORK, "--specpath", HERE,
-               "--hidden-import", "xlrd", "--hidden-import", "openpyxl",
+               "--collect-all", "xlrd", "--collect-all", "openpyxl",
                "--exclude-module", "matplotlib"] + extra + [patched]
         subprocess.run(cmd, check=False)
         # 打包出的是英文名 exe → 改成中文名
