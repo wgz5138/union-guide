@@ -43,6 +43,30 @@ def make_patched(src_path, ascii_name):
     open(out, "w", encoding="utf-8").write(s)
     return out
 
+def find_extra_binary_args():
+    """conda 環境常缺 libffi(_ctypes 要用)。找出來用 --add-binary 一起包進去。"""
+    import glob
+    env = os.path.dirname(sys.executable)            # ...\envs\medbid
+    cand_dirs = [os.path.join(env, "Library", "bin"),
+                 os.path.join(env, "DLLs"),
+                 env,
+                 os.path.join(env, "Library", "mingw-w64", "bin")]
+    patterns = ["libffi*.dll", "ffi*.dll"]
+    found = []
+    for d in cand_dirs:
+        for pat in patterns:
+            found += glob.glob(os.path.join(d, pat))
+    found = list(dict.fromkeys(found))               # 去重
+    args = []
+    for dll in found:
+        args += ["--add-binary", dll + os.pathsep + "."]   # Windows 上 os.pathsep=';'
+    if found:
+        print("找到並會打包的 DLL：")
+        for f in found: print("   " + f)
+    else:
+        print("⚠ 沒找到 libffi DLL，若打包後仍報 _ctypes 錯，請把畫面拍給小巫。")
+    return args
+
 def main():
     print("== Dialysis: build EXE ==\n")
     try:
@@ -51,6 +75,7 @@ def main():
         print("First time: installing PyInstaller (needs internet)...")
         subprocess.run([sys.executable, "-m", "pip", "install", "pyinstaller"], check=False)
 
+    extra = find_extra_binary_args()
     built = []
     for src, aname, cname in TARGETS:
         p = os.path.join(HERE, src)
@@ -59,11 +84,12 @@ def main():
             continue
         patched = make_patched(p, aname)
         print("\n-> building %s  ->  %s.exe ..." % (src, cname))
-        subprocess.run([sys.executable, "-m", "PyInstaller", "--onefile",
-                        "--noconfirm", "--clean", "--name", aname,
-                        "--distpath", DIST, "--workpath", WORK, "--specpath", HERE,
-                        "--hidden-import", "xlrd", "--hidden-import", "openpyxl",
-                        patched], check=False)
+        cmd = [sys.executable, "-m", "PyInstaller", "--onefile",
+               "--noconfirm", "--clean", "--name", aname,
+               "--distpath", DIST, "--workpath", WORK, "--specpath", HERE,
+               "--hidden-import", "xlrd", "--hidden-import", "openpyxl",
+               "--exclude-module", "matplotlib"] + extra + [patched]
+        subprocess.run(cmd, check=False)
         # 打包出的是英文名 exe → 改成中文名
         src_exe = os.path.join(DIST, aname + ".exe")
         dst_exe = os.path.join(DIST, cname + ".exe")
