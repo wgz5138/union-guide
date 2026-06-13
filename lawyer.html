@@ -186,11 +186,13 @@
     <!-- 付費一鍵設定（選用） -->
     <div class="label"><span class="n">⚡</span>付費一鍵（選用・你自己的金鑰）</div>
     <div class="card">
-      <div class="hint" style="margin-top:0">想直接跟 AI 律師對話、不用複製貼上？貼你自己的 API 金鑰。一次問答很便宜（約 <b>NT$0.5~5</b>）。免費的複製貼上隨時都在；金鑰只存這台、不外流，跟評讀／快查工具<b>共用同一把</b>。</div>
-      <div id="pay-toggle" style="font-size:13px;color:var(--blue);cursor:pointer;user-select:none;margin-top:10px">❓ 想了解付費怎麼回事？（點開看說明）</div>
+      <div class="hint" style="margin-top:0"><b>你不一定要付費！</b>下面每個功能都有「🧠 免費：複製提示詞」可貼到 ChatGPT／Claude 免費網頁用，<b>一毛都不用花</b>。付費一鍵只是「<b>懶得複製貼上</b>」時的方便：貼你自己的金鑰，工具直接幫你問。金鑰只存這台、不外流，跟評讀／快查<b>共用同一把</b>。</div>
+      <div id="pay-toggle" style="font-size:13px;color:var(--blue);cursor:pointer;user-select:none;margin-top:10px">❓ 付費怎麼算？要不要訂閱？（點開看完整說明）</div>
       <div id="pay-detail" style="display:none;background:#0C131F;border:1px solid var(--line);border-radius:10px;padding:12px 14px;font-size:13px;color:var(--txt2);line-height:1.85;margin-top:8px">
-        <p style="margin-bottom:8px"><b style="color:var(--head)">「Anthropic」是什麼？</b><br>一間做 AI 的公司，它的 AI 叫 <b>Claude</b>。付費就是用它的 AI 幫你跑。<b>錢不是付給這個網站</b>——你是儲值到<b>你自己在 Anthropic 的帳戶</b>，金鑰跟餘額都是你的、可帶著走。</p>
-        <p style="margin-bottom:0"><b style="color:var(--head)">怎麼申請＋儲值？</b><br>到 <a href="https://console.anthropic.com/" target="_blank" rel="noopener" style="color:var(--blue)">console.anthropic.com</a> 註冊 → 加值（最低約 US$5≈NT$160）→ 建立金鑰（<b>sk-ant-</b> 開頭）→ 貼回下面。</p>
+        <p style="margin-bottom:8px"><b style="color:var(--head)">① 不是訂閱、沒有月費。</b>是「<b>儲值，用多少扣多少</b>」（像悠遊卡）。儲一筆（最低約 US$5≈NT$160），每問一次扣一點點，<b>扣完就停、不會自動再扣</b>，要自己再儲。</p>
+        <p style="margin-bottom:8px"><b style="color:var(--head)">② 一題大概多少？</b>（每次問完工具會顯示「本次花約 NT$X」，不會偷扣）<br>・<b>Haiku</b> 約 NT$0.5~3｜・<b>Sonnet（建議）</b> 約 NT$2~10｜・<b>Opus（最貴）</b> 約 NT$6~25。US$5 大概能問 Sonnet 幾十～上百題。</p>
+        <p style="margin-bottom:8px"><b style="color:var(--head)">③ 錢是你的、會過期。</b>錢進<b>你自己的 Anthropic 帳戶</b>，這網站碰不到；金鑰任何「支援 Claude」的工具都能用。⚠️ 額度<b>約一年沒用會過期</b>——<b>偶爾才用就別儲、用免費的</b>。</p>
+        <p style="margin-bottom:0"><b style="color:var(--head)">④ 怎麼拿金鑰（建議用電腦）：</b><br>到 <a href="https://console.anthropic.com/" target="_blank" rel="noopener" style="color:var(--blue)">console.anthropic.com</a> 註冊登入 → <b>Billing</b>(帳單)按 <b>Add credits</b> 加值刷卡 → <b>API keys</b> 按 <b>Create Key</b> → 複製那串 <b>sk-ant-…</b>（只顯示一次，存好）→ 貼到下面、模型選 <b>Sonnet</b>。</p>
       </div>
       <input class="txt" id="api-key" type="password" placeholder="貼上 sk-ant-...（沒有？到 console.anthropic.com 申請＋儲值）" autocomplete="off" style="margin-top:10px">
       <select class="txt" id="api-model" style="margin-top:8px">
@@ -450,8 +452,9 @@ function showAppBanner(){ if(sessionStorage.getItem("hideAppBanner"))return; con
   if(/FBAN|FBAV|FBIOS|Instagram|Line\/|MicroMessenger|Twitter|TikTok|GSA\//i.test(navigator.userAgent||"")) showAppBanner(); })();
 
 /* 🔄 自動偵測新版本 */
-const BUILD="2026061226";
+const BUILD="2026061227";
 const CHANGELOG=[
+  "付費說明寫清楚：不是訂閱、是儲值用多少扣多少、額度會過期、一題大概多少、怎麼拿金鑰；強調免費路隨時在",
   "身分背景欄加『📋 帶入範本』：照欄位把你的公告貼進去、填一次永久記住（只存這台），同事用『接力』分享",
   "新增『🪪 我的身分背景／本案文件』常駐欄：只存這台、不上傳，AI 每次自動參考（院內規定優先於通則）",
   "AI 律師改『不只報喜』：每次回覆強制加『⚠ 風險與弱點』——對方律師會怎麼打你、你哪裡會輸、要補強什麼",
