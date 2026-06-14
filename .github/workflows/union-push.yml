@@ -1,0 +1,20 @@
+name: 工會金句推播（每4小時）
+on:
+  schedule:
+    - cron: '0 */4 * * *'     # 每 4 小時(UTC) 觸發一次
+  workflow_dispatch: {}        # 也可在 Actions 頁手動按一次測試
+permissions:
+  contents: read
+jobs:
+  push:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.x'
+      - name: 推播一則金句
+        env:
+          LINE_TOKEN: ${{ secrets.LINE_TOKEN }}
+          LINE_GROUP_ID: ${{ secrets.LINE_GROUP_ID }}
+        run: python tools/union_push.py
