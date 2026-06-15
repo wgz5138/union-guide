@@ -36,12 +36,15 @@ import requests
 # 設定區（你自己改這裡）★ 想查哪幾條，就在 ROUTES 裡加幾行 ★
 # ─────────────────────────────────────────────────────────────
 # 每一行 = 一條航線。複製一行、改代碼和月份，就多查一條。
-# 機場代碼參考：高雄 KHH、台北 TPE、東京 TYO、大阪 OSA、首爾 SEL、
-#              曼谷 BKK、香港 HKG、新加坡 SIN（不確定就 Google「城市 機場代碼」）
+# 城市代碼：高雄 KHH、台北 TPE、東京 TYO、大阪 OSA、福岡 FUK、
+#          首爾 SEL、曼谷 BKK、香港 HKG、新加坡 SIN
+# 也可填「國家代碼」查整個國家最便宜的：日本 JP、中國 CN、韓國 KR、泰國 TH
+# （不確定就 Google「城市 機場代碼」）
 ROUTES = [
-    {"origin": "KHH", "dest": "TYO", "month": "2026-08"},  # 高雄 → 東京（8月）
-    {"origin": "KHH", "dest": "OSA", "month": "2026-08"},  # 高雄 → 大阪（8月）
-    {"origin": "TPE", "dest": "TYO", "month": "2026-09"},  # 台北 → 東京（9月）
+    {"origin": "KHH", "dest": "OSA", "month": "2026-08"},  # 高雄 → 大阪
+    {"origin": "KHH", "dest": "FUK", "month": "2026-08"},  # 高雄 → 福岡
+    {"origin": "KHH", "dest": "JP",  "month": "2026-08"},  # 高雄 → 全日本（最便宜的）
+    {"origin": "KHH", "dest": "CN",  "month": "2026-08"},  # 高雄 → 全中國（最便宜的）
 ]
 
 CURRENCY = "twd"         # 用新台幣報價
