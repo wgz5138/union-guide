@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-高雄 ↔ 東京 便宜機票每日記價 + 降價通知（用 Travelpayouts / Aviasales 免費資料 API）
+多航線便宜機票每日記價 + 降價通知（用 Travelpayouts / Aviasales 免費資料 API）
+（想查哪幾條，改最下面設定區的 ROUTES 就好）
 
 這支不是「爬網站」，是直接跟 Travelpayouts 要資料——免費、合法、不怕被封。
 資料來源是 Aviasales 用戶最近實際查到的最低票價。
@@ -18,7 +19,7 @@
 2. 安裝套件：pip install requests
 3. 執行：python travelpayouts_flights.py
 
-跑完看 data/khh_tyo_price.csv（每天一列價格）和 logs/scraper.log。
+跑完看 data/flight_prices.csv（每條航線各一列價格）和 logs/scraper.log。
 低於門檻價會在畫面提醒；要寄到手機，照下面 notify() 接 Telegram。
 """
 
@@ -32,16 +33,22 @@ from logging.handlers import RotatingFileHandler
 import requests
 
 # ─────────────────────────────────────────────────────────────
-# 設定區（你自己改這裡）
+# 設定區（你自己改這裡）★ 想查哪幾條，就在 ROUTES 裡加幾行 ★
 # ─────────────────────────────────────────────────────────────
-ORIGIN = "KHH"           # 出發：高雄小港
-DEST = "TYO"             # 抵達：東京（TYO=成田+羽田都算）
-DEPART_MONTH = "2026-08"  # 想查的出發月份（查整個月最便宜；也可寫到日 2026-08-01）
+# 每一行 = 一條航線。複製一行、改代碼和月份，就多查一條。
+# 機場代碼參考：高雄 KHH、台北 TPE、東京 TYO、大阪 OSA、首爾 SEL、
+#              曼谷 BKK、香港 HKG、新加坡 SIN（不確定就 Google「城市 機場代碼」）
+ROUTES = [
+    {"origin": "KHH", "dest": "TYO", "month": "2026-08"},  # 高雄 → 東京（8月）
+    {"origin": "KHH", "dest": "OSA", "month": "2026-08"},  # 高雄 → 大阪（8月）
+    {"origin": "TPE", "dest": "TYO", "month": "2026-09"},  # 台北 → 東京（9月）
+]
+
 CURRENCY = "twd"         # 用新台幣報價
-THRESHOLD = 8000         # 低於這個價（TWD）就通知你
+THRESHOLD = 6000         # 低於這個價（TWD）就跳通知（已幫你降到 6000）
 ONE_WAY = True           # True=單程；False=來回
 
-OUTPUT_CSV = os.path.join("data", "khh_tyo_price.csv")
+OUTPUT_CSV = os.path.join("data", "flight_prices.csv")
 LOG_FILE = os.path.join("logs", "scraper.log")
 
 API_URL = "https://api.travelpayouts.com/aviasales/v3/prices_for_dates"
@@ -100,7 +107,8 @@ def get_json_with_retry(url, **kwargs):
 # ─────────────────────────────────────────────────────────────
 # 查最便宜的票
 # ─────────────────────────────────────────────────────────────
-def search_cheapest():
+def search_cheapest(route):
+    """查單一條航線最便宜的票。route = {"origin","dest","month"}。"""
     if not TOKEN:
         raise RuntimeError(
             "找不到 token！請先設定環境變數 TRAVELPAYOUTS_TOKEN"
@@ -110,9 +118,9 @@ def search_cheapest():
         API_URL,
         headers={"X-Access-Token": TOKEN},
         params={
-            "origin": ORIGIN,
-            "destination": DEST,
-            "departure_at": DEPART_MONTH,
+            "origin": route["origin"],
+            "destination": route["dest"],
+            "departure_at": route["month"],
             "currency": CURRENCY,
             "sorting": "price",
             "one_way": str(ONE_WAY).lower(),  # "true"/"false"
@@ -125,7 +133,8 @@ def search_cheapest():
 
     offers = result.get("data", [])
     if not offers:
-        log.info("這個條件查無票價（換個月份或日期試試）。")
+        log.info("　%s→%s（%s）查無票價（換個月份試試）。",
+                 route["origin"], route["dest"], route["month"])
         return None
 
     cheapest = min(offers, key=lambda o: o["price"])
@@ -138,7 +147,7 @@ def search_cheapest():
     return {
         "date": str(date.today()),                       # 今天（記價日）
         "depart_at": cheapest.get("departure_at", "")[:10],  # 這班是哪天出發
-        "route": f"{ORIGIN}-{DEST}",
+        "route": f"{route['origin']}-{route['dest']}",
         "price": cheapest["price"],
         "currency": currency,
         "airline": cheapest.get("airline", "?"),         # 航空公司代碼
@@ -183,19 +192,26 @@ def notify(row):
 # 主流程
 # ─────────────────────────────────────────────────────────────
 def main():
-    log.info("=== 查 %s→%s（%s 出發，%s）===",
-             ORIGIN, DEST, DEPART_MONTH, "單程" if ONE_WAY else "來回")
+    log.info("=== 開始查 %d 條航線（%s）===",
+             len(ROUTES), "單程" if ONE_WAY else "來回")
+    deals = 0  # 這次有幾條低於門檻
     try:
-        row = search_cheapest()
-        if not row:
-            return
-        save_csv(row)
-        if row["price"] < THRESHOLD:
-            notify(row)
-        else:
-            log.info("目前最低 %.0f %s，還沒到你設的門檻 %d，先記著。",
-                     row["price"], row["currency"], THRESHOLD)
-        log.info("=== 完成 ===")
+        for i, route in enumerate(ROUTES):
+            log.info("[%d/%d] 查 %s→%s（%s）",
+                     i + 1, len(ROUTES), route["origin"],
+                     route["dest"], route["month"])
+            row = search_cheapest(route)
+            if not row:
+                continue
+            save_csv(row)
+            if row["price"] < THRESHOLD:
+                notify(row)
+                deals += 1
+            else:
+                log.info("　最低 %.0f %s，還沒到門檻 %d，先記著。",
+                         row["price"], row["currency"], THRESHOLD)
+            time.sleep(1)  # 禮貌性間隔，別把人家 API 打太兇
+        log.info("=== 完成：%d 條航線，%d 條低於門檻 ===", len(ROUTES), deals)
     except Exception as e:
         log.exception("執行失敗：%s", e)
         raise
