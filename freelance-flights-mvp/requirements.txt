@@ -1,0 +1,6 @@
+# 基本款（scraper.py 用）
+requests>=2.31
+beautifulsoup4>=4.12
+
+# 動態網站才需要（scraper_playwright.py 用）；裝完還要跑：playwright install chromium
+playwright>=1.44
