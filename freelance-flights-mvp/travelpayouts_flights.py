@@ -27,6 +27,7 @@ import csv
 import logging
 import os
 import time
+import urllib.parse
 from datetime import date, datetime
 from logging.handlers import RotatingFileHandler
 
@@ -128,6 +129,25 @@ def get_json_with_retry(url, **kwargs):
 
 
 # ─────────────────────────────────────────────────────────────
+# 組一個「繁體中文」的 Skyscanner 訂票連結（點開就是中文頁）
+# ─────────────────────────────────────────────────────────────
+def build_skyscanner_link(origin, destination, outbound, inbound=""):
+    params = {
+        "origin": origin,
+        "destination": destination,
+        "outboundDate": outbound,    # YYYY-MM-DD
+        "adultsv2": 1,
+        "locale": "zh-TW",           # 繁體中文
+        "market": "TW",              # 台灣
+        "currency": "TWD",           # 新台幣
+    }
+    if inbound:
+        params["inboundDate"] = inbound
+    base = "https://www.skyscanner.net/g/referrals/v1/flights/day-view/"
+    return base + "?" + urllib.parse.urlencode(params)
+
+
+# ─────────────────────────────────────────────────────────────
 # 查最便宜的票
 # ─────────────────────────────────────────────────────────────
 def search_cheapest(route):
@@ -168,15 +188,22 @@ def search_cheapest(route):
     cheapest = min(offers, key=lambda o: o["price"])
     currency = result.get("currency", CURRENCY).upper()
 
-    # 組出可直接點開看的搜尋連結（link 是相對路徑）
-    link = cheapest.get("link", "")
-    full_link = ("https://www.aviasales.com" + link) if link else ""
+    depart_at = cheapest.get("departure_at", "")[:10]
+    return_at = cheapest.get("return_at", "")[:10]
+    # 用實際查到的「機場代碼」組一個【繁體中文 Skyscanner】連結，一點開就是中文頁
+    full_link = build_skyscanner_link(
+        cheapest.get("origin_airport") or 轉代碼(route["origin"]),
+        cheapest.get("destination_airport") or cheapest.get("destination")
+        or 轉代碼(route["dest"]),
+        depart_at,
+        return_at if round_trip else "",
+    )
 
     return {
         "date": str(date.today()),                       # 今天（記價日）
         "trip": "來回" if round_trip else "單程",
-        "depart_at": cheapest.get("departure_at", "")[:10],  # 去程哪天
-        "return_at": cheapest.get("return_at", "")[:10],     # 回程哪天（單程為空）
+        "depart_at": depart_at,                          # 去程哪天
+        "return_at": return_at,                          # 回程哪天（單程為空）
         "route": f"{route['origin']}-{route['dest']}",
         "price": cheapest["price"],
         "currency": currency,
