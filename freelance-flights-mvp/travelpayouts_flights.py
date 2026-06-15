@@ -36,20 +36,20 @@ import requests
 # 設定區（你自己改這裡）★ 想查哪幾條，就在 ROUTES 裡加幾行 ★
 # ─────────────────────────────────────────────────────────────
 # 每一行 = 一條航線。複製一行、改代碼和月份，就多查一條。
+#   month  = 去程月份（必填）
+#   return = 回程月份（選填）→ 有寫就查「來回票」，沒寫就查「單程」
 # 城市代碼：高雄 KHH、台北 TPE、東京 TYO、大阪 OSA、福岡 FUK、
 #          首爾 SEL、曼谷 BKK、香港 HKG、新加坡 SIN
 # 也可填「國家代碼」查整個國家最便宜的：日本 JP、中國 CN、韓國 KR、泰國 TH
 # （不確定就 Google「城市 機場代碼」）
 ROUTES = [
-    {"origin": "KHH", "dest": "OSA", "month": "2026-08"},  # 高雄 → 大阪
-    {"origin": "KHH", "dest": "FUK", "month": "2026-08"},  # 高雄 → 福岡
-    {"origin": "KHH", "dest": "JP",  "month": "2026-08"},  # 高雄 → 全日本（最便宜的）
-    {"origin": "KHH", "dest": "CN",  "month": "2026-08"},  # 高雄 → 全中國（最便宜的）
+    {"origin": "KHH", "dest": "JP", "month": "2026-08"},                      # 高雄→全日本（單程）
+    {"origin": "KHH", "dest": "TYO", "month": "2026-08", "return": "2026-08"},  # 高雄→東京（來回，8月去8月回）
+    {"origin": "KHH", "dest": "OSA", "month": "2026-09", "return": "2026-09"},  # 高雄→大阪（來回，9月）
 ]
 
 CURRENCY = "twd"         # 用新台幣報價
-THRESHOLD = 6000         # 低於這個價（TWD）就跳通知（已幫你降到 6000）
-ONE_WAY = True           # True=單程；False=來回
+THRESHOLD = 10000        # 低於這個價（TWD）就跳通知（來回票較貴，先設 10000）
 
 OUTPUT_CSV = os.path.join("data", "flight_prices.csv")
 LOG_FILE = os.path.join("logs", "scraper.log")
@@ -111,24 +111,29 @@ def get_json_with_retry(url, **kwargs):
 # 查最便宜的票
 # ─────────────────────────────────────────────────────────────
 def search_cheapest(route):
-    """查單一條航線最便宜的票。route = {"origin","dest","month"}。"""
+    """查單一條航線最便宜的票。route 有 return 就查來回，否則查單程。"""
     if not TOKEN:
         raise RuntimeError(
             "找不到 token！請先設定環境變數 TRAVELPAYOUTS_TOKEN"
             "（做法見本檔案開頭說明）。")
 
+    round_trip = "return" in route  # 有填回程 = 來回票
+    params = {
+        "origin": route["origin"],
+        "destination": route["dest"],
+        "departure_at": route["month"],
+        "currency": CURRENCY,
+        "sorting": "price",
+        "one_way": "false" if round_trip else "true",
+        "limit": 30,
+    }
+    if round_trip:
+        params["return_at"] = route["return"]  # 回程月份
+
     result = get_json_with_retry(
         API_URL,
         headers={"X-Access-Token": TOKEN},
-        params={
-            "origin": route["origin"],
-            "destination": route["dest"],
-            "departure_at": route["month"],
-            "currency": CURRENCY,
-            "sorting": "price",
-            "one_way": str(ONE_WAY).lower(),  # "true"/"false"
-            "limit": 30,
-        },
+        params=params,
     )
 
     if not result.get("success", True):
@@ -149,7 +154,9 @@ def search_cheapest(route):
 
     return {
         "date": str(date.today()),                       # 今天（記價日）
-        "depart_at": cheapest.get("departure_at", "")[:10],  # 這班是哪天出發
+        "trip": "來回" if round_trip else "單程",
+        "depart_at": cheapest.get("departure_at", "")[:10],  # 去程哪天
+        "return_at": cheapest.get("return_at", "")[:10],     # 回程哪天（單程為空）
         "route": f"{route['origin']}-{route['dest']}",
         "price": cheapest["price"],
         "currency": currency,
@@ -180,7 +187,10 @@ def save_csv(row):
 # 低於門檻就通知（先印畫面；要寄手機就接 Telegram）
 # ─────────────────────────────────────────────────────────────
 def notify(row):
-    msg = (f"✈️ 便宜票！{row['route']} {row['depart_at']} 出發 "
+    when = row["depart_at"]
+    if row["trip"] == "來回" and row["return_at"]:
+        when += f" 去 / {row['return_at']} 回"
+    msg = (f"✈️ 便宜票！{row['route']}（{row['trip']}）{when} "
            f"只要 {row['price']:.0f} {row['currency']}"
            f"（{row['airline']}，轉機 {row['transfers']} 次）\n{row['link']}")
     log.info("🔔 %s", msg)
@@ -195,14 +205,14 @@ def notify(row):
 # 主流程
 # ─────────────────────────────────────────────────────────────
 def main():
-    log.info("=== 開始查 %d 條航線（%s）===",
-             len(ROUTES), "單程" if ONE_WAY else "來回")
+    log.info("=== 開始查 %d 條航線 ===", len(ROUTES))
     deals = 0  # 這次有幾條低於門檻
     try:
         for i, route in enumerate(ROUTES):
-            log.info("[%d/%d] 查 %s→%s（%s）",
+            trip = "來回" if "return" in route else "單程"
+            log.info("[%d/%d] 查 %s→%s（%s，%s）",
                      i + 1, len(ROUTES), route["origin"],
-                     route["dest"], route["month"])
+                     route["dest"], route["month"], trip)
             row = search_cheapest(route)
             if not row:
                 continue
