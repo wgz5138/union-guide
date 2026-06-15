@@ -85,9 +85,14 @@ crontab -e
 
 | 檔案 | 用途 |
 |---|---|
-| `scraper.py` | 主骨架（requests 版）。靜態網站 / 有 JSON API 用這支，**先跑這支** |
+| `amadeus_flights.py` | **台北↔東京每日記價 + 降價通知**（用 Amadeus 免費 API，不用爬網站）。自己找便宜機票用這支，設定與註冊步驟寫在檔案開頭 |
+| `scraper.py` | 主骨架（requests 版）。要爬靜態網站 / 有 JSON API 用這支 |
 | `scraper_playwright.py` | 動態網站版（Google Flights 這類，資料靠 JS 載入） |
 | `requirements.txt` | 套件清單 |
+
+> **想自己找便宜機票？** 直接用 `amadeus_flights.py`，比爬 Google Flights 輕鬆太多。
+> 去 https://developers.amadeus.com 免費註冊拿金鑰 → 設成環境變數 → `python amadeus_flights.py`。
+> 細節看該檔案開頭。
 
 ---
 
