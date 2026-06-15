@@ -18,6 +18,7 @@
 """
 
 import os
+import re
 import time
 
 import requests
@@ -47,14 +48,31 @@ def send(chat_id, text):
 
 
 def handle(text):
-    """把使用者訊息變成查詢，回傳要回覆的字串。"""
-    words = text.replace("查", " ", 1).split()  # 開頭的「查」可有可無
-    if len(words) < 3:
-        return 說明
-    origin, dest, month = words[0], words[1], words[2]
+    """把使用者訊息變成查詢，回傳要回覆的字串。
+    很寬鬆：有沒有空格、有沒有逗號、有沒有「查」都看得懂。
+    例：『查 高雄 東京 2026-09』『查高雄福岡，2026-09』都行。"""
+    # 1) 先抓出月份（一個=單程；兩個=來回）
+    months = re.findall(r"\d{4}-\d{2}", text)
+    # 2) 把「查」、月份、各種標點都換成空白，剩下的拿來找地名
+    rest = text.replace("查", " ")
+    for m in months:
+        rest = rest.replace(m, " ")
+    for ch in "，,、。；;／/ 　":
+        rest = rest.replace(ch, " ")
+    # 3) 先用「地名對照表」在字串裡找中文地名（依出現順序）
+    hits = sorted((rest.find(n), n) for n in tp.地名對照表 if n in rest)
+    places = [n for _, n in hits]
+    # 4) 找不到足夠中文地名，就退回用空白切詞（支援英文代碼）
+    if len(places) < 2:
+        places = [w for w in rest.split() if w]
+
+    if len(places) < 2 or len(months) < 1:
+        return "看不太懂耶 😅\n\n" + 說明
+
+    origin, dest, month = places[0], places[1], months[0]
     route = {"origin": origin, "dest": dest, "month": month}
-    if len(words) >= 4:
-        route["return"] = words[3]
+    if len(months) >= 2:
+        route["return"] = months[1]
 
     row = tp.search_cheapest(route)
     if not row:
