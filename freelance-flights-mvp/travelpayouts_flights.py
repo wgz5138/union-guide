@@ -35,21 +35,41 @@ import requests
 # ─────────────────────────────────────────────────────────────
 # 設定區（你自己改這裡）★ 想查哪幾條，就在 ROUTES 裡加幾行 ★
 # ─────────────────────────────────────────────────────────────
-# 每一行 = 一條航線。複製一行、改代碼和月份，就多查一條。
+# ★ 好消息：origin / dest 可以直接寫「中文地名」，程式會自動翻成代碼！★
+#   （下面 地名對照表 有的就能用中文；沒有的就填代碼，例如某個冷門城市）
 #   month  = 去程月份（必填）
 #   return = 回程月份（選填）→ 有寫就查「來回票」，沒寫就查「單程」
-# 城市代碼：高雄 KHH、台北 TPE、東京 TYO、大阪 OSA、福岡 FUK、
-#          首爾 SEL、曼谷 BKK、香港 HKG、新加坡 SIN
-# 也可填「國家代碼」查整個國家最便宜的：日本 JP、中國 CN、韓國 KR、泰國 TH
-# （不確定就 Google「城市 機場代碼」）
 ROUTES = [
-    {"origin": "KHH", "dest": "JP", "month": "2026-08"},                      # 高雄→全日本（單程）
-    {"origin": "KHH", "dest": "TYO", "month": "2026-08", "return": "2026-08"},  # 高雄→東京（來回，8月去8月回）
-    {"origin": "KHH", "dest": "OSA", "month": "2026-09", "return": "2026-09"},  # 高雄→大阪（來回，9月）
+    {"origin": "高雄", "dest": "日本",   "month": "2026-09", "return": "2026-09"},  # 全日本 來回
+    {"origin": "高雄", "dest": "韓國",   "month": "2026-09", "return": "2026-09"},  # 全韓國 來回
+    {"origin": "高雄", "dest": "泰國",   "month": "2026-09", "return": "2026-09"},  # 全泰國 來回
+    {"origin": "高雄", "dest": "越南",   "month": "2026-09", "return": "2026-09"},  # 全越南 來回
+    {"origin": "高雄", "dest": "香港",   "month": "2026-09", "return": "2026-09"},  # 香港 來回
+    {"origin": "高雄", "dest": "新加坡", "month": "2026-09", "return": "2026-09"},  # 新加坡 來回
 ]
 
+# 地名對照表：中文 → 代碼（要加新地點就在這裡多寫一行）
+地名對照表 = {
+    # 台灣
+    "高雄": "KHH", "台北": "TPE", "台中": "RMQ", "桃園": "TPE",
+    # 國家（查整個國家最便宜的城市）
+    "日本": "JP", "韓國": "KR", "泰國": "TH", "越南": "VN",
+    "香港": "HK", "新加坡": "SG", "馬來西亞": "MY", "菲律賓": "PH", "中國": "CN",
+    # 城市
+    "東京": "TYO", "大阪": "OSA", "福岡": "FUK", "名古屋": "NGO", "沖繩": "OKA",
+    "首爾": "SEL", "釜山": "PUS", "曼谷": "BKK", "清邁": "CNX",
+    "河內": "HAN", "胡志明": "SGN", "峴港": "DAD",
+    "吉隆坡": "KUL", "馬尼拉": "MNL", "宿霧": "CEB", "上海": "SHA", "北京": "BJS",
+}
+
+
+def 轉代碼(name):
+    """中文地名→代碼；對照表沒有的就當作已經是代碼，原樣回傳。"""
+    return 地名對照表.get(name, name)
+
+
 CURRENCY = "twd"         # 用新台幣報價
-THRESHOLD = 10000        # 低於這個價（TWD）就跳通知（來回票較貴，先設 10000）
+THRESHOLD = 15000        # 低於這個價（TWD）就跳通知（多國來回，先設寬一點 15000）
 
 OUTPUT_CSV = os.path.join("data", "flight_prices.csv")
 LOG_FILE = os.path.join("logs", "scraper.log")
@@ -119,8 +139,8 @@ def search_cheapest(route):
 
     round_trip = "return" in route  # 有填回程 = 來回票
     params = {
-        "origin": route["origin"],
-        "destination": route["dest"],
+        "origin": 轉代碼(route["origin"]),       # 中文地名自動翻成代碼
+        "destination": 轉代碼(route["dest"]),
         "departure_at": route["month"],
         "currency": CURRENCY,
         "sorting": "price",
