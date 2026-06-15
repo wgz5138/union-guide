@@ -4,7 +4,7 @@
 威力彩包牌選號產生器
 ======================
 
-威力彩規則：第一區 1~38 選 6、第二區 1~8 選 1，每注 NT$50。
+威力彩規則：第一區 1~38 選 6、第二區 1~8 選 1，每注 NT$100。
 頭獎機率 = 1 / (C(38,6)×8) = 1 / 22,085,448。
 
 「包牌」= 第一區挑一組 k 個號碼（k>6），把這 k 個號碼能組出的所有 C(k,6) 種
@@ -36,7 +36,7 @@ from itertools import combinations
 FIRST_MIN, FIRST_MAX = 1, 38
 SECOND_MIN, SECOND_MAX = 1, 8
 PICK = 6
-TICKET_PRICE = 50
+TICKET_PRICE = 100  # 威力彩每注 NT$100（由官方 銷售總額/銷售注數 驗證）
 
 C38_6 = math.comb(FIRST_MAX, PICK)           # 2,760,681
 JACKPOT_SPACE = C38_6 * SECOND_MAX            # 22,085,448

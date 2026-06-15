@@ -33,7 +33,7 @@ REPORT_DIR = os.path.join(HERE, "report")
 
 FIRST_MAX = 38   # 第一區 1~38 選 6
 SECOND_MAX = 8   # 第二區 1~8 選 1
-TICKET_PRICE = 50  # 每注 NT$50
+TICKET_PRICE = 100  # 每注 NT$100（由官方資料 銷售總額/銷售注數 驗證）
 
 # 一注中頭獎機率 = 1 / (C(38,6) * 8)
 C38_6 = math.comb(FIRST_MAX, 6)          # 2,760,681
@@ -197,7 +197,7 @@ def build_report(meta, draws):
     A("### 5.2 唯一真正提高中獎『機率』的方法：包牌（買更多組號碼）")
     A("第一區若選 k 個號碼包牌（搭配 1 個第二區），可組出 C(k,6) 注。"
       "注數越多，命中機率越高，但花費同步上升：\n")
-    A("| 第一區選幾個號碼 | 注數 C(k,6) | 花費(每注$50) | 中頭獎機率 | 中『第一區6碼』機率 |")
+    A("| 第一區選幾個號碼 | 注數 C(k,6) | 花費(每注$100) | 中頭獎機率 | 中『第一區6碼』機率 |")
     A("|---:|---:|---:|---:|---:|")
     for k, tickets, cost, pj, p6 in buy_table():
         A(f"| {k} | {tickets:,} | NT${cost:,} | {fmt_pct(pj)} (1/{round(1/pj):,}) "
@@ -214,8 +214,9 @@ def build_report(meta, draws):
     ev_jackpot_only = jackpot / JACKPOT_SPACE
     A(f"- 假設頭獎累積到 **NT${jackpot:,}（10 億）**，僅計頭獎的每注期望回收 ≈ "
       f"NT${ev_jackpot_only:.1f}")
-    A(f"- 每注成本 NT${TICKET_PRICE}。即使只看頭獎，10 億時期望回收約 "
-      f"NT${ev_jackpot_only:.0f}，已接近成本——但這忽略了：")
+    A(f"- 每注成本 NT${TICKET_PRICE}。即使頭獎高達 10 億，僅頭獎的期望回收約 "
+      f"NT${ev_jackpot_only:.0f}，也只有成本的 "
+      f"{ev_jackpot_only/TICKET_PRICE*100:.0f}%（仍遠低於本金），何況還要考慮：")
     A("  1. 頭獎可能**多人均分**（中獎人越多分越少）；")
     A("  2. 高額獎金需扣**所得稅與印花稅**（實領縮水）；")
     A("  3. 多數情況頭獎沒這麼高，期望值明顯為負。")
