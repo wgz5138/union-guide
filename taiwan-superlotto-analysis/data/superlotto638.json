@@ -1,0 +1,5855 @@
+{
+  "source": "台灣彩券官方「各期開獎結果資料下載」CSV（使用者提供）",
+  "source_files": [
+    "威力彩_2022.csv",
+    "威力彩_2023.csv",
+    "威力彩_2024.csv",
+    "威力彩_2025.csv"
+  ],
+  "scraped_at": "2026-06-15T21:28:02.949175+00:00",
+  "count": 417,
+  "first_period": "111000001",
+  "last_period": "114000104",
+  "first_date": "2022-01-03",
+  "last_date": "2025-12-29",
+  "draws": [
+    {
+      "period": "111000001",
+      "date": "2022-01-03",
+      "first_zone": [
+        8,
+        14,
+        18,
+        27,
+        30,
+        35
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 1
+    },
+    {
+      "period": "111000002",
+      "date": "2022-01-06",
+      "first_zone": [
+        3,
+        5,
+        8,
+        12,
+        30,
+        31
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 2
+    },
+    {
+      "period": "111000003",
+      "date": "2022-01-10",
+      "first_zone": [
+        1,
+        6,
+        14,
+        15,
+        28,
+        34
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 6
+    },
+    {
+      "period": "111000004",
+      "date": "2022-01-13",
+      "first_zone": [
+        1,
+        8,
+        17,
+        18,
+        26,
+        31
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 7
+    },
+    {
+      "period": "111000005",
+      "date": "2022-01-17",
+      "first_zone": [
+        13,
+        15,
+        21,
+        22,
+        23,
+        28
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 4
+    },
+    {
+      "period": "111000006",
+      "date": "2022-01-20",
+      "first_zone": [
+        2,
+        5,
+        9,
+        23,
+        29,
+        38
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 2
+    },
+    {
+      "period": "111000007",
+      "date": "2022-01-24",
+      "first_zone": [
+        6,
+        11,
+        14,
+        28,
+        31,
+        37
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 7
+    },
+    {
+      "period": "111000008",
+      "date": "2022-01-27",
+      "first_zone": [
+        12,
+        16,
+        19,
+        24,
+        25,
+        38
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 8
+    },
+    {
+      "period": "111000009",
+      "date": "2022-01-31",
+      "first_zone": [
+        3,
+        7,
+        18,
+        21,
+        23,
+        37
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 6
+    },
+    {
+      "period": "111000010",
+      "date": "2022-02-03",
+      "first_zone": [
+        11,
+        13,
+        19,
+        22,
+        27,
+        28
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 3
+    },
+    {
+      "period": "111000011",
+      "date": "2022-02-07",
+      "first_zone": [
+        9,
+        13,
+        21,
+        27,
+        35,
+        38
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 2
+    },
+    {
+      "period": "111000012",
+      "date": "2022-02-10",
+      "first_zone": [
+        6,
+        10,
+        22,
+        23,
+        30,
+        34
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 1
+    },
+    {
+      "period": "111000013",
+      "date": "2022-02-14",
+      "first_zone": [
+        4,
+        8,
+        19,
+        29,
+        30,
+        36
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 4
+    },
+    {
+      "period": "111000014",
+      "date": "2022-02-17",
+      "first_zone": [
+        8,
+        19,
+        21,
+        27,
+        28,
+        37
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 2
+    },
+    {
+      "period": "111000015",
+      "date": "2022-02-21",
+      "first_zone": [
+        5,
+        13,
+        16,
+        28,
+        36,
+        37
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 1
+    },
+    {
+      "period": "111000016",
+      "date": "2022-02-24",
+      "first_zone": [
+        1,
+        4,
+        18,
+        24,
+        25,
+        32
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 5
+    },
+    {
+      "period": "111000017",
+      "date": "2022-02-28",
+      "first_zone": [
+        7,
+        14,
+        27,
+        28,
+        30,
+        32
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 6
+    },
+    {
+      "period": "111000018",
+      "date": "2022-03-03",
+      "first_zone": [
+        16,
+        18,
+        21,
+        22,
+        23,
+        30
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 4
+    },
+    {
+      "period": "111000019",
+      "date": "2022-03-07",
+      "first_zone": [
+        3,
+        12,
+        19,
+        26,
+        28,
+        31
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 2
+    },
+    {
+      "period": "111000020",
+      "date": "2022-03-10",
+      "first_zone": [
+        5,
+        21,
+        25,
+        27,
+        30,
+        35
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 4
+    },
+    {
+      "period": "111000021",
+      "date": "2022-03-14",
+      "first_zone": [
+        4,
+        8,
+        12,
+        14,
+        15,
+        17
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 3
+    },
+    {
+      "period": "111000022",
+      "date": "2022-03-17",
+      "first_zone": [
+        6,
+        8,
+        12,
+        21,
+        29,
+        32
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 3
+    },
+    {
+      "period": "111000023",
+      "date": "2022-03-21",
+      "first_zone": [
+        1,
+        10,
+        11,
+        20,
+        23,
+        24
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 4
+    },
+    {
+      "period": "111000024",
+      "date": "2022-03-24",
+      "first_zone": [
+        8,
+        12,
+        15,
+        20,
+        29,
+        34
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 4
+    },
+    {
+      "period": "111000025",
+      "date": "2022-03-28",
+      "first_zone": [
+        3,
+        4,
+        12,
+        21,
+        25,
+        30
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 7
+    },
+    {
+      "period": "111000026",
+      "date": "2022-03-31",
+      "first_zone": [
+        8,
+        11,
+        29,
+        31,
+        36,
+        38
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 7
+    },
+    {
+      "period": "111000027",
+      "date": "2022-04-04",
+      "first_zone": [
+        10,
+        13,
+        19,
+        25,
+        26,
+        38
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 2
+    },
+    {
+      "period": "111000028",
+      "date": "2022-04-07",
+      "first_zone": [
+        1,
+        15,
+        21,
+        31,
+        37,
+        38
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 5
+    },
+    {
+      "period": "111000029",
+      "date": "2022-04-11",
+      "first_zone": [
+        1,
+        4,
+        5,
+        26,
+        35,
+        38
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 4
+    },
+    {
+      "period": "111000030",
+      "date": "2022-04-14",
+      "first_zone": [
+        9,
+        12,
+        27,
+        28,
+        31,
+        33
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 2
+    },
+    {
+      "period": "111000031",
+      "date": "2022-04-18",
+      "first_zone": [
+        1,
+        5,
+        8,
+        9,
+        22,
+        38
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 3
+    },
+    {
+      "period": "111000032",
+      "date": "2022-04-21",
+      "first_zone": [
+        1,
+        18,
+        28,
+        31,
+        33,
+        35
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 3
+    },
+    {
+      "period": "111000033",
+      "date": "2022-04-25",
+      "first_zone": [
+        2,
+        3,
+        25,
+        26,
+        36,
+        38
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 1
+    },
+    {
+      "period": "111000034",
+      "date": "2022-04-28",
+      "first_zone": [
+        3,
+        12,
+        22,
+        23,
+        29,
+        36
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 6
+    },
+    {
+      "period": "111000035",
+      "date": "2022-05-02",
+      "first_zone": [
+        3,
+        12,
+        20,
+        25,
+        28,
+        35
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 2
+    },
+    {
+      "period": "111000036",
+      "date": "2022-05-05",
+      "first_zone": [
+        6,
+        10,
+        19,
+        23,
+        34,
+        38
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 3
+    },
+    {
+      "period": "111000037",
+      "date": "2022-05-09",
+      "first_zone": [
+        3,
+        12,
+        16,
+        17,
+        21,
+        34
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 6
+    },
+    {
+      "period": "111000038",
+      "date": "2022-05-12",
+      "first_zone": [
+        1,
+        2,
+        13,
+        21,
+        26,
+        34
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 6
+    },
+    {
+      "period": "111000039",
+      "date": "2022-05-16",
+      "first_zone": [
+        3,
+        5,
+        15,
+        17,
+        29,
+        31
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 6
+    },
+    {
+      "period": "111000040",
+      "date": "2022-05-19",
+      "first_zone": [
+        17,
+        19,
+        20,
+        26,
+        27,
+        38
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 5
+    },
+    {
+      "period": "111000041",
+      "date": "2022-05-23",
+      "first_zone": [
+        14,
+        15,
+        17,
+        24,
+        27,
+        31
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 2
+    },
+    {
+      "period": "111000042",
+      "date": "2022-05-26",
+      "first_zone": [
+        9,
+        13,
+        17,
+        25,
+        32,
+        35
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 1
+    },
+    {
+      "period": "111000043",
+      "date": "2022-05-30",
+      "first_zone": [
+        1,
+        2,
+        8,
+        27,
+        32,
+        33
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 5
+    },
+    {
+      "period": "111000044",
+      "date": "2022-06-02",
+      "first_zone": [
+        2,
+        14,
+        16,
+        34,
+        36,
+        37
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 8
+    },
+    {
+      "period": "111000045",
+      "date": "2022-06-06",
+      "first_zone": [
+        4,
+        12,
+        13,
+        27,
+        29,
+        32
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 7
+    },
+    {
+      "period": "111000046",
+      "date": "2022-06-09",
+      "first_zone": [
+        3,
+        6,
+        11,
+        12,
+        22,
+        28
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 5
+    },
+    {
+      "period": "111000047",
+      "date": "2022-06-13",
+      "first_zone": [
+        12,
+        17,
+        24,
+        31,
+        35,
+        36
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 3
+    },
+    {
+      "period": "111000048",
+      "date": "2022-06-16",
+      "first_zone": [
+        7,
+        16,
+        17,
+        22,
+        25,
+        32
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 7
+    },
+    {
+      "period": "111000049",
+      "date": "2022-06-20",
+      "first_zone": [
+        3,
+        4,
+        11,
+        17,
+        19,
+        26
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 5
+    },
+    {
+      "period": "111000050",
+      "date": "2022-06-23",
+      "first_zone": [
+        1,
+        2,
+        17,
+        32,
+        33,
+        35
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 4
+    },
+    {
+      "period": "111000051",
+      "date": "2022-06-27",
+      "first_zone": [
+        4,
+        8,
+        21,
+        29,
+        30,
+        32
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 6
+    },
+    {
+      "period": "111000052",
+      "date": "2022-06-30",
+      "first_zone": [
+        1,
+        7,
+        12,
+        17,
+        19,
+        31
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 7
+    },
+    {
+      "period": "111000053",
+      "date": "2022-07-04",
+      "first_zone": [
+        2,
+        5,
+        8,
+        10,
+        20,
+        25
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 7
+    },
+    {
+      "period": "111000054",
+      "date": "2022-07-07",
+      "first_zone": [
+        1,
+        3,
+        7,
+        20,
+        28,
+        37
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 1
+    },
+    {
+      "period": "111000055",
+      "date": "2022-07-11",
+      "first_zone": [
+        5,
+        11,
+        17,
+        19,
+        23,
+        37
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 7
+    },
+    {
+      "period": "111000056",
+      "date": "2022-07-14",
+      "first_zone": [
+        1,
+        6,
+        7,
+        8,
+        10,
+        30
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 7
+    },
+    {
+      "period": "111000057",
+      "date": "2022-07-18",
+      "first_zone": [
+        7,
+        10,
+        15,
+        17,
+        30,
+        33
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 8
+    },
+    {
+      "period": "111000058",
+      "date": "2022-07-21",
+      "first_zone": [
+        6,
+        11,
+        15,
+        23,
+        27,
+        37
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 6
+    },
+    {
+      "period": "111000059",
+      "date": "2022-07-25",
+      "first_zone": [
+        8,
+        9,
+        14,
+        17,
+        25,
+        29
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 1
+    },
+    {
+      "period": "111000060",
+      "date": "2022-07-28",
+      "first_zone": [
+        13,
+        15,
+        17,
+        20,
+        31,
+        35
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 5
+    },
+    {
+      "period": "111000061",
+      "date": "2022-08-01",
+      "first_zone": [
+        5,
+        7,
+        10,
+        21,
+        25,
+        31
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 2
+    },
+    {
+      "period": "111000062",
+      "date": "2022-08-04",
+      "first_zone": [
+        11,
+        20,
+        24,
+        29,
+        33,
+        35
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 6
+    },
+    {
+      "period": "111000063",
+      "date": "2022-08-08",
+      "first_zone": [
+        2,
+        8,
+        12,
+        17,
+        32,
+        36
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 3
+    },
+    {
+      "period": "111000064",
+      "date": "2022-08-11",
+      "first_zone": [
+        5,
+        14,
+        16,
+        33,
+        35,
+        38
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 4
+    },
+    {
+      "period": "111000065",
+      "date": "2022-08-15",
+      "first_zone": [
+        7,
+        10,
+        12,
+        16,
+        18,
+        28
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 1
+    },
+    {
+      "period": "111000066",
+      "date": "2022-08-18",
+      "first_zone": [
+        4,
+        5,
+        16,
+        28,
+        29,
+        35
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 4
+    },
+    {
+      "period": "111000067",
+      "date": "2022-08-22",
+      "first_zone": [
+        2,
+        4,
+        9,
+        19,
+        22,
+        30
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 2
+    },
+    {
+      "period": "111000068",
+      "date": "2022-08-25",
+      "first_zone": [
+        8,
+        11,
+        13,
+        27,
+        28,
+        38
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 5
+    },
+    {
+      "period": "111000069",
+      "date": "2022-08-29",
+      "first_zone": [
+        4,
+        10,
+        12,
+        21,
+        27,
+        29
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 4
+    },
+    {
+      "period": "111000070",
+      "date": "2022-09-01",
+      "first_zone": [
+        3,
+        9,
+        16,
+        21,
+        23,
+        24
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 3
+    },
+    {
+      "period": "111000071",
+      "date": "2022-09-05",
+      "first_zone": [
+        7,
+        17,
+        21,
+        25,
+        31,
+        38
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 3
+    },
+    {
+      "period": "111000072",
+      "date": "2022-09-08",
+      "first_zone": [
+        2,
+        6,
+        18,
+        21,
+        30,
+        38
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 4
+    },
+    {
+      "period": "111000073",
+      "date": "2022-09-12",
+      "first_zone": [
+        2,
+        4,
+        14,
+        16,
+        23,
+        29
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 4
+    },
+    {
+      "period": "111000074",
+      "date": "2022-09-15",
+      "first_zone": [
+        2,
+        9,
+        28,
+        29,
+        31,
+        36
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 1
+    },
+    {
+      "period": "111000075",
+      "date": "2022-09-19",
+      "first_zone": [
+        7,
+        13,
+        25,
+        27,
+        31,
+        38
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 3
+    },
+    {
+      "period": "111000076",
+      "date": "2022-09-22",
+      "first_zone": [
+        16,
+        19,
+        26,
+        30,
+        31,
+        36
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 2
+    },
+    {
+      "period": "111000077",
+      "date": "2022-09-26",
+      "first_zone": [
+        3,
+        10,
+        14,
+        16,
+        17,
+        20
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 5
+    },
+    {
+      "period": "111000078",
+      "date": "2022-09-29",
+      "first_zone": [
+        1,
+        10,
+        17,
+        22,
+        27,
+        35
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 1
+    },
+    {
+      "period": "111000079",
+      "date": "2022-10-03",
+      "first_zone": [
+        1,
+        7,
+        17,
+        18,
+        23,
+        28
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 5
+    },
+    {
+      "period": "111000080",
+      "date": "2022-10-06",
+      "first_zone": [
+        10,
+        15,
+        21,
+        23,
+        26,
+        36
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 4
+    },
+    {
+      "period": "111000081",
+      "date": "2022-10-10",
+      "first_zone": [
+        6,
+        13,
+        21,
+        24,
+        27,
+        33
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 1
+    },
+    {
+      "period": "111000082",
+      "date": "2022-10-13",
+      "first_zone": [
+        1,
+        9,
+        17,
+        19,
+        21,
+        24
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 5
+    },
+    {
+      "period": "111000083",
+      "date": "2022-10-17",
+      "first_zone": [
+        1,
+        13,
+        18,
+        27,
+        32,
+        33
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 6
+    },
+    {
+      "period": "111000084",
+      "date": "2022-10-20",
+      "first_zone": [
+        2,
+        6,
+        9,
+        10,
+        24,
+        33
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 2
+    },
+    {
+      "period": "111000085",
+      "date": "2022-10-24",
+      "first_zone": [
+        7,
+        9,
+        15,
+        27,
+        29,
+        30
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 4
+    },
+    {
+      "period": "111000086",
+      "date": "2022-10-27",
+      "first_zone": [
+        12,
+        16,
+        20,
+        22,
+        29,
+        36
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 5
+    },
+    {
+      "period": "111000087",
+      "date": "2022-10-31",
+      "first_zone": [
+        2,
+        10,
+        20,
+        25,
+        29,
+        36
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 6
+    },
+    {
+      "period": "111000088",
+      "date": "2022-11-03",
+      "first_zone": [
+        1,
+        6,
+        11,
+        16,
+        29,
+        35
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 1
+    },
+    {
+      "period": "111000089",
+      "date": "2022-11-07",
+      "first_zone": [
+        7,
+        9,
+        10,
+        17,
+        18,
+        22
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 8
+    },
+    {
+      "period": "111000090",
+      "date": "2022-11-10",
+      "first_zone": [
+        9,
+        12,
+        19,
+        31,
+        32,
+        35
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 8
+    },
+    {
+      "period": "111000091",
+      "date": "2022-11-14",
+      "first_zone": [
+        10,
+        15,
+        17,
+        21,
+        29,
+        30
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 5
+    },
+    {
+      "period": "111000092",
+      "date": "2022-11-17",
+      "first_zone": [
+        3,
+        12,
+        20,
+        28,
+        32,
+        34
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 8
+    },
+    {
+      "period": "111000093",
+      "date": "2022-11-21",
+      "first_zone": [
+        15,
+        19,
+        23,
+        25,
+        26,
+        35
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 2
+    },
+    {
+      "period": "111000094",
+      "date": "2022-11-24",
+      "first_zone": [
+        8,
+        10,
+        11,
+        23,
+        32,
+        37
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 6
+    },
+    {
+      "period": "111000095",
+      "date": "2022-11-28",
+      "first_zone": [
+        4,
+        7,
+        9,
+        13,
+        19,
+        36
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 7
+    },
+    {
+      "period": "111000096",
+      "date": "2022-12-01",
+      "first_zone": [
+        5,
+        6,
+        12,
+        15,
+        17,
+        20
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 8
+    },
+    {
+      "period": "111000097",
+      "date": "2022-12-05",
+      "first_zone": [
+        14,
+        16,
+        22,
+        26,
+        30,
+        35
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 2
+    },
+    {
+      "period": "111000098",
+      "date": "2022-12-08",
+      "first_zone": [
+        8,
+        12,
+        14,
+        15,
+        21,
+        25
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 4
+    },
+    {
+      "period": "111000099",
+      "date": "2022-12-12",
+      "first_zone": [
+        6,
+        12,
+        20,
+        24,
+        25,
+        26
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 4
+    },
+    {
+      "period": "111000100",
+      "date": "2022-12-15",
+      "first_zone": [
+        7,
+        16,
+        21,
+        23,
+        29,
+        34
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 3
+    },
+    {
+      "period": "111000101",
+      "date": "2022-12-19",
+      "first_zone": [
+        1,
+        3,
+        7,
+        11,
+        13,
+        20
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 5
+    },
+    {
+      "period": "111000102",
+      "date": "2022-12-22",
+      "first_zone": [
+        13,
+        19,
+        23,
+        33,
+        36,
+        37
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 4
+    },
+    {
+      "period": "111000103",
+      "date": "2022-12-26",
+      "first_zone": [
+        4,
+        9,
+        14,
+        21,
+        29,
+        31
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 6
+    },
+    {
+      "period": "111000104",
+      "date": "2022-12-29",
+      "first_zone": [
+        2,
+        19,
+        21,
+        28,
+        29,
+        35
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 4
+    },
+    {
+      "period": "112000001",
+      "date": "2023-01-02",
+      "first_zone": [
+        3,
+        4,
+        5,
+        27,
+        28,
+        35
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 8
+    },
+    {
+      "period": "112000002",
+      "date": "2023-01-05",
+      "first_zone": [
+        4,
+        11,
+        15,
+        18,
+        25,
+        36
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 5
+    },
+    {
+      "period": "112000003",
+      "date": "2023-01-09",
+      "first_zone": [
+        9,
+        10,
+        17,
+        24,
+        31,
+        37
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 3
+    },
+    {
+      "period": "112000004",
+      "date": "2023-01-12",
+      "first_zone": [
+        4,
+        8,
+        20,
+        22,
+        34,
+        36
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 3
+    },
+    {
+      "period": "112000005",
+      "date": "2023-01-16",
+      "first_zone": [
+        3,
+        11,
+        13,
+        17,
+        23,
+        38
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 8
+    },
+    {
+      "period": "112000006",
+      "date": "2023-01-19",
+      "first_zone": [
+        3,
+        10,
+        14,
+        15,
+        25,
+        33
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 8
+    },
+    {
+      "period": "112000007",
+      "date": "2023-01-23",
+      "first_zone": [
+        7,
+        15,
+        17,
+        23,
+        33,
+        38
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 1
+    },
+    {
+      "period": "112000008",
+      "date": "2023-01-26",
+      "first_zone": [
+        3,
+        11,
+        22,
+        23,
+        28,
+        36
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 7
+    },
+    {
+      "period": "112000009",
+      "date": "2023-01-30",
+      "first_zone": [
+        10,
+        11,
+        23,
+        27,
+        28,
+        34
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 3
+    },
+    {
+      "period": "112000010",
+      "date": "2023-02-02",
+      "first_zone": [
+        9,
+        14,
+        15,
+        20,
+        35,
+        38
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 5
+    },
+    {
+      "period": "112000011",
+      "date": "2023-02-06",
+      "first_zone": [
+        4,
+        6,
+        9,
+        11,
+        23,
+        26
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 5
+    },
+    {
+      "period": "112000012",
+      "date": "2023-02-09",
+      "first_zone": [
+        1,
+        2,
+        24,
+        27,
+        33,
+        37
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 2
+    },
+    {
+      "period": "112000013",
+      "date": "2023-02-13",
+      "first_zone": [
+        8,
+        10,
+        15,
+        18,
+        23,
+        28
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 5
+    },
+    {
+      "period": "112000014",
+      "date": "2023-02-16",
+      "first_zone": [
+        5,
+        6,
+        18,
+        25,
+        32,
+        38
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 1
+    },
+    {
+      "period": "112000015",
+      "date": "2023-02-20",
+      "first_zone": [
+        2,
+        8,
+        16,
+        22,
+        24,
+        27
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 8
+    },
+    {
+      "period": "112000016",
+      "date": "2023-02-23",
+      "first_zone": [
+        10,
+        19,
+        26,
+        30,
+        33,
+        34
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 4
+    },
+    {
+      "period": "112000017",
+      "date": "2023-02-27",
+      "first_zone": [
+        1,
+        3,
+        6,
+        10,
+        17,
+        20
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 8
+    },
+    {
+      "period": "112000018",
+      "date": "2023-03-02",
+      "first_zone": [
+        3,
+        12,
+        18,
+        26,
+        27,
+        34
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 4
+    },
+    {
+      "period": "112000019",
+      "date": "2023-03-06",
+      "first_zone": [
+        2,
+        13,
+        17,
+        20,
+        25,
+        28
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 6
+    },
+    {
+      "period": "112000020",
+      "date": "2023-03-09",
+      "first_zone": [
+        17,
+        25,
+        29,
+        35,
+        37,
+        38
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 7
+    },
+    {
+      "period": "112000021",
+      "date": "2023-03-13",
+      "first_zone": [
+        10,
+        11,
+        16,
+        21,
+        30,
+        34
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 3
+    },
+    {
+      "period": "112000022",
+      "date": "2023-03-16",
+      "first_zone": [
+        3,
+        6,
+        16,
+        21,
+        22,
+        23
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 1
+    },
+    {
+      "period": "112000023",
+      "date": "2023-03-20",
+      "first_zone": [
+        6,
+        9,
+        20,
+        29,
+        36,
+        38
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 3
+    },
+    {
+      "period": "112000024",
+      "date": "2023-03-23",
+      "first_zone": [
+        2,
+        10,
+        11,
+        12,
+        33,
+        36
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 6
+    },
+    {
+      "period": "112000025",
+      "date": "2023-03-27",
+      "first_zone": [
+        9,
+        12,
+        18,
+        22,
+        28,
+        30
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 5
+    },
+    {
+      "period": "112000026",
+      "date": "2023-03-30",
+      "first_zone": [
+        1,
+        12,
+        17,
+        26,
+        33,
+        38
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 5
+    },
+    {
+      "period": "112000027",
+      "date": "2023-04-03",
+      "first_zone": [
+        17,
+        19,
+        22,
+        26,
+        34,
+        35
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 5
+    },
+    {
+      "period": "112000028",
+      "date": "2023-04-06",
+      "first_zone": [
+        5,
+        8,
+        15,
+        21,
+        24,
+        26
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 5
+    },
+    {
+      "period": "112000029",
+      "date": "2023-04-10",
+      "first_zone": [
+        4,
+        6,
+        19,
+        23,
+        29,
+        34
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 7
+    },
+    {
+      "period": "112000030",
+      "date": "2023-04-13",
+      "first_zone": [
+        4,
+        12,
+        24,
+        26,
+        28,
+        34
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 7
+    },
+    {
+      "period": "112000031",
+      "date": "2023-04-17",
+      "first_zone": [
+        9,
+        15,
+        25,
+        29,
+        30,
+        36
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 8
+    },
+    {
+      "period": "112000032",
+      "date": "2023-04-20",
+      "first_zone": [
+        3,
+        15,
+        19,
+        32,
+        37,
+        38
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 3
+    },
+    {
+      "period": "112000033",
+      "date": "2023-04-24",
+      "first_zone": [
+        2,
+        13,
+        14,
+        17,
+        20,
+        28
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 7
+    },
+    {
+      "period": "112000034",
+      "date": "2023-04-27",
+      "first_zone": [
+        7,
+        15,
+        25,
+        33,
+        36,
+        38
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 7
+    },
+    {
+      "period": "112000035",
+      "date": "2023-05-01",
+      "first_zone": [
+        1,
+        7,
+        14,
+        25,
+        29,
+        32
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 3
+    },
+    {
+      "period": "112000036",
+      "date": "2023-05-04",
+      "first_zone": [
+        2,
+        5,
+        15,
+        22,
+        33,
+        36
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 5
+    },
+    {
+      "period": "112000037",
+      "date": "2023-05-08",
+      "first_zone": [
+        3,
+        5,
+        16,
+        17,
+        26,
+        29
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 2
+    },
+    {
+      "period": "112000038",
+      "date": "2023-05-11",
+      "first_zone": [
+        7,
+        11,
+        13,
+        23,
+        25,
+        34
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 3
+    },
+    {
+      "period": "112000039",
+      "date": "2023-05-15",
+      "first_zone": [
+        2,
+        3,
+        4,
+        7,
+        20,
+        29
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 1
+    },
+    {
+      "period": "112000040",
+      "date": "2023-05-18",
+      "first_zone": [
+        7,
+        12,
+        14,
+        24,
+        26,
+        31
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 4
+    },
+    {
+      "period": "112000041",
+      "date": "2023-05-22",
+      "first_zone": [
+        15,
+        18,
+        19,
+        30,
+        31,
+        38
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 2
+    },
+    {
+      "period": "112000042",
+      "date": "2023-05-25",
+      "first_zone": [
+        6,
+        9,
+        12,
+        19,
+        20,
+        38
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 2
+    },
+    {
+      "period": "112000043",
+      "date": "2023-05-29",
+      "first_zone": [
+        1,
+        2,
+        9,
+        18,
+        24,
+        25
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 3
+    },
+    {
+      "period": "112000044",
+      "date": "2023-06-01",
+      "first_zone": [
+        10,
+        18,
+        25,
+        29,
+        36,
+        37
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 2
+    },
+    {
+      "period": "112000045",
+      "date": "2023-06-05",
+      "first_zone": [
+        4,
+        11,
+        28,
+        32,
+        34,
+        35
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 1
+    },
+    {
+      "period": "112000046",
+      "date": "2023-06-08",
+      "first_zone": [
+        3,
+        8,
+        12,
+        18,
+        35,
+        38
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 3
+    },
+    {
+      "period": "112000047",
+      "date": "2023-06-12",
+      "first_zone": [
+        1,
+        2,
+        16,
+        18,
+        35,
+        38
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 1
+    },
+    {
+      "period": "112000048",
+      "date": "2023-06-15",
+      "first_zone": [
+        2,
+        24,
+        25,
+        26,
+        34,
+        36
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 8
+    },
+    {
+      "period": "112000049",
+      "date": "2023-06-19",
+      "first_zone": [
+        4,
+        8,
+        12,
+        20,
+        27,
+        36
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 1
+    },
+    {
+      "period": "112000050",
+      "date": "2023-06-22",
+      "first_zone": [
+        1,
+        4,
+        7,
+        17,
+        24,
+        28
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 8
+    },
+    {
+      "period": "112000051",
+      "date": "2023-06-26",
+      "first_zone": [
+        1,
+        15,
+        16,
+        17,
+        24,
+        35
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 6
+    },
+    {
+      "period": "112000052",
+      "date": "2023-06-29",
+      "first_zone": [
+        1,
+        8,
+        26,
+        27,
+        29,
+        36
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 2
+    },
+    {
+      "period": "112000053",
+      "date": "2023-07-03",
+      "first_zone": [
+        5,
+        7,
+        10,
+        21,
+        25,
+        29
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 4
+    },
+    {
+      "period": "112000054",
+      "date": "2023-07-06",
+      "first_zone": [
+        7,
+        21,
+        25,
+        26,
+        30,
+        36
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 4
+    },
+    {
+      "period": "112000055",
+      "date": "2023-07-10",
+      "first_zone": [
+        14,
+        17,
+        18,
+        21,
+        32,
+        35
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 2
+    },
+    {
+      "period": "112000056",
+      "date": "2023-07-13",
+      "first_zone": [
+        1,
+        18,
+        19,
+        20,
+        23,
+        29
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 6
+    },
+    {
+      "period": "112000057",
+      "date": "2023-07-17",
+      "first_zone": [
+        3,
+        16,
+        19,
+        24,
+        25,
+        37
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 8
+    },
+    {
+      "period": "112000058",
+      "date": "2023-07-20",
+      "first_zone": [
+        5,
+        10,
+        17,
+        27,
+        34,
+        35
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 5
+    },
+    {
+      "period": "112000059",
+      "date": "2023-07-24",
+      "first_zone": [
+        5,
+        8,
+        17,
+        30,
+        32,
+        38
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 4
+    },
+    {
+      "period": "112000060",
+      "date": "2023-07-27",
+      "first_zone": [
+        6,
+        7,
+        16,
+        25,
+        32,
+        33
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 2
+    },
+    {
+      "period": "112000061",
+      "date": "2023-07-31",
+      "first_zone": [
+        23,
+        24,
+        26,
+        33,
+        35,
+        37
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 1
+    },
+    {
+      "period": "112000062",
+      "date": "2023-08-03",
+      "first_zone": [
+        17,
+        18,
+        21,
+        25,
+        27,
+        33
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 4
+    },
+    {
+      "period": "112000063",
+      "date": "2023-08-07",
+      "first_zone": [
+        3,
+        27,
+        29,
+        31,
+        33,
+        37
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 2
+    },
+    {
+      "period": "112000064",
+      "date": "2023-08-10",
+      "first_zone": [
+        3,
+        11,
+        21,
+        29,
+        30,
+        38
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 3
+    },
+    {
+      "period": "112000065",
+      "date": "2023-08-14",
+      "first_zone": [
+        2,
+        3,
+        4,
+        10,
+        17,
+        26
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 2
+    },
+    {
+      "period": "112000066",
+      "date": "2023-08-17",
+      "first_zone": [
+        4,
+        18,
+        21,
+        23,
+        28,
+        37
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 6
+    },
+    {
+      "period": "112000067",
+      "date": "2023-08-21",
+      "first_zone": [
+        1,
+        12,
+        14,
+        19,
+        33,
+        34
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 4
+    },
+    {
+      "period": "112000068",
+      "date": "2023-08-24",
+      "first_zone": [
+        3,
+        10,
+        17,
+        21,
+        23,
+        38
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 3
+    },
+    {
+      "period": "112000069",
+      "date": "2023-08-28",
+      "first_zone": [
+        3,
+        6,
+        8,
+        15,
+        24,
+        38
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 5
+    },
+    {
+      "period": "112000070",
+      "date": "2023-08-31",
+      "first_zone": [
+        4,
+        22,
+        23,
+        27,
+        30,
+        34
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 7
+    },
+    {
+      "period": "112000071",
+      "date": "2023-09-04",
+      "first_zone": [
+        1,
+        3,
+        12,
+        24,
+        27,
+        30
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 8
+    },
+    {
+      "period": "112000072",
+      "date": "2023-09-07",
+      "first_zone": [
+        11,
+        15,
+        18,
+        20,
+        22,
+        33
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 7
+    },
+    {
+      "period": "112000073",
+      "date": "2023-09-11",
+      "first_zone": [
+        11,
+        12,
+        20,
+        27,
+        28,
+        31
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 1
+    },
+    {
+      "period": "112000074",
+      "date": "2023-09-14",
+      "first_zone": [
+        2,
+        14,
+        24,
+        26,
+        28,
+        29
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 7
+    },
+    {
+      "period": "112000075",
+      "date": "2023-09-18",
+      "first_zone": [
+        1,
+        4,
+        11,
+        14,
+        21,
+        22
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 1
+    },
+    {
+      "period": "112000076",
+      "date": "2023-09-21",
+      "first_zone": [
+        3,
+        7,
+        12,
+        13,
+        28,
+        34
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 5
+    },
+    {
+      "period": "112000077",
+      "date": "2023-09-25",
+      "first_zone": [
+        20,
+        25,
+        26,
+        30,
+        32,
+        35
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 3
+    },
+    {
+      "period": "112000078",
+      "date": "2023-09-28",
+      "first_zone": [
+        9,
+        16,
+        17,
+        25,
+        29,
+        33
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 7
+    },
+    {
+      "period": "112000079",
+      "date": "2023-10-02",
+      "first_zone": [
+        3,
+        7,
+        13,
+        25,
+        28,
+        32
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 3
+    },
+    {
+      "period": "112000080",
+      "date": "2023-10-05",
+      "first_zone": [
+        4,
+        15,
+        20,
+        25,
+        29,
+        30
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 2
+    },
+    {
+      "period": "112000081",
+      "date": "2023-10-09",
+      "first_zone": [
+        6,
+        7,
+        8,
+        17,
+        20,
+        22
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 8
+    },
+    {
+      "period": "112000082",
+      "date": "2023-10-12",
+      "first_zone": [
+        8,
+        14,
+        20,
+        23,
+        27,
+        35
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 8
+    },
+    {
+      "period": "112000083",
+      "date": "2023-10-16",
+      "first_zone": [
+        5,
+        7,
+        20,
+        25,
+        31,
+        32
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 8
+    },
+    {
+      "period": "112000084",
+      "date": "2023-10-19",
+      "first_zone": [
+        4,
+        7,
+        19,
+        22,
+        26,
+        28
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 1
+    },
+    {
+      "period": "112000085",
+      "date": "2023-10-23",
+      "first_zone": [
+        6,
+        10,
+        11,
+        30,
+        32,
+        35
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 8
+    },
+    {
+      "period": "112000086",
+      "date": "2023-10-26",
+      "first_zone": [
+        27,
+        28,
+        30,
+        31,
+        36,
+        38
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 8
+    },
+    {
+      "period": "112000087",
+      "date": "2023-10-30",
+      "first_zone": [
+        3,
+        7,
+        10,
+        11,
+        30,
+        33
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 6
+    },
+    {
+      "period": "112000088",
+      "date": "2023-11-02",
+      "first_zone": [
+        9,
+        15,
+        20,
+        28,
+        36,
+        37
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 7
+    },
+    {
+      "period": "112000089",
+      "date": "2023-11-06",
+      "first_zone": [
+        11,
+        15,
+        22,
+        30,
+        33,
+        38
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 5
+    },
+    {
+      "period": "112000090",
+      "date": "2023-11-09",
+      "first_zone": [
+        3,
+        5,
+        8,
+        23,
+        24,
+        26
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 5
+    },
+    {
+      "period": "112000091",
+      "date": "2023-11-13",
+      "first_zone": [
+        1,
+        12,
+        16,
+        23,
+        25,
+        28
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 7
+    },
+    {
+      "period": "112000092",
+      "date": "2023-11-16",
+      "first_zone": [
+        1,
+        4,
+        7,
+        28,
+        35,
+        37
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 2
+    },
+    {
+      "period": "112000093",
+      "date": "2023-11-20",
+      "first_zone": [
+        7,
+        11,
+        13,
+        15,
+        30,
+        38
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 7
+    },
+    {
+      "period": "112000094",
+      "date": "2023-11-23",
+      "first_zone": [
+        6,
+        8,
+        13,
+        22,
+        25,
+        37
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 7
+    },
+    {
+      "period": "112000095",
+      "date": "2023-11-27",
+      "first_zone": [
+        2,
+        11,
+        23,
+        24,
+        25,
+        29
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 1
+    },
+    {
+      "period": "112000096",
+      "date": "2023-11-30",
+      "first_zone": [
+        2,
+        13,
+        21,
+        28,
+        33,
+        35
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 2
+    },
+    {
+      "period": "112000097",
+      "date": "2023-12-04",
+      "first_zone": [
+        2,
+        9,
+        14,
+        20,
+        22,
+        31
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 5
+    },
+    {
+      "period": "112000098",
+      "date": "2023-12-07",
+      "first_zone": [
+        4,
+        9,
+        16,
+        17,
+        18,
+        33
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 1
+    },
+    {
+      "period": "112000099",
+      "date": "2023-12-11",
+      "first_zone": [
+        9,
+        19,
+        21,
+        23,
+        26,
+        32
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 5
+    },
+    {
+      "period": "112000100",
+      "date": "2023-12-14",
+      "first_zone": [
+        4,
+        16,
+        17,
+        19,
+        32,
+        35
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 5
+    },
+    {
+      "period": "112000101",
+      "date": "2023-12-18",
+      "first_zone": [
+        5,
+        18,
+        20,
+        24,
+        31,
+        36
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 2
+    },
+    {
+      "period": "112000102",
+      "date": "2023-12-21",
+      "first_zone": [
+        3,
+        10,
+        13,
+        34,
+        37,
+        38
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 4
+    },
+    {
+      "period": "112000103",
+      "date": "2023-12-25",
+      "first_zone": [
+        5,
+        7,
+        16,
+        19,
+        20,
+        32
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 2
+    },
+    {
+      "period": "112000104",
+      "date": "2023-12-28",
+      "first_zone": [
+        7,
+        8,
+        18,
+        20,
+        23,
+        31
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 8
+    },
+    {
+      "period": "113000001",
+      "date": "2024-01-01",
+      "first_zone": [
+        11,
+        16,
+        17,
+        18,
+        28,
+        35
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 4
+    },
+    {
+      "period": "113000002",
+      "date": "2024-01-04",
+      "first_zone": [
+        2,
+        3,
+        6,
+        12,
+        24,
+        28
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 5
+    },
+    {
+      "period": "113000003",
+      "date": "2024-01-08",
+      "first_zone": [
+        1,
+        3,
+        16,
+        20,
+        29,
+        33
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 1
+    },
+    {
+      "period": "113000004",
+      "date": "2024-01-11",
+      "first_zone": [
+        4,
+        10,
+        16,
+        17,
+        22,
+        34
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 5
+    },
+    {
+      "period": "113000005",
+      "date": "2024-01-15",
+      "first_zone": [
+        10,
+        15,
+        21,
+        27,
+        29,
+        35
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 8
+    },
+    {
+      "period": "113000006",
+      "date": "2024-01-18",
+      "first_zone": [
+        2,
+        4,
+        6,
+        14,
+        31,
+        34
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 3
+    },
+    {
+      "period": "113000007",
+      "date": "2024-01-22",
+      "first_zone": [
+        9,
+        12,
+        14,
+        17,
+        27,
+        31
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 6
+    },
+    {
+      "period": "113000008",
+      "date": "2024-01-25",
+      "first_zone": [
+        3,
+        10,
+        11,
+        17,
+        26,
+        29
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 1
+    },
+    {
+      "period": "113000009",
+      "date": "2024-01-29",
+      "first_zone": [
+        6,
+        15,
+        22,
+        25,
+        32,
+        36
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 3
+    },
+    {
+      "period": "113000010",
+      "date": "2024-02-01",
+      "first_zone": [
+        4,
+        13,
+        21,
+        23,
+        25,
+        29
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 7
+    },
+    {
+      "period": "113000011",
+      "date": "2024-02-05",
+      "first_zone": [
+        1,
+        16,
+        18,
+        21,
+        30,
+        38
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 6
+    },
+    {
+      "period": "113000012",
+      "date": "2024-02-08",
+      "first_zone": [
+        10,
+        15,
+        20,
+        24,
+        25,
+        34
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 2
+    },
+    {
+      "period": "113000013",
+      "date": "2024-02-12",
+      "first_zone": [
+        2,
+        18,
+        21,
+        28,
+        30,
+        35
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 8
+    },
+    {
+      "period": "113000014",
+      "date": "2024-02-15",
+      "first_zone": [
+        2,
+        7,
+        17,
+        22,
+        32,
+        33
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 4
+    },
+    {
+      "period": "113000015",
+      "date": "2024-02-19",
+      "first_zone": [
+        5,
+        6,
+        18,
+        26,
+        33,
+        38
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 5
+    },
+    {
+      "period": "113000016",
+      "date": "2024-02-22",
+      "first_zone": [
+        4,
+        13,
+        14,
+        17,
+        24,
+        25
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 4
+    },
+    {
+      "period": "113000017",
+      "date": "2024-02-26",
+      "first_zone": [
+        4,
+        7,
+        11,
+        12,
+        35,
+        37
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 8
+    },
+    {
+      "period": "113000018",
+      "date": "2024-02-29",
+      "first_zone": [
+        1,
+        2,
+        11,
+        17,
+        24,
+        29
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 4
+    },
+    {
+      "period": "113000019",
+      "date": "2024-03-04",
+      "first_zone": [
+        3,
+        5,
+        10,
+        24,
+        37,
+        38
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 7
+    },
+    {
+      "period": "113000020",
+      "date": "2024-03-07",
+      "first_zone": [
+        3,
+        11,
+        13,
+        17,
+        20,
+        27
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 2
+    },
+    {
+      "period": "113000021",
+      "date": "2024-03-11",
+      "first_zone": [
+        5,
+        11,
+        14,
+        26,
+        30,
+        33
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 3
+    },
+    {
+      "period": "113000022",
+      "date": "2024-03-14",
+      "first_zone": [
+        2,
+        11,
+        12,
+        15,
+        21,
+        30
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 6
+    },
+    {
+      "period": "113000023",
+      "date": "2024-03-18",
+      "first_zone": [
+        2,
+        10,
+        11,
+        19,
+        23,
+        35
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 1
+    },
+    {
+      "period": "113000024",
+      "date": "2024-03-21",
+      "first_zone": [
+        1,
+        8,
+        16,
+        17,
+        26,
+        38
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 7
+    },
+    {
+      "period": "113000025",
+      "date": "2024-03-25",
+      "first_zone": [
+        2,
+        15,
+        16,
+        23,
+        24,
+        38
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 5
+    },
+    {
+      "period": "113000026",
+      "date": "2024-03-28",
+      "first_zone": [
+        2,
+        9,
+        15,
+        19,
+        24,
+        31
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 4
+    },
+    {
+      "period": "113000027",
+      "date": "2024-04-01",
+      "first_zone": [
+        3,
+        9,
+        27,
+        35,
+        36,
+        37
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 2
+    },
+    {
+      "period": "113000028",
+      "date": "2024-04-04",
+      "first_zone": [
+        3,
+        14,
+        17,
+        22,
+        24,
+        33
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 1
+    },
+    {
+      "period": "113000029",
+      "date": "2024-04-08",
+      "first_zone": [
+        5,
+        6,
+        8,
+        11,
+        18,
+        23
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 5
+    },
+    {
+      "period": "113000030",
+      "date": "2024-04-11",
+      "first_zone": [
+        11,
+        12,
+        14,
+        25,
+        30,
+        36
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 3
+    },
+    {
+      "period": "113000031",
+      "date": "2024-04-15",
+      "first_zone": [
+        6,
+        7,
+        8,
+        14,
+        27,
+        36
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 7
+    },
+    {
+      "period": "113000032",
+      "date": "2024-04-18",
+      "first_zone": [
+        2,
+        16,
+        18,
+        21,
+        34,
+        37
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 5
+    },
+    {
+      "period": "113000033",
+      "date": "2024-04-22",
+      "first_zone": [
+        2,
+        14,
+        19,
+        22,
+        31,
+        35
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 1
+    },
+    {
+      "period": "113000034",
+      "date": "2024-04-25",
+      "first_zone": [
+        3,
+        20,
+        31,
+        34,
+        36,
+        37
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 7
+    },
+    {
+      "period": "113000035",
+      "date": "2024-04-29",
+      "first_zone": [
+        8,
+        19,
+        25,
+        30,
+        31,
+        35
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 7
+    },
+    {
+      "period": "113000036",
+      "date": "2024-05-02",
+      "first_zone": [
+        13,
+        17,
+        24,
+        26,
+        33,
+        35
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 6
+    },
+    {
+      "period": "113000037",
+      "date": "2024-05-06",
+      "first_zone": [
+        4,
+        13,
+        25,
+        30,
+        31,
+        34
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 7
+    },
+    {
+      "period": "113000038",
+      "date": "2024-05-09",
+      "first_zone": [
+        10,
+        14,
+        22,
+        29,
+        35,
+        37
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 7
+    },
+    {
+      "period": "113000039",
+      "date": "2024-05-13",
+      "first_zone": [
+        15,
+        20,
+        23,
+        26,
+        33,
+        35
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 7
+    },
+    {
+      "period": "113000040",
+      "date": "2024-05-16",
+      "first_zone": [
+        1,
+        2,
+        10,
+        13,
+        18,
+        30
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 1
+    },
+    {
+      "period": "113000041",
+      "date": "2024-05-20",
+      "first_zone": [
+        1,
+        5,
+        7,
+        19,
+        32,
+        33
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 3
+    },
+    {
+      "period": "113000042",
+      "date": "2024-05-23",
+      "first_zone": [
+        4,
+        8,
+        14,
+        21,
+        25,
+        37
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 3
+    },
+    {
+      "period": "113000043",
+      "date": "2024-05-27",
+      "first_zone": [
+        1,
+        4,
+        20,
+        26,
+        29,
+        33
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 4
+    },
+    {
+      "period": "113000044",
+      "date": "2024-05-30",
+      "first_zone": [
+        6,
+        7,
+        16,
+        21,
+        27,
+        31
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 6
+    },
+    {
+      "period": "113000045",
+      "date": "2024-06-03",
+      "first_zone": [
+        3,
+        4,
+        11,
+        22,
+        35,
+        36
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 3
+    },
+    {
+      "period": "113000046",
+      "date": "2024-06-06",
+      "first_zone": [
+        5,
+        13,
+        17,
+        25,
+        33,
+        38
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 1
+    },
+    {
+      "period": "113000047",
+      "date": "2024-06-10",
+      "first_zone": [
+        5,
+        11,
+        15,
+        26,
+        28,
+        29
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 7
+    },
+    {
+      "period": "113000048",
+      "date": "2024-06-13",
+      "first_zone": [
+        2,
+        5,
+        15,
+        18,
+        32,
+        35
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 3
+    },
+    {
+      "period": "113000049",
+      "date": "2024-06-17",
+      "first_zone": [
+        5,
+        22,
+        28,
+        29,
+        30,
+        31
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 8
+    },
+    {
+      "period": "113000050",
+      "date": "2024-06-20",
+      "first_zone": [
+        10,
+        11,
+        24,
+        27,
+        30,
+        36
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 7
+    },
+    {
+      "period": "113000051",
+      "date": "2024-06-24",
+      "first_zone": [
+        7,
+        13,
+        16,
+        22,
+        25,
+        26
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 8
+    },
+    {
+      "period": "113000052",
+      "date": "2024-06-27",
+      "first_zone": [
+        2,
+        11,
+        14,
+        15,
+        17,
+        29
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 1
+    },
+    {
+      "period": "113000053",
+      "date": "2024-07-01",
+      "first_zone": [
+        2,
+        3,
+        12,
+        17,
+        30,
+        33
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 5
+    },
+    {
+      "period": "113000054",
+      "date": "2024-07-04",
+      "first_zone": [
+        21,
+        23,
+        24,
+        25,
+        30,
+        38
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 1
+    },
+    {
+      "period": "113000055",
+      "date": "2024-07-08",
+      "first_zone": [
+        10,
+        11,
+        13,
+        30,
+        32,
+        37
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 5
+    },
+    {
+      "period": "113000056",
+      "date": "2024-07-11",
+      "first_zone": [
+        9,
+        10,
+        12,
+        15,
+        29,
+        36
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 4
+    },
+    {
+      "period": "113000057",
+      "date": "2024-07-15",
+      "first_zone": [
+        1,
+        4,
+        11,
+        19,
+        25,
+        33
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 2
+    },
+    {
+      "period": "113000058",
+      "date": "2024-07-18",
+      "first_zone": [
+        8,
+        12,
+        19,
+        23,
+        28,
+        31
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 5
+    },
+    {
+      "period": "113000059",
+      "date": "2024-07-22",
+      "first_zone": [
+        11,
+        14,
+        17,
+        31,
+        32,
+        38
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 8
+    },
+    {
+      "period": "113000060",
+      "date": "2024-07-25",
+      "first_zone": [
+        4,
+        11,
+        23,
+        27,
+        32,
+        38
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 7
+    },
+    {
+      "period": "113000061",
+      "date": "2024-07-29",
+      "first_zone": [
+        3,
+        6,
+        11,
+        27,
+        28,
+        30
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 1
+    },
+    {
+      "period": "113000062",
+      "date": "2024-08-01",
+      "first_zone": [
+        3,
+        13,
+        25,
+        26,
+        31,
+        34
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 5
+    },
+    {
+      "period": "113000063",
+      "date": "2024-08-05",
+      "first_zone": [
+        2,
+        7,
+        14,
+        15,
+        29,
+        35
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 3
+    },
+    {
+      "period": "113000064",
+      "date": "2024-08-08",
+      "first_zone": [
+        2,
+        3,
+        21,
+        29,
+        34,
+        37
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 8
+    },
+    {
+      "period": "113000065",
+      "date": "2024-08-12",
+      "first_zone": [
+        2,
+        9,
+        10,
+        17,
+        20,
+        30
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 4
+    },
+    {
+      "period": "113000066",
+      "date": "2024-08-15",
+      "first_zone": [
+        4,
+        6,
+        14,
+        16,
+        20,
+        24
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 2
+    },
+    {
+      "period": "113000067",
+      "date": "2024-08-19",
+      "first_zone": [
+        6,
+        10,
+        17,
+        21,
+        22,
+        29
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 6
+    },
+    {
+      "period": "113000068",
+      "date": "2024-08-22",
+      "first_zone": [
+        5,
+        15,
+        19,
+        20,
+        31,
+        34
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 2
+    },
+    {
+      "period": "113000069",
+      "date": "2024-08-26",
+      "first_zone": [
+        15,
+        18,
+        25,
+        26,
+        29,
+        30
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 1
+    },
+    {
+      "period": "113000070",
+      "date": "2024-08-29",
+      "first_zone": [
+        9,
+        24,
+        25,
+        31,
+        32,
+        38
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 3
+    },
+    {
+      "period": "113000071",
+      "date": "2024-09-02",
+      "first_zone": [
+        9,
+        16,
+        24,
+        27,
+        31,
+        37
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 4
+    },
+    {
+      "period": "113000072",
+      "date": "2024-09-05",
+      "first_zone": [
+        10,
+        14,
+        16,
+        25,
+        28,
+        38
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 4
+    },
+    {
+      "period": "113000073",
+      "date": "2024-09-09",
+      "first_zone": [
+        7,
+        21,
+        22,
+        27,
+        31,
+        36
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 7
+    },
+    {
+      "period": "113000074",
+      "date": "2024-09-12",
+      "first_zone": [
+        10,
+        12,
+        21,
+        27,
+        33,
+        38
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 8
+    },
+    {
+      "period": "113000075",
+      "date": "2024-09-16",
+      "first_zone": [
+        8,
+        14,
+        17,
+        23,
+        25,
+        26
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 4
+    },
+    {
+      "period": "113000076",
+      "date": "2024-09-19",
+      "first_zone": [
+        3,
+        8,
+        16,
+        24,
+        26,
+        30
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 4
+    },
+    {
+      "period": "113000077",
+      "date": "2024-09-23",
+      "first_zone": [
+        4,
+        13,
+        14,
+        23,
+        24,
+        29
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 8
+    },
+    {
+      "period": "113000078",
+      "date": "2024-09-26",
+      "first_zone": [
+        3,
+        6,
+        9,
+        11,
+        18,
+        29
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 3
+    },
+    {
+      "period": "113000079",
+      "date": "2024-09-30",
+      "first_zone": [
+        3,
+        9,
+        13,
+        14,
+        17,
+        33
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 5
+    },
+    {
+      "period": "113000080",
+      "date": "2024-10-03",
+      "first_zone": [
+        11,
+        17,
+        18,
+        19,
+        30,
+        36
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 8
+    },
+    {
+      "period": "113000081",
+      "date": "2024-10-07",
+      "first_zone": [
+        9,
+        21,
+        22,
+        27,
+        29,
+        36
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 5
+    },
+    {
+      "period": "113000082",
+      "date": "2024-10-10",
+      "first_zone": [
+        2,
+        8,
+        14,
+        20,
+        23,
+        37
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 8
+    },
+    {
+      "period": "113000083",
+      "date": "2024-10-14",
+      "first_zone": [
+        6,
+        10,
+        22,
+        23,
+        25,
+        27
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 8
+    },
+    {
+      "period": "113000084",
+      "date": "2024-10-17",
+      "first_zone": [
+        2,
+        3,
+        5,
+        10,
+        25,
+        30
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 6
+    },
+    {
+      "period": "113000085",
+      "date": "2024-10-21",
+      "first_zone": [
+        4,
+        6,
+        13,
+        19,
+        23,
+        38
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 7
+    },
+    {
+      "period": "113000086",
+      "date": "2024-10-24",
+      "first_zone": [
+        8,
+        10,
+        20,
+        28,
+        29,
+        33
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 2
+    },
+    {
+      "period": "113000087",
+      "date": "2024-10-28",
+      "first_zone": [
+        9,
+        11,
+        23,
+        33,
+        35,
+        37
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 2
+    },
+    {
+      "period": "113000088",
+      "date": "2024-10-31",
+      "first_zone": [
+        4,
+        8,
+        12,
+        14,
+        17,
+        37
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 4
+    },
+    {
+      "period": "113000089",
+      "date": "2024-11-04",
+      "first_zone": [
+        1,
+        7,
+        14,
+        20,
+        22,
+        23
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 1
+    },
+    {
+      "period": "113000090",
+      "date": "2024-11-07",
+      "first_zone": [
+        5,
+        21,
+        26,
+        28,
+        34,
+        38
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 6
+    },
+    {
+      "period": "113000091",
+      "date": "2024-11-11",
+      "first_zone": [
+        3,
+        8,
+        9,
+        17,
+        28,
+        33
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 2
+    },
+    {
+      "period": "113000092",
+      "date": "2024-11-14",
+      "first_zone": [
+        6,
+        15,
+        22,
+        23,
+        31,
+        37
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 5
+    },
+    {
+      "period": "113000093",
+      "date": "2024-11-18",
+      "first_zone": [
+        8,
+        9,
+        13,
+        21,
+        36,
+        38
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 8
+    },
+    {
+      "period": "113000094",
+      "date": "2024-11-21",
+      "first_zone": [
+        8,
+        12,
+        13,
+        16,
+        18,
+        27
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 6
+    },
+    {
+      "period": "113000095",
+      "date": "2024-11-25",
+      "first_zone": [
+        7,
+        14,
+        19,
+        25,
+        33,
+        37
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 3
+    },
+    {
+      "period": "113000096",
+      "date": "2024-11-28",
+      "first_zone": [
+        20,
+        25,
+        32,
+        33,
+        34,
+        36
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 7
+    },
+    {
+      "period": "113000097",
+      "date": "2024-12-02",
+      "first_zone": [
+        8,
+        21,
+        22,
+        36,
+        37,
+        38
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 5
+    },
+    {
+      "period": "113000098",
+      "date": "2024-12-05",
+      "first_zone": [
+        10,
+        14,
+        19,
+        30,
+        33,
+        38
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 3
+    },
+    {
+      "period": "113000099",
+      "date": "2024-12-09",
+      "first_zone": [
+        13,
+        18,
+        26,
+        30,
+        31,
+        36
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 5
+    },
+    {
+      "period": "113000100",
+      "date": "2024-12-12",
+      "first_zone": [
+        11,
+        14,
+        17,
+        23,
+        25,
+        30
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 8
+    },
+    {
+      "period": "113000101",
+      "date": "2024-12-16",
+      "first_zone": [
+        3,
+        19,
+        27,
+        30,
+        36,
+        37
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 7
+    },
+    {
+      "period": "113000102",
+      "date": "2024-12-19",
+      "first_zone": [
+        6,
+        8,
+        9,
+        18,
+        23,
+        38
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 5
+    },
+    {
+      "period": "113000103",
+      "date": "2024-12-23",
+      "first_zone": [
+        15,
+        16,
+        18,
+        25,
+        34,
+        37
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 4
+    },
+    {
+      "period": "113000104",
+      "date": "2024-12-26",
+      "first_zone": [
+        13,
+        15,
+        18,
+        28,
+        35,
+        37
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 4
+    },
+    {
+      "period": "113000105",
+      "date": "2024-12-30",
+      "first_zone": [
+        6,
+        8,
+        12,
+        16,
+        23,
+        31
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 1
+    },
+    {
+      "period": "114000001",
+      "date": "2025-01-02",
+      "first_zone": [
+        4,
+        12,
+        13,
+        22,
+        27,
+        32
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 5
+    },
+    {
+      "period": "114000002",
+      "date": "2025-01-06",
+      "first_zone": [
+        4,
+        14,
+        17,
+        29,
+        31,
+        38
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 7
+    },
+    {
+      "period": "114000003",
+      "date": "2025-01-09",
+      "first_zone": [
+        1,
+        4,
+        15,
+        16,
+        31,
+        34
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 4
+    },
+    {
+      "period": "114000004",
+      "date": "2025-01-13",
+      "first_zone": [
+        3,
+        13,
+        22,
+        26,
+        28,
+        33
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 2
+    },
+    {
+      "period": "114000005",
+      "date": "2025-01-16",
+      "first_zone": [
+        10,
+        16,
+        19,
+        21,
+        31,
+        37
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 3
+    },
+    {
+      "period": "114000006",
+      "date": "2025-01-20",
+      "first_zone": [
+        8,
+        11,
+        13,
+        27,
+        29,
+        37
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 2
+    },
+    {
+      "period": "114000007",
+      "date": "2025-01-23",
+      "first_zone": [
+        7,
+        10,
+        13,
+        22,
+        25,
+        29
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 2
+    },
+    {
+      "period": "114000008",
+      "date": "2025-01-27",
+      "first_zone": [
+        2,
+        10,
+        15,
+        18,
+        25,
+        35
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 8
+    },
+    {
+      "period": "114000009",
+      "date": "2025-01-30",
+      "first_zone": [
+        3,
+        17,
+        20,
+        21,
+        24,
+        37
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 6
+    },
+    {
+      "period": "114000010",
+      "date": "2025-02-03",
+      "first_zone": [
+        4,
+        7,
+        15,
+        31,
+        33,
+        36
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 6
+    },
+    {
+      "period": "114000011",
+      "date": "2025-02-06",
+      "first_zone": [
+        6,
+        18,
+        21,
+        32,
+        33,
+        37
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 1
+    },
+    {
+      "period": "114000012",
+      "date": "2025-02-10",
+      "first_zone": [
+        6,
+        7,
+        8,
+        13,
+        14,
+        24
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 4
+    },
+    {
+      "period": "114000013",
+      "date": "2025-02-13",
+      "first_zone": [
+        2,
+        3,
+        11,
+        18,
+        30,
+        36
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 7
+    },
+    {
+      "period": "114000014",
+      "date": "2025-02-17",
+      "first_zone": [
+        1,
+        17,
+        21,
+        23,
+        31,
+        34
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 1
+    },
+    {
+      "period": "114000015",
+      "date": "2025-02-20",
+      "first_zone": [
+        5,
+        6,
+        15,
+        19,
+        32,
+        37
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 8
+    },
+    {
+      "period": "114000016",
+      "date": "2025-02-24",
+      "first_zone": [
+        7,
+        15,
+        16,
+        23,
+        24,
+        35
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 2
+    },
+    {
+      "period": "114000017",
+      "date": "2025-02-27",
+      "first_zone": [
+        1,
+        7,
+        8,
+        24,
+        26,
+        34
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 2
+    },
+    {
+      "period": "114000018",
+      "date": "2025-03-03",
+      "first_zone": [
+        12,
+        15,
+        20,
+        23,
+        26,
+        32
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 5
+    },
+    {
+      "period": "114000019",
+      "date": "2025-03-06",
+      "first_zone": [
+        5,
+        9,
+        15,
+        17,
+        18,
+        29
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 4
+    },
+    {
+      "period": "114000020",
+      "date": "2025-03-10",
+      "first_zone": [
+        13,
+        16,
+        17,
+        20,
+        27,
+        31
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 2
+    },
+    {
+      "period": "114000021",
+      "date": "2025-03-13",
+      "first_zone": [
+        3,
+        4,
+        13,
+        16,
+        24,
+        25
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 7
+    },
+    {
+      "period": "114000022",
+      "date": "2025-03-17",
+      "first_zone": [
+        1,
+        2,
+        3,
+        12,
+        18,
+        28
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 4
+    },
+    {
+      "period": "114000023",
+      "date": "2025-03-20",
+      "first_zone": [
+        1,
+        3,
+        12,
+        18,
+        31,
+        38
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 8
+    },
+    {
+      "period": "114000024",
+      "date": "2025-03-24",
+      "first_zone": [
+        3,
+        17,
+        22,
+        24,
+        25,
+        33
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 3
+    },
+    {
+      "period": "114000025",
+      "date": "2025-03-27",
+      "first_zone": [
+        7,
+        8,
+        21,
+        26,
+        32,
+        35
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 2
+    },
+    {
+      "period": "114000026",
+      "date": "2025-03-31",
+      "first_zone": [
+        2,
+        6,
+        7,
+        9,
+        12,
+        20
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 4
+    },
+    {
+      "period": "114000027",
+      "date": "2025-04-03",
+      "first_zone": [
+        2,
+        9,
+        15,
+        21,
+        29,
+        36
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 7
+    },
+    {
+      "period": "114000028",
+      "date": "2025-04-07",
+      "first_zone": [
+        13,
+        21,
+        24,
+        25,
+        31,
+        36
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 4
+    },
+    {
+      "period": "114000029",
+      "date": "2025-04-10",
+      "first_zone": [
+        9,
+        16,
+        20,
+        23,
+        29,
+        34
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 4
+    },
+    {
+      "period": "114000030",
+      "date": "2025-04-14",
+      "first_zone": [
+        1,
+        5,
+        9,
+        20,
+        29,
+        38
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 2
+    },
+    {
+      "period": "114000031",
+      "date": "2025-04-17",
+      "first_zone": [
+        1,
+        2,
+        3,
+        5,
+        17,
+        27
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 8
+    },
+    {
+      "period": "114000032",
+      "date": "2025-04-21",
+      "first_zone": [
+        5,
+        9,
+        20,
+        29,
+        35,
+        36
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 8
+    },
+    {
+      "period": "114000033",
+      "date": "2025-04-24",
+      "first_zone": [
+        7,
+        17,
+        25,
+        29,
+        36,
+        37
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 5
+    },
+    {
+      "period": "114000034",
+      "date": "2025-04-28",
+      "first_zone": [
+        2,
+        14,
+        17,
+        19,
+        29,
+        32
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 5
+    },
+    {
+      "period": "114000035",
+      "date": "2025-05-01",
+      "first_zone": [
+        14,
+        19,
+        20,
+        25,
+        27,
+        30
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 4
+    },
+    {
+      "period": "114000036",
+      "date": "2025-05-05",
+      "first_zone": [
+        7,
+        8,
+        9,
+        11,
+        19,
+        35
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 4
+    },
+    {
+      "period": "114000037",
+      "date": "2025-05-08",
+      "first_zone": [
+        5,
+        8,
+        9,
+        17,
+        31,
+        37
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 1
+    },
+    {
+      "period": "114000038",
+      "date": "2025-05-12",
+      "first_zone": [
+        2,
+        8,
+        26,
+        34,
+        35,
+        38
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 4
+    },
+    {
+      "period": "114000039",
+      "date": "2025-05-15",
+      "first_zone": [
+        1,
+        2,
+        8,
+        21,
+        23,
+        26
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 1
+    },
+    {
+      "period": "114000040",
+      "date": "2025-05-19",
+      "first_zone": [
+        10,
+        15,
+        22,
+        27,
+        29,
+        37
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 3
+    },
+    {
+      "period": "114000041",
+      "date": "2025-05-22",
+      "first_zone": [
+        6,
+        12,
+        21,
+        25,
+        34,
+        38
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 3
+    },
+    {
+      "period": "114000042",
+      "date": "2025-05-26",
+      "first_zone": [
+        13,
+        14,
+        17,
+        23,
+        24,
+        37
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 6
+    },
+    {
+      "period": "114000043",
+      "date": "2025-05-29",
+      "first_zone": [
+        5,
+        6,
+        9,
+        20,
+        22,
+        35
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 7
+    },
+    {
+      "period": "114000044",
+      "date": "2025-06-02",
+      "first_zone": [
+        1,
+        5,
+        16,
+        18,
+        21,
+        31
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 2
+    },
+    {
+      "period": "114000045",
+      "date": "2025-06-05",
+      "first_zone": [
+        12,
+        16,
+        20,
+        22,
+        34,
+        35
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 5
+    },
+    {
+      "period": "114000046",
+      "date": "2025-06-09",
+      "first_zone": [
+        3,
+        7,
+        9,
+        19,
+        24,
+        31
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 2
+    },
+    {
+      "period": "114000047",
+      "date": "2025-06-12",
+      "first_zone": [
+        5,
+        12,
+        13,
+        15,
+        26,
+        38
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 5
+    },
+    {
+      "period": "114000048",
+      "date": "2025-06-16",
+      "first_zone": [
+        4,
+        11,
+        12,
+        18,
+        21,
+        26
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 3
+    },
+    {
+      "period": "114000049",
+      "date": "2025-06-19",
+      "first_zone": [
+        1,
+        7,
+        20,
+        21,
+        36,
+        38
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 6
+    },
+    {
+      "period": "114000050",
+      "date": "2025-06-23",
+      "first_zone": [
+        6,
+        11,
+        20,
+        31,
+        32,
+        33
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 6
+    },
+    {
+      "period": "114000051",
+      "date": "2025-06-26",
+      "first_zone": [
+        1,
+        7,
+        15,
+        23,
+        26,
+        38
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 4
+    },
+    {
+      "period": "114000052",
+      "date": "2025-06-30",
+      "first_zone": [
+        1,
+        3,
+        9,
+        15,
+        22,
+        27
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 5
+    },
+    {
+      "period": "114000053",
+      "date": "2025-07-03",
+      "first_zone": [
+        11,
+        14,
+        20,
+        27,
+        30,
+        38
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 6
+    },
+    {
+      "period": "114000054",
+      "date": "2025-07-07",
+      "first_zone": [
+        7,
+        9,
+        14,
+        23,
+        37,
+        38
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 3
+    },
+    {
+      "period": "114000055",
+      "date": "2025-07-10",
+      "first_zone": [
+        1,
+        2,
+        7,
+        14,
+        28,
+        31
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 2
+    },
+    {
+      "period": "114000056",
+      "date": "2025-07-14",
+      "first_zone": [
+        3,
+        6,
+        19,
+        22,
+        37,
+        38
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 4
+    },
+    {
+      "period": "114000057",
+      "date": "2025-07-17",
+      "first_zone": [
+        1,
+        4,
+        6,
+        21,
+        25,
+        28
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 2
+    },
+    {
+      "period": "114000058",
+      "date": "2025-07-21",
+      "first_zone": [
+        10,
+        18,
+        20,
+        24,
+        36,
+        38
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 4
+    },
+    {
+      "period": "114000059",
+      "date": "2025-07-24",
+      "first_zone": [
+        3,
+        4,
+        7,
+        10,
+        33,
+        38
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 5
+    },
+    {
+      "period": "114000060",
+      "date": "2025-07-28",
+      "first_zone": [
+        12,
+        16,
+        18,
+        22,
+        24,
+        36
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 5
+    },
+    {
+      "period": "114000061",
+      "date": "2025-07-31",
+      "first_zone": [
+        4,
+        9,
+        18,
+        20,
+        29,
+        31
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 3
+    },
+    {
+      "period": "114000062",
+      "date": "2025-08-04",
+      "first_zone": [
+        15,
+        16,
+        22,
+        27,
+        30,
+        32
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 1
+    },
+    {
+      "period": "114000063",
+      "date": "2025-08-07",
+      "first_zone": [
+        2,
+        4,
+        7,
+        8,
+        18,
+        25
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 7
+    },
+    {
+      "period": "114000064",
+      "date": "2025-08-11",
+      "first_zone": [
+        3,
+        5,
+        9,
+        16,
+        18,
+        19
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 2
+    },
+    {
+      "period": "114000065",
+      "date": "2025-08-14",
+      "first_zone": [
+        1,
+        11,
+        14,
+        17,
+        19,
+        36
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 3
+    },
+    {
+      "period": "114000066",
+      "date": "2025-08-18",
+      "first_zone": [
+        2,
+        5,
+        8,
+        17,
+        20,
+        26
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 6
+    },
+    {
+      "period": "114000067",
+      "date": "2025-08-21",
+      "first_zone": [
+        2,
+        4,
+        11,
+        12,
+        16,
+        19
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 2
+    },
+    {
+      "period": "114000068",
+      "date": "2025-08-25",
+      "first_zone": [
+        1,
+        12,
+        14,
+        21,
+        36,
+        37
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 3
+    },
+    {
+      "period": "114000069",
+      "date": "2025-08-28",
+      "first_zone": [
+        9,
+        13,
+        14,
+        17,
+        23,
+        30
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 5
+    },
+    {
+      "period": "114000070",
+      "date": "2025-09-01",
+      "first_zone": [
+        2,
+        7,
+        16,
+        18,
+        28,
+        29
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 4
+    },
+    {
+      "period": "114000071",
+      "date": "2025-09-04",
+      "first_zone": [
+        6,
+        7,
+        9,
+        11,
+        21,
+        38
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 8
+    },
+    {
+      "period": "114000072",
+      "date": "2025-09-08",
+      "first_zone": [
+        7,
+        8,
+        14,
+        15,
+        25,
+        36
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 6
+    },
+    {
+      "period": "114000073",
+      "date": "2025-09-11",
+      "first_zone": [
+        11,
+        18,
+        21,
+        27,
+        31,
+        35
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 6
+    },
+    {
+      "period": "114000074",
+      "date": "2025-09-15",
+      "first_zone": [
+        4,
+        16,
+        20,
+        33,
+        34,
+        38
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 2
+    },
+    {
+      "period": "114000075",
+      "date": "2025-09-18",
+      "first_zone": [
+        10,
+        20,
+        25,
+        28,
+        32,
+        36
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 2
+    },
+    {
+      "period": "114000076",
+      "date": "2025-09-22",
+      "first_zone": [
+        10,
+        11,
+        14,
+        22,
+        31,
+        33
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 2
+    },
+    {
+      "period": "114000077",
+      "date": "2025-09-25",
+      "first_zone": [
+        8,
+        12,
+        14,
+        24,
+        28,
+        35
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 3
+    },
+    {
+      "period": "114000078",
+      "date": "2025-09-29",
+      "first_zone": [
+        12,
+        16,
+        17,
+        20,
+        27,
+        36
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 3
+    },
+    {
+      "period": "114000079",
+      "date": "2025-10-02",
+      "first_zone": [
+        3,
+        5,
+        12,
+        24,
+        27,
+        30
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 7
+    },
+    {
+      "period": "114000080",
+      "date": "2025-10-06",
+      "first_zone": [
+        5,
+        6,
+        9,
+        14,
+        15,
+        37
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 5
+    },
+    {
+      "period": "114000081",
+      "date": "2025-10-09",
+      "first_zone": [
+        1,
+        6,
+        11,
+        20,
+        34,
+        35
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 8
+    },
+    {
+      "period": "114000082",
+      "date": "2025-10-13",
+      "first_zone": [
+        4,
+        6,
+        8,
+        18,
+        24,
+        28
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 1
+    },
+    {
+      "period": "114000083",
+      "date": "2025-10-16",
+      "first_zone": [
+        8,
+        9,
+        13,
+        16,
+        26,
+        35
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 2
+    },
+    {
+      "period": "114000084",
+      "date": "2025-10-20",
+      "first_zone": [
+        8,
+        12,
+        19,
+        22,
+        24,
+        32
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 5
+    },
+    {
+      "period": "114000085",
+      "date": "2025-10-23",
+      "first_zone": [
+        5,
+        9,
+        11,
+        21,
+        32,
+        35
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 8
+    },
+    {
+      "period": "114000086",
+      "date": "2025-10-27",
+      "first_zone": [
+        1,
+        11,
+        16,
+        20,
+        27,
+        36
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 6
+    },
+    {
+      "period": "114000087",
+      "date": "2025-10-30",
+      "first_zone": [
+        13,
+        14,
+        17,
+        20,
+        21,
+        24
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 2
+    },
+    {
+      "period": "114000088",
+      "date": "2025-11-03",
+      "first_zone": [
+        4,
+        18,
+        20,
+        30,
+        32,
+        35
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 4
+    },
+    {
+      "period": "114000089",
+      "date": "2025-11-06",
+      "first_zone": [
+        11,
+        18,
+        20,
+        25,
+        29,
+        37
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 8
+    },
+    {
+      "period": "114000090",
+      "date": "2025-11-10",
+      "first_zone": [
+        6,
+        12,
+        28,
+        29,
+        31,
+        32
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 4
+    },
+    {
+      "period": "114000091",
+      "date": "2025-11-13",
+      "first_zone": [
+        2,
+        9,
+        11,
+        15,
+        26,
+        34
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 4
+    },
+    {
+      "period": "114000092",
+      "date": "2025-11-17",
+      "first_zone": [
+        17,
+        18,
+        19,
+        28,
+        34,
+        36
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 6
+    },
+    {
+      "period": "114000093",
+      "date": "2025-11-20",
+      "first_zone": [
+        3,
+        8,
+        17,
+        20,
+        31,
+        35
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 7
+    },
+    {
+      "period": "114000094",
+      "date": "2025-11-24",
+      "first_zone": [
+        7,
+        9,
+        19,
+        20,
+        33,
+        34
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 7
+    },
+    {
+      "period": "114000095",
+      "date": "2025-11-27",
+      "first_zone": [
+        4,
+        9,
+        16,
+        26,
+        33,
+        35
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 2
+    },
+    {
+      "period": "114000096",
+      "date": "2025-12-01",
+      "first_zone": [
+        5,
+        7,
+        8,
+        11,
+        32,
+        37
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 2
+    },
+    {
+      "period": "114000097",
+      "date": "2025-12-04",
+      "first_zone": [
+        3,
+        6,
+        7,
+        10,
+        29,
+        33
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 1
+    },
+    {
+      "period": "114000098",
+      "date": "2025-12-08",
+      "first_zone": [
+        5,
+        14,
+        15,
+        20,
+        32,
+        37
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 2
+    },
+    {
+      "period": "114000099",
+      "date": "2025-12-11",
+      "first_zone": [
+        5,
+        6,
+        11,
+        15,
+        22,
+        37
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 7
+    },
+    {
+      "period": "114000100",
+      "date": "2025-12-15",
+      "first_zone": [
+        19,
+        26,
+        28,
+        31,
+        32,
+        34
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 6
+    },
+    {
+      "period": "114000101",
+      "date": "2025-12-18",
+      "first_zone": [
+        8,
+        15,
+        16,
+        21,
+        29,
+        37
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 5
+    },
+    {
+      "period": "114000102",
+      "date": "2025-12-22",
+      "first_zone": [
+        5,
+        16,
+        21,
+        25,
+        32,
+        34
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 8
+    },
+    {
+      "period": "114000103",
+      "date": "2025-12-25",
+      "first_zone": [
+        6,
+        12,
+        21,
+        22,
+        28,
+        34
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 8
+    },
+    {
+      "period": "114000104",
+      "date": "2025-12-29",
+      "first_zone": [
+        1,
+        3,
+        9,
+        11,
+        18,
+        32
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 6
+    }
+  ]
+}
