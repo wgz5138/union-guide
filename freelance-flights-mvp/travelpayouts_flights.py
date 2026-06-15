@@ -72,8 +72,11 @@ def 轉代碼(name):
 CURRENCY = "twd"         # 用新台幣報價
 THRESHOLD = 15000        # 低於這個價（TWD）就跳通知（多國來回，先設寬一點 15000）
 
-OUTPUT_CSV = os.path.join("data", "flight_prices.csv")
-LOG_FILE = os.path.join("logs", "scraper.log")
+# 資料與 log 都放在「程式所在的資料夾」底下（不管從哪裡點兩下執行都一樣），
+# 所以你把專案放 F 槽，data/ 和 logs/ 就在 F 槽，全部集中、好找。
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+OUTPUT_CSV = os.path.join(BASE_DIR, "data", "flight_prices.csv")
+LOG_FILE = os.path.join(BASE_DIR, "logs", "scraper.log")
 
 API_URL = "https://api.travelpayouts.com/aviasales/v3/prices_for_dates"
 TOKEN = os.environ.get("TRAVELPAYOUTS_TOKEN", "")
