@@ -200,7 +200,8 @@ def scrape(start_month, end_month, delay=0.4):
             print(f"  X {y}-{m:02d} 失敗：{e}", file=sys.stderr)
             failed.append(f"{y}-{m:02d}")
         time.sleep(delay)
-    records = sorted(all_rows.values(), key=lambda r: r["period"])
+    # 以開獎日期排序（期別字串長度不一，字串排序會錯亂時間順序）
+    records = sorted(all_rows.values(), key=lambda r: (r["date"], r["period"]))
     return records, failed
 
 

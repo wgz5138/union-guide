@@ -89,7 +89,9 @@ def main():
         for r in rows:
             all_rows[r["period"]] = r   # 以期別去重（跨年也安全）
 
-    records = sorted(all_rows.values(), key=lambda r: r["period"])
+    # 注意：期別字串長度不一（2009-2010 為 8 碼 98/99，2011 起為 9 碼 100+），
+    # 直接以字串排序會錯亂時間順序，故以「開獎日期」為主鍵排序。
+    records = sorted(all_rows.values(), key=lambda r: (r["date"], r["period"]))
     if not records:
         raise SystemExit("沒有解析到任何威力彩開獎紀錄，請確認 CSV 內容。")
 
