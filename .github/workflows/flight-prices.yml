@@ -16,22 +16,35 @@ on:
       - 'freelance-flights-mvp/travelpayouts_flights.py'
       - '.github/workflows/flight-prices.yml'
 
+permissions:
+  contents: write   # 為了把 price_state.json（價格記憶）提交回 repo
+
 jobs:
   check:
     runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: freelance-flights-mvp
     steps:
       - uses: actions/checkout@v5
       - uses: actions/setup-python@v6
         with:
           python-version: '3.x'
       - name: 安裝套件
+        working-directory: freelance-flights-mvp
         run: pip install requests
       - name: 查機票並推 Telegram
+        working-directory: freelance-flights-mvp
         env:
           TRAVELPAYOUTS_TOKEN: ${{ secrets.TRAVELPAYOUTS_TOKEN }}
           TG_TOKEN: ${{ secrets.TG_TOKEN }}
           TG_CHAT: ${{ secrets.TG_CHAT }}
         run: python travelpayouts_flights.py
+      - name: 保存價格記憶（讓降價偵測在雲端也有效）
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add freelance-flights-mvp/price_state.json
+          if git diff --cached --quiet; then
+            echo "價格無變化，略過提交。"
+          else
+            git commit -m "chore(flights): 更新價格記憶"
+            git push
+          fi

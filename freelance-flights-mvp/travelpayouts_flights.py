@@ -24,6 +24,7 @@
 """
 
 import csv
+import json
 import logging
 import os
 import time
@@ -77,6 +78,8 @@ THRESHOLD = 15000        # 低於這個價（TWD）就跳通知（多國來回�
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 OUTPUT_CSV = os.path.join(BASE_DIR, "data", "flight_prices.csv")
 LOG_FILE = os.path.join(BASE_DIR, "logs", "scraper.log")
+# 記每條航線「上次的價格」，用來判斷有沒有降價（只在變便宜時才通知，不洗版）。
+STATE_FILE = os.path.join(BASE_DIR, "price_state.json")
 
 API_URL = "https://api.travelpayouts.com/aviasales/v3/prices_for_dates"
 TOKEN = os.environ.get("TRAVELPAYOUTS_TOKEN", "")
@@ -234,15 +237,41 @@ def save_csv(row):
 
 
 # ─────────────────────────────────────────────────────────────
-# 低於門檻就通知（先印畫面；要寄手機就接 Telegram）
+# 降價偵測：記住每條航線上次的價格
+# ─────────────────────────────────────────────────────────────
+def load_state():
+    """讀回上次各航線的價格 {航線: 價格}。檔案不存在或壞掉就回空的。"""
+    if not os.path.exists(STATE_FILE):
+        return {}
+    try:
+        with open(STATE_FILE, encoding="utf-8") as f:
+            return json.load(f)
+    except (OSError, ValueError):
+        return {}
+
+
+def save_state(state):
+    try:
+        with open(STATE_FILE, "w", encoding="utf-8") as f:
+            json.dump(state, f, ensure_ascii=False, indent=2)
+    except OSError as e:
+        log.warning("　價格狀態存檔失敗（不影響查價）：%s", e)
+
+
+# ─────────────────────────────────────────────────────────────
+# 通知（印畫面；TG 有設就推手機）。降價時訊息會多一行省多少。
 # ─────────────────────────────────────────────────────────────
 def notify(row):
     when = row["depart_at"]
     if row["trip"] == "來回" and row["return_at"]:
         when += f" 去 / {row['return_at']} 回"
+    drop = ""
+    if row.get("drop_from"):
+        省 = row["drop_from"] - row["price"]
+        drop = f"\n📉 降價了！上次 {row['drop_from']:.0f}，這次省 {省:.0f} 元"
     msg = (f"✈️ 便宜票！{row['route']}（{row['trip']}）{when} "
            f"只要 {row['price']:.0f} {row['currency']}"
-           f"（{row['airline']}，轉機 {row['transfers']} 次）\n{row['link']}")
+           f"（{row['airline']}，轉機 {row['transfers']} 次）{drop}\n{row['link']}")
     log.info("🔔 %s", msg)
     # 寄到手機（Telegram）：只要環境變數 TG_TOKEN 和 TG_CHAT 都有設就會送。
     # 沒設就只印在畫面，不會出錯。（怎麼拿這兩個值，見 README / tg_setup.py）
@@ -266,7 +295,8 @@ def notify(row):
 # ─────────────────────────────────────────────────────────────
 def main():
     log.info("=== 開始查 %d 條航線 ===", len(ROUTES))
-    deals = 0  # 這次有幾條低於門檻
+    state = load_state()   # 上次各航線的價格
+    deals = 0              # 這次有幾條值得通知
     try:
         for i, route in enumerate(ROUTES):
             trip = "來回" if "return" in route else "單程"
@@ -277,14 +307,28 @@ def main():
             if not row:
                 continue
             save_csv(row)
-            if row["price"] < THRESHOLD:
+
+            上次 = state.get(row["route"])
+            價格 = row["price"]
+            # 通知規則：① 比上次便宜 → 一定通知（並標降了多少）
+            #          ② 第一次看到這條，且低於門檻 → 通知
+            #          ③ 沒變便宜（持平或變貴）→ 不通知，避免洗版
+            if 上次 is not None and 價格 < 上次:
+                row["drop_from"] = 上次
+                notify(row)
+                deals += 1
+            elif 上次 is None and 價格 < THRESHOLD:
                 notify(row)
                 deals += 1
             else:
-                log.info("　最低 %.0f %s，還沒到門檻 %d，先記著。",
-                         row["price"], row["currency"], THRESHOLD)
+                log.info("　最低 %.0f %s（上次 %s），沒變便宜，不通知。",
+                         價格, row["currency"],
+                         f"{上次:.0f}" if 上次 is not None else "無紀錄")
+
+            state[row["route"]] = 價格   # 更新這條的最新價
             time.sleep(1)  # 禮貌性間隔，別把人家 API 打太兇
-        log.info("=== 完成：%d 條航線，%d 條低於門檻 ===", len(ROUTES), deals)
+        save_state(state)
+        log.info("=== 完成：%d 條航線，%d 條值得通知 ===", len(ROUTES), deals)
     except Exception as e:
         log.exception("執行失敗：%s", e)
         raise
