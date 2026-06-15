@@ -3,8 +3,8 @@
 """
 互動查機票：自己輸入「出發、目的地、月份」，馬上查最便宜＋推 Telegram。
 
-用法（在 freelance-flights-mvp 資料夾裡）：
-    python 查機票.py
+用法：直接「滑鼠點兩下」資料夾裡的『查機票.bat』即可（推薦）。
+　　　或在終端機跑：python ask_flights.py
 
 它會一步步問你問題，你用中文打地名就好（例：高雄、東京、日本、首爾）。
 查詢、記 CSV、推 Telegram 全都沿用 travelpayouts_flights.py 的設定，
