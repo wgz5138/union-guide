@@ -1,0 +1,7 @@
+# 跑出來的資料和 log 不進版控
+data/
+logs/
+__pycache__/
+*.pyc
+.venv/
+venv/
