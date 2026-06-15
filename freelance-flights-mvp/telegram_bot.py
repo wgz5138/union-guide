@@ -70,6 +70,15 @@ def handle(text):
         return "看不太懂耶 😅\n\n" + 說明
 
     origin, dest, month = places[0], places[1], months[0]
+
+    # 如果地名是「中文但不在對照表」，API 會看不懂 → 先友善提醒，別吐錯誤
+    未知 = [p for p in (origin, dest)
+            if p not in tp.地名對照表 and any(ord(c) > 127 for c in p)]
+    if 未知:
+        return (f"我不認得「{'、'.join(未知)}」😅\n"
+                "請改用機場代碼（例：重慶 CKG、成都 CTU），或用清單上的中文地名：\n"
+                + "、".join(tp.地名對照表))
+
     route = {"origin": origin, "dest": dest, "month": month}
     if len(months) >= 2:
         route["return"] = months[1]
