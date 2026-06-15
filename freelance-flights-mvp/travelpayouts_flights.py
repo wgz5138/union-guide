@@ -194,11 +194,21 @@ def notify(row):
            f"只要 {row['price']:.0f} {row['currency']}"
            f"（{row['airline']}，轉機 {row['transfers']} 次）\n{row['link']}")
     log.info("🔔 %s", msg)
-    # 想寄到手機：去 Telegram 找 @BotFather 建一個 bot 拿 token，再解除下面註解
-    # token, chat_id = os.environ.get("TG_TOKEN"), os.environ.get("TG_CHAT")
-    # if token and chat_id:
-    #     requests.post(f"https://api.telegram.org/bot{token}/sendMessage",
-    #                   data={"chat_id": chat_id, "text": msg}, timeout=10)
+    # 寄到手機（Telegram）：只要環境變數 TG_TOKEN 和 TG_CHAT 都有設就會送。
+    # 沒設就只印在畫面，不會出錯。（怎麼拿這兩個值，見 README / tg_setup.py）
+    token = os.environ.get("TG_TOKEN")
+    chat_id = os.environ.get("TG_CHAT")
+    if token and chat_id:
+        try:
+            requests.post(
+                f"https://api.telegram.org/bot{token}/sendMessage",
+                data={"chat_id": chat_id, "text": msg},
+                timeout=10,
+            )
+            log.info("　已推送到 Telegram。")
+        except requests.RequestException as e:
+            # 通知失敗不該害整個程式掛掉，記一筆就好
+            log.warning("　Telegram 推送失敗（不影響記價）：%s", e)
 
 
 # ─────────────────────────────────────────────────────────────

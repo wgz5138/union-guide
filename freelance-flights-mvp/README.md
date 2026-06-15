@@ -85,7 +85,8 @@ crontab -e
 
 | 檔案 | 用途 |
 |---|---|
-| `travelpayouts_flights.py` | ⭐ **高雄↔東京每日記價 + 降價通知**（用 Travelpayouts/Aviasales 免費資料 API）。自己找便宜機票用這支，註冊與設定步驟寫在檔案開頭 |
+| `travelpayouts_flights.py` | ⭐ **多航線每日記價 + 降價通知**（用 Travelpayouts/Aviasales 免費資料 API）。自己找便宜機票用這支，註冊與設定步驟寫在檔案開頭 |
+| `tg_setup.py` | 小工具：幫你找出 Telegram chat id（設手機通知時用） |
 | `amadeus_flights.py` | 同功能的 Amadeus 版。⚠️ **Amadeus 免費自助版將於 2026/7/17 關閉**，留作參考，新用戶請改用上面那支 |
 | `scraper.py` | 主骨架（requests 版）。要爬靜態網站 / 有 JSON API 用這支 |
 | `scraper_playwright.py` | 動態網站版（Google Flights 這類，資料靠 JS 載入） |
