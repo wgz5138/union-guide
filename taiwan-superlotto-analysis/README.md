@@ -17,9 +17,27 @@
 | 檔案 | 用途 |
 |---|---|
 | `scraper.py` | 從官方 API 逐月抓取全部歷史開獎資料 → `data/superlotto638.{json,csv}` |
+| `ingest_csv.py` | 讀取官方下載的 CSV（每年一檔）→ `data/superlotto638.{json,csv}` |
 | `analyze.py` | 讀取資料做統計分析 → `report/analysis_report.md` + `report/stats.json` |
-| `data/` | 官方真實開獎資料（由 scraper 產生） |
+| `wheel.py` | 包牌選號產生器（包牌全餐 / 依預算試算 / 隨機選號） |
+| `data/` | 官方真實開獎資料 |
 | `report/` | 分析報告 |
+
+## 包牌選號產生器 `wheel.py`
+
+```bash
+# 包牌全餐：第一區挑一組號碼，產生所有 C(k,6) 組合注單（第二區可多選，省略=全包1~8）
+python3 wheel.py wheel --pool "3 14 24 38 7 22 16" --second "2 5" --out tickets.csv
+
+# 依預算試算：有多少錢、第二區選幾個，最多能包幾個號碼、機率多少
+python3 wheel.py budget --budget 20000 --second-count 1
+
+# 快速隨機選號（--avoid-birthday 偏好 >31 的號碼，降低與生日選號族群均分的機率）
+python3 wheel.py random --count 5 --avoid-birthday
+```
+
+> ⚠ 包牌只是等比例放大注數→等比例放大機率，成本同步放大，**期望值仍為負**。
+> 樂透每期獨立隨機，沒有任何選號法能保證或長期獲利。請當娛樂、量力而為。
 
 ## 使用方式
 
