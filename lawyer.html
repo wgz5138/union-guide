@@ -125,6 +125,18 @@
   .wel-box .lead{font-size:16px;color:var(--txt);line-height:1.75;margin-bottom:20px}
   .wel-go{width:100%;background:var(--cyan);color:#06231f;border:none;border-radius:12px;padding:15px;font-size:18px;font-weight:700;cursor:pointer;font-family:inherit}
   .wel-more{margin-top:14px;font-size:15px;color:var(--blue);cursor:pointer;user-select:none}
+  /* 互動導覽 */
+  #tour-dim{position:fixed;inset:0;background:rgba(6,10,18,.72);z-index:1100;display:none}
+  #tour-dim.show{display:block}
+  .tour-hi{position:relative;z-index:1150;box-shadow:0 0 0 3px var(--cyan),0 0 22px rgba(63,214,208,.55);border-radius:12px}
+  #tour-bar{position:fixed;left:0;right:0;bottom:0;z-index:1160;background:var(--panel);border-top:1px solid var(--cyan);padding:14px 16px;display:none}
+  #tour-bar.show{display:block}
+  #tour-text{font-size:15px;color:var(--head);line-height:1.65;margin-bottom:10px}
+  #tour-text b{color:var(--cyan)}
+  .tour-btns{display:flex;gap:8px}
+  .tour-btns button{flex:1;border:none;border-radius:10px;padding:11px;font-size:15px;font-weight:600;cursor:pointer;font-family:inherit}
+  #tour-skip{background:#0F1622;color:var(--txt2);border:1px solid var(--line)}
+  #tour-next{background:var(--cyan);color:#06231f}
   .man-box{max-width:620px;margin:0 auto;background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:20px}
   .man-box h2{font-size:18px;color:var(--head);margin-bottom:4px}
   .man-close{background:var(--cyan);color:#06231f;border:none;border-radius:20px;padding:6px 14px;font-weight:700;cursor:pointer;font-family:inherit;float:right}
@@ -369,8 +381,9 @@
     <div class="em">⚖️</div>
     <h2>AI 律師 👋</h2>
     <p class="lead">把<b>你的狀況</b>或<b>對方說的話</b>貼進來，它會像律師一樣幫你<b>引法條、找破綻、列證據</b>。<br>勞動法（加班費／工時／資遣）是它的主場。</p>
-    <button class="wel-go" id="wel-go">開始用</button>
-    <div class="wel-more" id="wel-more">先看文字教學</div>
+    <button class="wel-go" id="wel-tour">▶ 帶我走一遍（30 秒）</button>
+    <div class="wel-more" id="wel-go">直接開始用，不用導覽</div>
+    <div class="wel-more" id="wel-more" style="margin-top:8px">先看文字教學</div>
   </div>
 </div>
 
@@ -380,6 +393,7 @@
     <button class="man-close" id="man-close">✕ 關閉</button>
     <h2>📖 怎麼用（小白版）</h2>
     <p style="font-size:13px;color:var(--muted)">AI 律師 — 偶爾用一次也不怕，照著走。</p>
+    <button id="man-tour" style="display:block;width:100%;margin:4px 0 6px;background:var(--cyan);color:#06231f;border:none;border-radius:10px;padding:11px;font-size:15px;font-weight:700;cursor:pointer;font-family:inherit">▶ 帶我走一遍（互動導覽・含付費說明）</button>
 
     <h3>這工具在幹嘛？</h3>
     <p>你<b>講你的狀況</b>，或把<b>對方（主管／資方／對造）說的話</b>貼進去，它會像律師一樣：<b>①引經據典</b>（搬出哪條法）、<b>②判斷對方有沒有道理、怎麼反駁</b>、<b>③給你策略</b>、<b>④列出該準備的證據</b>。</p>
@@ -407,6 +421,13 @@
   </div>
 </div>
 
+<!-- 互動導覽 -->
+<div id="tour-dim"></div>
+<div id="tour-bar">
+  <div id="tour-text"></div>
+  <div class="tour-btns"><button id="tour-skip">跳過</button><button id="tour-next">下一步 →</button></div>
+</div>
+
 <div class="toast" id="toast"></div>
 
 <script>
@@ -420,6 +441,27 @@ function unlock(){ document.body.classList.remove("locked"); document.body.class
 function closeManual(){ document.getElementById("manual").classList.remove("show"); localStorage.setItem("law_seen_manual","1"); }
 document.getElementById("wel-go").addEventListener("click",()=>{ document.getElementById("welcome").classList.remove("show"); localStorage.setItem("law_seen_manual","1"); });
 document.getElementById("wel-more").addEventListener("click",()=>{ document.getElementById("welcome").classList.remove("show"); localStorage.setItem("law_seen_manual","1"); document.getElementById("manual").classList.add("show"); });
+/* ===== 互動導覽（含免費 vs 付費說明） ===== */
+const TOUR=[
+  {sel:"#seg-mode", t:"① 先選<b>用途</b>：打官司／申訴，還是協商／談判。下面再選領域、你的立場。"},
+  {sel:"#situation", t:"② <b>描述你的狀況</b>，或直接<b>貼對方（主管／資方）說的話</b>——AI 會判斷他有沒有道理、教你怎麼反駁。"},
+  {sel:"#free-btn", t:"③ <b>免費這條隨時都在</b>：按這顆複製提示詞，貼到 ChatGPT／Claude 免費網頁就能用，<b>一毛都不用花</b>。"},
+  {sel:"#pay-toggle", t:"④ 想<b>直接在這裡問</b>、不想複製貼上？才需要金鑰。點這顆看「付費怎麼算」：是<b>儲值、用多少扣多少、不是訂閱</b>，每次會顯示花了多少（約 NT$2~10）。"},
+  {sel:"#profile-toggle", t:"⑤ <b>身分背景</b>：把你的院內公告貼這（<b>只存你這台、不上傳</b>），AI 每次都會照你的真實規定回。"},
+  {sel:"#law-sec-toggle", t:"⑥ <b>法規庫</b>：34 部官方法條，點開可搜尋——AI 引用的就是這些真條文。走完囉 🎉 有問題隨時點右上「❓怎麼用」。"}
+];
+let _ti=0;
+function tourStep(){ document.querySelectorAll(".tour-hi").forEach(e=>e.classList.remove("tour-hi"));
+  const s=TOUR[_ti], el=document.querySelector(s.sel);
+  if(el){ el.classList.add("tour-hi"); el.scrollIntoView({behavior:"smooth",block:"center"}); }
+  document.getElementById("tour-text").innerHTML="（"+(_ti+1)+"/"+TOUR.length+"）"+s.t;
+  document.getElementById("tour-next").textContent=_ti===TOUR.length-1?"完成 ✓":"下一步 →"; }
+function startTour(){ document.getElementById("welcome").classList.remove("show"); document.getElementById("manual").classList.remove("show"); _ti=0; document.getElementById("tour-dim").classList.add("show"); document.getElementById("tour-bar").classList.add("show"); tourStep(); }
+function endTour(){ document.querySelectorAll(".tour-hi").forEach(e=>e.classList.remove("tour-hi")); document.getElementById("tour-dim").classList.remove("show"); document.getElementById("tour-bar").classList.remove("show"); localStorage.setItem("law_seen_manual","1"); window.scrollTo({top:0,behavior:"smooth"}); }
+document.getElementById("tour-next").addEventListener("click",()=>{ if(_ti<TOUR.length-1){_ti++;tourStep();}else endTour(); });
+document.getElementById("tour-skip").addEventListener("click",endTour);
+document.getElementById("wel-tour").addEventListener("click",startTour);
+document.getElementById("man-tour").addEventListener("click",startTour);
 if(sessionStorage.getItem(UNLOCK_KEY)==="1") unlock();
 function tryUnlock(){ const v=document.getElementById("gate-pw").value;
   if(pwOk(v)){ sessionStorage.setItem(UNLOCK_KEY,"1"); unlock(); }
@@ -452,8 +494,9 @@ function showAppBanner(){ if(sessionStorage.getItem("hideAppBanner"))return; con
   if(/FBAN|FBAV|FBIOS|Instagram|Line\/|MicroMessenger|Twitter|TikTok|GSA\//i.test(navigator.userAgent||"")) showAppBanner(); })();
 
 /* 🔄 自動偵測新版本 */
-const BUILD="2026061229";
+const BUILD="2026061230";
 const CHANGELOG=[
+  "新增互動導覽（首頁『▶ 帶我走一遍』）：6 步驟，特別講清楚『免費 vs 付費』怎麼用",
   "法規庫改可摺疊＋預設不全攤（手機不再被上千條洗很長）；搜尋或點分類才列出、超過60條提示縮小範圍",
   "付費說明寫清楚：不是訂閱、是儲值用多少扣多少、額度會過期、一題大概多少、怎麼拿金鑰；強調免費路隨時在",
   "身分背景欄加『📋 帶入範本』：照欄位把你的公告貼進去、填一次永久記住（只存這台），同事用『接力』分享",
