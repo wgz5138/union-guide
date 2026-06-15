@@ -98,6 +98,7 @@ python telegram_bot.py                  # 啟動雙向聊天 bot
 | `設定每天自動跑.bat` / `取消每天自動跑.bat` | 本機每日排程（Windows 工作排程器） |
 | `../.github/workflows/flight-prices.yml` | 雲端每日排程 |
 | `scraper.py` / `scraper_playwright.py` | 通用爬蟲骨架（requests / 動態網站版），可改去爬其他網站 |
+| `gflights_scraper.py` | **A2310 案：Google Flights 爬蟲**（Playwright，文字+正則解析；選擇器需對實際頁面微調，ToS 禁爬請告知客戶） |
 | `amadeus_flights.py` | Amadeus 版（其免費自助版 2026/7/17 關閉，留作參考） |
 
 ---
