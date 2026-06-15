@@ -1,6 +1,10 @@
 {
   "source": "台灣彩券官方「各期開獎結果資料下載」CSV（使用者提供）",
   "source_files": [
+    "威力彩_2014.csv",
+    "威力彩_2015.csv",
+    "威力彩_2016.csv",
+    "威力彩_2017.csv",
     "威力彩_2018.csv",
     "威力彩_2019.csv",
     "威力彩_2020.csv",
@@ -8,15 +12,5854 @@
     "威力彩_2022.csv",
     "威力彩_2023.csv",
     "威力彩_2024.csv",
-    "威力彩_2025.csv"
+    "威力彩_2025.csv",
+    "威力彩_2026.csv"
   ],
-  "scraped_at": "2026-06-15T21:32:07.750450+00:00",
-  "count": 835,
-  "first_period": "107000001",
-  "last_period": "114000104",
-  "first_date": "2018-01-01",
-  "last_date": "2025-12-29",
+  "scraped_at": "2026-06-15T21:33:37.863452+00:00",
+  "count": 1295,
+  "first_period": "103000001",
+  "last_period": "115000043",
+  "first_date": "2014-01-02",
+  "last_date": "2026-05-28",
   "draws": [
+    {
+      "period": "103000001",
+      "date": "2014-01-02",
+      "first_zone": [
+        8,
+        10,
+        19,
+        27,
+        28,
+        37
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 3
+    },
+    {
+      "period": "103000002",
+      "date": "2014-01-06",
+      "first_zone": [
+        7,
+        8,
+        12,
+        18,
+        23,
+        31
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 2
+    },
+    {
+      "period": "103000003",
+      "date": "2014-01-09",
+      "first_zone": [
+        4,
+        22,
+        23,
+        31,
+        34,
+        35
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 1
+    },
+    {
+      "period": "103000004",
+      "date": "2014-01-13",
+      "first_zone": [
+        3,
+        4,
+        23,
+        24,
+        26,
+        30
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 2
+    },
+    {
+      "period": "103000005",
+      "date": "2014-01-16",
+      "first_zone": [
+        13,
+        14,
+        23,
+        34,
+        37,
+        38
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 7
+    },
+    {
+      "period": "103000006",
+      "date": "2014-01-20",
+      "first_zone": [
+        4,
+        9,
+        21,
+        23,
+        36,
+        37
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 3
+    },
+    {
+      "period": "103000007",
+      "date": "2014-01-23",
+      "first_zone": [
+        12,
+        26,
+        28,
+        29,
+        31,
+        32
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 6
+    },
+    {
+      "period": "103000008",
+      "date": "2014-01-27",
+      "first_zone": [
+        8,
+        20,
+        26,
+        28,
+        36,
+        38
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 8
+    },
+    {
+      "period": "103000009",
+      "date": "2014-01-30",
+      "first_zone": [
+        6,
+        10,
+        11,
+        14,
+        16,
+        30
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 1
+    },
+    {
+      "period": "103000010",
+      "date": "2014-02-03",
+      "first_zone": [
+        17,
+        19,
+        21,
+        24,
+        28,
+        37
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 6
+    },
+    {
+      "period": "103000011",
+      "date": "2014-02-06",
+      "first_zone": [
+        2,
+        8,
+        25,
+        29,
+        35,
+        36
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 2
+    },
+    {
+      "period": "103000012",
+      "date": "2014-02-10",
+      "first_zone": [
+        13,
+        20,
+        25,
+        27,
+        28,
+        33
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 1
+    },
+    {
+      "period": "103000013",
+      "date": "2014-02-13",
+      "first_zone": [
+        6,
+        8,
+        16,
+        20,
+        35,
+        36
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 8
+    },
+    {
+      "period": "103000014",
+      "date": "2014-02-17",
+      "first_zone": [
+        8,
+        12,
+        14,
+        17,
+        33,
+        37
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 5
+    },
+    {
+      "period": "103000015",
+      "date": "2014-02-20",
+      "first_zone": [
+        1,
+        3,
+        10,
+        13,
+        18,
+        30
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 1
+    },
+    {
+      "period": "103000016",
+      "date": "2014-02-24",
+      "first_zone": [
+        10,
+        15,
+        23,
+        27,
+        29,
+        36
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 5
+    },
+    {
+      "period": "103000017",
+      "date": "2014-02-27",
+      "first_zone": [
+        4,
+        8,
+        20,
+        21,
+        23,
+        26
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 5
+    },
+    {
+      "period": "103000018",
+      "date": "2014-03-03",
+      "first_zone": [
+        1,
+        5,
+        9,
+        13,
+        28,
+        37
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 5
+    },
+    {
+      "period": "103000019",
+      "date": "2014-03-06",
+      "first_zone": [
+        8,
+        13,
+        15,
+        20,
+        27,
+        28
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 4
+    },
+    {
+      "period": "103000020",
+      "date": "2014-03-10",
+      "first_zone": [
+        11,
+        18,
+        22,
+        27,
+        28,
+        29
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 4
+    },
+    {
+      "period": "103000021",
+      "date": "2014-03-13",
+      "first_zone": [
+        11,
+        15,
+        19,
+        21,
+        27,
+        30
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 4
+    },
+    {
+      "period": "103000022",
+      "date": "2014-03-17",
+      "first_zone": [
+        2,
+        12,
+        15,
+        22,
+        27,
+        28
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 5
+    },
+    {
+      "period": "103000023",
+      "date": "2014-03-20",
+      "first_zone": [
+        1,
+        8,
+        18,
+        25,
+        35,
+        37
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 5
+    },
+    {
+      "period": "103000024",
+      "date": "2014-03-24",
+      "first_zone": [
+        6,
+        14,
+        24,
+        31,
+        35,
+        37
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 1
+    },
+    {
+      "period": "103000025",
+      "date": "2014-03-27",
+      "first_zone": [
+        4,
+        15,
+        19,
+        22,
+        37,
+        38
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 5
+    },
+    {
+      "period": "103000026",
+      "date": "2014-03-31",
+      "first_zone": [
+        2,
+        8,
+        15,
+        16,
+        17,
+        30
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 6
+    },
+    {
+      "period": "103000027",
+      "date": "2014-04-03",
+      "first_zone": [
+        2,
+        13,
+        22,
+        25,
+        27,
+        33
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 8
+    },
+    {
+      "period": "103000028",
+      "date": "2014-04-07",
+      "first_zone": [
+        5,
+        21,
+        25,
+        28,
+        32,
+        38
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 5
+    },
+    {
+      "period": "103000029",
+      "date": "2014-04-10",
+      "first_zone": [
+        6,
+        10,
+        14,
+        15,
+        18,
+        24
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 7
+    },
+    {
+      "period": "103000030",
+      "date": "2014-04-14",
+      "first_zone": [
+        6,
+        22,
+        31,
+        32,
+        33,
+        38
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 4
+    },
+    {
+      "period": "103000031",
+      "date": "2014-04-17",
+      "first_zone": [
+        1,
+        6,
+        17,
+        19,
+        27,
+        30
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 6
+    },
+    {
+      "period": "103000032",
+      "date": "2014-04-21",
+      "first_zone": [
+        9,
+        12,
+        13,
+        24,
+        25,
+        34
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 5
+    },
+    {
+      "period": "103000033",
+      "date": "2014-04-24",
+      "first_zone": [
+        8,
+        14,
+        19,
+        21,
+        30,
+        31
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 2
+    },
+    {
+      "period": "103000034",
+      "date": "2014-04-28",
+      "first_zone": [
+        1,
+        4,
+        18,
+        26,
+        30,
+        36
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 1
+    },
+    {
+      "period": "103000035",
+      "date": "2014-05-01",
+      "first_zone": [
+        2,
+        4,
+        5,
+        11,
+        32,
+        33
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 8
+    },
+    {
+      "period": "103000036",
+      "date": "2014-05-05",
+      "first_zone": [
+        16,
+        24,
+        25,
+        31,
+        32,
+        33
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 5
+    },
+    {
+      "period": "103000037",
+      "date": "2014-05-08",
+      "first_zone": [
+        9,
+        10,
+        14,
+        19,
+        28,
+        29
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 8
+    },
+    {
+      "period": "103000038",
+      "date": "2014-05-12",
+      "first_zone": [
+        1,
+        2,
+        5,
+        8,
+        9,
+        29
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 1
+    },
+    {
+      "period": "103000039",
+      "date": "2014-05-15",
+      "first_zone": [
+        7,
+        9,
+        21,
+        28,
+        33,
+        35
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 8
+    },
+    {
+      "period": "103000040",
+      "date": "2014-05-19",
+      "first_zone": [
+        1,
+        16,
+        22,
+        31,
+        33,
+        36
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 4
+    },
+    {
+      "period": "103000041",
+      "date": "2014-05-22",
+      "first_zone": [
+        9,
+        12,
+        20,
+        34,
+        36,
+        37
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 3
+    },
+    {
+      "period": "103000042",
+      "date": "2014-05-26",
+      "first_zone": [
+        2,
+        9,
+        10,
+        19,
+        22,
+        32
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 5
+    },
+    {
+      "period": "103000043",
+      "date": "2014-05-29",
+      "first_zone": [
+        18,
+        19,
+        22,
+        27,
+        32,
+        35
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 2
+    },
+    {
+      "period": "103000044",
+      "date": "2014-06-02",
+      "first_zone": [
+        7,
+        11,
+        14,
+        20,
+        31,
+        34
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 7
+    },
+    {
+      "period": "103000045",
+      "date": "2014-06-05",
+      "first_zone": [
+        8,
+        10,
+        12,
+        19,
+        20,
+        37
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 1
+    },
+    {
+      "period": "103000046",
+      "date": "2014-06-09",
+      "first_zone": [
+        4,
+        5,
+        14,
+        18,
+        21,
+        33
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 2
+    },
+    {
+      "period": "103000047",
+      "date": "2014-06-12",
+      "first_zone": [
+        4,
+        14,
+        19,
+        22,
+        27,
+        30
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 5
+    },
+    {
+      "period": "103000048",
+      "date": "2014-06-16",
+      "first_zone": [
+        3,
+        11,
+        24,
+        27,
+        29,
+        37
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 1
+    },
+    {
+      "period": "103000049",
+      "date": "2014-06-19",
+      "first_zone": [
+        10,
+        11,
+        16,
+        24,
+        29,
+        30
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 1
+    },
+    {
+      "period": "103000050",
+      "date": "2014-06-23",
+      "first_zone": [
+        4,
+        14,
+        18,
+        19,
+        26,
+        34
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 3
+    },
+    {
+      "period": "103000051",
+      "date": "2014-06-26",
+      "first_zone": [
+        4,
+        12,
+        19,
+        24,
+        27,
+        30
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 7
+    },
+    {
+      "period": "103000052",
+      "date": "2014-06-30",
+      "first_zone": [
+        4,
+        14,
+        21,
+        25,
+        28,
+        29
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 2
+    },
+    {
+      "period": "103000053",
+      "date": "2014-07-03",
+      "first_zone": [
+        8,
+        10,
+        14,
+        22,
+        31,
+        36
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 4
+    },
+    {
+      "period": "103000054",
+      "date": "2014-07-07",
+      "first_zone": [
+        4,
+        10,
+        14,
+        30,
+        32,
+        33
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 8
+    },
+    {
+      "period": "103000055",
+      "date": "2014-07-10",
+      "first_zone": [
+        1,
+        2,
+        10,
+        21,
+        22,
+        31
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 8
+    },
+    {
+      "period": "103000056",
+      "date": "2014-07-14",
+      "first_zone": [
+        1,
+        18,
+        25,
+        26,
+        37,
+        38
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 6
+    },
+    {
+      "period": "103000057",
+      "date": "2014-07-17",
+      "first_zone": [
+        16,
+        20,
+        21,
+        27,
+        29,
+        37
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 3
+    },
+    {
+      "period": "103000058",
+      "date": "2014-07-21",
+      "first_zone": [
+        1,
+        3,
+        4,
+        10,
+        13,
+        37
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 1
+    },
+    {
+      "period": "103000059",
+      "date": "2014-07-24",
+      "first_zone": [
+        6,
+        17,
+        25,
+        29,
+        35,
+        36
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 1
+    },
+    {
+      "period": "103000060",
+      "date": "2014-07-28",
+      "first_zone": [
+        5,
+        11,
+        15,
+        16,
+        23,
+        35
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 1
+    },
+    {
+      "period": "103000061",
+      "date": "2014-07-31",
+      "first_zone": [
+        1,
+        15,
+        17,
+        31,
+        33,
+        38
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 2
+    },
+    {
+      "period": "103000062",
+      "date": "2014-08-04",
+      "first_zone": [
+        5,
+        10,
+        18,
+        26,
+        28,
+        33
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 2
+    },
+    {
+      "period": "103000063",
+      "date": "2014-08-07",
+      "first_zone": [
+        17,
+        18,
+        23,
+        25,
+        26,
+        36
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 5
+    },
+    {
+      "period": "103000064",
+      "date": "2014-08-11",
+      "first_zone": [
+        14,
+        16,
+        25,
+        27,
+        29,
+        36
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 7
+    },
+    {
+      "period": "103000065",
+      "date": "2014-08-14",
+      "first_zone": [
+        4,
+        11,
+        12,
+        16,
+        19,
+        23
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 6
+    },
+    {
+      "period": "103000066",
+      "date": "2014-08-18",
+      "first_zone": [
+        10,
+        12,
+        18,
+        31,
+        34,
+        37
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 5
+    },
+    {
+      "period": "103000067",
+      "date": "2014-08-21",
+      "first_zone": [
+        18,
+        22,
+        23,
+        25,
+        32,
+        36
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 6
+    },
+    {
+      "period": "103000068",
+      "date": "2014-08-25",
+      "first_zone": [
+        3,
+        5,
+        10,
+        20,
+        26,
+        30
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 6
+    },
+    {
+      "period": "103000069",
+      "date": "2014-08-28",
+      "first_zone": [
+        1,
+        15,
+        23,
+        24,
+        26,
+        29
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 5
+    },
+    {
+      "period": "103000070",
+      "date": "2014-09-01",
+      "first_zone": [
+        5,
+        14,
+        22,
+        23,
+        26,
+        32
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 8
+    },
+    {
+      "period": "103000071",
+      "date": "2014-09-04",
+      "first_zone": [
+        1,
+        8,
+        10,
+        14,
+        24,
+        26
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 1
+    },
+    {
+      "period": "103000072",
+      "date": "2014-09-08",
+      "first_zone": [
+        5,
+        18,
+        19,
+        21,
+        31,
+        37
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 8
+    },
+    {
+      "period": "103000073",
+      "date": "2014-09-11",
+      "first_zone": [
+        5,
+        7,
+        15,
+        25,
+        29,
+        37
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 8
+    },
+    {
+      "period": "103000074",
+      "date": "2014-09-15",
+      "first_zone": [
+        3,
+        14,
+        15,
+        20,
+        21,
+        28
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 8
+    },
+    {
+      "period": "103000075",
+      "date": "2014-09-18",
+      "first_zone": [
+        5,
+        10,
+        15,
+        23,
+        24,
+        35
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 6
+    },
+    {
+      "period": "103000076",
+      "date": "2014-09-22",
+      "first_zone": [
+        8,
+        15,
+        18,
+        23,
+        31,
+        37
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 8
+    },
+    {
+      "period": "103000077",
+      "date": "2014-09-25",
+      "first_zone": [
+        10,
+        12,
+        22,
+        26,
+        28,
+        36
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 8
+    },
+    {
+      "period": "103000078",
+      "date": "2014-09-29",
+      "first_zone": [
+        2,
+        8,
+        15,
+        27,
+        28,
+        36
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 7
+    },
+    {
+      "period": "103000079",
+      "date": "2014-10-02",
+      "first_zone": [
+        4,
+        12,
+        13,
+        26,
+        31,
+        33
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 6
+    },
+    {
+      "period": "103000080",
+      "date": "2014-10-06",
+      "first_zone": [
+        15,
+        20,
+        22,
+        25,
+        33,
+        35
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 7
+    },
+    {
+      "period": "103000081",
+      "date": "2014-10-09",
+      "first_zone": [
+        2,
+        6,
+        7,
+        8,
+        9,
+        38
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 8
+    },
+    {
+      "period": "103000082",
+      "date": "2014-10-13",
+      "first_zone": [
+        3,
+        19,
+        26,
+        30,
+        33,
+        35
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 2
+    },
+    {
+      "period": "103000083",
+      "date": "2014-10-16",
+      "first_zone": [
+        9,
+        11,
+        12,
+        20,
+        24,
+        30
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 2
+    },
+    {
+      "period": "103000084",
+      "date": "2014-10-20",
+      "first_zone": [
+        11,
+        21,
+        25,
+        30,
+        34,
+        37
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 1
+    },
+    {
+      "period": "103000085",
+      "date": "2014-10-23",
+      "first_zone": [
+        8,
+        12,
+        27,
+        28,
+        35,
+        38
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 6
+    },
+    {
+      "period": "103000086",
+      "date": "2014-10-27",
+      "first_zone": [
+        7,
+        9,
+        10,
+        24,
+        37,
+        38
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 8
+    },
+    {
+      "period": "103000087",
+      "date": "2014-10-30",
+      "first_zone": [
+        6,
+        8,
+        9,
+        10,
+        27,
+        34
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 6
+    },
+    {
+      "period": "103000088",
+      "date": "2014-11-03",
+      "first_zone": [
+        2,
+        6,
+        8,
+        11,
+        26,
+        38
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 7
+    },
+    {
+      "period": "103000089",
+      "date": "2014-11-06",
+      "first_zone": [
+        5,
+        15,
+        19,
+        20,
+        32,
+        36
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 3
+    },
+    {
+      "period": "103000090",
+      "date": "2014-11-10",
+      "first_zone": [
+        1,
+        6,
+        14,
+        17,
+        31,
+        34
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 8
+    },
+    {
+      "period": "103000091",
+      "date": "2014-11-13",
+      "first_zone": [
+        12,
+        14,
+        15,
+        17,
+        27,
+        35
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 6
+    },
+    {
+      "period": "103000092",
+      "date": "2014-11-17",
+      "first_zone": [
+        5,
+        6,
+        13,
+        24,
+        32,
+        34
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 1
+    },
+    {
+      "period": "103000093",
+      "date": "2014-11-20",
+      "first_zone": [
+        12,
+        17,
+        30,
+        31,
+        33,
+        35
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 4
+    },
+    {
+      "period": "103000094",
+      "date": "2014-11-24",
+      "first_zone": [
+        3,
+        5,
+        19,
+        22,
+        24,
+        32
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 2
+    },
+    {
+      "period": "103000095",
+      "date": "2014-11-27",
+      "first_zone": [
+        1,
+        2,
+        21,
+        29,
+        33,
+        36
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 8
+    },
+    {
+      "period": "103000096",
+      "date": "2014-12-01",
+      "first_zone": [
+        1,
+        2,
+        7,
+        14,
+        19,
+        31
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 7
+    },
+    {
+      "period": "103000097",
+      "date": "2014-12-04",
+      "first_zone": [
+        2,
+        5,
+        7,
+        11,
+        22,
+        36
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 6
+    },
+    {
+      "period": "103000098",
+      "date": "2014-12-08",
+      "first_zone": [
+        11,
+        20,
+        24,
+        27,
+        35,
+        38
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 8
+    },
+    {
+      "period": "103000099",
+      "date": "2014-12-11",
+      "first_zone": [
+        7,
+        12,
+        13,
+        21,
+        24,
+        28
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 6
+    },
+    {
+      "period": "103000100",
+      "date": "2014-12-15",
+      "first_zone": [
+        5,
+        10,
+        11,
+        15,
+        36,
+        38
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 6
+    },
+    {
+      "period": "103000101",
+      "date": "2014-12-18",
+      "first_zone": [
+        1,
+        5,
+        18,
+        20,
+        26,
+        29
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 5
+    },
+    {
+      "period": "103000102",
+      "date": "2014-12-22",
+      "first_zone": [
+        1,
+        4,
+        5,
+        13,
+        19,
+        37
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 2
+    },
+    {
+      "period": "103000103",
+      "date": "2014-12-25",
+      "first_zone": [
+        3,
+        6,
+        10,
+        14,
+        23,
+        36
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 1
+    },
+    {
+      "period": "103000104",
+      "date": "2014-12-29",
+      "first_zone": [
+        2,
+        4,
+        9,
+        10,
+        11,
+        37
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 2
+    },
+    {
+      "period": "104000001",
+      "date": "2015-01-01",
+      "first_zone": [
+        1,
+        3,
+        5,
+        11,
+        17,
+        21
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 2
+    },
+    {
+      "period": "104000002",
+      "date": "2015-01-05",
+      "first_zone": [
+        1,
+        6,
+        15,
+        23,
+        26,
+        34
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 6
+    },
+    {
+      "period": "104000003",
+      "date": "2015-01-08",
+      "first_zone": [
+        3,
+        13,
+        17,
+        29,
+        36,
+        38
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 7
+    },
+    {
+      "period": "104000004",
+      "date": "2015-01-12",
+      "first_zone": [
+        16,
+        25,
+        30,
+        35,
+        36,
+        37
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 5
+    },
+    {
+      "period": "104000005",
+      "date": "2015-01-15",
+      "first_zone": [
+        1,
+        3,
+        16,
+        28,
+        29,
+        37
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 2
+    },
+    {
+      "period": "104000006",
+      "date": "2015-01-19",
+      "first_zone": [
+        4,
+        8,
+        9,
+        21,
+        32,
+        33
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 2
+    },
+    {
+      "period": "104000007",
+      "date": "2015-01-22",
+      "first_zone": [
+        14,
+        18,
+        26,
+        27,
+        30,
+        36
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 5
+    },
+    {
+      "period": "104000008",
+      "date": "2015-01-26",
+      "first_zone": [
+        4,
+        12,
+        24,
+        25,
+        33,
+        38
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 4
+    },
+    {
+      "period": "104000009",
+      "date": "2015-01-29",
+      "first_zone": [
+        1,
+        4,
+        14,
+        18,
+        29,
+        30
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 8
+    },
+    {
+      "period": "104000010",
+      "date": "2015-02-02",
+      "first_zone": [
+        1,
+        4,
+        17,
+        24,
+        26,
+        27
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 7
+    },
+    {
+      "period": "104000011",
+      "date": "2015-02-05",
+      "first_zone": [
+        3,
+        10,
+        16,
+        25,
+        29,
+        37
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 1
+    },
+    {
+      "period": "104000012",
+      "date": "2015-02-09",
+      "first_zone": [
+        1,
+        3,
+        4,
+        15,
+        16,
+        34
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 2
+    },
+    {
+      "period": "104000013",
+      "date": "2015-02-12",
+      "first_zone": [
+        7,
+        8,
+        10,
+        25,
+        33,
+        36
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 3
+    },
+    {
+      "period": "104000014",
+      "date": "2015-02-16",
+      "first_zone": [
+        4,
+        5,
+        7,
+        23,
+        24,
+        30
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 2
+    },
+    {
+      "period": "104000015",
+      "date": "2015-02-19",
+      "first_zone": [
+        4,
+        12,
+        13,
+        15,
+        23,
+        38
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 4
+    },
+    {
+      "period": "104000016",
+      "date": "2015-02-23",
+      "first_zone": [
+        5,
+        13,
+        31,
+        34,
+        35,
+        38
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 2
+    },
+    {
+      "period": "104000017",
+      "date": "2015-02-26",
+      "first_zone": [
+        8,
+        21,
+        22,
+        26,
+        32,
+        37
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 4
+    },
+    {
+      "period": "104000018",
+      "date": "2015-03-02",
+      "first_zone": [
+        9,
+        11,
+        12,
+        21,
+        31,
+        36
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 7
+    },
+    {
+      "period": "104000019",
+      "date": "2015-03-05",
+      "first_zone": [
+        2,
+        4,
+        8,
+        13,
+        24,
+        26
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 2
+    },
+    {
+      "period": "104000020",
+      "date": "2015-03-09",
+      "first_zone": [
+        3,
+        12,
+        16,
+        18,
+        21,
+        36
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 3
+    },
+    {
+      "period": "104000021",
+      "date": "2015-03-12",
+      "first_zone": [
+        1,
+        2,
+        14,
+        22,
+        27,
+        30
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 1
+    },
+    {
+      "period": "104000022",
+      "date": "2015-03-16",
+      "first_zone": [
+        5,
+        8,
+        20,
+        22,
+        30,
+        34
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 8
+    },
+    {
+      "period": "104000023",
+      "date": "2015-03-19",
+      "first_zone": [
+        6,
+        17,
+        30,
+        34,
+        35,
+        38
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 2
+    },
+    {
+      "period": "104000024",
+      "date": "2015-03-23",
+      "first_zone": [
+        10,
+        12,
+        17,
+        18,
+        27,
+        32
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 5
+    },
+    {
+      "period": "104000025",
+      "date": "2015-03-26",
+      "first_zone": [
+        6,
+        14,
+        24,
+        26,
+        36,
+        38
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 3
+    },
+    {
+      "period": "104000026",
+      "date": "2015-03-30",
+      "first_zone": [
+        1,
+        8,
+        10,
+        19,
+        23,
+        24
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 5
+    },
+    {
+      "period": "104000027",
+      "date": "2015-04-02",
+      "first_zone": [
+        1,
+        8,
+        12,
+        18,
+        19,
+        37
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 5
+    },
+    {
+      "period": "104000028",
+      "date": "2015-04-06",
+      "first_zone": [
+        1,
+        7,
+        20,
+        22,
+        25,
+        32
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 8
+    },
+    {
+      "period": "104000029",
+      "date": "2015-04-09",
+      "first_zone": [
+        2,
+        6,
+        11,
+        12,
+        15,
+        28
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 2
+    },
+    {
+      "period": "104000030",
+      "date": "2015-04-13",
+      "first_zone": [
+        5,
+        12,
+        20,
+        23,
+        32,
+        37
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 2
+    },
+    {
+      "period": "104000031",
+      "date": "2015-04-16",
+      "first_zone": [
+        3,
+        8,
+        26,
+        28,
+        29,
+        35
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 3
+    },
+    {
+      "period": "104000032",
+      "date": "2015-04-20",
+      "first_zone": [
+        11,
+        21,
+        22,
+        24,
+        25,
+        26
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 6
+    },
+    {
+      "period": "104000033",
+      "date": "2015-04-23",
+      "first_zone": [
+        9,
+        11,
+        15,
+        25,
+        28,
+        38
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 3
+    },
+    {
+      "period": "104000034",
+      "date": "2015-04-27",
+      "first_zone": [
+        2,
+        12,
+        14,
+        26,
+        34,
+        37
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 2
+    },
+    {
+      "period": "104000035",
+      "date": "2015-04-30",
+      "first_zone": [
+        12,
+        13,
+        23,
+        26,
+        32,
+        35
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 4
+    },
+    {
+      "period": "104000036",
+      "date": "2015-05-04",
+      "first_zone": [
+        6,
+        8,
+        13,
+        16,
+        25,
+        33
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 3
+    },
+    {
+      "period": "104000037",
+      "date": "2015-05-07",
+      "first_zone": [
+        7,
+        13,
+        18,
+        24,
+        26,
+        27
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 6
+    },
+    {
+      "period": "104000038",
+      "date": "2015-05-11",
+      "first_zone": [
+        3,
+        5,
+        10,
+        23,
+        30,
+        31
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 4
+    },
+    {
+      "period": "104000039",
+      "date": "2015-05-14",
+      "first_zone": [
+        10,
+        15,
+        16,
+        22,
+        30,
+        35
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 5
+    },
+    {
+      "period": "104000040",
+      "date": "2015-05-18",
+      "first_zone": [
+        5,
+        6,
+        13,
+        17,
+        23,
+        38
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 8
+    },
+    {
+      "period": "104000041",
+      "date": "2015-05-21",
+      "first_zone": [
+        1,
+        6,
+        12,
+        15,
+        25,
+        37
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 2
+    },
+    {
+      "period": "104000042",
+      "date": "2015-05-25",
+      "first_zone": [
+        4,
+        7,
+        11,
+        25,
+        30,
+        38
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 4
+    },
+    {
+      "period": "104000043",
+      "date": "2015-05-28",
+      "first_zone": [
+        19,
+        21,
+        22,
+        25,
+        31,
+        33
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 1
+    },
+    {
+      "period": "104000044",
+      "date": "2015-06-01",
+      "first_zone": [
+        2,
+        23,
+        25,
+        32,
+        34,
+        37
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 6
+    },
+    {
+      "period": "104000045",
+      "date": "2015-06-04",
+      "first_zone": [
+        3,
+        15,
+        21,
+        24,
+        33,
+        35
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 2
+    },
+    {
+      "period": "104000046",
+      "date": "2015-06-08",
+      "first_zone": [
+        6,
+        10,
+        11,
+        13,
+        19,
+        28
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 1
+    },
+    {
+      "period": "104000047",
+      "date": "2015-06-11",
+      "first_zone": [
+        9,
+        24,
+        26,
+        27,
+        37,
+        38
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 6
+    },
+    {
+      "period": "104000048",
+      "date": "2015-06-15",
+      "first_zone": [
+        4,
+        7,
+        8,
+        25,
+        31,
+        35
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 8
+    },
+    {
+      "period": "104000049",
+      "date": "2015-06-18",
+      "first_zone": [
+        5,
+        8,
+        13,
+        17,
+        21,
+        38
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 5
+    },
+    {
+      "period": "104000050",
+      "date": "2015-06-22",
+      "first_zone": [
+        3,
+        5,
+        11,
+        19,
+        26,
+        27
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 2
+    },
+    {
+      "period": "104000051",
+      "date": "2015-06-25",
+      "first_zone": [
+        3,
+        8,
+        10,
+        17,
+        27,
+        37
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 8
+    },
+    {
+      "period": "104000052",
+      "date": "2015-06-29",
+      "first_zone": [
+        7,
+        24,
+        25,
+        26,
+        27,
+        29
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 7
+    },
+    {
+      "period": "104000053",
+      "date": "2015-07-02",
+      "first_zone": [
+        7,
+        23,
+        29,
+        31,
+        36,
+        37
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 8
+    },
+    {
+      "period": "104000054",
+      "date": "2015-07-06",
+      "first_zone": [
+        7,
+        11,
+        12,
+        14,
+        22,
+        27
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 3
+    },
+    {
+      "period": "104000055",
+      "date": "2015-07-09",
+      "first_zone": [
+        3,
+        4,
+        15,
+        27,
+        32,
+        36
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 5
+    },
+    {
+      "period": "104000056",
+      "date": "2015-07-13",
+      "first_zone": [
+        1,
+        12,
+        17,
+        27,
+        29,
+        31
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 6
+    },
+    {
+      "period": "104000057",
+      "date": "2015-07-16",
+      "first_zone": [
+        1,
+        2,
+        7,
+        24,
+        31,
+        38
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 8
+    },
+    {
+      "period": "104000058",
+      "date": "2015-07-20",
+      "first_zone": [
+        13,
+        16,
+        28,
+        33,
+        35,
+        37
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 8
+    },
+    {
+      "period": "104000059",
+      "date": "2015-07-23",
+      "first_zone": [
+        2,
+        3,
+        11,
+        16,
+        18,
+        29
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 4
+    },
+    {
+      "period": "104000060",
+      "date": "2015-07-27",
+      "first_zone": [
+        4,
+        7,
+        23,
+        26,
+        30,
+        36
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 7
+    },
+    {
+      "period": "104000061",
+      "date": "2015-07-30",
+      "first_zone": [
+        3,
+        9,
+        11,
+        16,
+        23,
+        24
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 4
+    },
+    {
+      "period": "104000062",
+      "date": "2015-08-03",
+      "first_zone": [
+        17,
+        18,
+        28,
+        30,
+        36,
+        38
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 4
+    },
+    {
+      "period": "104000063",
+      "date": "2015-08-06",
+      "first_zone": [
+        6,
+        8,
+        9,
+        14,
+        22,
+        24
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 3
+    },
+    {
+      "period": "104000064",
+      "date": "2015-08-10",
+      "first_zone": [
+        6,
+        16,
+        18,
+        20,
+        24,
+        38
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 7
+    },
+    {
+      "period": "104000065",
+      "date": "2015-08-13",
+      "first_zone": [
+        6,
+        13,
+        25,
+        27,
+        29,
+        33
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 1
+    },
+    {
+      "period": "104000066",
+      "date": "2015-08-17",
+      "first_zone": [
+        15,
+        19,
+        23,
+        27,
+        28,
+        33
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 2
+    },
+    {
+      "period": "104000067",
+      "date": "2015-08-20",
+      "first_zone": [
+        3,
+        7,
+        20,
+        21,
+        24,
+        33
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 8
+    },
+    {
+      "period": "104000068",
+      "date": "2015-08-24",
+      "first_zone": [
+        13,
+        17,
+        18,
+        22,
+        29,
+        31
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 3
+    },
+    {
+      "period": "104000069",
+      "date": "2015-08-27",
+      "first_zone": [
+        2,
+        17,
+        23,
+        27,
+        30,
+        34
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 1
+    },
+    {
+      "period": "104000070",
+      "date": "2015-08-31",
+      "first_zone": [
+        12,
+        15,
+        24,
+        31,
+        36,
+        37
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 6
+    },
+    {
+      "period": "104000071",
+      "date": "2015-09-03",
+      "first_zone": [
+        3,
+        4,
+        5,
+        15,
+        16,
+        33
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 6
+    },
+    {
+      "period": "104000072",
+      "date": "2015-09-07",
+      "first_zone": [
+        7,
+        24,
+        25,
+        28,
+        31,
+        34
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 3
+    },
+    {
+      "period": "104000073",
+      "date": "2015-09-10",
+      "first_zone": [
+        15,
+        22,
+        25,
+        26,
+        32,
+        34
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 4
+    },
+    {
+      "period": "104000074",
+      "date": "2015-09-14",
+      "first_zone": [
+        9,
+        19,
+        21,
+        23,
+        27,
+        37
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 8
+    },
+    {
+      "period": "104000075",
+      "date": "2015-09-17",
+      "first_zone": [
+        9,
+        11,
+        24,
+        27,
+        34,
+        35
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 4
+    },
+    {
+      "period": "104000076",
+      "date": "2015-09-21",
+      "first_zone": [
+        1,
+        2,
+        5,
+        11,
+        25,
+        33
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 4
+    },
+    {
+      "period": "104000077",
+      "date": "2015-09-24",
+      "first_zone": [
+        3,
+        5,
+        13,
+        16,
+        24,
+        26
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 3
+    },
+    {
+      "period": "104000078",
+      "date": "2015-09-28",
+      "first_zone": [
+        5,
+        12,
+        13,
+        22,
+        27,
+        30
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 8
+    },
+    {
+      "period": "104000079",
+      "date": "2015-10-01",
+      "first_zone": [
+        2,
+        6,
+        14,
+        16,
+        23,
+        31
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 3
+    },
+    {
+      "period": "104000080",
+      "date": "2015-10-05",
+      "first_zone": [
+        20,
+        22,
+        30,
+        32,
+        36,
+        37
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 1
+    },
+    {
+      "period": "104000081",
+      "date": "2015-10-08",
+      "first_zone": [
+        7,
+        9,
+        10,
+        16,
+        19,
+        22
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 8
+    },
+    {
+      "period": "104000082",
+      "date": "2015-10-12",
+      "first_zone": [
+        4,
+        19,
+        23,
+        31,
+        33,
+        35
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 2
+    },
+    {
+      "period": "104000083",
+      "date": "2015-10-15",
+      "first_zone": [
+        9,
+        10,
+        24,
+        31,
+        35,
+        36
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 7
+    },
+    {
+      "period": "104000084",
+      "date": "2015-10-19",
+      "first_zone": [
+        4,
+        17,
+        25,
+        27,
+        32,
+        37
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 1
+    },
+    {
+      "period": "104000085",
+      "date": "2015-10-22",
+      "first_zone": [
+        4,
+        8,
+        16,
+        24,
+        26,
+        33
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 6
+    },
+    {
+      "period": "104000086",
+      "date": "2015-10-26",
+      "first_zone": [
+        2,
+        9,
+        19,
+        20,
+        31,
+        32
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 7
+    },
+    {
+      "period": "104000087",
+      "date": "2015-10-29",
+      "first_zone": [
+        3,
+        10,
+        11,
+        18,
+        19,
+        33
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 5
+    },
+    {
+      "period": "104000088",
+      "date": "2015-11-02",
+      "first_zone": [
+        3,
+        14,
+        21,
+        25,
+        28,
+        36
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 3
+    },
+    {
+      "period": "104000089",
+      "date": "2015-11-05",
+      "first_zone": [
+        1,
+        11,
+        12,
+        20,
+        24,
+        37
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 8
+    },
+    {
+      "period": "104000090",
+      "date": "2015-11-09",
+      "first_zone": [
+        6,
+        7,
+        13,
+        26,
+        28,
+        33
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 5
+    },
+    {
+      "period": "104000091",
+      "date": "2015-11-12",
+      "first_zone": [
+        1,
+        2,
+        13,
+        15,
+        29,
+        33
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 3
+    },
+    {
+      "period": "104000092",
+      "date": "2015-11-16",
+      "first_zone": [
+        2,
+        9,
+        15,
+        20,
+        22,
+        23
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 5
+    },
+    {
+      "period": "104000093",
+      "date": "2015-11-19",
+      "first_zone": [
+        3,
+        5,
+        27,
+        28,
+        35,
+        37
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 5
+    },
+    {
+      "period": "104000094",
+      "date": "2015-11-23",
+      "first_zone": [
+        1,
+        5,
+        9,
+        15,
+        19,
+        22
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 5
+    },
+    {
+      "period": "104000095",
+      "date": "2015-11-26",
+      "first_zone": [
+        3,
+        4,
+        5,
+        7,
+        19,
+        38
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 4
+    },
+    {
+      "period": "104000096",
+      "date": "2015-11-30",
+      "first_zone": [
+        4,
+        13,
+        20,
+        27,
+        33,
+        38
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 1
+    },
+    {
+      "period": "104000097",
+      "date": "2015-12-03",
+      "first_zone": [
+        7,
+        8,
+        17,
+        19,
+        20,
+        30
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 2
+    },
+    {
+      "period": "104000098",
+      "date": "2015-12-07",
+      "first_zone": [
+        13,
+        19,
+        20,
+        23,
+        32,
+        34
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 4
+    },
+    {
+      "period": "104000099",
+      "date": "2015-12-10",
+      "first_zone": [
+        11,
+        12,
+        26,
+        30,
+        32,
+        34
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 8
+    },
+    {
+      "period": "104000100",
+      "date": "2015-12-14",
+      "first_zone": [
+        2,
+        6,
+        7,
+        9,
+        16,
+        25
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 1
+    },
+    {
+      "period": "104000101",
+      "date": "2015-12-17",
+      "first_zone": [
+        6,
+        8,
+        13,
+        15,
+        17,
+        29
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 5
+    },
+    {
+      "period": "104000102",
+      "date": "2015-12-21",
+      "first_zone": [
+        1,
+        6,
+        11,
+        14,
+        20,
+        38
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 5
+    },
+    {
+      "period": "104000103",
+      "date": "2015-12-24",
+      "first_zone": [
+        13,
+        17,
+        23,
+        27,
+        29,
+        34
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 5
+    },
+    {
+      "period": "104000104",
+      "date": "2015-12-28",
+      "first_zone": [
+        5,
+        11,
+        12,
+        26,
+        30,
+        37
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 5
+    },
+    {
+      "period": "104000105",
+      "date": "2015-12-31",
+      "first_zone": [
+        3,
+        13,
+        22,
+        26,
+        31,
+        37
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 6
+    },
+    {
+      "period": "105000001",
+      "date": "2016-01-04",
+      "first_zone": [
+        11,
+        13,
+        18,
+        26,
+        28,
+        29
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 7
+    },
+    {
+      "period": "105000002",
+      "date": "2016-01-07",
+      "first_zone": [
+        5,
+        14,
+        28,
+        34,
+        35,
+        38
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 6
+    },
+    {
+      "period": "105000003",
+      "date": "2016-01-11",
+      "first_zone": [
+        19,
+        27,
+        33,
+        34,
+        35,
+        36
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 4
+    },
+    {
+      "period": "105000004",
+      "date": "2016-01-14",
+      "first_zone": [
+        9,
+        11,
+        13,
+        17,
+        27,
+        34
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 6
+    },
+    {
+      "period": "105000005",
+      "date": "2016-01-18",
+      "first_zone": [
+        1,
+        16,
+        17,
+        29,
+        30,
+        32
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 7
+    },
+    {
+      "period": "105000006",
+      "date": "2016-01-21",
+      "first_zone": [
+        6,
+        15,
+        18,
+        22,
+        34,
+        35
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 3
+    },
+    {
+      "period": "105000007",
+      "date": "2016-01-25",
+      "first_zone": [
+        20,
+        23,
+        24,
+        25,
+        29,
+        32
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 8
+    },
+    {
+      "period": "105000008",
+      "date": "2016-01-28",
+      "first_zone": [
+        3,
+        9,
+        23,
+        26,
+        30,
+        36
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 5
+    },
+    {
+      "period": "105000009",
+      "date": "2016-02-01",
+      "first_zone": [
+        3,
+        19,
+        20,
+        26,
+        32,
+        34
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 8
+    },
+    {
+      "period": "105000010",
+      "date": "2016-02-04",
+      "first_zone": [
+        7,
+        13,
+        22,
+        32,
+        34,
+        37
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 7
+    },
+    {
+      "period": "105000011",
+      "date": "2016-02-08",
+      "first_zone": [
+        1,
+        4,
+        8,
+        11,
+        19,
+        23
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 3
+    },
+    {
+      "period": "105000012",
+      "date": "2016-02-11",
+      "first_zone": [
+        1,
+        16,
+        20,
+        25,
+        30,
+        33
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 1
+    },
+    {
+      "period": "105000013",
+      "date": "2016-02-15",
+      "first_zone": [
+        3,
+        7,
+        9,
+        20,
+        28,
+        32
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 5
+    },
+    {
+      "period": "105000014",
+      "date": "2016-02-18",
+      "first_zone": [
+        8,
+        20,
+        23,
+        27,
+        36,
+        37
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 4
+    },
+    {
+      "period": "105000015",
+      "date": "2016-02-22",
+      "first_zone": [
+        4,
+        12,
+        19,
+        23,
+        30,
+        33
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 5
+    },
+    {
+      "period": "105000016",
+      "date": "2016-02-25",
+      "first_zone": [
+        10,
+        15,
+        18,
+        28,
+        29,
+        33
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 5
+    },
+    {
+      "period": "105000017",
+      "date": "2016-02-29",
+      "first_zone": [
+        1,
+        9,
+        15,
+        17,
+        18,
+        38
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 6
+    },
+    {
+      "period": "105000018",
+      "date": "2016-03-03",
+      "first_zone": [
+        3,
+        11,
+        12,
+        22,
+        24,
+        27
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 6
+    },
+    {
+      "period": "105000019",
+      "date": "2016-03-07",
+      "first_zone": [
+        10,
+        11,
+        14,
+        24,
+        34,
+        38
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 3
+    },
+    {
+      "period": "105000020",
+      "date": "2016-03-10",
+      "first_zone": [
+        6,
+        16,
+        21,
+        32,
+        35,
+        38
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 7
+    },
+    {
+      "period": "105000021",
+      "date": "2016-03-14",
+      "first_zone": [
+        3,
+        6,
+        7,
+        13,
+        17,
+        28
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 3
+    },
+    {
+      "period": "105000022",
+      "date": "2016-03-17",
+      "first_zone": [
+        7,
+        9,
+        19,
+        26,
+        28,
+        31
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 8
+    },
+    {
+      "period": "105000023",
+      "date": "2016-03-21",
+      "first_zone": [
+        9,
+        10,
+        19,
+        25,
+        27,
+        32
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 5
+    },
+    {
+      "period": "105000024",
+      "date": "2016-03-24",
+      "first_zone": [
+        3,
+        8,
+        16,
+        24,
+        31,
+        38
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 6
+    },
+    {
+      "period": "105000025",
+      "date": "2016-03-28",
+      "first_zone": [
+        4,
+        8,
+        14,
+        16,
+        27,
+        34
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 2
+    },
+    {
+      "period": "105000026",
+      "date": "2016-03-31",
+      "first_zone": [
+        2,
+        7,
+        11,
+        25,
+        26,
+        28
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 4
+    },
+    {
+      "period": "105000027",
+      "date": "2016-04-04",
+      "first_zone": [
+        2,
+        8,
+        14,
+        16,
+        29,
+        37
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 6
+    },
+    {
+      "period": "105000028",
+      "date": "2016-04-07",
+      "first_zone": [
+        3,
+        6,
+        26,
+        29,
+        33,
+        36
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 5
+    },
+    {
+      "period": "105000029",
+      "date": "2016-04-11",
+      "first_zone": [
+        2,
+        15,
+        21,
+        23,
+        31,
+        36
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 1
+    },
+    {
+      "period": "105000030",
+      "date": "2016-04-14",
+      "first_zone": [
+        15,
+        22,
+        28,
+        29,
+        30,
+        38
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 7
+    },
+    {
+      "period": "105000031",
+      "date": "2016-04-18",
+      "first_zone": [
+        4,
+        8,
+        12,
+        17,
+        21,
+        35
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 8
+    },
+    {
+      "period": "105000032",
+      "date": "2016-04-21",
+      "first_zone": [
+        13,
+        15,
+        16,
+        23,
+        27,
+        30
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 2
+    },
+    {
+      "period": "105000033",
+      "date": "2016-04-25",
+      "first_zone": [
+        7,
+        8,
+        10,
+        21,
+        27,
+        34
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 4
+    },
+    {
+      "period": "105000034",
+      "date": "2016-04-28",
+      "first_zone": [
+        1,
+        6,
+        8,
+        15,
+        24,
+        37
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 7
+    },
+    {
+      "period": "105000035",
+      "date": "2016-05-02",
+      "first_zone": [
+        9,
+        15,
+        17,
+        18,
+        22,
+        28
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 6
+    },
+    {
+      "period": "105000036",
+      "date": "2016-05-05",
+      "first_zone": [
+        2,
+        9,
+        14,
+        16,
+        18,
+        19
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 6
+    },
+    {
+      "period": "105000037",
+      "date": "2016-05-09",
+      "first_zone": [
+        4,
+        14,
+        20,
+        30,
+        37,
+        38
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 4
+    },
+    {
+      "period": "105000038",
+      "date": "2016-05-12",
+      "first_zone": [
+        1,
+        12,
+        15,
+        19,
+        22,
+        32
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 5
+    },
+    {
+      "period": "105000039",
+      "date": "2016-05-16",
+      "first_zone": [
+        9,
+        11,
+        21,
+        27,
+        28,
+        38
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 4
+    },
+    {
+      "period": "105000040",
+      "date": "2016-05-19",
+      "first_zone": [
+        1,
+        10,
+        16,
+        23,
+        30,
+        32
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 2
+    },
+    {
+      "period": "105000041",
+      "date": "2016-05-23",
+      "first_zone": [
+        3,
+        11,
+        14,
+        15,
+        35,
+        38
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 2
+    },
+    {
+      "period": "105000042",
+      "date": "2016-05-26",
+      "first_zone": [
+        3,
+        5,
+        12,
+        24,
+        25,
+        28
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 6
+    },
+    {
+      "period": "105000043",
+      "date": "2016-05-30",
+      "first_zone": [
+        3,
+        12,
+        17,
+        27,
+        28,
+        38
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 4
+    },
+    {
+      "period": "105000044",
+      "date": "2016-06-02",
+      "first_zone": [
+        11,
+        16,
+        17,
+        33,
+        34,
+        38
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 8
+    },
+    {
+      "period": "105000045",
+      "date": "2016-06-06",
+      "first_zone": [
+        6,
+        13,
+        14,
+        24,
+        29,
+        38
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 8
+    },
+    {
+      "period": "105000046",
+      "date": "2016-06-09",
+      "first_zone": [
+        10,
+        12,
+        24,
+        27,
+        35,
+        38
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 6
+    },
+    {
+      "period": "105000047",
+      "date": "2016-06-13",
+      "first_zone": [
+        3,
+        10,
+        14,
+        21,
+        23,
+        36
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 3
+    },
+    {
+      "period": "105000048",
+      "date": "2016-06-16",
+      "first_zone": [
+        2,
+        9,
+        11,
+        19,
+        31,
+        35
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 4
+    },
+    {
+      "period": "105000049",
+      "date": "2016-06-20",
+      "first_zone": [
+        2,
+        6,
+        7,
+        9,
+        21,
+        32
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 4
+    },
+    {
+      "period": "105000050",
+      "date": "2016-06-23",
+      "first_zone": [
+        5,
+        8,
+        12,
+        15,
+        31,
+        33
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 5
+    },
+    {
+      "period": "105000051",
+      "date": "2016-06-27",
+      "first_zone": [
+        14,
+        18,
+        19,
+        26,
+        27,
+        29
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 6
+    },
+    {
+      "period": "105000052",
+      "date": "2016-06-30",
+      "first_zone": [
+        6,
+        16,
+        22,
+        23,
+        31,
+        34
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 8
+    },
+    {
+      "period": "105000053",
+      "date": "2016-07-04",
+      "first_zone": [
+        1,
+        21,
+        29,
+        31,
+        33,
+        34
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 2
+    },
+    {
+      "period": "105000054",
+      "date": "2016-07-07",
+      "first_zone": [
+        2,
+        5,
+        11,
+        17,
+        23,
+        27
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 2
+    },
+    {
+      "period": "105000055",
+      "date": "2016-07-11",
+      "first_zone": [
+        5,
+        10,
+        14,
+        31,
+        34,
+        38
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 2
+    },
+    {
+      "period": "105000056",
+      "date": "2016-07-14",
+      "first_zone": [
+        7,
+        25,
+        27,
+        31,
+        36,
+        37
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 7
+    },
+    {
+      "period": "105000057",
+      "date": "2016-07-18",
+      "first_zone": [
+        1,
+        9,
+        14,
+        26,
+        30,
+        37
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 6
+    },
+    {
+      "period": "105000058",
+      "date": "2016-07-21",
+      "first_zone": [
+        13,
+        20,
+        22,
+        23,
+        29,
+        38
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 8
+    },
+    {
+      "period": "105000059",
+      "date": "2016-07-25",
+      "first_zone": [
+        5,
+        6,
+        14,
+        26,
+        31,
+        38
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 6
+    },
+    {
+      "period": "105000060",
+      "date": "2016-07-28",
+      "first_zone": [
+        3,
+        6,
+        8,
+        17,
+        21,
+        37
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 1
+    },
+    {
+      "period": "105000061",
+      "date": "2016-08-01",
+      "first_zone": [
+        1,
+        18,
+        22,
+        26,
+        35,
+        38
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 2
+    },
+    {
+      "period": "105000062",
+      "date": "2016-08-04",
+      "first_zone": [
+        6,
+        14,
+        17,
+        18,
+        32,
+        38
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 2
+    },
+    {
+      "period": "105000063",
+      "date": "2016-08-08",
+      "first_zone": [
+        1,
+        2,
+        12,
+        16,
+        21,
+        35
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 3
+    },
+    {
+      "period": "105000064",
+      "date": "2016-08-11",
+      "first_zone": [
+        1,
+        22,
+        31,
+        33,
+        35,
+        37
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 3
+    },
+    {
+      "period": "105000065",
+      "date": "2016-08-15",
+      "first_zone": [
+        5,
+        8,
+        14,
+        28,
+        30,
+        38
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 5
+    },
+    {
+      "period": "105000066",
+      "date": "2016-08-18",
+      "first_zone": [
+        1,
+        8,
+        17,
+        22,
+        24,
+        26
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 6
+    },
+    {
+      "period": "105000067",
+      "date": "2016-08-22",
+      "first_zone": [
+        12,
+        16,
+        23,
+        26,
+        29,
+        33
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 7
+    },
+    {
+      "period": "105000068",
+      "date": "2016-08-25",
+      "first_zone": [
+        1,
+        13,
+        30,
+        31,
+        33,
+        37
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 8
+    },
+    {
+      "period": "105000069",
+      "date": "2016-08-29",
+      "first_zone": [
+        7,
+        8,
+        23,
+        29,
+        32,
+        34
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 5
+    },
+    {
+      "period": "105000070",
+      "date": "2016-09-01",
+      "first_zone": [
+        10,
+        14,
+        18,
+        21,
+        29,
+        37
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 5
+    },
+    {
+      "period": "105000071",
+      "date": "2016-09-05",
+      "first_zone": [
+        4,
+        7,
+        21,
+        25,
+        35,
+        37
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 4
+    },
+    {
+      "period": "105000072",
+      "date": "2016-09-08",
+      "first_zone": [
+        10,
+        18,
+        21,
+        27,
+        31,
+        33
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 3
+    },
+    {
+      "period": "105000073",
+      "date": "2016-09-12",
+      "first_zone": [
+        9,
+        11,
+        13,
+        23,
+        33,
+        36
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 3
+    },
+    {
+      "period": "105000074",
+      "date": "2016-09-15",
+      "first_zone": [
+        3,
+        4,
+        6,
+        17,
+        29,
+        37
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 7
+    },
+    {
+      "period": "105000075",
+      "date": "2016-09-19",
+      "first_zone": [
+        7,
+        8,
+        12,
+        15,
+        18,
+        31
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 6
+    },
+    {
+      "period": "105000076",
+      "date": "2016-09-22",
+      "first_zone": [
+        14,
+        15,
+        19,
+        24,
+        25,
+        37
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 6
+    },
+    {
+      "period": "105000077",
+      "date": "2016-09-26",
+      "first_zone": [
+        5,
+        10,
+        11,
+        20,
+        22,
+        36
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 6
+    },
+    {
+      "period": "105000078",
+      "date": "2016-09-29",
+      "first_zone": [
+        2,
+        6,
+        13,
+        20,
+        28,
+        37
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 2
+    },
+    {
+      "period": "105000079",
+      "date": "2016-10-03",
+      "first_zone": [
+        2,
+        7,
+        26,
+        27,
+        32,
+        36
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 2
+    },
+    {
+      "period": "105000080",
+      "date": "2016-10-06",
+      "first_zone": [
+        5,
+        7,
+        14,
+        19,
+        33,
+        34
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 3
+    },
+    {
+      "period": "105000081",
+      "date": "2016-10-10",
+      "first_zone": [
+        7,
+        11,
+        20,
+        29,
+        34,
+        38
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 4
+    },
+    {
+      "period": "105000082",
+      "date": "2016-10-13",
+      "first_zone": [
+        2,
+        5,
+        6,
+        10,
+        33,
+        36
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 3
+    },
+    {
+      "period": "105000083",
+      "date": "2016-10-17",
+      "first_zone": [
+        1,
+        6,
+        10,
+        20,
+        23,
+        35
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 6
+    },
+    {
+      "period": "105000084",
+      "date": "2016-10-20",
+      "first_zone": [
+        4,
+        13,
+        19,
+        23,
+        24,
+        29
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 5
+    },
+    {
+      "period": "105000085",
+      "date": "2016-10-24",
+      "first_zone": [
+        1,
+        5,
+        6,
+        8,
+        14,
+        27
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 4
+    },
+    {
+      "period": "105000086",
+      "date": "2016-10-27",
+      "first_zone": [
+        5,
+        11,
+        12,
+        26,
+        31,
+        33
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 7
+    },
+    {
+      "period": "105000087",
+      "date": "2016-10-31",
+      "first_zone": [
+        10,
+        15,
+        20,
+        24,
+        27,
+        34
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 8
+    },
+    {
+      "period": "105000088",
+      "date": "2016-11-03",
+      "first_zone": [
+        4,
+        5,
+        14,
+        21,
+        26,
+        36
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 5
+    },
+    {
+      "period": "105000089",
+      "date": "2016-11-07",
+      "first_zone": [
+        9,
+        19,
+        22,
+        29,
+        30,
+        34
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 4
+    },
+    {
+      "period": "105000090",
+      "date": "2016-11-10",
+      "first_zone": [
+        1,
+        4,
+        5,
+        15,
+        27,
+        29
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 4
+    },
+    {
+      "period": "105000091",
+      "date": "2016-11-14",
+      "first_zone": [
+        5,
+        6,
+        13,
+        15,
+        17,
+        30
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 7
+    },
+    {
+      "period": "105000092",
+      "date": "2016-11-17",
+      "first_zone": [
+        7,
+        8,
+        28,
+        29,
+        37,
+        38
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 1
+    },
+    {
+      "period": "105000093",
+      "date": "2016-11-21",
+      "first_zone": [
+        10,
+        14,
+        23,
+        28,
+        32,
+        36
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 2
+    },
+    {
+      "period": "105000094",
+      "date": "2016-11-24",
+      "first_zone": [
+        1,
+        7,
+        10,
+        15,
+        16,
+        28
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 2
+    },
+    {
+      "period": "105000095",
+      "date": "2016-11-28",
+      "first_zone": [
+        13,
+        18,
+        26,
+        30,
+        32,
+        36
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 3
+    },
+    {
+      "period": "105000096",
+      "date": "2016-12-01",
+      "first_zone": [
+        5,
+        12,
+        18,
+        27,
+        34,
+        38
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 5
+    },
+    {
+      "period": "105000097",
+      "date": "2016-12-05",
+      "first_zone": [
+        13,
+        23,
+        30,
+        32,
+        33,
+        35
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 8
+    },
+    {
+      "period": "105000098",
+      "date": "2016-12-08",
+      "first_zone": [
+        1,
+        8,
+        16,
+        18,
+        22,
+        30
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 6
+    },
+    {
+      "period": "105000099",
+      "date": "2016-12-12",
+      "first_zone": [
+        5,
+        11,
+        15,
+        20,
+        26,
+        31
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 4
+    },
+    {
+      "period": "105000100",
+      "date": "2016-12-15",
+      "first_zone": [
+        2,
+        4,
+        9,
+        13,
+        33,
+        36
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 6
+    },
+    {
+      "period": "105000101",
+      "date": "2016-12-19",
+      "first_zone": [
+        6,
+        9,
+        12,
+        23,
+        28,
+        34
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 5
+    },
+    {
+      "period": "105000102",
+      "date": "2016-12-22",
+      "first_zone": [
+        9,
+        10,
+        16,
+        29,
+        32,
+        38
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 6
+    },
+    {
+      "period": "105000103",
+      "date": "2016-12-26",
+      "first_zone": [
+        7,
+        11,
+        22,
+        24,
+        31,
+        36
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 3
+    },
+    {
+      "period": "105000104",
+      "date": "2016-12-29",
+      "first_zone": [
+        8,
+        11,
+        15,
+        17,
+        21,
+        31
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 7
+    },
+    {
+      "period": "106000001",
+      "date": "2017-01-02",
+      "first_zone": [
+        4,
+        7,
+        9,
+        21,
+        31,
+        34
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 2
+    },
+    {
+      "period": "106000002",
+      "date": "2017-01-05",
+      "first_zone": [
+        7,
+        13,
+        18,
+        24,
+        29,
+        37
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 7
+    },
+    {
+      "period": "106000003",
+      "date": "2017-01-09",
+      "first_zone": [
+        4,
+        8,
+        15,
+        24,
+        35,
+        36
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 6
+    },
+    {
+      "period": "106000004",
+      "date": "2017-01-12",
+      "first_zone": [
+        2,
+        7,
+        10,
+        17,
+        31,
+        32
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 3
+    },
+    {
+      "period": "106000005",
+      "date": "2017-01-16",
+      "first_zone": [
+        15,
+        16,
+        18,
+        20,
+        23,
+        24
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 3
+    },
+    {
+      "period": "106000006",
+      "date": "2017-01-19",
+      "first_zone": [
+        3,
+        7,
+        25,
+        26,
+        35,
+        36
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 5
+    },
+    {
+      "period": "106000007",
+      "date": "2017-01-23",
+      "first_zone": [
+        2,
+        5,
+        7,
+        8,
+        15,
+        24
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 7
+    },
+    {
+      "period": "106000008",
+      "date": "2017-01-26",
+      "first_zone": [
+        2,
+        8,
+        16,
+        17,
+        24,
+        38
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 5
+    },
+    {
+      "period": "106000009",
+      "date": "2017-01-30",
+      "first_zone": [
+        3,
+        7,
+        8,
+        10,
+        18,
+        31
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 4
+    },
+    {
+      "period": "106000010",
+      "date": "2017-02-02",
+      "first_zone": [
+        1,
+        9,
+        10,
+        20,
+        30,
+        37
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 3
+    },
+    {
+      "period": "106000011",
+      "date": "2017-02-06",
+      "first_zone": [
+        2,
+        15,
+        20,
+        21,
+        33,
+        34
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 3
+    },
+    {
+      "period": "106000012",
+      "date": "2017-02-09",
+      "first_zone": [
+        1,
+        3,
+        25,
+        28,
+        30,
+        36
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 2
+    },
+    {
+      "period": "106000013",
+      "date": "2017-02-13",
+      "first_zone": [
+        4,
+        9,
+        21,
+        22,
+        25,
+        33
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 7
+    },
+    {
+      "period": "106000014",
+      "date": "2017-02-16",
+      "first_zone": [
+        6,
+        12,
+        14,
+        15,
+        20,
+        24
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 7
+    },
+    {
+      "period": "106000015",
+      "date": "2017-02-20",
+      "first_zone": [
+        12,
+        16,
+        17,
+        24,
+        35,
+        38
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 4
+    },
+    {
+      "period": "106000016",
+      "date": "2017-02-23",
+      "first_zone": [
+        1,
+        2,
+        6,
+        11,
+        16,
+        29
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 7
+    },
+    {
+      "period": "106000017",
+      "date": "2017-02-27",
+      "first_zone": [
+        18,
+        20,
+        25,
+        32,
+        37,
+        38
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 1
+    },
+    {
+      "period": "106000018",
+      "date": "2017-03-02",
+      "first_zone": [
+        3,
+        8,
+        14,
+        19,
+        28,
+        34
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 2
+    },
+    {
+      "period": "106000019",
+      "date": "2017-03-06",
+      "first_zone": [
+        6,
+        7,
+        11,
+        23,
+        25,
+        26
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 4
+    },
+    {
+      "period": "106000020",
+      "date": "2017-03-09",
+      "first_zone": [
+        6,
+        7,
+        18,
+        20,
+        24,
+        32
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 7
+    },
+    {
+      "period": "106000021",
+      "date": "2017-03-13",
+      "first_zone": [
+        5,
+        13,
+        14,
+        23,
+        30,
+        32
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 2
+    },
+    {
+      "period": "106000022",
+      "date": "2017-03-16",
+      "first_zone": [
+        2,
+        8,
+        11,
+        15,
+        20,
+        21
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 2
+    },
+    {
+      "period": "106000023",
+      "date": "2017-03-20",
+      "first_zone": [
+        3,
+        4,
+        27,
+        29,
+        35,
+        38
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 2
+    },
+    {
+      "period": "106000024",
+      "date": "2017-03-23",
+      "first_zone": [
+        7,
+        8,
+        14,
+        15,
+        18,
+        29
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 2
+    },
+    {
+      "period": "106000025",
+      "date": "2017-03-27",
+      "first_zone": [
+        5,
+        12,
+        22,
+        34,
+        35,
+        38
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 2
+    },
+    {
+      "period": "106000026",
+      "date": "2017-03-30",
+      "first_zone": [
+        5,
+        10,
+        12,
+        16,
+        31,
+        37
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 7
+    },
+    {
+      "period": "106000027",
+      "date": "2017-04-03",
+      "first_zone": [
+        1,
+        13,
+        15,
+        22,
+        26,
+        33
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 6
+    },
+    {
+      "period": "106000028",
+      "date": "2017-04-06",
+      "first_zone": [
+        1,
+        2,
+        7,
+        33,
+        36,
+        37
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 5
+    },
+    {
+      "period": "106000029",
+      "date": "2017-04-10",
+      "first_zone": [
+        6,
+        8,
+        10,
+        12,
+        18,
+        38
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 3
+    },
+    {
+      "period": "106000030",
+      "date": "2017-04-13",
+      "first_zone": [
+        1,
+        7,
+        9,
+        19,
+        30,
+        37
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 4
+    },
+    {
+      "period": "106000031",
+      "date": "2017-04-17",
+      "first_zone": [
+        2,
+        11,
+        23,
+        24,
+        34,
+        35
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 4
+    },
+    {
+      "period": "106000032",
+      "date": "2017-04-20",
+      "first_zone": [
+        1,
+        14,
+        16,
+        19,
+        24,
+        35
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 8
+    },
+    {
+      "period": "106000033",
+      "date": "2017-04-24",
+      "first_zone": [
+        1,
+        6,
+        12,
+        24,
+        25,
+        35
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 6
+    },
+    {
+      "period": "106000034",
+      "date": "2017-04-27",
+      "first_zone": [
+        4,
+        6,
+        11,
+        18,
+        24,
+        26
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 4
+    },
+    {
+      "period": "106000035",
+      "date": "2017-05-01",
+      "first_zone": [
+        2,
+        4,
+        7,
+        16,
+        17,
+        23
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 1
+    },
+    {
+      "period": "106000036",
+      "date": "2017-05-04",
+      "first_zone": [
+        4,
+        9,
+        13,
+        14,
+        19,
+        37
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 2
+    },
+    {
+      "period": "106000037",
+      "date": "2017-05-08",
+      "first_zone": [
+        3,
+        7,
+        14,
+        17,
+        26,
+        38
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 7
+    },
+    {
+      "period": "106000038",
+      "date": "2017-05-11",
+      "first_zone": [
+        4,
+        6,
+        12,
+        28,
+        29,
+        37
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 3
+    },
+    {
+      "period": "106000039",
+      "date": "2017-05-15",
+      "first_zone": [
+        6,
+        11,
+        12,
+        14,
+        27,
+        31
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 4
+    },
+    {
+      "period": "106000040",
+      "date": "2017-05-18",
+      "first_zone": [
+        1,
+        4,
+        15,
+        17,
+        30,
+        32
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 3
+    },
+    {
+      "period": "106000041",
+      "date": "2017-05-22",
+      "first_zone": [
+        2,
+        5,
+        10,
+        11,
+        36,
+        38
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 3
+    },
+    {
+      "period": "106000042",
+      "date": "2017-05-25",
+      "first_zone": [
+        7,
+        15,
+        22,
+        24,
+        26,
+        34
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 1
+    },
+    {
+      "period": "106000043",
+      "date": "2017-05-29",
+      "first_zone": [
+        1,
+        8,
+        11,
+        13,
+        20,
+        37
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 1
+    },
+    {
+      "period": "106000044",
+      "date": "2017-06-01",
+      "first_zone": [
+        1,
+        5,
+        8,
+        31,
+        34,
+        35
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 2
+    },
+    {
+      "period": "106000045",
+      "date": "2017-06-05",
+      "first_zone": [
+        2,
+        4,
+        15,
+        16,
+        25,
+        36
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 3
+    },
+    {
+      "period": "106000046",
+      "date": "2017-06-08",
+      "first_zone": [
+        1,
+        8,
+        9,
+        11,
+        26,
+        29
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 4
+    },
+    {
+      "period": "106000047",
+      "date": "2017-06-12",
+      "first_zone": [
+        7,
+        9,
+        15,
+        20,
+        30,
+        31
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 5
+    },
+    {
+      "period": "106000048",
+      "date": "2017-06-15",
+      "first_zone": [
+        8,
+        13,
+        23,
+        28,
+        34,
+        35
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 2
+    },
+    {
+      "period": "106000049",
+      "date": "2017-06-19",
+      "first_zone": [
+        6,
+        9,
+        13,
+        21,
+        24,
+        30
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 5
+    },
+    {
+      "period": "106000050",
+      "date": "2017-06-22",
+      "first_zone": [
+        3,
+        6,
+        12,
+        18,
+        20,
+        35
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 2
+    },
+    {
+      "period": "106000051",
+      "date": "2017-06-26",
+      "first_zone": [
+        17,
+        19,
+        20,
+        27,
+        31,
+        37
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 3
+    },
+    {
+      "period": "106000052",
+      "date": "2017-06-29",
+      "first_zone": [
+        4,
+        7,
+        19,
+        20,
+        25,
+        36
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 8
+    },
+    {
+      "period": "106000053",
+      "date": "2017-07-03",
+      "first_zone": [
+        3,
+        7,
+        8,
+        11,
+        31,
+        32
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 3
+    },
+    {
+      "period": "106000054",
+      "date": "2017-07-06",
+      "first_zone": [
+        8,
+        12,
+        21,
+        30,
+        34,
+        35
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 5
+    },
+    {
+      "period": "106000055",
+      "date": "2017-07-10",
+      "first_zone": [
+        5,
+        14,
+        16,
+        21,
+        22,
+        28
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 5
+    },
+    {
+      "period": "106000056",
+      "date": "2017-07-13",
+      "first_zone": [
+        13,
+        16,
+        18,
+        19,
+        30,
+        33
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 3
+    },
+    {
+      "period": "106000057",
+      "date": "2017-07-17",
+      "first_zone": [
+        6,
+        10,
+        11,
+        25,
+        32,
+        38
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 3
+    },
+    {
+      "period": "106000058",
+      "date": "2017-07-20",
+      "first_zone": [
+        9,
+        10,
+        13,
+        15,
+        22,
+        35
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 3
+    },
+    {
+      "period": "106000059",
+      "date": "2017-07-24",
+      "first_zone": [
+        5,
+        19,
+        25,
+        29,
+        32,
+        34
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 8
+    },
+    {
+      "period": "106000060",
+      "date": "2017-07-27",
+      "first_zone": [
+        11,
+        15,
+        17,
+        26,
+        29,
+        34
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 1
+    },
+    {
+      "period": "106000061",
+      "date": "2017-07-31",
+      "first_zone": [
+        1,
+        8,
+        9,
+        29,
+        35,
+        38
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 1
+    },
+    {
+      "period": "106000062",
+      "date": "2017-08-03",
+      "first_zone": [
+        1,
+        17,
+        18,
+        21,
+        25,
+        37
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 1
+    },
+    {
+      "period": "106000063",
+      "date": "2017-08-07",
+      "first_zone": [
+        4,
+        6,
+        7,
+        22,
+        25,
+        37
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 4
+    },
+    {
+      "period": "106000064",
+      "date": "2017-08-10",
+      "first_zone": [
+        1,
+        5,
+        12,
+        22,
+        30,
+        32
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 8
+    },
+    {
+      "period": "106000065",
+      "date": "2017-08-14",
+      "first_zone": [
+        1,
+        8,
+        13,
+        19,
+        30,
+        35
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 5
+    },
+    {
+      "period": "106000066",
+      "date": "2017-08-17",
+      "first_zone": [
+        9,
+        11,
+        12,
+        13,
+        24,
+        30
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 4
+    },
+    {
+      "period": "106000067",
+      "date": "2017-08-21",
+      "first_zone": [
+        1,
+        3,
+        17,
+        20,
+        26,
+        31
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 2
+    },
+    {
+      "period": "106000068",
+      "date": "2017-08-24",
+      "first_zone": [
+        4,
+        12,
+        15,
+        17,
+        22,
+        30
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 3
+    },
+    {
+      "period": "106000069",
+      "date": "2017-08-28",
+      "first_zone": [
+        4,
+        10,
+        15,
+        16,
+        17,
+        28
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 1
+    },
+    {
+      "period": "106000070",
+      "date": "2017-08-31",
+      "first_zone": [
+        2,
+        5,
+        8,
+        9,
+        14,
+        18
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 4
+    },
+    {
+      "period": "106000071",
+      "date": "2017-09-04",
+      "first_zone": [
+        8,
+        10,
+        14,
+        15,
+        18,
+        29
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 2
+    },
+    {
+      "period": "106000072",
+      "date": "2017-09-07",
+      "first_zone": [
+        2,
+        3,
+        7,
+        12,
+        14,
+        22
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 4
+    },
+    {
+      "period": "106000073",
+      "date": "2017-09-11",
+      "first_zone": [
+        1,
+        3,
+        21,
+        26,
+        32,
+        34
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 2
+    },
+    {
+      "period": "106000074",
+      "date": "2017-09-14",
+      "first_zone": [
+        5,
+        13,
+        22,
+        25,
+        26,
+        31
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 5
+    },
+    {
+      "period": "106000075",
+      "date": "2017-09-18",
+      "first_zone": [
+        2,
+        4,
+        8,
+        22,
+        26,
+        37
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 1
+    },
+    {
+      "period": "106000076",
+      "date": "2017-09-21",
+      "first_zone": [
+        4,
+        6,
+        11,
+        16,
+        18,
+        23
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 4
+    },
+    {
+      "period": "106000077",
+      "date": "2017-09-25",
+      "first_zone": [
+        3,
+        4,
+        15,
+        16,
+        24,
+        34
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 4
+    },
+    {
+      "period": "106000078",
+      "date": "2017-09-28",
+      "first_zone": [
+        1,
+        4,
+        18,
+        25,
+        34,
+        36
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 1
+    },
+    {
+      "period": "106000079",
+      "date": "2017-10-02",
+      "first_zone": [
+        3,
+        13,
+        17,
+        26,
+        34,
+        38
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 8
+    },
+    {
+      "period": "106000080",
+      "date": "2017-10-05",
+      "first_zone": [
+        6,
+        7,
+        8,
+        12,
+        28,
+        30
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 1
+    },
+    {
+      "period": "106000081",
+      "date": "2017-10-09",
+      "first_zone": [
+        15,
+        17,
+        19,
+        20,
+        24,
+        27
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 8
+    },
+    {
+      "period": "106000082",
+      "date": "2017-10-12",
+      "first_zone": [
+        4,
+        17,
+        20,
+        25,
+        27,
+        33
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 6
+    },
+    {
+      "period": "106000083",
+      "date": "2017-10-16",
+      "first_zone": [
+        2,
+        7,
+        9,
+        16,
+        17,
+        25
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 7
+    },
+    {
+      "period": "106000084",
+      "date": "2017-10-19",
+      "first_zone": [
+        6,
+        8,
+        10,
+        11,
+        12,
+        21
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 6
+    },
+    {
+      "period": "106000085",
+      "date": "2017-10-23",
+      "first_zone": [
+        10,
+        11,
+        17,
+        30,
+        33,
+        35
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 8
+    },
+    {
+      "period": "106000086",
+      "date": "2017-10-26",
+      "first_zone": [
+        5,
+        7,
+        24,
+        26,
+        34,
+        38
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 3
+    },
+    {
+      "period": "106000087",
+      "date": "2017-10-30",
+      "first_zone": [
+        13,
+        14,
+        19,
+        24,
+        32,
+        38
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 1
+    },
+    {
+      "period": "106000088",
+      "date": "2017-11-02",
+      "first_zone": [
+        2,
+        9,
+        19,
+        26,
+        29,
+        31
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 1
+    },
+    {
+      "period": "106000089",
+      "date": "2017-11-06",
+      "first_zone": [
+        1,
+        9,
+        16,
+        21,
+        27,
+        31
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 5
+    },
+    {
+      "period": "106000090",
+      "date": "2017-11-09",
+      "first_zone": [
+        8,
+        18,
+        19,
+        20,
+        23,
+        37
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 8
+    },
+    {
+      "period": "106000091",
+      "date": "2017-11-13",
+      "first_zone": [
+        4,
+        15,
+        17,
+        20,
+        25,
+        28
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 1
+    },
+    {
+      "period": "106000092",
+      "date": "2017-11-16",
+      "first_zone": [
+        1,
+        11,
+        13,
+        20,
+        21,
+        38
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 2
+    },
+    {
+      "period": "106000093",
+      "date": "2017-11-20",
+      "first_zone": [
+        9,
+        16,
+        18,
+        26,
+        30,
+        37
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 5
+    },
+    {
+      "period": "106000094",
+      "date": "2017-11-23",
+      "first_zone": [
+        14,
+        17,
+        20,
+        28,
+        29,
+        34
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 5
+    },
+    {
+      "period": "106000095",
+      "date": "2017-11-27",
+      "first_zone": [
+        10,
+        13,
+        14,
+        17,
+        20,
+        21
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 2
+    },
+    {
+      "period": "106000096",
+      "date": "2017-11-30",
+      "first_zone": [
+        7,
+        8,
+        13,
+        28,
+        29,
+        34
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 2
+    },
+    {
+      "period": "106000097",
+      "date": "2017-12-04",
+      "first_zone": [
+        17,
+        19,
+        20,
+        24,
+        26,
+        36
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 3
+    },
+    {
+      "period": "106000098",
+      "date": "2017-12-07",
+      "first_zone": [
+        3,
+        4,
+        7,
+        17,
+        20,
+        22
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 5
+    },
+    {
+      "period": "106000099",
+      "date": "2017-12-11",
+      "first_zone": [
+        3,
+        10,
+        15,
+        16,
+        23,
+        38
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 3
+    },
+    {
+      "period": "106000100",
+      "date": "2017-12-14",
+      "first_zone": [
+        1,
+        6,
+        12,
+        24,
+        25,
+        30
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 3
+    },
+    {
+      "period": "106000101",
+      "date": "2017-12-18",
+      "first_zone": [
+        1,
+        3,
+        7,
+        17,
+        24,
+        28
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 7
+    },
+    {
+      "period": "106000102",
+      "date": "2017-12-21",
+      "first_zone": [
+        3,
+        8,
+        22,
+        23,
+        24,
+        36
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 4
+    },
+    {
+      "period": "106000103",
+      "date": "2017-12-25",
+      "first_zone": [
+        2,
+        10,
+        12,
+        15,
+        16,
+        21
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 5
+    },
+    {
+      "period": "106000104",
+      "date": "2017-12-28",
+      "first_zone": [
+        1,
+        14,
+        18,
+        23,
+        28,
+        29
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 7
+    },
     {
       "period": "107000001",
       "date": "2018-01-01",
@@ -11706,6 +17549,608 @@
       ],
       "first_zone_drawn": [],
       "second_zone": 6
+    },
+    {
+      "period": "115000001",
+      "date": "2026-01-01",
+      "first_zone": [
+        7,
+        14,
+        22,
+        23,
+        31,
+        35
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 1
+    },
+    {
+      "period": "115000002",
+      "date": "2026-01-05",
+      "first_zone": [
+        11,
+        14,
+        19,
+        25,
+        34,
+        37
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 4
+    },
+    {
+      "period": "115000003",
+      "date": "2026-01-08",
+      "first_zone": [
+        7,
+        17,
+        25,
+        26,
+        27,
+        33
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 3
+    },
+    {
+      "period": "115000004",
+      "date": "2026-01-12",
+      "first_zone": [
+        1,
+        9,
+        14,
+        17,
+        33,
+        38
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 3
+    },
+    {
+      "period": "115000005",
+      "date": "2026-01-15",
+      "first_zone": [
+        8,
+        10,
+        16,
+        26,
+        31,
+        38
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 5
+    },
+    {
+      "period": "115000006",
+      "date": "2026-01-19",
+      "first_zone": [
+        10,
+        16,
+        20,
+        23,
+        35,
+        37
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 5
+    },
+    {
+      "period": "115000007",
+      "date": "2026-01-22",
+      "first_zone": [
+        11,
+        17,
+        29,
+        30,
+        34,
+        35
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 6
+    },
+    {
+      "period": "115000008",
+      "date": "2026-01-26",
+      "first_zone": [
+        3,
+        8,
+        12,
+        26,
+        32,
+        38
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 4
+    },
+    {
+      "period": "115000009",
+      "date": "2026-01-29",
+      "first_zone": [
+        5,
+        10,
+        15,
+        17,
+        23,
+        25
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 5
+    },
+    {
+      "period": "115000010",
+      "date": "2026-02-02",
+      "first_zone": [
+        1,
+        12,
+        14,
+        15,
+        27,
+        29
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 5
+    },
+    {
+      "period": "115000011",
+      "date": "2026-02-05",
+      "first_zone": [
+        7,
+        22,
+        28,
+        34,
+        36,
+        37
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 7
+    },
+    {
+      "period": "115000012",
+      "date": "2026-02-09",
+      "first_zone": [
+        13,
+        14,
+        16,
+        33,
+        34,
+        37
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 2
+    },
+    {
+      "period": "115000013",
+      "date": "2026-02-12",
+      "first_zone": [
+        6,
+        10,
+        22,
+        25,
+        32,
+        35
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 3
+    },
+    {
+      "period": "115000014",
+      "date": "2026-02-16",
+      "first_zone": [
+        2,
+        6,
+        19,
+        33,
+        36,
+        38
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 3
+    },
+    {
+      "period": "115000015",
+      "date": "2026-02-19",
+      "first_zone": [
+        2,
+        3,
+        6,
+        12,
+        23,
+        27
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 4
+    },
+    {
+      "period": "115000016",
+      "date": "2026-02-23",
+      "first_zone": [
+        4,
+        10,
+        13,
+        24,
+        31,
+        35
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 2
+    },
+    {
+      "period": "115000017",
+      "date": "2026-02-26",
+      "first_zone": [
+        3,
+        19,
+        27,
+        30,
+        37,
+        38
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 2
+    },
+    {
+      "period": "115000018",
+      "date": "2026-03-02",
+      "first_zone": [
+        7,
+        9,
+        11,
+        23,
+        25,
+        29
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 5
+    },
+    {
+      "period": "115000019",
+      "date": "2026-03-05",
+      "first_zone": [
+        7,
+        11,
+        14,
+        32,
+        36,
+        38
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 2
+    },
+    {
+      "period": "115000020",
+      "date": "2026-03-09",
+      "first_zone": [
+        1,
+        11,
+        14,
+        17,
+        29,
+        32
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 8
+    },
+    {
+      "period": "115000021",
+      "date": "2026-03-12",
+      "first_zone": [
+        4,
+        9,
+        15,
+        25,
+        27,
+        31
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 8
+    },
+    {
+      "period": "115000022",
+      "date": "2026-03-16",
+      "first_zone": [
+        14,
+        26,
+        28,
+        31,
+        32,
+        34
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 1
+    },
+    {
+      "period": "115000023",
+      "date": "2026-03-19",
+      "first_zone": [
+        9,
+        13,
+        14,
+        18,
+        31,
+        34
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 1
+    },
+    {
+      "period": "115000024",
+      "date": "2026-03-23",
+      "first_zone": [
+        1,
+        9,
+        18,
+        28,
+        33,
+        38
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 5
+    },
+    {
+      "period": "115000025",
+      "date": "2026-03-26",
+      "first_zone": [
+        13,
+        14,
+        22,
+        28,
+        35,
+        38
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 5
+    },
+    {
+      "period": "115000026",
+      "date": "2026-03-30",
+      "first_zone": [
+        2,
+        13,
+        21,
+        22,
+        29,
+        34
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 1
+    },
+    {
+      "period": "115000027",
+      "date": "2026-04-02",
+      "first_zone": [
+        5,
+        15,
+        17,
+        23,
+        25,
+        34
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 6
+    },
+    {
+      "period": "115000028",
+      "date": "2026-04-06",
+      "first_zone": [
+        5,
+        8,
+        22,
+        27,
+        35,
+        38
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 4
+    },
+    {
+      "period": "115000029",
+      "date": "2026-04-09",
+      "first_zone": [
+        4,
+        9,
+        13,
+        27,
+        29,
+        34
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 3
+    },
+    {
+      "period": "115000030",
+      "date": "2026-04-13",
+      "first_zone": [
+        3,
+        10,
+        11,
+        16,
+        19,
+        24
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 5
+    },
+    {
+      "period": "115000031",
+      "date": "2026-04-16",
+      "first_zone": [
+        4,
+        11,
+        16,
+        22,
+        30,
+        38
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 6
+    },
+    {
+      "period": "115000032",
+      "date": "2026-04-20",
+      "first_zone": [
+        7,
+        13,
+        19,
+        34,
+        35,
+        37
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 8
+    },
+    {
+      "period": "115000033",
+      "date": "2026-04-23",
+      "first_zone": [
+        10,
+        14,
+        15,
+        16,
+        27,
+        33
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 5
+    },
+    {
+      "period": "115000034",
+      "date": "2026-04-27",
+      "first_zone": [
+        6,
+        8,
+        27,
+        33,
+        35,
+        38
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 2
+    },
+    {
+      "period": "115000035",
+      "date": "2026-04-30",
+      "first_zone": [
+        1,
+        4,
+        13,
+        19,
+        27,
+        30
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 8
+    },
+    {
+      "period": "115000036",
+      "date": "2026-05-04",
+      "first_zone": [
+        9,
+        21,
+        29,
+        32,
+        36,
+        38
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 2
+    },
+    {
+      "period": "115000037",
+      "date": "2026-05-07",
+      "first_zone": [
+        3,
+        14,
+        15,
+        24,
+        34,
+        38
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 3
+    },
+    {
+      "period": "115000038",
+      "date": "2026-05-11",
+      "first_zone": [
+        15,
+        19,
+        23,
+        26,
+        31,
+        38
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 5
+    },
+    {
+      "period": "115000039",
+      "date": "2026-05-14",
+      "first_zone": [
+        6,
+        8,
+        9,
+        17,
+        21,
+        29
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 8
+    },
+    {
+      "period": "115000040",
+      "date": "2026-05-18",
+      "first_zone": [
+        6,
+        7,
+        14,
+        25,
+        29,
+        34
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 4
+    },
+    {
+      "period": "115000041",
+      "date": "2026-05-21",
+      "first_zone": [
+        6,
+        14,
+        22,
+        28,
+        35,
+        38
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 1
+    },
+    {
+      "period": "115000042",
+      "date": "2026-05-25",
+      "first_zone": [
+        9,
+        17,
+        21,
+        24,
+        31,
+        33
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 3
+    },
+    {
+      "period": "115000043",
+      "date": "2026-05-28",
+      "first_zone": [
+        1,
+        2,
+        24,
+        31,
+        34,
+        38
+      ],
+      "first_zone_drawn": [],
+      "second_zone": 3
     }
   ]
 }
