@@ -1,0 +1,45 @@
+<!DOCTYPE html><html lang='zh-TW'><head><meta charset='utf-8'><style>
+@page { size: A4; margin: 18mm 16mm; }
+* { font-family: 'WenQuanYi Zen Hei','Noto Sans CJK TC',sans-serif; }
+body { color:#1a1a1a; line-height:1.6; font-size:11pt; }
+h1 { font-size:19pt; border-bottom:3px solid #2356b6; padding-bottom:6px; }
+h2 { font-size:14pt; color:#2356b6; margin-top:22px;
+     border-left:5px solid #2356b6; padding-left:8px; }
+table { border-collapse:collapse; width:100%; margin:10px 0; font-size:10pt; }
+th,td { border:1px solid #bbb; padding:6px 8px; vertical-align:top; text-align:left; }
+th { background:#2356b6; color:#fff; }
+tr:nth-child(even) td { background:#f3f6fc; }
+blockquote { background:#fff8e6; border-left:5px solid #e0a800;
+             padding:8px 12px; margin:10px 0; color:#5a4a00; }
+pre { background:#f5f5f5; border:1px solid #ddd; padding:10px;
+      font-family:monospace; font-size:9.5pt; white-space:pre-wrap; }
+code { background:#eef; padding:1px 4px; border-radius:3px; font-size:9.5pt; }
+hr { border:none; border-top:1px solid #ddd; margin:16px 0; }
+strong { color:#11244e; }
+ul,ol { margin:6px 0 6px 22px; }
+li { margin:3px 0; }
+</style></head><body><h1>代理 IP 方案選擇參考（供委託方評估選用）</h1>
+<blockquote><strong>用途</strong>：本系統已內建代理 IP 支援（設定環境變數 <code>GF_PROXY</code> 即可啟用，無需改程式）。<br>代理服務<strong>由委託方自行選購並負擔費用</strong>（見「維護保固與責任說明」第六點）。<br>本表為<strong>中立參考，非背書、不收佣</strong>；各家<strong>方案／價格／試用條件常有變動，請以官網當下為準</strong>。<br>資料查詢日：<strong>2026-06-16</strong>。</blockquote>
+<hr>
+<h2>一、先懂兩個名詞（影響 CP 值判斷）</h2>
+<ul><li><strong>住宅代理（Residential）</strong>：用真實家用網路的 IP，<strong>最不容易被 Google 識破</strong>，但<strong>較貴</strong>（多以流量 GB 計費）。</li><li><strong>資料中心代理（Datacenter）</strong>：機房 IP，<strong>便宜又快</strong>，但<strong>容易被 Google 認出並封鎖</strong>，避封效果有限。</li></ul>
+<blockquote>結論：要對付 Google 反爬，<strong>避封效果看住宅代理</strong>；資料中心代理主要拿來「測程式接線通不通」。</blockquote>
+<hr>
+<h2>二、供應商比較</h2>
+<table>
+<tr><th>供應商</th><th>類型</th><th>免費／入門方案</th><th>門檻</th><th>優點</th><th>缺點</th><th>適合誰</th></tr>
+<tr><td><strong>Webshare</strong></td><td>資料中心為主</td><td><strong>免費</strong> 10 個代理＋約 1GB/月</td><td>免綁卡</td><td>真的免費、好上手</td><td>資料中心對 Google <strong>易被擋</strong>、避封效果有限</td><td>先確認「程式接線生效」、輕量測試</td></tr>
+<tr><td><strong>Decodo</strong>（原 Smartproxy）</td><td>住宅</td><td><strong>3 天試用、100MB</strong></td><td>驗證卡片（$0 不扣款）</td><td>真住宅試用、面板友善、CP 中上</td><td>試用額度小、時間短</td><td>想小量驗證「住宅避封效果」</td></tr>
+<tr><td><strong>DataImpulse</strong></td><td>住宅</td><td><strong>$5／5GB、永不過期</strong></td><td><strong>免企業驗證</strong></td><td>入門便宜、<strong>無時限</strong>、$1/GB、門檻低</td><td>規模／口碑不如兩大廠</td><td>預算有限、想用真住宅又不想被試用時限綁</td></tr>
+<tr><td><strong>Bright Data</strong></td><td>住宅（規模最大）</td><td>7 天試用</td><td><strong>需企業驗證</strong></td><td>IP 池最大最穩、功能最全</td><td>貴、門檻高、設定較複雜</td><td>企業級／大量長期抓取</td></tr>
+<tr><td><strong>Oxylabs</strong></td><td>住宅</td><td>有試用</td><td>偏企業驗證</td><td>品質高、企業級支援</td><td>貴、個人門檻高</td><td>企業級需求</td></tr>
+<tr><td><strong>IPRoyal</strong></td><td>住宅／多種</td><td><strong>無自助免費試用</strong></td><td>綁卡</td><td>便宜、隨用隨付、彈性</td><td>沒有免費試用</td><td>想隨用隨付省錢</td></tr>
+</table>
+<hr>
+<h2>三、怎麼挑（CP 值思路，僅供參考）</h2>
+<ul><li><strong>只想先確認程式接代理沒問題</strong> → <strong>Webshare 免費</strong>（夠用、零成本）。</li><li><strong>偶爾急救／小量、預算有限</strong> → <strong>DataImpulse</strong>（$5/5GB 不過期）或 <strong>Decodo 試用</strong>。</li><li><strong>量大／長期／要最穩</strong> → <strong>Bright Data／Oxylabs</strong>（效果最好，但貴、且多需企業驗證）。</li><li><strong>想隨用隨付、彈性控管花費</strong> → <strong>IPRoyal</strong>。</li></ul>
+<hr>
+<h2>四、共同注意事項（重要）</h2>
+<ol><li><strong>免費公開代理清單</strong>（網路上找的免費 IP）<strong>只適合測接線、切勿用來跑真資料或填帳密</strong>，有被竊聽與資安風險。</li><li>代理 IP <strong>能降低</strong>被封風險，但<strong>不保證</strong>必然解除封鎖或長期可用（目標網站可能仍封鎖特定代理）。</li><li>試用方案多需<strong>註冊／綁卡／企業驗證</strong>，額度與時間有限；正式使用請評估<strong>月流量</strong>換算成本。</li><li>代理之選用、設定、測試與輪替若需開發方協助，屬<strong>有償維護</strong>（見「維護保固與責任說明」）。</li><li>使用代理仍須遵守目標網站服務條款與當地法令；合規責任歸屬見「維護保固與責任說明」。</li></ol>
+<hr>
+<p>*本參考由開發方整理提供，僅為協助委託方評估，最終選擇與費用由委託方自行決定與負擔。*</p></body></html>
