@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>高榮企業工會 ・ 成立排雷檢核表</title>
+<style>
+  :root{
+    --red:#C0392B;--red-deep:#7B1818;--gold:#B7860B;--gold-l:#FEF9E7;
+    --ink:#1A1A1A;--mid:#555;--soft:#888;--bg:#FAF8F5;--card:#fff;--bd:#E8E2D8;
+    --green:#1A7A4A;--green-l:#EAF7F0;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:"Noto Sans TC",-apple-system,"PingFang TC","Microsoft JhengHei",sans-serif;
+    background:var(--bg);color:var(--ink);line-height:1.7;font-size:16px}
+  .top{background:linear-gradient(135deg,var(--red),var(--red-deep));color:#fff;padding:22px 18px 18px;text-align:center}
+  .top h1{font-size:21px;font-weight:800;letter-spacing:.02em}
+  .top p{font-size:13px;opacity:.9;margin-top:4px}
+  main{max-width:680px;margin:0 auto;padding:16px 14px 60px}
+
+  .bar-wrap{position:sticky;top:0;z-index:9;background:rgba(250,248,245,.97);
+    backdrop-filter:blur(6px);padding:12px 4px 10px;border-bottom:1px solid var(--bd)}
+  .bar-head{display:flex;justify-content:space-between;font-size:13px;color:var(--mid);margin-bottom:6px}
+  .bar-head b{color:var(--red)}
+  .track{height:9px;background:#EDE7DD;border-radius:99px;overflow:hidden}
+  .fill{height:100%;width:0;background:linear-gradient(90deg,var(--gold),var(--red));
+    border-radius:99px;transition:width .4s}
+
+  .deadline{background:var(--gold-l);border:1px solid #EAD67A;border-radius:12px;
+    padding:12px 14px;margin:14px 0;font-size:14px}
+  .deadline label{font-weight:600;color:var(--red-deep)}
+  .deadline input{font-size:16px;padding:6px 8px;border:1px solid #d9cda0;border-radius:8px;margin-top:4px}
+  .deadline .out{margin-top:8px;font-size:15px}
+  .deadline .out b{font-size:18px;color:var(--red);font-variant-numeric:tabular-nums}
+  .deadline .left{color:var(--green);font-weight:700}
+  .deadline .over{color:var(--red);font-weight:700}
+
+  .phase{margin-top:18px}
+  .phase__h{display:flex;align-items:center;gap:9px;margin-bottom:8px}
+  .phase__n{flex:none;width:30px;height:30px;border-radius:50%;background:var(--red);color:#fff;
+    display:flex;align-items:center;justify-content:center;font-weight:700;font-size:15px}
+  .phase__t{font-size:17px;font-weight:700}
+  .phase__t small{display:block;font-size:12px;color:var(--soft);font-weight:400}
+
+  ul{list-style:none}
+  li{display:flex;gap:11px;background:var(--card);border:1px solid var(--bd);
+    border-left:3px solid var(--gold);border-radius:10px;padding:11px 13px;margin-bottom:8px;
+    cursor:pointer;-webkit-tap-highlight-color:transparent;transition:.15s}
+  li:active{background:#FBF7F0}
+  li.done{background:var(--green-l);border-color:#C5E6D3;border-left-color:var(--green)}
+  .box{flex:none;width:22px;height:22px;border:2px solid #c9c0b0;border-radius:6px;margin-top:2px;
+    display:flex;align-items:center;justify-content:center;transition:.2s}
+  li.done .box{background:var(--green);border-color:var(--green)}
+  li.done .box::after{content:"✓";color:#fff;font-size:14px;font-weight:800}
+  .txt{flex:1}
+  .txt .t{font-weight:600}
+  li.done .txt .t{text-decoration:line-through;color:var(--soft)}
+  .txt .why{display:block;font-size:13px;color:var(--mid);margin-top:3px}
+  .txt .why b{color:var(--red)}
+
+  .info{background:#F3EFE8;border-radius:12px;padding:14px;margin-top:22px;font-size:14px;line-height:1.8}
+  .info h3{font-size:15px;color:var(--red-deep);margin-bottom:6px}
+  .info a{color:var(--red)}
+  .acts{display:flex;gap:10px;flex-wrap:wrap;margin-top:18px}
+  .btn{flex:1;min-width:130px;text-align:center;padding:11px;border-radius:10px;border:none;
+    font-size:15px;font-weight:600;cursor:pointer}
+  .btn--p{background:var(--red);color:#fff}
+  .btn--g{background:#fff;border:1px solid var(--bd);color:var(--mid)}
+  .foot{text-align:center;font-size:12px;color:var(--soft);margin-top:24px;line-height:1.8}
+  @media print{.bar-wrap,.acts{display:none}body{background:#fff}}
+</style>
+</head>
+<body>
+<div class="top">
+  <h1>高榮企業工會 ・ 成立排雷檢核表</h1>
+  <p>依《工會法》一步步排雷｜勾選會自動存進度（這台裝置）</p>
+</div>
+
+<main>
+  <div class="bar-wrap">
+    <div class="bar-head"><span>完成度</span><span><b id="cnt">0</b> / <span id="tot">0</span></span></div>
+    <div class="track"><div class="fill" id="fill"></div></div>
+  </div>
+
+  <div class="deadline">
+    <label for="dday">📅 成立大會日期（＝30 日登記倒數起點）：</label><br>
+    <input type="date" id="dday">
+    <div class="out" id="ddOut" style="display:none"></div>
+  </div>
+
+  <div id="list"></div>
+
+  <div class="info">
+    <h3>☎️ 送件前先打這通（高雄市勞工局 ・ 勞工組織科 ・ 工會輔導）</h3>
+    專線 <b>(07) 812-4633</b>、<b>(07) 812-5381</b>（總機 (07) 812-4613）<br>
+    工會輔導分機 121～125、136：<br>
+    #122 陳小姐｜#123 許小姐｜#124 黃先生｜#125 劉小姐｜#136 金小姐<br>
+    地址：806604 高雄市前鎮區鎮中路 6 號
+    <h3 style="margin-top:12px">🛡️ 你的保護傘</h3>
+    《工會法》第 35 條：雇主不得因你籌組／參加工會而解僱、降調、減薪或不利對待，違者處分無效、可申請裁決。籌組期間請保留公告、信件、會議紀錄等證據。
+  </div>
+
+  <div class="acts">
+    <button class="btn btn--p" onclick="window.print()">🖨️ 列印 / 存 PDF</button>
+    <button class="btn btn--g" onclick="resetAll()">↺ 清除勾選</button>
+  </div>
+
+  <p class="foot">
+    僅供參考、非法律意見；正式程序與表格以高雄市政府勞工局公告為準。<br>
+    《工會法》全文：law.moj.gov.tw（pcode=N0020001）
+  </p>
+</main>
+
+<script>
+// 檢核表資料：每階段 → 多個項目 {t:該做的事, why:為什麼/雷在哪}
+const DATA = [
+ ["資格與身分（最早、最致命，先排）", [
+   ["連署／會員只收「勞工身分」（約用、契約、派遣等非公職受僱者），逐一確認身分別欄","雷：<b>公職人員混入</b>→資格不符、登記被退。公職要走《公務人員協會法》。"],
+   ["發起人名單排除「代表雇主行使管理權之主管」","雷：這類主管<b>不得當企業工會發起人</b>（工會法§14、官方流程）。職級界定打 #122～#125 問承辦確認。"],
+   ["連署書加問「是否已具其他企業工會會籍」","雷：同一企業工會會籍重複，資格有瑕疵。"]
+ ]],
+ ["連署 30 人", [
+   ["連署人數衝過 30（多備幾位，防事後有人資格不符要補）","雷：剛好卡 30，一人出問題就不足法定門檻。"],
+   ["每筆連署：姓名／部門／身分別／簽名／日期都填齊","雷：身分別欄沒填好→日後領 20 萬獎勵時拿不出資格證明。"]
+ ]],
+ ["成立籌備會", [
+   ["召開籌備會，推選召集人＋籌備委員，並分工（章程／招募／總務）","雷：沒開正式會、沒推籌委，程序不完整。"],
+   ["做籌備會會議紀錄並存檔","雷：沒紀錄，登記時或被質疑時拿不出來。"]
+ ]],
+ ["公開徵求會員 ＋ 擬定章程", [
+   ["公開徵求會員：公告／說明會／訊息全部存證（截圖、簽到、紀錄）","雷：沒留公開徵求證據→程序被質疑。"],
+   ["章程逐條對照勞動部「企業工會章程範例」","雷：章程沒對官方範本→登記被退件、來回耗時。"],
+   ["章程草稿打電話請勞工組織科承辦先看過","先確認再送，省掉退件來回。"],
+   ["章程含：名稱／宗旨／會址／會員資格／理監事組織／經費(會費)／會議／修章程序","缺項即不完整。"]
+ ]],
+ ["召開成立大會（這天＝30 日倒數起點）", [
+   ["開會前點名，確認「發起人過半數出席」才開會","雷：未達出席門檻就開會→決議可能無效。"],
+   ["依議程：報告籌備→通過章程→選理事監事→理事互選理事長","雷：選舉/程序瑕疵。"],
+   ["當場完成四份產出：成立大會紀錄、章程定版、會員名冊、理監事名冊","雷：當場沒做名冊，事後補很麻煩。"],
+   ["把成立大會日期記到上方欄位（系統幫你算 30 日死線）","★ 30 日登記期限從大會日起算。"]
+ ]],
+ ["30 日內向勞工局登記領證", [
+   ["送件前打 #122～#125 確認最新表格與流程","先問再送，避免退件。"],
+   ["備齊：登記申請書、章程、會員名冊、理監事名冊、成立大會紀錄","雷：文件不齊被退。"],
+   ["在「大會日 +30 日」內送出，且預留緩衝、別卡最後一天","雷：<b>逾期就得整個重來</b>。"],
+   ["確認勞工局收件 → 領取工會登記證書（＝正式法人）","拿到證書才算正式成立。"]
+ ]],
+ ["立案後：補助、帳戶、協商", [
+   ["先領到登記證書，再申請「獎勵工會成立」（最高 20 萬，分兩階段）","雷：多數補助要證書才能申請。"],
+   ["申請統一編號、開立工會對公銀行帳戶",""],
+   ["Logo 採原創設計（未使用院徽／退輔會標誌）","雷：用院徽有商標風險、給對方把柄。"],
+   ["（成立後）依《團體協約法》向院方提「書面團體協約協商請求」","院方有誠信協商義務(§6)，無正當理由不得拒絕；僵局可申請裁決/調解。"]
+ ]]
+];
+
+const KEY="gaorong_paolei_v1";
+const saved=JSON.parse(localStorage.getItem(KEY)||"{}");
+const list=document.getElementById("list");
+let total=0;
+DATA.forEach((ph,pi)=>{
+  const sec=document.createElement("div");sec.className="phase";
+  sec.innerHTML=`<div class="phase__h"><span class="phase__n">${pi}</span>
+    <span class="phase__t">${ph[0]}</span></div>`;
+  const ul=document.createElement("ul");
+  ph[1].forEach((it,ii)=>{
+    total++;
+    const id=`p${pi}_${ii}`;
+    const li=document.createElement("li");
+    if(saved[id]) li.classList.add("done");
+    li.innerHTML=`<span class="box"></span><span class="txt">
+      <span class="t">${it[0]}</span>${it[1]?`<span class="why">${it[1]}</span>`:""}</span>`;
+    li.onclick=()=>{li.classList.toggle("done");saved[id]=li.classList.contains("done");
+      localStorage.setItem(KEY,JSON.stringify(saved));refresh();};
+    ul.appendChild(li);
+  });
+  sec.appendChild(ul);list.appendChild(sec);
+});
+document.getElementById("tot").textContent=total;
+
+function refresh(){
+  const done=document.querySelectorAll("li.done").length;
+  document.getElementById("cnt").textContent=done;
+  document.getElementById("fill").style.width=(done/total*100)+"%";
+}
+function resetAll(){
+  if(!confirm("確定清除所有勾選？")) return;
+  localStorage.removeItem(KEY);location.reload();
+}
+refresh();
+
+// 大會日 → 自動算 30 日登記死線
+const dd=document.getElementById("dday"),ddOut=document.getElementById("ddOut");
+const DKEY="gaorong_dday";
+if(localStorage.getItem(DKEY)){dd.value=localStorage.getItem(DKEY);}
+function calcDDL(){
+  if(!dd.value){ddOut.style.display="none";return;}
+  localStorage.setItem(DKEY,dd.value);
+  const d=new Date(dd.value);const dl=new Date(d);dl.setDate(dl.getDate()+30);
+  const y=dl.getFullYear(),m=dl.getMonth()+1,day=dl.getDate();
+  const today=new Date();today.setHours(0,0,0,0);
+  const left=Math.ceil((dl-today)/86400000);
+  let tail = left>=0 ? `<span class="left">還有 ${left} 天</span>` : `<span class="over">已逾期 ${-left} 天（需重新召開大會）</span>`;
+  ddOut.style.display="block";
+  ddOut.innerHTML=`⏰ 登記送件最後期限：<b>${y}/${m}/${day}</b>　${tail}<br>
+    <span style="font-size:13px;color:var(--mid)">（大會後 30 日內，務必送進高雄市勞工局並確認收件）</span>`;
+}
+dd.addEventListener("change",calcDDL);calcDDL();
+
+// 年
+</script>
+</body>
+</html>
