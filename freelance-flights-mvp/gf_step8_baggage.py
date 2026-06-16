@@ -86,19 +86,27 @@ def main():
                 break
             try:
                 cards[idx].click(timeout=5000)
-                # 輪詢等行李資訊渲染（最多 ~9 秒），出現再讀，避免讀太早
                 bag = ""
-                for _ in range(18):
-                    page.wait_for_timeout(500)
-                    detail = page.inner_text("body")
-                    if "手提行李" in detail or "託運行李" in detail:
-                        bag = parse_baggage(detail)
+                # 詳情頁也會間歇報錯 → 比照列表，錯了就重新載入重試
+                for d_try in range(1, 6):
+                    got = False
+                    for _ in range(16):              # 輪詢等行李/錯誤出現
+                        page.wait_for_timeout(500)
+                        detail = page.inner_text("body")
+                        if "手提行李" in detail or "託運行李" in detail:
+                            bag = parse_baggage(detail); got = True; break
+                        if "系統發生錯誤" in detail:
+                            break
+                    if got:
                         break
-                print(f"  第 {idx+1} 班行李：{bag or '（沒出現行李字樣）'}")
-                if not bag:
-                    # 診斷：把點開後的畫面文字印出來看跑到哪個畫面
-                    print("  ── 點開後畫面文字(前 700 字)──")
-                    print("  " + page.inner_text("body")[:700].replace("\n", " "))
+                    # 詳情報錯 → 按重新載入再試
+                    print(f"    詳情第 {d_try} 次未出行李，重載重試…")
+                    try:
+                        page.get_by_text("重新載入", exact=False).first.click(timeout=3000)
+                    except Exception:
+                        page.reload(timeout=60_000)
+                    page.wait_for_timeout(5000)
+                print(f"  第 {idx+1} 班行李：{bag or '（多次重試仍沒出現）'}")
                 page.go_back()              # 返回列表
                 page.wait_for_timeout(3000)
                 back_ok = len(找卡(page)) > 0
