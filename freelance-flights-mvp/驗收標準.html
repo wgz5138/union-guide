@@ -1,0 +1,47 @@
+<!DOCTYPE html><html lang='zh-TW'><head><meta charset='utf-8'><style>
+@page { size: A4; margin: 18mm 16mm; }
+* { font-family: 'WenQuanYi Zen Hei','Noto Sans CJK TC',sans-serif; }
+body { color:#1a1a1a; line-height:1.6; font-size:11pt; }
+h1 { font-size:19pt; border-bottom:3px solid #2356b6; padding-bottom:6px; }
+h2 { font-size:14pt; color:#2356b6; margin-top:22px;
+     border-left:5px solid #2356b6; padding-left:8px; }
+table { border-collapse:collapse; width:100%; margin:10px 0; font-size:10pt; }
+th,td { border:1px solid #bbb; padding:6px 8px; vertical-align:top; text-align:left; }
+th { background:#2356b6; color:#fff; }
+tr:nth-child(even) td { background:#f3f6fc; }
+blockquote { background:#fff8e6; border-left:5px solid #e0a800;
+             padding:8px 12px; margin:10px 0; color:#5a4a00; }
+pre { background:#f5f5f5; border:1px solid #ddd; padding:10px;
+      font-family:monospace; font-size:9.5pt; white-space:pre-wrap; }
+code { background:#eef; padding:1px 4px; border-radius:3px; font-size:9.5pt; }
+hr { border:none; border-top:1px solid #ddd; margin:16px 0; }
+strong { color:#11244e; }
+ul,ol { margin:6px 0 6px 22px; }
+li { margin:3px 0; }
+</style></head><body><h1>驗收標準（A2310 機票監測系統）</h1>
+<blockquote>本文件定義雙方對「完成」與「成功率」的共同認定，作為驗收與付款依據。<br>與「維護保固與責任說明」搭配使用；名詞與責任歸屬以該說明為準。<br><br><strong>開發方：</strong>【請填您的名字】　<strong>委託方：</strong>＿＿＿＿＿＿　<strong>日期：</strong>＿＿＿＿</blockquote>
+<hr>
+<h2>一、交付清單（驗收時應齊備）</h2>
+<ul><li>[ ] <code>gflights_scraper.py</code>：Google Flights 抓取主程式（票價、轉機次數、起降時間、航空公司、行李額度）</li><li>[ ] 結構化輸出：<code>data/gflights.csv</code>、<code>data/gflights.json</code></li><li>[ ] 排程設定：<code>設定Google機票每天自動跑.bat</code> 等（含失敗重跑、錯過補跑、執行紀錄）</li><li>[ ] 使用說明（README）與本驗收標準、維護保固說明</li><li>[ ] 反爬：真實 Chrome 指紋、擬真操作、自動重試；<strong>代理 IP 選配</strong>（環境變數 <code>GF_PROXY</code>）</li></ul>
+<hr>
+<h2>二、「成功」的定義（核心，請特別確認）</h2>
+<ol><li><strong>單次執行成功</strong> ＝ 在<strong>正常使用頻率</strong>下，該次執行能取得 <code>ROUTES</code> 設定中 <strong>每一條航線</strong>的航班清單（每條航線至少 1 班），且每班含： <strong>票價、轉機次數、起降時間、航空公司</strong>。</li><li><strong>成功率</strong> ＝ 多次執行中「單次執行成功」的比例。</li><li><strong>驗收門檻</strong>：成功率 <strong>≥ 95%（每 10 次至少 9.5 次成功）</strong>。</li></ol>
+<blockquote><strong>行李額度</strong>：屬逐班點入詳情頁之<strong>加值資料</strong>，因目標網站詳情頁本身會間歇性錯誤，<br>其單班取得率<strong>不納入上述「成功率」主指標</strong>，另以「盡力取得、失敗不影響清單」方式提供。<br><br><strong>航班號</strong>：經實測，Google Flights 介面<strong>不穩定提供</strong>航班號，<strong>不納入驗收項目</strong>；<br>如委託方需要完整航班號，建議改由 Amadeus／GDS 等來源補充（屬另一資料來源、另行報價）。</blockquote>
+<hr>
+<h2>三、成功率的量測方法</h2>
+<ol><li>使用隨附之 <code>穩定度壓測.py</code>，於<strong>正常頻率</strong>下連續執行並記錄： <code>`</code> python 穩定度壓測.py 10 1800      （10 次，每次間隔 30 分鐘） <code>`</code></li><li>結果自動寫入 <code>data/stability_test.csv</code>，以該檔之「成功」欄位統計成功率。</li><li>驗收以<strong>雙方約定之測試時段</strong>所得數據為準。</li></ol>
+<hr>
+<h2>四、測試前提與排除條款（重要，避免爭議）</h2>
+<p>下列情形<strong>不計入「失敗」</strong>、不作為未達標之認定，因其非程式品質問題：</p>
+<ol><li><strong>高頻測試／壓力測試造成的限速</strong>：短時間內（例如一小時內）從同一 IP 重複執行 多次，將觸發目標網站反爬限速（變慢、間歇錯誤、需多次重試）。 <strong>此種高頻情境所得數據不代表正常運行、不計入驗收成功率。</strong> 驗收應以「<strong>每條航線每次間隔數十分鐘以上、貼近實際每日排程</strong>」之頻率進行。</li><li><strong>目標網站改版／反爬升級／封鎖 IP</strong>（屬維護範圍，見維護保固說明第三點）。</li><li><strong>委託方環境問題</strong>：電腦、網路、權限、Python／瀏覽器版本、未安裝真實 Chrome 等。</li><li><strong>第三方因素</strong>：代理 IP、雲端主機、第三方服務之可用性與費用。</li><li><strong>目標網站當日該航線確實無票</strong>（非程式錯誤）。</li></ol>
+<blockquote>測試應在：① 正常頻率、② 目標網站未改版、③ 已正確安裝環境（含真實 Chrome）、<br>④ 直連或委託方提供之有效代理 之條件下進行。</blockquote>
+<hr>
+<h2>五、驗收流程</h2>
+<ol><li>開發方交付上述清單並協助完成首次環境設定與一次成功執行。</li><li>依第三點於約定時段量測成功率。</li><li>達門檻（成功率 ≥ 95%）即視為通過驗收；未達標而屬第四點排除情形者，不計入。</li><li>通過驗收後，後續之改版因應、反爬升級、規模擴充等，依「維護保固與責任說明」辦理。</li></ol>
+<hr>
+<h2>六、雙方確認</h2>
+<p>委託方已閱讀並理解上述<strong>成功定義、量測方法與排除條款</strong>，同意以此作為驗收與付款依據。</p>
+<p>開發方簽名：＿＿＿＿＿＿　日期：＿＿＿＿　</p>
+<p>委託方簽名：＿＿＿＿＿＿　日期：＿＿＿＿</p>
+<hr>
+<blockquote>⚠️ 本文件為範本，非正式法律意見；正式條款建議於合約中載明，必要時請專業人士審閱。</blockquote></body></html>
