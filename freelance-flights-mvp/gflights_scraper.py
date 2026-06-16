@@ -107,6 +107,13 @@ def parse(text, route):
         xs = x.strip()
         if xs not in times:
             times.append(xs)
+    # 跨日：抵達時間後常接「+1」表示隔天到（轉機/紅眼班機）。
+    # 抓出來補在 arrive_time 後面，避免「抵達比出發早」被誤判成資料錯誤。
+    arrive_suffix = ""
+    if len(times) > 1:
+        mp = re.search(re.escape(times[1]) + r"\s*\+\s*(\d)", t)
+        if mp:
+            arrive_suffix = "+" + mp.group(1)
     ma = re.search(r"(台灣虎航|星宇航空|長榮航空|中華航空|香港快運航空|德威航空|"
                    r"濟州航空|真航空|釜山航空|韓亞航空|大韓航空|宿霧太平洋|越捷航空|"
                    r"泰國獅子航空|菲律賓航空|樂桃航空|捷星日本航空|捷星|酷航|"
@@ -124,7 +131,7 @@ def parse(text, route):
         "price_twd": price,
         "transfers": transfers,                       # 0=直飛
         "depart_time": (times[0].strip() if times else ""),
-        "arrive_time": (times[1].strip() if len(times) > 1 else ""),
+        "arrive_time": (times[1] + arrive_suffix if len(times) > 1 else ""),
         "airline": airline,
         "flight_no": "",    # 後續可擴充（需點進詳情頁）
         "baggage": "",      # 後續可擴充（需點進詳情頁）
@@ -177,13 +184,17 @@ def parse_baggage(text):
     found = []
     for line in text.split("\n"):
         s = line.strip()
+        # 清掉中文字之間被 DOM 換行塞進來的空格（例：「託 運」→「託運」）
+        s = re.sub(r"(?<=[一-鿿])\s+(?=[一-鿿])", "", s)
         if ("手提行李" in s or "託運行李" in s) and 2 < len(s) < 40:
             found.append(s)
     return " / ".join(dict.fromkeys(found))
 
 
 def click_flight(page, price, depart):
-    """在列表找出「票價＋出發時間」相符的航班並點開（回傳是否點到）。"""
+    """在列表找出「票價＋出發時間」相符的航班並點開。
+    回傳 'ok'（點到）/ 'click_fail'（找到卡但點不開）/ 'no_match'（找不到對應卡）。
+    （為了診斷行李抓不到的真因，把三種結果分開回報並記 log。）"""
     pf = f"{price:,}"
     for li in page.query_selector_all("li"):
         try:
@@ -193,37 +204,49 @@ def click_flight(page, price, depart):
         if pf in t and depart and depart in t and "小時" in t:
             try:
                 li.click(timeout=5000)
-                return True
-            except Exception:
-                return False
-    return False
+                return "ok"
+            except Exception as e:
+                log.info("　　[行李] 找到卡但點不開（價%s 出發%s）：%s", pf, depart, e)
+                return "click_fail"
+    log.info("　　[行李] 列表找不到對應航班卡（價%s 出發%s）", pf, depart)
+    return "no_match"
 
 
 def fetch_baggage(page):
     """在詳情頁抓行李；詳情頁也會間歇報錯，比照列表重試。
-    全程防呆：任何步驟出錯都不拋例外（行李是加值，不該中斷主流程）。"""
-    for _ in range(5):
+    全程防呆：任何步驟出錯都不拋例外（行李是加值，不該中斷主流程）。
+    各種「沒抓到」的原因都記 log，方便診斷成功率為何偏低。"""
+    for outer in range(5):
+        got_error = False
         for _ in range(16):
             try:
                 page.wait_for_timeout(500)
                 d = page.inner_text("body")
-            except Exception:
+            except Exception as e:
+                log.info("　　[行李] 讀詳情頁出錯放棄：%s", e)
                 return ""
             if "手提行李" in d or "託運行李" in d:
                 return parse_baggage(d)
             if "系統發生錯誤" in d:
+                got_error = True
                 break
+        if got_error:
+            log.info("　　[行李] 詳情頁出現『系統發生錯誤』，第 %d 次重載", outer + 1)
+        else:
+            log.info("　　[行李] 等約 8 秒仍沒出現行李字樣（第 %d 輪）", outer + 1)
         try:
             page.get_by_text("重新載入", exact=False).first.click(timeout=3000)
         except Exception:
             try:
                 page.reload(timeout=60_000)
-            except Exception:
-                return ""      # reload 失敗（frame detached 等）→ 放棄這班行李
+            except Exception as e:
+                log.info("　　[行李] 重載失敗放棄（frame detached 等）：%s", e)
+                return ""      # reload 失敗 → 放棄這班行李
         try:
             page.wait_for_timeout(5000)
         except Exception:
             return ""
+    log.info("　　[行李] 重試 5 輪仍抓不到，放棄這班")
     return ""
 
 
@@ -248,10 +271,15 @@ def extract(page, route):
     # 2) 逐班點詳情補「行李額度」（前 BAGGAGE_TOP 班，控制時間）
     #    全程防呆：任何一班出錯都只略過該班，絕不中斷整體抓取。
     if FETCH_BAGGAGE:
-        for row in rows[:BAGGAGE_TOP]:
+        log.info("　[行李] 開始逐班抓（前 %d 班）", min(BAGGAGE_TOP, len(rows)))
+        for idx, row in enumerate(rows[:BAGGAGE_TOP], 1):
             try:
-                if click_flight(page, row["price_twd"], row["depart_time"]):
+                status = click_flight(page, row["price_twd"], row["depart_time"])
+                if status == "ok":
                     row["baggage"] = fetch_baggage(page)
+                    log.info("　[行李] 第 %d 班 %s：%s", idx,
+                             row["airline"] or "(未知航空)",
+                             row["baggage"] or "（沒抓到）")
                     try:
                         page.go_back()
                         page.wait_for_timeout(3000)
@@ -263,6 +291,8 @@ def extract(page, route):
                             load_with_retry(page, route)
                     except Exception:
                         load_with_retry(page, route)
+                else:
+                    log.info("　[行李] 第 %d 班略過（%s）", idx, status)
             except Exception as e:
                 log.warning("　某班抓行李失敗（略過該班，不影響其餘）：%s", e)
                 try:
