@@ -195,6 +195,35 @@ def parse_baggage(text):
     return " / ".join(dict.fromkeys(found))
 
 
+# 航空中文名 → IATA 代碼：用來在詳情頁「精準」找航班號，降低誤抓
+AIRLINE_IATA = {
+    "台灣虎航": "IT", "星宇航空": "JX", "長榮航空": "BR", "中華航空": "CI",
+    "香港快運航空": "UO", "德威航空": "TW", "濟州航空": "7C", "真航空": "LJ",
+    "釜山航空": "BX", "韓亞航空": "OZ", "大韓航空": "KE", "宿霧太平洋": "5J",
+    "越捷航空": "VJ", "泰國獅子航空": "SL", "菲律賓航空": "PR", "樂桃航空": "MM",
+    "捷星日本航空": "GK", "捷星": "GK", "酷航": "TR", "聯合航空": "UA",
+    "全日空航空": "NH", "全日空": "NH", "日本航空": "JL", "國泰航空": "CX",
+    "國泰": "CX", "亞洲航空": "AK", "達美": "DL",
+}
+
+
+def parse_flight_no(text, airline=""):
+    """從詳情頁文字找航班號。
+    先用『這班航空的 IATA 代碼＋數字』精準找（例 BR132 / CI 100）；
+    找不到再用通用樣式列出候選，方便診斷 Google 詳情頁到底有沒有放航班號。
+    回傳 (航班號, 候選清單)。"""
+    t = " ".join(text.split())
+    code = AIRLINE_IATA.get(airline, "")
+    if code:
+        m = re.search(r"\b" + re.escape(code) + r"\s?(\d{1,4})\b", t)
+        if m:
+            return f"{code}{m.group(1)}", []
+    # 通用候選：2 碼代碼 + 1~4 位數（純診斷用，可能有雜訊）
+    cands = re.findall(r"\b([A-Z0-9]{2}\s?\d{1,4})\b", t)
+    cands = list(dict.fromkeys(c.replace(" ", "") for c in cands))
+    return "", cands
+
+
 def click_flight(page, price, depart):
     """在列表找出「票價＋出發時間」相符的航班並點開。
     回傳 'ok'（點到）/ 'click_fail'（找到卡但點不開）/ 'no_match'（找不到對應卡）。
@@ -283,10 +312,10 @@ def human_scroll(page):
         pass
 
 
-def fetch_baggage(page):
-    """在詳情頁抓行李；詳情頁也會間歇報錯，比照列表重試。
-    全程防呆：任何步驟出錯都不拋例外（行李是加值，不該中斷主流程）。
-    各種「沒抓到」的原因都記 log，方便診斷成功率為何偏低。"""
+def fetch_detail_text(page):
+    """讀詳情頁全文（行李、航班號都從這份文字解析）。詳情頁間歇報錯會自動重載。
+    全程防呆：任何步驟出錯都回 ''（加值資料不該中斷主流程）。
+    成功回傳詳情頁文字；失敗回 ''，並記 log 方便診斷。"""
     # 先給詳情頁一點時間 settle，避免把「正在載入的瞬間」誤判成錯誤就急著重載
     try:
         page.wait_for_timeout(SETTLE_MS)
@@ -299,30 +328,30 @@ def fetch_baggage(page):
                 page.wait_for_timeout(500)
                 d = page.inner_text("body")
             except Exception as e:
-                log.info("　　[行李] 讀詳情頁出錯放棄：%s", e)
+                log.info("　　[詳情] 讀詳情頁出錯放棄：%s", e)
                 return ""
             if "手提行李" in d or "託運行李" in d:
-                return parse_baggage(d)
+                return d
             if "系統發生錯誤" in d:
                 got_error = True
                 break
         if got_error:
-            log.info("　　[行李] 詳情頁出現『系統發生錯誤』，第 %d 次重載", outer + 1)
+            log.info("　　[詳情] 詳情頁出現『系統發生錯誤』，第 %d 次重載", outer + 1)
         else:
-            log.info("　　[行李] 等約 8 秒仍沒出現行李字樣（第 %d 輪）", outer + 1)
+            log.info("　　[詳情] 等約 8 秒仍沒出現行李字樣（第 %d 輪）", outer + 1)
         try:
             page.get_by_text("重新載入", exact=False).first.click(timeout=3000)
         except Exception:
             try:
                 page.reload(timeout=60_000)
             except Exception as e:
-                log.info("　　[行李] 重載失敗放棄（frame detached 等）：%s", e)
-                return ""      # reload 失敗 → 放棄這班行李
+                log.info("　　[詳情] 重載失敗放棄（frame detached 等）：%s", e)
+                return ""      # reload 失敗 → 放棄這班
         try:
             page.wait_for_timeout(random.randint(4000, 7000))  # 重載後等待加抖動
         except Exception:
             return ""
-    log.info("　　[行李] 重試 5 輪仍抓不到，放棄這班")
+    log.info("　　[詳情] 重試 5 輪仍讀不到，放棄這班")
     return ""
 
 
@@ -354,10 +383,22 @@ def extract(page, route):
                 polite_wait(page)   # 點下一班前先禮貌等一下（隨機）
                 status = click_flight(page, row["price_twd"], row["depart_time"])
                 if status == "ok":
-                    row["baggage"] = fetch_baggage(page)
+                    dtext = fetch_detail_text(page)
+                    row["baggage"] = parse_baggage(dtext) if dtext else ""
                     log.info("　[行李] 第 %d 班 %s：%s", idx,
                              row["airline"] or "(未知航空)",
                              row["baggage"] or "（沒抓到）")
+                    # ① 航班號探測：從同一份詳情文字找，有就填、沒有就記候選供診斷
+                    fno, cands = (parse_flight_no(dtext, row["airline"])
+                                  if dtext else ("", []))
+                    row["flight_no"] = fno
+                    if fno:
+                        log.info("　[航班號] 第 %d 班 %s → %s", idx,
+                                 row["airline"] or "(未知)", fno)
+                    else:
+                        log.info("　[航班號] 第 %d 班 %s：詳情頁找不到（通用候選：%s）",
+                                 idx, row["airline"] or "(未知)",
+                                 "、".join(cands[:6]) or "無")
                     try:
                         page.go_back()
                         page.wait_for_timeout(3000)
