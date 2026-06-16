@@ -207,7 +207,7 @@ def click_flight(page, price, depart):
             continue
         if pf in t and depart and depart in t and "小時" in t:
             try:
-                li.click(timeout=5000)
+                human_click(page, li)   # 擬真點擊（hover＋滑鼠軌跡＋微停）
                 return "ok"
             except Exception as e:
                 log.info("　　[行李] 找到卡但點不開（價%s 出發%s）：%s", pf, depart, e)
@@ -220,6 +220,50 @@ def polite_wait(page):
     """班與班之間的隨機禮貌間隔：降低觸發 Google 間歇錯誤、較不像機器人、較耐封。"""
     try:
         page.wait_for_timeout(random.randint(*POLITE_WAIT_MS))
+    except Exception:
+        pass
+
+
+def human_click(page, element):
+    """像真人那樣點：捲到看得到 → 滑鼠帶軌跡移過去 → hover → 微停 → 才點。
+    全程防呆，任何一步失敗都不影響最終的 click。"""
+    try:
+        element.scroll_into_view_if_needed(timeout=3000)
+    except Exception:
+        pass
+    try:
+        box = element.bounding_box()
+        if box:
+            # 落點在卡片內偏中間、帶隨機；滑鼠分段移動（有軌跡，不瞬移）
+            tx = box["x"] + box["width"] * random.uniform(0.3, 0.7)
+            ty = box["y"] + box["height"] * random.uniform(0.3, 0.7)
+            page.mouse.move(tx, ty, steps=random.randint(8, 20))
+    except Exception:
+        pass
+    try:
+        element.hover(timeout=3000)
+    except Exception:
+        pass
+    try:
+        page.wait_for_timeout(random.randint(250, 700))
+    except Exception:
+        pass
+    element.click(timeout=5000)
+
+
+def human_scroll(page):
+    """像人邊看邊往下滑：分幾段捲、每段隨機停一下，順便讓 lazy-load 卡片長出來。"""
+    for _ in range(random.randint(3, 6)):
+        try:
+            page.mouse.wheel(0, random.randint(500, 1100))
+            page.wait_for_timeout(random.randint(400, 1100))
+        except Exception:
+            break
+    # 偶爾往回捲一點，更像人在重看
+    try:
+        if random.random() < 0.4:
+            page.mouse.wheel(0, -random.randint(200, 500))
+            page.wait_for_timeout(random.randint(300, 700))
     except Exception:
         pass
 
@@ -268,7 +312,8 @@ def fetch_baggage(page):
 
 
 def extract(page, route):
-    # 1) 先從列表抓各航班（去重）
+    # 1) 先像人一樣邊看邊往下捲（順便讓 lazy-load 卡片長出來），再抓各航班（去重）
+    human_scroll(page)
     rows, seen = [], set()
     for li in page.query_selector_all("li"):
         try:
@@ -357,13 +402,22 @@ def main():
     os.makedirs(os.path.dirname(PROFILE), exist_ok=True)
     total = 0
     with sync_playwright() as p:
-        ctx = p.chromium.launch_persistent_context(
-            PROFILE, headless=HEADLESS,
+        # 啟動參數共用；優先用「你電腦真的 Chrome」(channel="chrome")，
+        # 它的指紋(WebGL/字型/codec)就是真瀏覽器，比內建 Chromium 不易被偵測。
+        launch_kw = dict(
+            user_data_dir=PROFILE, headless=HEADLESS,
             args=["--disable-blink-features=AutomationControlled",
                   "--disable-infobars"],
             ignore_default_args=["--enable-automation"],
             user_agent=UA, locale="zh-TW", timezone_id="Asia/Taipei",
             viewport={"width": 1366, "height": 850})
+        try:
+            ctx = p.chromium.launch_persistent_context(channel="chrome", **launch_kw)
+            log.info("　使用真 Chrome（channel=chrome）")
+        except Exception as e:
+            # 沒裝 Chrome / 抓不到 → 自動退回內建 Chromium，不讓程式掛掉
+            log.warning("　找不到真 Chrome，退回內建 Chromium：%s", e)
+            ctx = p.chromium.launch_persistent_context(**launch_kw)
         ctx.add_init_script(STEALTH_JS)
         page = ctx.pages[0] if ctx.pages else ctx.new_page()
         for route in ROUTES:
