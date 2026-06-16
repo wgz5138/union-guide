@@ -100,11 +100,23 @@ def parse(text, route):
         ms = (re.search(r"轉機\s*(\d+)\s*次", t) or re.search(r"(\d+)\s*次轉機", t)
               or re.search(r"(\d+)\s*stop", t))
         transfers = int(ms.group(1)) if ms else None
-    times = re.findall(r"(?:清晨|上午|下午|中午|凌晨|晚上)?\s?\d{1,2}:\d{2}", t)
+    raw_times = re.findall(r"(?:清晨|上午|下午|中午|凌晨|晚上)?\s?\d{1,2}:\d{2}", t)
+    # 取前兩個「不同」的時間當出發/抵達，避免同一個時間被重複抓成出發=抵達
+    times = []
+    for x in raw_times:
+        xs = x.strip()
+        if xs not in times:
+            times.append(xs)
     ma = re.search(r"(台灣虎航|星宇航空|長榮航空|中華航空|香港快運航空|德威航空|"
                    r"濟州航空|真航空|釜山航空|韓亞航空|大韓航空|宿霧太平洋|越捷航空|"
                    r"泰國獅子航空|菲律賓航空|樂桃航空|捷星日本航空|捷星|酷航|"
                    r"聯合航空|全日空航空|全日空|日本航空|國泰航空|國泰|亞洲航空|達美)", t)
+    if ma:
+        airline = ma.group(1).strip()
+    else:
+        # 後備：清單沒列到的航空，抓任何「⋯航空」字樣（避免直接空白）
+        mg = re.search(r"([一-龥]{2,10}航空)", t)
+        airline = mg.group(1).strip() if mg else ""
     return {
         "scraped_at": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
         "query_date": str(date.today()),
@@ -113,27 +125,48 @@ def parse(text, route):
         "transfers": transfers,                       # 0=直飛
         "depart_time": (times[0].strip() if times else ""),
         "arrive_time": (times[1].strip() if len(times) > 1 else ""),
-        "airline": ma.group(1).strip() if ma else "",
+        "airline": airline,
         "flight_no": "",    # 後續可擴充（需點進詳情頁）
         "baggage": "",      # 後續可擴充（需點進詳情頁）
     }
 
 
+def page_loaded_ok(body):
+    """較嚴格的『結果頁已真的載出』判斷。
+    舊版只要頁面含 `$`（任何頁面幾乎都有）就算成功，容易『還沒載完就誤判』。
+    改為：要『同時看到價格＋"小時"（航程時長）』、且沒有錯誤字樣，才算真的載出。"""
+    has_price = bool(re.search(r"\$\s*[\d,]{3,}", body))
+    has_time = "小時" in body
+    has_error = any(e in body for e in 錯誤線索)
+    return has_price and has_time and not has_error
+
+
 def load_with_retry(page, route):
-    """重試到結果載出為止；回傳 True/False。這就是『高穩定性』的核心。"""
+    """重試到結果載出為止；回傳 True/False。這就是『高穩定性』的核心。
+    重點：連線逾時／載入丟例外，都當成『這次失敗』繼續重試，
+    絕不讓單次例外往外炸掉整條航線或整個程式。"""
     url = build_url(route)
     for attempt in range(1, MAX_TRIES + 1):
         log.info("　載入嘗試 %d/%d：%s→%s", attempt, MAX_TRIES,
                  route["origin"], route["dest"])
-        page.goto(url, timeout=60_000)
-        page.wait_for_timeout(WAIT_MS)
-        for label in ["全部接受", "我同意", "接受全部", "Accept all"]:
+        try:
+            page.goto(url, timeout=60_000)
+            page.wait_for_timeout(WAIT_MS)
+            for label in ["全部接受", "我同意", "接受全部", "Accept all"]:
+                try:
+                    page.get_by_text(label, exact=False).first.click(timeout=1500)
+                except Exception:
+                    pass
+            body = page.inner_text("body")
+        except Exception as e:
+            # goto 逾時、frame detached 等：記下來，等一下再重試（不中斷）
+            log.warning("　　第 %d 次載入出錯，稍候重試：%s", attempt, e)
             try:
-                page.get_by_text(label, exact=False).first.click(timeout=1500)
+                page.wait_for_timeout(2500)
             except Exception:
                 pass
-        body = page.inner_text("body")
-        if any(k in body for k in 結果線索) and not any(e in body for e in 錯誤線索):
+            continue
+        if page_loaded_ok(body):
             return True
         page.wait_for_timeout(2500)
     return False
@@ -240,26 +273,41 @@ def extract(page, route):
 
 
 def save(rows):
+    """累積儲存：CSV、JSON 行為一致，都『往後累加』。
+    （舊版 CSV 是 append、JSON 卻是覆蓋，只留最後一批 → 已修正。）"""
     if not rows:
         log.info("沒有資料可存。")
         return
     os.makedirs(os.path.dirname(OUTPUT_CSV), exist_ok=True)
     fields = list(rows[0].keys())
+    # CSV：append（檔案不存在時才寫表頭）
     new = not os.path.exists(OUTPUT_CSV)
     with open(OUTPUT_CSV, "a", newline="", encoding="utf-8-sig") as f:
         w = csv.DictWriter(f, fieldnames=fields)
         if new:
             w.writeheader()
         w.writerows(rows)
+    # JSON：先讀回舊資料，併上新資料再整檔寫回（壞檔/不存在都當空清單）
+    existing = []
+    if os.path.exists(OUTPUT_JSON):
+        try:
+            with open(OUTPUT_JSON, "r", encoding="utf-8") as f:
+                existing = json.load(f)
+            if not isinstance(existing, list):
+                existing = []
+        except Exception:
+            existing = []
+    existing.extend(rows)
     with open(OUTPUT_JSON, "w", encoding="utf-8") as f:
-        json.dump(rows, f, ensure_ascii=False, indent=2)
-    log.info("已存 %d 筆 → %s（與 .json）", len(rows), OUTPUT_CSV)
+        json.dump(existing, f, ensure_ascii=False, indent=2)
+    log.info("已存 %d 筆（累計 %d 筆）→ %s（與 .json）",
+             len(rows), len(existing), OUTPUT_CSV)
 
 
 def main():
     log.info("=== Google Flights 抓取開始（%d 條航線）===", len(ROUTES))
     os.makedirs(os.path.dirname(PROFILE), exist_ok=True)
-    all_rows = []
+    total = 0
     with sync_playwright() as p:
         ctx = p.chromium.launch_persistent_context(
             PROFILE, headless=HEADLESS,
@@ -271,17 +319,22 @@ def main():
         ctx.add_init_script(STEALTH_JS)
         page = ctx.pages[0] if ctx.pages else ctx.new_page()
         for route in ROUTES:
-            if load_with_retry(page, route):
-                rows = extract(page, route)
-                log.info("　%s→%s：抓到 %d 班", route["origin"], route["dest"],
-                         len(rows))
-                all_rows.extend(rows)
-            else:
-                log.warning("　%s→%s：重試 %d 次仍未載出，略過。",
-                            route["origin"], route["dest"], MAX_TRIES)
+            # 每條航線各自包起來：單一航線出任何錯都只略過它，不波及其他航線
+            try:
+                if load_with_retry(page, route):
+                    rows = extract(page, route)
+                    log.info("　%s→%s：抓到 %d 班", route["origin"],
+                             route["dest"], len(rows))
+                    save(rows)            # ★ 抓完一條就先存，中途崩潰也不丟已抓到的
+                    total += len(rows)
+                else:
+                    log.warning("　%s→%s：重試 %d 次仍未載出，略過。",
+                                route["origin"], route["dest"], MAX_TRIES)
+            except Exception as e:
+                log.warning("　%s→%s：發生未預期錯誤，略過此航線：%s",
+                            route["origin"], route["dest"], e)
         ctx.close()
-    save(all_rows)
-    log.info("=== 完成，共 %d 班 ===", len(all_rows))
+    log.info("=== 完成，本次共 %d 班 ===", total)
 
 
 if __name__ == "__main__":
