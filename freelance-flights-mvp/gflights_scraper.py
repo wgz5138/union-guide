@@ -252,20 +252,27 @@ AIRLINE_IATA = {
 
 
 def parse_flight_no(text, airline=""):
-    """從詳情頁文字找航班號。
-    先用『這班航空的 IATA 代碼＋數字』精準找（例 BR132 / CI 100）；
-    找不到再用通用樣式列出候選，方便診斷 Google 詳情頁到底有沒有放航班號。
+    """從詳情頁文字找航班號。Google 可能寫成『代碼+數字』(BR 198) 或
+    『中文航空名+數字』(長榮航空 198 / 中華航空 6)，兩種都試。
     回傳 (航班號, 候選清單)。"""
     t = " ".join(text.split())
     code = AIRLINE_IATA.get(airline, "")
+    # 1) IATA 代碼 + 數字：BR 198 / CI6
     if code:
         m = re.search(r"\b" + re.escape(code) + r"\s?(\d{1,4})\b", t)
         if m:
             return f"{code}{m.group(1)}", []
-    # 通用候選：2 碼代碼 + 1~4 位數（純診斷用，可能有雜訊）
+    # 2) 中文航空名（可帶 · - 空白分隔）+ 數字：長榮航空 198 / 中華航空·6
+    #    後面用負向預看擋掉時間(12:55)與更長數字串，避免把時刻/票價誤當航班號
+    if airline:
+        m = re.search(re.escape(airline) + r"[\s·\-]*(\d{1,4})(?!\s*[:：\d])", t)
+        if m:
+            return (f"{code}{m.group(1)}" if code else f"{airline}{m.group(1)}"), []
+    # 3) 通用候選：只留「含字母」的 token（真航班號都有字母碼，如 BR132、5J820），
+    #    過濾純數字雜訊（價格/機型切出的 571、737）。沒有就代表這份文字裡找不到。
     cands = re.findall(r"\b([A-Z0-9]{2}\s?\d{1,4})\b", t)
-    cands = list(dict.fromkeys(c.replace(" ", "") for c in cands))
-    return "", cands
+    cands = [c.replace(" ", "") for c in cands if re.search(r"[A-Z]", c)]
+    return "", list(dict.fromkeys(cands))
 
 
 def click_flight(page, price, depart):
@@ -380,9 +387,9 @@ def fetch_detail_text(page):
                 got_error = True
                 break
         if got_error:
-            log.info("　　[詳情] 詳情頁出現『系統發生錯誤』，第 %d 次重載", outer + 1)
+            log.info("　　[詳情] Google 詳情頁暫時錯誤，自動重試中（第 %d 次）…", outer + 1)
         else:
-            log.info("　　[詳情] 等約 8 秒仍沒出現行李字樣（第 %d 輪）", outer + 1)
+            log.info("　　[詳情] 尚未出現行李字樣，再等一下（第 %d 輪）…", outer + 1)
         try:
             page.get_by_text("重新載入", exact=False).first.click(timeout=3000)
         except Exception:
@@ -397,6 +404,34 @@ def fetch_detail_text(page):
             return ""
     log.info("　　[詳情] 重試 5 輪仍讀不到，放棄這班")
     return ""
+
+
+def expand_detail(page):
+    """展開詳情頁裡『航班詳細資訊』(下拉箭頭/可展開區塊)，讓航班號(如 BR 198 / 華航 6)
+    渲染出來，再讀一次全文。全程防呆：點錯/失敗都不影響主流程，回展開後的文字。"""
+    # 點開尚未展開的可展開元素（aria-expanded=false）；數量設上限避免亂點太久
+    for sel in ['button[aria-expanded="false"]', '[role="button"][aria-expanded="false"]']:
+        try:
+            els = page.query_selector_all(sel)
+        except Exception:
+            els = []
+        for el in els[:10]:
+            try:
+                el.click(timeout=1200)
+                page.wait_for_timeout(250)
+            except Exception:
+                pass
+    # 也試著點含「詳情/詳細資訊/航班」字樣的展開鈕
+    for label in ["航班詳情", "詳細資訊", "航班資訊", "詳情"]:
+        try:
+            page.get_by_text(label, exact=False).first.click(timeout=1200)
+            page.wait_for_timeout(350)
+        except Exception:
+            pass
+    try:
+        return page.inner_text("body")
+    except Exception:
+        return ""
 
 
 def extract(page, route):
@@ -432,17 +467,33 @@ def extract(page, route):
                     log.info("　[行李] 第 %d 班 %s：%s", idx,
                              row["airline"] or "(未知航空)",
                              row["baggage"] or "（沒抓到）")
-                    # ① 航班號探測：從同一份詳情文字找，有就填、沒有就記候選供診斷
+                    # ① 航班號探測：先從現有詳情文字找；找不到就展開『航班詳情』再讀一次
                     fno, cands = (parse_flight_no(dtext, row["airline"])
                                   if dtext else ("", []))
+                    if not fno and dtext:
+                        dtext2 = expand_detail(page)
+                        if dtext2:
+                            f2, c2 = parse_flight_no(dtext2, row["airline"])
+                            if f2:
+                                fno = f2
+                            else:
+                                dtext, cands = dtext2, c2   # 用展開後文字做診斷
                     row["flight_no"] = fno
                     if fno:
                         log.info("　[航班號] 第 %d 班 %s → %s", idx,
                                  row["airline"] or "(未知)", fno)
                     else:
-                        log.info("　[航班號] 第 %d 班 %s：詳情頁找不到（通用候選：%s）",
+                        # 診斷：節錄詳情頁中『航空名前後』的文字，看 Google 怎麼寫航班號
+                        snip = ""
+                        if dtext and row["airline"]:
+                            pos = dtext.find(row["airline"])
+                            if pos >= 0:
+                                snip = (" ".join(
+                                    dtext[max(0, pos - 6):pos + 70].split()))
+                        extra = ("｜含字母候選：" + "、".join(cands[:6])) if cands else ""
+                        log.info("　[航班號] 第 %d 班 %s：未抓到｜詳情節錄「%s」%s",
                                  idx, row["airline"] or "(未知)",
-                                 "、".join(cands[:6]) or "無")
+                                 snip or "（找不到航空名）", extra)
                     try:
                         page.go_back()
                         page.wait_for_timeout(3000)
