@@ -1,64 +1,66 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Google Flights 機票數據抓取（A2310 案 用 Playwright 開真瀏覽器爬）
+Google Flights 機票數據抓取（A2310 案・正式版）
 
-⚠️ 重要前提（接案前務必知道）：
-  1. Google Flights 整頁靠 JavaScript 渲染、class 名是亂碼且會變、且有反爬。
-     → 本檔把「流程與穩定性結構」搭好，但【解析選擇器需對著實際頁面微調】。
-        程式以「讀整段文字 + 正規表達式」為主，比抓亂碼 class 穩，但仍可能要調。
-  2. 「行李額度」通常不在搜尋結果列表上，要點進票價詳情才看得到 →
-     先標為 TODO（見 parse_card），列表能穩定拿到：票價、轉機次數、時間、航空。
-  3. Google 服務條款（ToS）禁止自動抓取 → 正式接案請先告知客戶法律/封鎖風險，
-     並評估改用官方/付費 API 或單一航空官網（較好爬）的可行性。
+本檔整併了實際驗證成功的做法：
+  • stealth（隱藏自動化特徵）+ 持久化設定檔（保留 cookie/同意）→ 過反爬、提高成功率
+  • 失敗自動重試到成功 → 真正的「高穩定性」
+  • 「靠內容找卡 + 文字正則解析」→ 不依賴會變的亂碼 class
+  • 多航線/多日期、結構化儲存（CSV + JSON）、log
+
+已可穩定取得：票價、轉機次數、起降時間、航空公司。
+（航班號、行李額度需點進票價詳情頁，為後續可擴充項目。）
+
+⚠️ Google ToS 禁止自動抓取；正式委託請先與客戶確認合規與頻率/封鎖風險。
 
 安裝：
     pip install playwright
     playwright install chromium
-
 執行：
     python gflights_scraper.py
-（除錯時把 HEADLESS 改 False，可親眼看瀏覽器在做什麼，方便調選擇器。）
 """
 
 import csv
 import json
 import logging
 import os
-import random
 import re
-import time
-import urllib.parse
-from datetime import datetime
+from datetime import date, datetime
 from logging.handlers import RotatingFileHandler
 
-from playwright.sync_api import sync_playwright, TimeoutError as PWTimeout
+from playwright.sync_api import sync_playwright
 
 # ─────────────────────────────────────────────────────────────
-# 設定區
+# 設定區（出發/抵達用 IATA 代碼；日期 YYYY-MM-DD）
 # ─────────────────────────────────────────────────────────────
-# 要抓的航線（出發/抵達用 IATA 代碼；日期 YYYY-MM-DD）
 ROUTES = [
-    {"origin": "KHH", "dest": "NRT", "date": "2026-09-15"},  # 高雄→東京成田
-    {"origin": "KHH", "dest": "KIX", "date": "2026-09-15"},  # 高雄→大阪關西
+    {"origin": "KHH", "dest": "NRT", "date": "2026-09-15"},  # 高雄→東京
+    {"origin": "KHH", "dest": "KIX", "date": "2026-09-15"},  # 高雄→大阪
 ]
 
-HEADLESS = True            # 除錯改 False 可看瀏覽器
-PAGE_TIMEOUT = 45_000      # 毫秒
-MAX_RETRIES = 3
-BACKOFF_BASE = 2
+HEADLESS = False        # Google 對 headless 偵測較嚴，建議 False（看得到瀏覽器較穩）
+MAX_TRIES = 8           # 每條航線最多重試幾次（高穩定性的關鍵）
+WAIT_MS = 11_000        # 每次載入後等待毫秒
 
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-OUTPUT_CSV = os.path.join(BASE_DIR, "data", "gflights.csv")
-OUTPUT_JSON = os.path.join(BASE_DIR, "data", "gflights.json")
-LOG_FILE = os.path.join(BASE_DIR, "logs", "gflights.log")
+HERE = os.path.dirname(os.path.abspath(__file__))
+PROFILE = os.path.join(HERE, "data", ".gf_profile")   # 持久設定檔（gitignore）
+OUTPUT_CSV = os.path.join(HERE, "data", "gflights.csv")
+OUTPUT_JSON = os.path.join(HERE, "data", "gflights.json")
+LOG_FILE = os.path.join(HERE, "logs", "gflights.log")
 
 UA = ("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
-      "(KHTML, like Gecko) Chrome/124.0 Safari/537.36")
+      "(KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36")
+STEALTH_JS = """
+Object.defineProperty(navigator,'webdriver',{get:()=>undefined});
+Object.defineProperty(navigator,'languages',{get:()=>['zh-TW','zh','en']});
+Object.defineProperty(navigator,'plugins',{get:()=>[1,2,3,4,5]});
+window.chrome = window.chrome || { runtime: {} };
+"""
+結果線索 = ["小時", "直達", "直飛", "NT$", "$"]
+錯誤線索 = ["系統發生錯誤", "糟糕", "Something went wrong"]
 
 
-# ─────────────────────────────────────────────────────────────
-# log
 # ─────────────────────────────────────────────────────────────
 def setup_logging():
     os.makedirs(os.path.dirname(LOG_FILE), exist_ok=True)
@@ -77,134 +79,85 @@ def setup_logging():
 log = setup_logging()
 
 
-# ─────────────────────────────────────────────────────────────
-# 組 Google Flights 搜尋網址（用自然語言 q=，比手動填表單穩）
-# ─────────────────────────────────────────────────────────────
 def build_url(route):
-    q = f"Flights from {route['origin']} to {route['dest']} on {route['date']} oneway"
-    params = {"q": q, "curr": "TWD", "hl": "zh-TW", "gl": "TW"}
-    return "https://www.google.com/travel/flights?" + urllib.parse.urlencode(params)
+    q = (f"Flights from {route['origin']} to {route['dest']} "
+         f"on {route['date']} oneway")
+    from urllib.parse import urlencode
+    return ("https://www.google.com/travel/flights?"
+            + urlencode({"q": q, "curr": "TWD", "hl": "zh-TW", "gl": "TW"}))
 
 
-# ─────────────────────────────────────────────────────────────
-# 解析一張結果卡：以「整段文字 + 正則」為主（比亂碼 class 穩）
-# ─────────────────────────────────────────────────────────────
-def parse_card(text, route):
-    """text = 一個結果項目的 inner_text。回傳一筆資料 dict 或 None。"""
-    # 票價：抓 NT$ 或 純數字（千分位逗號）
-    m_price = re.search(r"(?:NT\$|＄|\$)?\s*([\d,]{3,})", text)
-    price = int(m_price.group(1).replace(",", "")) if m_price else None
-    if price is None:
-        return None
-
-    # 轉機次數：「直飛 / Nonstop」=0；「1 次轉機 / 1 stop」等
-    if re.search(r"直飛|非直達.*0|[Nn]onstop", text):
+def parse(text, route):
+    t = " ".join(text.split())
+    m = (re.search(r"\$\s*([\d,]{3,})", t)
+         or re.search(r"\b(\d{1,3}(?:,\d{3})+)\b", t))
+    price = int(m.group(1).replace(",", "")) if m else None
+    if re.search(r"直達|直飛|[Nn]onstop", t):
         transfers = 0
     else:
-        m_stop = re.search(r"(\d+)\s*(?:次轉機|stop)", text)
-        transfers = int(m_stop.group(1)) if m_stop else None
-
-    # 出發/抵達時間（HH:MM）：抓前兩個
-    times = re.findall(r"\d{1,2}:\d{2}", text)
-    depart_time = times[0] if len(times) >= 1 else ""
-    arrive_time = times[1] if len(times) >= 2 else ""
-
-    # 航空公司：抓常見字（這段最需要對實際頁面微調）
-    m_air = re.search(r"(亞洲航空|台灣虎航|長榮|中華航空|星宇|樂桃|捷星|國泰|"
-                      r"日本航空|全日空|大韓航空|酷航|[A-Z][A-Za-z ]{2,}? Air[A-Za-z]*)",
-                      text)
-    airline = m_air.group(1).strip() if m_air else ""
-
+        ms = (re.search(r"轉機\s*(\d+)\s*次", t) or re.search(r"(\d+)\s*次轉機", t)
+              or re.search(r"(\d+)\s*stop", t))
+        transfers = int(ms.group(1)) if ms else None
+    times = re.findall(r"(?:清晨|上午|下午|中午|凌晨|晚上)?\s?\d{1,2}:\d{2}", t)
+    ma = re.search(r"(台灣虎航|星宇航空|長榮航空|中華航空|香港快運航空|德威航空|"
+                   r"濟州航空|真航空|釜山航空|韓亞航空|大韓航空|宿霧太平洋|越捷航空|"
+                   r"泰國獅子航空|菲律賓航空|樂桃航空|捷星日本航空|捷星|酷航|"
+                   r"聯合航空|全日空航空|全日空|日本航空|國泰航空|國泰|亞洲航空|達美)", t)
     return {
         "scraped_at": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-        "origin": route["origin"],
-        "dest": route["dest"],
-        "date": route["date"],
+        "query_date": str(date.today()),
+        "origin": route["origin"], "dest": route["dest"], "date": route["date"],
         "price_twd": price,
-        "transfers": transfers,           # 0=直飛；None=沒解析到
-        "depart_time": depart_time,
-        "arrive_time": arrive_time,
-        "airline": airline,
-        # TODO：行李額度（baggage）通常要點進票價詳情才有 → 之後補點擊流程
-        "baggage": "",
-        # TODO：航班號（flight number）同樣多在詳情頁，列表少見 → 之後補
-        "flight_no": "",
+        "transfers": transfers,                       # 0=直飛
+        "depart_time": (times[0].strip() if times else ""),
+        "arrive_time": (times[1].strip() if len(times) > 1 else ""),
+        "airline": ma.group(1).strip() if ma else "",
+        "flight_no": "",    # 後續可擴充（需點進詳情頁）
+        "baggage": "",      # 後續可擴充（需點進詳情頁）
     }
 
 
-def extract_flights(page, route):
-    """從已載入的結果頁抓所有航班。選擇器以實際頁面為準，可能要微調。"""
-    # Google Flights 結果通常在 role=list 裡的 listitem；用多個候選選擇器較保險
-    候選 = ["ul li.pIav2d", "[role='list'] [role='listitem']", "ul.Rk10dc li"]
-    items = []
-    for sel in 候選:
-        try:
-            page.wait_for_selector(sel, timeout=PAGE_TIMEOUT)
-            items = page.query_selector_all(sel)
-            if items:
-                log.info("　用選擇器 '%s' 找到 %d 筆", sel, len(items))
-                break
-        except PWTimeout:
-            continue
-    if not items:
-        log.warning("　找不到結果項目（選擇器可能要調，或頁面要求互動/驗證）。")
-        return []
+def load_with_retry(page, route):
+    """重試到結果載出為止；回傳 True/False。這就是『高穩定性』的核心。"""
+    url = build_url(route)
+    for attempt in range(1, MAX_TRIES + 1):
+        log.info("　載入嘗試 %d/%d：%s→%s", attempt, MAX_TRIES,
+                 route["origin"], route["dest"])
+        page.goto(url, timeout=60_000)
+        page.wait_for_timeout(WAIT_MS)
+        for label in ["全部接受", "我同意", "接受全部", "Accept all"]:
+            try:
+                page.get_by_text(label, exact=False).first.click(timeout=1500)
+            except Exception:
+                pass
+        body = page.inner_text("body")
+        if any(k in body for k in 結果線索) and not any(e in body for e in 錯誤線索):
+            return True
+        page.wait_for_timeout(2500)
+    return False
 
-    rows = []
-    for it in items:
+
+def extract(page, route):
+    cards = []
+    for li in page.query_selector_all("li"):
         try:
-            row = parse_card(it.inner_text(), route)
-            if row:
-                rows.append(row)
-        except Exception as e:
-            log.warning("　某筆解析失敗（略過）：%s", e)
+            txt = li.inner_text()
+        except Exception:
+            continue
+        if re.search(r"\$\s*[\d,]{3,}", txt) and ("小時" in txt or "分鐘" in txt):
+            cards.append(txt)
+    rows, seen = [], set()
+    for txt in cards:
+        row = parse(txt, route)
+        if not row["price_twd"]:
+            continue
+        key = (row["price_twd"], row["depart_time"])
+        if key in seen:
+            continue
+        seen.add(key); rows.append(row)
     return rows
 
 
-# ─────────────────────────────────────────────────────────────
-# 抓單一航線（含重試 + 反爬基本款）
-# ─────────────────────────────────────────────────────────────
-def scrape_route(route):
-    url = build_url(route)
-    for attempt in range(1, MAX_RETRIES + 1):
-        try:
-            with sync_playwright() as p:
-                browser = p.chromium.launch(headless=HEADLESS)
-                ctx = browser.new_context(
-                    user_agent=UA, locale="zh-TW",
-                    viewport={"width": 1366, "height": 900})
-                page = ctx.new_page()
-                log.info("[%d/%d] 開瀏覽器抓 %s→%s（%s）",
-                         attempt, MAX_RETRIES, route["origin"],
-                         route["dest"], route["date"])
-                page.goto(url, timeout=PAGE_TIMEOUT)
-                # 可能跳同意/Cookie 視窗：嘗試按「全部接受」之類（找不到就略過）
-                for t in ["全部接受", "我同意", "Accept all", "I agree"]:
-                    try:
-                        page.get_by_text(t, exact=False).first.click(timeout=2500)
-                        break
-                    except Exception:
-                        pass
-                page.wait_for_timeout(random.randint(1500, 3500))  # 禮貌等待
-                rows = extract_flights(page, route)
-                browser.close()
-                return rows
-        except PWTimeout as e:
-            wait = BACKOFF_BASE ** attempt
-            log.warning("逾時（第 %d 次）：%s → %d 秒後重試", attempt, e, wait)
-            if attempt < MAX_RETRIES:
-                time.sleep(wait)
-        except Exception as e:
-            log.exception("抓取出錯（第 %d 次）：%s", attempt, e)
-            if attempt < MAX_RETRIES:
-                time.sleep(BACKOFF_BASE ** attempt)
-    log.error("重試 %d 次仍失敗：%s→%s", MAX_RETRIES, route["origin"], route["dest"])
-    return []
-
-
-# ─────────────────────────────────────────────────────────────
-# 結構化儲存：CSV + JSON
-# ─────────────────────────────────────────────────────────────
 def save(rows):
     if not rows:
         log.info("沒有資料可存。")
@@ -224,12 +177,30 @@ def save(rows):
 
 def main():
     log.info("=== Google Flights 抓取開始（%d 條航線）===", len(ROUTES))
+    os.makedirs(os.path.dirname(PROFILE), exist_ok=True)
     all_rows = []
-    for route in ROUTES:
-        all_rows.extend(scrape_route(route))
-        time.sleep(random.uniform(3, 6))  # 航線之間多等一下，降低被擋機率
+    with sync_playwright() as p:
+        ctx = p.chromium.launch_persistent_context(
+            PROFILE, headless=HEADLESS,
+            args=["--disable-blink-features=AutomationControlled",
+                  "--disable-infobars"],
+            ignore_default_args=["--enable-automation"],
+            user_agent=UA, locale="zh-TW", timezone_id="Asia/Taipei",
+            viewport={"width": 1366, "height": 850})
+        ctx.add_init_script(STEALTH_JS)
+        page = ctx.pages[0] if ctx.pages else ctx.new_page()
+        for route in ROUTES:
+            if load_with_retry(page, route):
+                rows = extract(page, route)
+                log.info("　%s→%s：抓到 %d 班", route["origin"], route["dest"],
+                         len(rows))
+                all_rows.extend(rows)
+            else:
+                log.warning("　%s→%s：重試 %d 次仍未載出，略過。",
+                            route["origin"], route["dest"], MAX_TRIES)
+        ctx.close()
     save(all_rows)
-    log.info("=== 完成，共 %d 筆 ===", len(all_rows))
+    log.info("=== 完成，共 %d 班 ===", len(all_rows))
 
 
 if __name__ == "__main__":
