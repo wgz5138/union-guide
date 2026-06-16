@@ -52,6 +52,13 @@ SETTLE_MS = 1800        # 點開詳情後先給頁面這麼久 settle，再開�
 #   set GF_PROXY=http://host:port              （或 socks5://host:port）
 #   set GF_PROXY=http://帳號:密碼@host:port    （需帳密的付費代理）
 # 留空＝不走代理。委託方自備代理服務、費用自負（見「維護保固與責任說明」）。
+ENRICH_FLIGHT_NO = True  # 抓完用「航班號增益」補 flight_no（Amadeus 班表+對照表；見 flight_no_enrich.py）
+
+# 航班號增益模組（選用）：缺檔/缺套件都不讓主程式掛掉
+try:
+    import flight_no_enrich
+except Exception:
+    flight_no_enrich = None
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 PROFILE = os.path.join(HERE, "data", ".gf_profile")   # 持久設定檔（gitignore）
@@ -536,6 +543,12 @@ def main():
                     if rows:
                         log.info("　%s→%s%s：抓到 %d 班", route["origin"],
                                  route["dest"], tag, len(rows))
+                        # 航班號增益：存檔前補上 flight_no（直飛班；防呆，不影響其他欄位）
+                        if ENRICH_FLIGHT_NO and flight_no_enrich:
+                            try:
+                                flight_no_enrich.enrich(rows, log)
+                            except Exception as e:
+                                log.warning("　航班號補號略過（不影響抓取）：%s", e)
                         save(rows)        # ★ 抓完一條就先存，中途崩潰也不丟已抓到的
                         all_rows.extend(rows)
                         return True
