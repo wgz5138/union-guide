@@ -42,6 +42,8 @@ ROUTES = [
 HEADLESS = False        # Google 對 headless 偵測較嚴，建議 False（看得到瀏覽器較穩）
 MAX_TRIES = 8           # 每條航線最多重試幾次（高穩定性的關鍵）
 WAIT_MS = 11_000        # 每次載入後等待毫秒
+FETCH_BAGGAGE = True    # 是否逐班點詳情抓「行李額度」（較慢：詳情頁也會間歇報錯需重試）
+BAGGAGE_TOP = 5         # 每條航線最多抓前幾班的行李（控制時間；其餘行李留空）
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 PROFILE = os.path.join(HERE, "data", ".gf_profile")   # 持久設定檔（gitignore）
@@ -137,17 +139,61 @@ def load_with_retry(page, route):
     return False
 
 
+def parse_baggage(text):
+    """從詳情文字抓行李說明（手提/託運）。"""
+    found = []
+    for line in text.split("\n"):
+        s = line.strip()
+        if ("手提行李" in s or "託運行李" in s) and 2 < len(s) < 40:
+            found.append(s)
+    return " / ".join(dict.fromkeys(found))
+
+
+def click_flight(page, price, depart):
+    """在列表找出「票價＋出發時間」相符的航班並點開（回傳是否點到）。"""
+    pf = f"{price:,}"
+    for li in page.query_selector_all("li"):
+        try:
+            t = li.inner_text()
+        except Exception:
+            continue
+        if pf in t and depart and depart in t and "小時" in t:
+            try:
+                li.click(timeout=5000)
+                return True
+            except Exception:
+                return False
+    return False
+
+
+def fetch_baggage(page):
+    """在詳情頁抓行李；詳情頁也會間歇報錯，比照列表重試。"""
+    for _ in range(5):
+        for _ in range(16):
+            page.wait_for_timeout(500)
+            d = page.inner_text("body")
+            if "手提行李" in d or "託運行李" in d:
+                return parse_baggage(d)
+            if "系統發生錯誤" in d:
+                break
+        try:
+            page.get_by_text("重新載入", exact=False).first.click(timeout=3000)
+        except Exception:
+            page.reload(timeout=60_000)
+        page.wait_for_timeout(5000)
+    return ""
+
+
 def extract(page, route):
-    cards = []
+    # 1) 先從列表抓各航班（去重）
+    rows, seen = [], set()
     for li in page.query_selector_all("li"):
         try:
             txt = li.inner_text()
         except Exception:
             continue
-        if re.search(r"\$\s*[\d,]{3,}", txt) and ("小時" in txt or "分鐘" in txt):
-            cards.append(txt)
-    rows, seen = [], set()
-    for txt in cards:
+        if not (re.search(r"\$\s*[\d,]{3,}", txt) and ("小時" in txt or "分鐘" in txt)):
+            continue
         row = parse(txt, route)
         if not row["price_twd"]:
             continue
@@ -155,6 +201,16 @@ def extract(page, route):
         if key in seen:
             continue
         seen.add(key); rows.append(row)
+
+    # 2) 逐班點詳情補「行李額度」（前 BAGGAGE_TOP 班，控制時間）
+    if FETCH_BAGGAGE:
+        for row in rows[:BAGGAGE_TOP]:
+            if click_flight(page, row["price_twd"], row["depart_time"]):
+                row["baggage"] = fetch_baggage(page)
+                page.go_back()
+                page.wait_for_timeout(3000)
+                if not (any(k in page.inner_text("body") for k in 結果線索)):
+                    load_with_retry(page, route)  # 返回失敗就重載列表
     return rows
 
 
