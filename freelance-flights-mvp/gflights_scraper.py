@@ -252,26 +252,20 @@ AIRLINE_IATA = {
 
 
 def parse_flight_no(text, airline=""):
-    """從詳情頁文字找航班號。Google 可能寫成『代碼+數字』(BR 198) 或
-    『中文航空名+數字』(長榮航空 198 / 中華航空 6)，兩種都試。
+    """從詳情頁文字找航班號。實測 Google 詳情頁格式為『IATA代碼 空格 數字』，
+    例：「…PassengerUA 838…」中的 UA 838。
+    注意：代碼常被前一個字黏住（PassengerUA），故**不要求代碼前邊界**，
+    但要求代碼後緊接（至多一個空格）數字並以邊界結尾，避免誤抓。
     回傳 (航班號, 候選清單)。"""
     t = " ".join(text.split())
     code = AIRLINE_IATA.get(airline, "")
-    # 1) IATA 代碼 + 數字：BR 198 / CI6
     if code:
-        m = re.search(r"\b" + re.escape(code) + r"\s?(\d{1,4})\b", t)
+        m = re.search(re.escape(code) + r"\s?(\d{1,4})\b", t)
         if m:
             return f"{code}{m.group(1)}", []
-    # 2) 中文航空名（可帶 · - 空白分隔）+ 數字：長榮航空 198 / 中華航空·6
-    #    後面用負向預看擋掉時間(12:55)與更長數字串，避免把時刻/票價誤當航班號
-    if airline:
-        m = re.search(re.escape(airline) + r"[\s·\-]*(\d{1,4})(?!\s*[:：\d])", t)
-        if m:
-            return (f"{code}{m.group(1)}" if code else f"{airline}{m.group(1)}"), []
-    # 3) 通用候選：只留「含字母」的 token（真航班號都有字母碼，如 BR132、5J820），
-    #    過濾純數字雜訊（價格/機型切出的 571、737）。沒有就代表這份文字裡找不到。
-    cands = re.findall(r"\b([A-Z0-9]{2}\s?\d{1,4})\b", t)
-    cands = [c.replace(" ", "") for c in cands if re.search(r"[A-Z]", c)]
+    # 候選（診斷用）：兩個大寫字母 + 數字（像航班號的 token），過濾純數字雜訊
+    cands = [c.replace(" ", "")
+             for c in re.findall(r"[A-Z]{2}\s?\d{1,4}\b", t)]
     return "", list(dict.fromkeys(cands))
 
 
@@ -479,21 +473,15 @@ def extract(page, route):
                             else:
                                 dtext, cands = dtext2, c2   # 用展開後文字做診斷
                     row["flight_no"] = fno
-                    if fno:
-                        log.info("　[航班號] 第 %d 班 %s → %s", idx,
-                                 row["airline"] or "(未知)", fno)
-                    else:
-                        # 診斷：節錄詳情頁中『航空名前後』的文字，看 Google 怎麼寫航班號
-                        snip = ""
-                        if dtext and row["airline"]:
-                            pos = dtext.find(row["airline"])
-                            if pos >= 0:
-                                snip = (" ".join(
-                                    dtext[max(0, pos - 6):pos + 70].split()))
-                        extra = ("｜含字母候選：" + "、".join(cands[:6])) if cands else ""
-                        log.info("　[航班號] 第 %d 班 %s：未抓到｜詳情節錄「%s」%s",
-                                 idx, row["airline"] or "(未知)",
-                                 snip or "（找不到航空名）", extra)
+                    # 每班都印『航空名前後』節錄，方便核對抓到的號碼對不對（驗證期）
+                    snip = ""
+                    if dtext and row["airline"]:
+                        pos = dtext.find(row["airline"])
+                        if pos >= 0:
+                            snip = " ".join(dtext[max(0, pos - 6):pos + 90].split())
+                    log.info("　[航班號] 第 %d 班 %s → %s｜節錄「%s」", idx,
+                             row["airline"] or "(未知)", fno or "未抓到",
+                             snip or "（找不到航空名）")
                     try:
                         page.go_back()
                         page.wait_for_timeout(3000)
