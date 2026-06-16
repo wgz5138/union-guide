@@ -434,24 +434,14 @@ def extract(page, route):
                              row["airline"] or "(未知航空)",
                              row["baggage"] or "（沒抓到）")
                     # ① 航班號探測：從詳情文字找（Google 格式為『代碼 數字』，如 UA 838）
+                    # ① 航班號：Google 多數情況詳情頁未載入機型/航班號區段（實測確認），
+                    #    這裡採『有出現就抓、沒有就留空』——零額外成本，不為它犧牲穩定度。
                     fno, _ = (parse_flight_no(dtext, row["airline"])
                               if dtext else ("", []))
                     row["flight_no"] = fno
                     if fno:
                         log.info("　[航班號] 第 %d 班 %s → %s", idx,
                                  row["airline"] or "(未知)", fno)
-                    else:
-                        # 診斷：航班號就在『機型』區段旁，找找這份文字裡有沒有機型，確認號碼在不在
-                        anchor = ""
-                        for kw in ["Passenger", "Boeing", "Airbus", "Embraer",
-                                   "波音", "空中巴士", "客機", "機型"]:
-                            p = dtext.find(kw) if dtext else -1
-                            if p >= 0:
-                                anchor = " ".join(dtext[max(0, p - 20):p + 55].split())
-                                break
-                        log.info("　[航班號] 第 %d 班 %s → 未抓到｜機型區段：%s", idx,
-                                 row["airline"] or "(未知)",
-                                 anchor or "（這份文字裡沒有機型/航班號區段）")
                     try:
                         page.go_back()
                         page.wait_for_timeout(3000)
