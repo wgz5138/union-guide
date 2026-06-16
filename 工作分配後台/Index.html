@@ -1,0 +1,265 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<style>
+  :root{
+    --red:#C0392B; --red-light:#FDECEA; --red-deep:#7B1818;
+    --gold:#B7860B; --gold-light:#FEF9E7;
+    --ink:#1A1A1A; --ink-mid:#444; --ink-soft:#888; --bg:#F6F3EF;
+    --card:#FFFFFF; --border:#E8E4DE;
+    --green:#1A7A4A; --green-light:#EAFAF1; --green-deep:#0F5C36;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;}
+  html,body{background:var(--bg);color:var(--ink);
+    font-family:-apple-system,"PingFang TC","Noto Sans TC","Microsoft JhengHei",sans-serif;
+    font-size:17px;line-height:1.6;-webkit-text-size-adjust:100%;}
+
+  /* 頂列 */
+  .appbar{position:sticky;top:0;z-index:30;background:var(--red);color:#fff;
+    padding:14px 16px;display:flex;align-items:center;justify-content:space-between;
+    box-shadow:0 2px 10px rgba(123,24,24,.25);}
+  .appbar h1{font-size:19px;font-weight:700;letter-spacing:.02em;}
+  .appbar .sub{font-size:11.5px;opacity:.8;margin-top:1px;}
+  .refresh{background:rgba(255,255,255,.18);border:none;color:#fff;font-size:13px;
+    padding:8px 14px;border-radius:30px;cursor:pointer;display:flex;align-items:center;gap:5px;}
+  .refresh:active{background:rgba(255,255,255,.3);}
+  .refresh.spin{opacity:.6;}
+
+  /* 進度英雄區 */
+  .hero{background:linear-gradient(160deg,#C0392B,#8E2620);color:#fff;padding:20px 18px 26px;text-align:center;}
+  .hero .big{font-size:46px;font-weight:800;line-height:1;letter-spacing:-.02em;}
+  .hero .big small{font-size:20px;font-weight:500;opacity:.75;}
+  .hero .label{font-size:13px;opacity:.9;margin-top:6px;letter-spacing:.05em;}
+  .bar{height:14px;background:rgba(255,255,255,.22);border-radius:30px;margin-top:16px;overflow:hidden;}
+  .bar > i{display:block;height:100%;width:0;border-radius:30px;
+    background:linear-gradient(90deg,#FFD86B,#FFF1C2);transition:width .7s cubic-bezier(.22,1,.36,1);}
+  .hero .pct{font-size:13px;margin-top:9px;font-weight:600;}
+  .mini{display:flex;gap:8px;justify-content:center;margin-top:14px;flex-wrap:wrap;}
+  .mini span{font-size:12px;background:rgba(255,255,255,.15);padding:4px 11px;border-radius:30px;}
+  .mini b{font-weight:700;}
+
+  /* 篩選 */
+  .filters{display:flex;gap:7px;overflow-x:auto;padding:12px 14px;scrollbar-width:none;
+    position:sticky;top:54px;z-index:20;background:var(--bg);}
+  .filters::-webkit-scrollbar{display:none;}
+  .chip{flex:0 0 auto;font-size:14px;padding:7px 15px;border-radius:30px;border:1.5px solid var(--border);
+    background:#fff;color:var(--ink-mid);cursor:pointer;white-space:nowrap;font-weight:500;}
+  .chip.on{background:var(--red);border-color:var(--red);color:#fff;}
+
+  main{max-width:640px;margin:0 auto;padding:4px 14px 90px;}
+
+  /* 區塊 */
+  .block{margin-top:18px;}
+  .block-head{display:flex;align-items:center;justify-content:space-between;margin:0 4px 9px;}
+  .block-name{font-size:16px;font-weight:700;color:var(--red-deep);display:flex;align-items:center;gap:8px;}
+  .block-name .dot{width:9px;height:9px;border-radius:50%;background:var(--gold);}
+  .block-prog{font-size:12.5px;color:var(--ink-soft);font-weight:600;}
+
+  /* 任務卡 */
+  .task{background:var(--card);border:1px solid var(--border);border-radius:16px;
+    padding:15px 15px 13px;margin-bottom:11px;box-shadow:0 1px 3px rgba(0,0,0,.04);
+    transition:transform .12s, box-shadow .2s, opacity .3s;}
+  .task.done{background:var(--green-light);border-color:#C2E6D0;}
+  .task .item{font-size:17px;font-weight:600;line-height:1.5;color:var(--ink);}
+  .task.done .item{color:var(--green-deep);}
+  .task .meta{display:flex;gap:7px;flex-wrap:wrap;margin-top:10px;}
+  .tag{font-size:13px;padding:4px 11px;border-radius:8px;background:#F2EFE9;color:var(--ink-mid);
+    display:inline-flex;align-items:center;gap:5px;}
+  .tag.owner{background:var(--red-light);color:var(--red-deep);font-weight:600;}
+  .tag.time{background:var(--gold-light);color:#5C4000;}
+
+  /* 狀態按鈕 */
+  .st{margin-top:13px;width:100%;border:none;border-radius:12px;padding:13px;font-size:16px;
+    font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;
+    transition:transform .1s;}
+  .st:active{transform:scale(.97);}
+  .st-待辦{background:#EDEAE4;color:#6B6B6B;}
+  .st-進行中{background:#FBE9B0;color:#7A5600;}
+  .st-完成{background:var(--green);color:#fff;}
+  .st .hint{font-size:11px;font-weight:500;opacity:.65;}
+
+  .empty{text-align:center;color:var(--ink-soft);padding:50px 20px;font-size:15px;}
+  .loading{text-align:center;padding:60px 20px;color:var(--ink-soft);}
+  .spinner{width:34px;height:34px;border:3px solid var(--border);border-top-color:var(--red);
+    border-radius:50%;animation:sp .8s linear infinite;margin:0 auto 14px;}
+  @keyframes sp{to{transform:rotate(360deg);}}
+
+  /* toast */
+  #toast{position:fixed;left:50%;bottom:26px;transform:translateX(-50%) translateY(40px);
+    background:#222;color:#fff;font-size:14px;padding:11px 20px;border-radius:30px;opacity:0;
+    transition:.3s;z-index:60;box-shadow:0 6px 20px rgba(0,0,0,.3);pointer-events:none;}
+  #toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
+
+  .footnote{text-align:center;font-size:11.5px;color:var(--ink-soft);margin-top:24px;}
+</style>
+</head>
+<body>
+  <div class="appbar">
+    <div>
+      <h1>工會籌備 · 工作分配</h1>
+      <div class="sub" id="updated">載入中…</div>
+    </div>
+    <button class="refresh" id="refreshBtn" onclick="load(true)">↻ 更新</button>
+  </div>
+
+  <div class="hero">
+    <div class="big"><span id="doneN">0</span><small> / <span id="totalN">0</span></small></div>
+    <div class="label">項任務已完成</div>
+    <div class="bar"><i id="barFill"></i></div>
+    <div class="pct" id="pctText">0%</div>
+    <div class="mini">
+      <span>✅ 完成 <b id="cDone">0</b></span>
+      <span>🔸 進行中 <b id="cDoing">0</b></span>
+      <span>⬜ 待辦 <b id="cTodo">0</b></span>
+    </div>
+  </div>
+
+  <div class="filters" id="filters"></div>
+
+  <main id="list">
+    <div class="loading"><div class="spinner"></div>正在從試算表載入…</div>
+  </main>
+
+  <div id="toast"></div>
+
+<script>
+  var DATA = [];
+  var FILTER = '全部';
+  var ORDER = ['待辦','進行中','完成'];
+
+  function load(manual){
+    var btn = document.getElementById('refreshBtn');
+    btn.classList.add('spin');
+    google.script.run
+      .withSuccessHandler(function(res){
+        DATA = res.tasks || [];
+        buildFilters(res.owners || []);
+        render();
+        document.getElementById('updated').textContent = '更新於 ' + (res.updated||'') + '　·　即時共享';
+        btn.classList.remove('spin');
+        if(manual) toast('已更新');
+      })
+      .withFailureHandler(function(err){
+        btn.classList.remove('spin');
+        document.getElementById('list').innerHTML =
+          '<div class="empty">😣 載入失敗，請下拉重新整理<br><small>'+err.message+'</small></div>';
+      })
+      .getData();
+  }
+
+  function buildFilters(owners){
+    var box = document.getElementById('filters');
+    var tabs = ['全部'].concat(owners);
+    box.innerHTML = tabs.map(function(t){
+      var label = (t==='全部') ? '全部' : '👤 '+t;
+      return '<button class="chip '+(t===FILTER?'on':'')+'" onclick="setFilter(\''+
+        t.replace(/'/g,"\\'")+'\')">'+label+'</button>';
+    }).join('');
+  }
+  function setFilter(t){ FILTER=t; buildFilters(uniqueOwners()); render(); }
+  function uniqueOwners(){
+    var o={}; DATA.forEach(function(t){
+      (t.owner||'').split(/[\/、,，]/).forEach(function(n){n=n.trim();if(n)o[n]=1;});
+    }); return Object.keys(o);
+  }
+
+  function visible(){
+    if(FILTER==='全部') return DATA;
+    return DATA.filter(function(t){ return (t.owner||'').indexOf(FILTER) > -1; });
+  }
+
+  function render(){
+    var rows = visible();
+    // 統計（依目前篩選）
+    var done=0,doing=0,todo=0;
+    rows.forEach(function(t){
+      if(t.status==='完成')done++; else if(t.status==='進行中')doing++; else todo++;
+    });
+    var total=rows.length;
+    var pct = total? Math.round(done/total*100):0;
+    document.getElementById('doneN').textContent=done;
+    document.getElementById('totalN').textContent=total;
+    document.getElementById('cDone').textContent=done;
+    document.getElementById('cDoing').textContent=doing;
+    document.getElementById('cTodo').textContent=todo;
+    document.getElementById('pctText').textContent=pct+'%　'+motivate(pct);
+    document.getElementById('barFill').style.width=pct+'%';
+
+    if(!total){ document.getElementById('list').innerHTML='<div class="empty">這位的任務目前是空的 🙌</div>'; return; }
+
+    // 依區塊分組
+    var groups={}, gorder=[];
+    rows.forEach(function(t){ if(!groups[t.block]){groups[t.block]=[];gorder.push(t.block);} groups[t.block].push(t); });
+
+    var html='';
+    gorder.forEach(function(g){
+      var arr=groups[g];
+      var gd=arr.filter(function(t){return t.status==='完成';}).length;
+      html+='<div class="block"><div class="block-head">'+
+        '<div class="block-name"><span class="dot"></span>'+esc(g)+'</div>'+
+        '<div class="block-prog">'+gd+'/'+arr.length+' 完成</div></div>';
+      arr.forEach(function(t){
+        var next = ORDER[(ORDER.indexOf(t.status)+1)%ORDER.length];
+        html+='<div class="task '+(t.status==='完成'?'done':'')+'" id="task-'+t.row+'">'+
+          '<div class="item">'+esc(t.item)+'</div>'+
+          '<div class="meta">'+
+            (t.owner?'<span class="tag owner">👤 '+esc(t.owner)+'</span>':'')+
+            (t.time?'<span class="tag time">📅 '+esc(t.time)+'</span>':'')+
+            (t.note?'<span class="tag">📝 '+esc(t.note)+'</span>':'')+
+          '</div>'+
+          '<button class="st st-'+t.status+'" onclick="cycle('+t.row+')">'+
+            statusIcon(t.status)+' '+t.status+
+            '<span class="hint">（點一下改成「'+next+'」）</span>'+
+          '</button>'+
+        '</div>';
+      });
+      html+='</div>';
+    });
+    document.getElementById('list').innerHTML=html;
+  }
+
+  function cycle(row){
+    var t=null; for(var i=0;i<DATA.length;i++){if(DATA[i].row===row){t=DATA[i];break;}}
+    if(!t)return;
+    var next=ORDER[(ORDER.indexOf(t.status)+1)%ORDER.length];
+    t.status=next;          // 樂觀更新：先變畫面
+    render();
+    if(next==='完成') toast('🎉 完成一項，太棒了！');
+    google.script.run
+      .withSuccessHandler(function(res){
+        document.getElementById('updated').textContent='更新於 '+res.updated+'　·　即時共享';
+      })
+      .withFailureHandler(function(err){
+        t.status=ORDER[(ORDER.indexOf(next)+ORDER.length-1)%ORDER.length];
+        render(); toast('儲存失敗，請重試');
+      })
+      .updateStatus(row,next);
+  }
+
+  function motivate(p){
+    if(p>=100)return'全部完成 🏆';
+    if(p>=80)return'快攻頂了 💪';
+    if(p>=50)return'過半囉 🔥';
+    if(p>=20)return'動起來了 🚀';
+    return'開始衝 ✊';
+  }
+  function statusIcon(s){return s==='完成'?'✅':s==='進行中'?'🔸':'⬜';}
+  function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+  var _tt;
+  function toast(m){var t=document.getElementById('toast');t.textContent=m;t.classList.add('show');
+    clearTimeout(_tt);_tt=setTimeout(function(){t.classList.remove('show');},1800);}
+
+  // 自動同步別人的更新（每 25 秒，背景靜默）
+  setInterval(function(){ if(document.visibilityState==='visible') silentRefresh(); },25000);
+  function silentRefresh(){
+    google.script.run.withSuccessHandler(function(res){
+      DATA=res.tasks||[]; render();
+      document.getElementById('updated').textContent='更新於 '+(res.updated||'')+'　·　即時共享';
+    }).getData();
+  }
+
+  load();
+</script>
+</body>
+</html>
