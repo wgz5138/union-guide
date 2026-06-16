@@ -152,6 +152,19 @@ def page_loaded_ok(body):
     return has_price and has_time and not has_error
 
 
+def _backoff(page, attempt):
+    """指數退避（簡化版）：等待隨重試次數逐次拉長，上限 12 秒，更能熬過暫時性故障。"""
+    try:
+        page.wait_for_timeout(min(2500 * attempt, 12_000))
+    except Exception:
+        pass
+
+
+# 同意視窗按鈕：多認幾種（接受/拒絕/英文都能讓同意牆消失）
+CONSENT_LABELS = ["全部接受", "我同意", "接受全部", "全部拒絕",
+                  "Accept all", "I agree", "Reject all"]
+
+
 def load_with_retry(page, route):
     """重試到結果載出為止；回傳 True/False。這就是『高穩定性』的核心。
     重點：連線逾時／載入丟例外，都當成『這次失敗』繼續重試，
@@ -163,23 +176,27 @@ def load_with_retry(page, route):
         try:
             page.goto(url, timeout=60_000)
             page.wait_for_timeout(WAIT_MS)
-            for label in ["全部接受", "我同意", "接受全部", "Accept all"]:
+            for label in CONSENT_LABELS:
                 try:
                     page.get_by_text(label, exact=False).first.click(timeout=1500)
+                except Exception:
+                    pass
+            if attempt >= 3:
+                # 後段嘗試：輕推捲動逼出 lazy-load 內容，提高判定成功的命中率
+                try:
+                    page.mouse.wheel(0, 600)
+                    page.wait_for_timeout(800)
                 except Exception:
                     pass
             body = page.inner_text("body")
         except Exception as e:
             # goto 逾時、frame detached 等：記下來，等一下再重試（不中斷）
             log.warning("　　第 %d 次載入出錯，稍候重試：%s", attempt, e)
-            try:
-                page.wait_for_timeout(2500)
-            except Exception:
-                pass
+            _backoff(page, attempt)
             continue
         if page_loaded_ok(body):
             return True
-        page.wait_for_timeout(2500)
+        _backoff(page, attempt)
     return False
 
 
@@ -456,8 +473,8 @@ def save(rows):
 def main():
     log.info("=== Google Flights 抓取開始（%d 條航線）===", len(ROUTES))
     os.makedirs(os.path.dirname(PROFILE), exist_ok=True)
-    total = 0
     all_rows = []   # 收集所有航班，供呼叫端（例如個人通知腳本）取用
+    ok_routes = 0   # 成功取得航班清單的航線數（用來算成功率）
     with sync_playwright() as p:
         # 啟動參數共用；優先用「你電腦真的 Chrome」(channel="chrome")，
         # 它的指紋(WebGL/字型/codec)就是真瀏覽器，比內建 Chromium 不易被偵測。
@@ -477,24 +494,46 @@ def main():
             ctx = p.chromium.launch_persistent_context(**launch_kw)
         ctx.add_init_script(STEALTH_JS)
         page = ctx.pages[0] if ctx.pages else ctx.new_page()
-        for route in ROUTES:
-            # 每條航線各自包起來：單一航線出任何錯都只略過它，不波及其他航線
+
+        def try_one(route, tag=""):
+            """跑單一航線；成功取得航班清單回傳 True。任何錯都只影響本航線。"""
             try:
                 if load_with_retry(page, route):
                     rows = extract(page, route)
-                    log.info("　%s→%s：抓到 %d 班", route["origin"],
-                             route["dest"], len(rows))
-                    save(rows)            # ★ 抓完一條就先存，中途崩潰也不丟已抓到的
-                    total += len(rows)
-                    all_rows.extend(rows)
-                else:
-                    log.warning("　%s→%s：重試 %d 次仍未載出，略過。",
-                                route["origin"], route["dest"], MAX_TRIES)
+                    if rows:
+                        log.info("　%s→%s%s：抓到 %d 班", route["origin"],
+                                 route["dest"], tag, len(rows))
+                        save(rows)        # ★ 抓完一條就先存，中途崩潰也不丟已抓到的
+                        all_rows.extend(rows)
+                        return True
+                    log.warning("　%s→%s%s：載入成功但沒有航班（可能該日無票）",
+                                route["origin"], route["dest"], tag)
+                    return False
+                log.warning("　%s→%s%s：重試 %d 次仍未載出。",
+                            route["origin"], route["dest"], tag, MAX_TRIES)
+                return False
             except Exception as e:
-                log.warning("　%s→%s：發生未預期錯誤，略過此航線：%s",
-                            route["origin"], route["dest"], e)
+                log.warning("　%s→%s%s：發生未預期錯誤：%s",
+                            route["origin"], route["dest"], tag, e)
+                return False
+
+        # 第一輪：每條航線各自獨立
+        failed = []
+        for route in ROUTES:
+            if try_one(route):
+                ok_routes += 1
+            else:
+                failed.append(route)
+        # 第二輪補救：第一輪失敗的航線，全部跑完後再給一次機會（Google 常只是暫時抽風）
+        if failed:
+            log.info("　── 第二輪：再給 %d 條先前失敗的航線一次機會 ──", len(failed))
+            for route in failed:
+                if try_one(route, tag="(第二輪)"):
+                    ok_routes += 1
         ctx.close()
-    log.info("=== 完成，本次共 %d 班 ===", total)
+    rate = (ok_routes / len(ROUTES) * 100) if ROUTES else 0
+    log.info("=== 完成：成功 %d/%d 航線（%.0f%%），共抓 %d 班 ===",
+             ok_routes, len(ROUTES), rate, len(all_rows))
     return all_rows
 
 
