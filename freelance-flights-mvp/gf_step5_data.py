@@ -42,17 +42,21 @@ def parse(text):
     # 價格：優先抓有 $ 的（避免把 CO2「200 公斤」當價格）
     m = re.search(r"\$\s*([\d,]{3,})", t) or re.search(r"\b(\d{1,3}(?:,\d{3})+)\b", t)
     price = int(m.group(1).replace(",", "")) if m else None
-    # 轉機：直達/直飛/nonstop = 0；否則抓「N 次轉機 / N stop」
+    # 轉機：直達/直飛/nonstop = 0；否則「轉機 N 次」或「N 次轉機」或「N stop」
     if re.search(r"直達|直飛|[Nn]onstop", t):
         transfers = 0
     else:
-        ms = re.search(r"(\d+)\s*(?:次轉機|轉機|stop)", t)
+        ms = (re.search(r"轉機\s*(\d+)\s*次", t)      # 轉機 1 次（數字在後）
+              or re.search(r"(\d+)\s*次轉機", t)       # 1 次轉機（數字在前）
+              or re.search(r"(\d+)\s*stop", t))
         transfers = int(ms.group(1)) if ms else None
-    # 時間：中文制（上午/下午/中午/凌晨 + h:mm），取前兩個
-    times = re.findall(r"(?:上午|下午|中午|凌晨|晚上)?\s?\d{1,2}:\d{2}", t)
-    # 航空
-    ma = re.search(r"(台灣虎航|星宇航空|長榮航空|中華航空|樂桃|捷星|國泰|酷航|"
-                   r"日本航空|全日空|大韓航空|亞洲航空|聯合航空|達美)", t)
+    # 時間：中文制（上午/下午/中午/凌晨/晚上 + h:mm），取前兩個
+    times = re.findall(r"(?:清晨|上午|下午|中午|凌晨|晚上)?\s?\d{1,2}:\d{2}", t)
+    # 航空（常見台/亞洲航空；長名放前面避免被短名截斷）
+    ma = re.search(r"(台灣虎航|星宇航空|長榮航空|中華航空|香港快運航空|德威航空|"
+                   r"濟州航空|真航空|釜山航空|韓亞航空|大韓航空|宿霧太平洋|越捷航空|"
+                   r"泰國獅子航空|菲律賓航空|樂桃航空|捷星日本航空|捷星|酷航|"
+                   r"聯合航空|全日空航空|全日空|日本航空|國泰航空|國泰|亞洲航空|達美)", t)
     return {
         "price_twd": price,
         "transfers": transfers,
@@ -97,21 +101,21 @@ def main():
                 continue
             if re.search(r"\$\s*[\d,]{3,}", txt) and ("小時" in txt or "分鐘" in txt):
                 cards.append(txt)
-        # 去重（巢狀 li 可能重複）
-        seen, uniq = set(), []
-        for c in cards:
-            key = " ".join(c.split())[:80]
-            if key not in seen:
-                seen.add(key); uniq.append(c)
-        print(f"\n靠內容找到 {len(uniq)} 張航班卡")
+        print(f"\n靠內容找到 {len(cards)} 個候選（含重複/展開版，下面會去重）")
 
-        rows = []
-        for i, txt in enumerate(uniq[:10], 1):
+        # 解析 + 用「票價＋出發時間」去重（展開詳情版會跟摘要卡同鍵→自動濾掉）
+        rows, seen = [], set()
+        for txt in cards:
             row = parse(txt)
-            print(f"\n--- 第 {i} 張 ---\n{' '.join(txt.split())[:160]}")
+            if not row["price_twd"]:
+                continue
+            key = (row["price_twd"], row["depart_time"])
+            if key in seen:
+                continue
+            seen.add(key)
+            rows.append(row)
+            print(f"\n--- 第 {len(rows)} 班 ---\n{' '.join(txt.split())[:150]}")
             print("解析：", row)
-            if row["price_twd"]:
-                rows.append(row)
 
         if rows:
             with open(OUT_CSV, "w", newline="", encoding="utf-8-sig") as f:
