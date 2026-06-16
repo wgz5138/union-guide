@@ -1,105 +1,120 @@
-# 機票監測爬蟲骨架（MVP）— A2310 練手 / 起點
+# ✈️ 機票價格監測小幫手 / Flight Price Monitor
 
-這是一份**現在就能跑**的爬蟲骨架。它不直接抓機票（目標網站還沒跟客戶確認），
-而是先把接案要交付的「**高穩定性結構**」搭好：重試、log、CSV、排程、失敗通知。
-等你確認真網站，只要改兩個地方就變正式案子。
+> 自動監測指定航線的便宜機票，**降價就主動推到手機 Telegram**；
+> 支援雲端每天自動跑（電腦關著也行）、桌面一鍵查、以及在 Telegram 直接打字查詢。
+
+這是一個從零打造的小型自動化專案：把「定時抓資料 → 整理 → 通知」整條流程做成
+**穩定、免顧、跨裝置**的服務。也是一份示範「資料擷取 + 排程 + 通知」如何串起來的範例。
 
 ---
 
-## 1. 先跑起來（5 分鐘看到成果）
+## 🎯 解決什麼問題
+
+人工一條一條去比價、還要天天回去看「降了沒」很煩。這個工具把它自動化：
+
+- 你只要設定「想盯哪些航線、低於多少價想被通知」
+- 它每天自動查、**只在變便宜時**通知你（不洗版）
+- 通知附**繁體中文訂票連結**，點開直接看 / 訂
+
+---
+
+## ✨ 功能
+
+| 功能 | 說明 |
+|---|---|
+| 🔎 多航線批次查價 | 一次查多條航線，單程 / 來回都支援 |
+| 🌏 中文地名 | 直接輸入「高雄」「日本」「首爾」，自動轉成機場/國家代碼 |
+| 🏙️ 整國搜尋 + 多城市選項 | 查「高雄→日本」會列出各城市的直飛選項讓你挑 |
+| 📉 降價偵測 | 記住上次價格，**只有變便宜才通知**，避免洗版 |
+| 📱 Telegram 推播 | 撿到便宜票直接推到手機，附中文 Skyscanner 連結 |
+| 💬 雙向聊天 bot | 在 Telegram 打「查 高雄 東京 2026-09」即時回你 |
+| ☁️ 雲端每天自動跑 | GitHub Actions 排程，電腦關機也照跑照推 |
+| 🖱️ 桌面一鍵 / 開機自動 | Windows `.bat` 雙擊即用，可設開機背景待命 |
+| 🔁 高穩定性 | 自動重試（間隔逐次拉長）、逾時、log、失敗不中斷 |
+
+---
+
+## 🧱 用到的技術
+
+- **Python**（標準庫 + `requests`）
+- **Travelpayouts / Aviasales Data API**（免費機票價格資料）
+- **Telegram Bot API**（單向推播 + 雙向長輪詢查詢）
+- **GitHub Actions**（雲端排程 + 把價格記憶提交回 repo）
+- **Windows 工作排程器 / 批次檔**（本機自動化與一鍵啟動）
+- 設計重點：重試/退避、log 輪替、設定與密鑰分離（環境變數）、相對路徑寫檔
+
+---
+
+## 🗺️ 架構（三種使用方式，同一套核心）
+
+```
+            ┌─────────────────────────────┐
+            │  travelpayouts_flights.py   │  ← 核心：查價 / 降價偵測 / 通知
+            └──────────────┬──────────────┘
+                           │
+   ┌───────────────┬───────┴────────┬────────────────────┐
+   │               │                │                    │
+☁️ 雲端排程     🖱️ 桌面一鍵       💬 雙向 bot          📉 降價記憶
+GitHub Actions  每日查價.bat     telegram_bot.py     price_state.json
+(電腦關著也跑)  查機票.bat        (手機打字即查)       (只在變便宜才推)
+                           │
+                           ▼
+                  📱 Telegram 推播（附繁中 Skyscanner 連結）
+```
+
+---
+
+## 🚀 快速開始
 
 ```bash
 cd freelance-flights-mvp
-python -m venv .venv && source .venv/bin/activate   # Windows：.venv\Scripts\activate
 pip install -r requirements.txt
-python scraper.py
+
+# 設定金鑰（環境變數，不寫進程式碼）
+#   Windows(PowerShell)： $env:TRAVELPAYOUTS_TOKEN="..."  $env:TG_TOKEN="..."  $env:TG_CHAT="..."
+#   Mac/Linux：           export TRAVELPAYOUTS_TOKEN=...   等
+
+python travelpayouts_flights.py        # 批次查設定好的航線
+python telegram_bot.py                  # 啟動雙向聊天 bot
 ```
 
-跑完看：
-- `data/flights.csv` — 抓到的資料
-- `logs/scraper.log` — 每次執行的紀錄（含重試、錯誤）
+- Travelpayouts token：到 https://www.travelpayouts.com 免費註冊 → Profile → API token
+- Telegram：用 @BotFather 建 bot 拿 token；`tg_setup.py` 幫你找出 chat id
 
-> 預設 `USE_DEMO = True`，抓的是 `quotes.toscrape.com`（**專門給人練爬蟲的合法沙盒**）。
-> 目的是讓你親眼看到「重試 → 抓取 → 解析 → 存 CSV → log」整條會動。
-
-**試試重試機制**：把 `scraper.py` 裡的 `DEMO_URL` 改成一個壞網址，再跑一次，
-看 log 怎麼重試、間隔怎麼逐次拉長、最後怎麼報錯——這就是客戶說的「高穩定性」。
+**雲端每天自動跑**：把 token 設成 GitHub repo 的 Secrets（`TRAVELPAYOUTS_TOKEN` / `TG_TOKEN` / `TG_CHAT`），
+`.github/workflows/flight-prices.yml` 會每天自動執行並推 Telegram。
 
 ---
 
-## 2. 變成真案子要改哪裡
-
-1. **先偵查目標網站**（報價前就要做）：打開網站 → `F12` → Network → XHR/Fetch，
-   操作一次搜尋，看資料怎麼來：
-   - 有回傳 JSON 的 API → 最好爬，直接打那個網址。
-   - 資料在 HTML 裡 → 用 `scraper.py` 的 BeautifulSoup。
-   - 資料靠 JS 動態長出來（Google Flights 多半是）→ 用 `scraper_playwright.py`。
-2. 把 `scraper.py` 的 `USE_DEMO` 改成 `False`，填 `TARGET_URL`、`ROUTES`。
-3. 把 `parse_flights()`（或 Playwright 版的 `extract_flights()`）裡的 `REPLACE_ME`
-   換成真實選擇器 / JSON 取值。
-4. 失敗通知：`notify_failure()` 裡接上客戶要的管道（Telegram 範例已附）。
-
----
-
-## 3. 定時排程（「定期、定時抓」就靠這個）
-
-選一種即可。先確認手動 `python scraper.py` 能跑，再排程。
-
-### A) GitHub Actions（免費、不用自己開電腦，輕量監測首選）
-在 repo 建 `.github/workflows/scrape.yml`：
-
-```yaml
-name: scrape-flights
-on:
-  schedule:
-    - cron: "0 * * * *"   # 每小時整點（UTC 時區，台灣要 -8 換算）
-  workflow_dispatch: {}    # 也可手動按按鈕跑
-jobs:
-  run:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
-        with: { python-version: "3.12" }
-      - run: pip install -r freelance-flights-mvp/requirements.txt
-      - run: python freelance-flights-mvp/scraper.py
-      # CSV 要保存的話，這裡再加一步 commit 回 repo 或上傳 artifact
-```
-
-### B) Linux / Mac：cron
-```bash
-crontab -e
-# 每小時整點跑（路徑換成你的絕對路徑）
-0 * * * * cd /path/to/freelance-flights-mvp && /path/to/.venv/bin/python scraper.py
-```
-
-### C) Windows：工作排程器
-1. 開「工作排程器 / Task Scheduler」→ 建立基本工作
-2. 觸發程序：選每天 / 每小時
-3. 動作：啟動程式 → 程式填 `python`（或 venv 裡的 python.exe 絕對路徑），
-   引數填 `scraper.py`，「開始位置」填這個資料夾的路徑
-
----
-
-## 4. 檔案說明
+## 📁 檔案
 
 | 檔案 | 用途 |
 |---|---|
-| `travelpayouts_flights.py` | ⭐ **多航線每日記價 + 降價通知**（用 Travelpayouts/Aviasales 免費資料 API）。自己找便宜機票用這支，註冊與設定步驟寫在檔案開頭 |
-| `tg_setup.py` | 小工具：幫你找出 Telegram chat id（設手機通知時用） |
-| `amadeus_flights.py` | 同功能的 Amadeus 版。⚠️ **Amadeus 免費自助版將於 2026/7/17 關閉**，留作參考，新用戶請改用上面那支 |
-| `scraper.py` | 主骨架（requests 版）。要爬靜態網站 / 有 JSON API 用這支 |
-| `scraper_playwright.py` | 動態網站版（Google Flights 這類，資料靠 JS 載入） |
-| `requirements.txt` | 套件清單 |
-
-> **想自己找便宜機票？** 直接用 `travelpayouts_flights.py`，比爬 Google Flights 輕鬆太多。
-> 去 https://www.travelpayouts.com 免費註冊 → Profile → API token 拿 token →
-> 設成環境變數 `TRAVELPAYOUTS_TOKEN` → `python travelpayouts_flights.py`。細節看該檔案開頭。
+| `travelpayouts_flights.py` | ⭐ 核心：多航線查價、降價偵測、推播 |
+| `telegram_bot.py` | 雙向聊天 bot（在 Telegram 打字即查） |
+| `tg_setup.py` | 找出你的 Telegram chat id |
+| `查機票.bat` / `每日查價.bat` | 桌面一鍵：互動查 / 批次查 |
+| `背景啟動機器人.bat` / `停止機器人.bat` / `開機背景啟動.bat` | bot 背景執行 / 停止 / 開機自動 |
+| `設定每天自動跑.bat` / `取消每天自動跑.bat` | 本機每日排程（Windows 工作排程器） |
+| `../.github/workflows/flight-prices.yml` | 雲端每日排程 |
+| `scraper.py` / `scraper_playwright.py` | 通用爬蟲骨架（requests / 動態網站版），可改去爬其他網站 |
+| `gflights_scraper.py` | **A2310 案：Google Flights 爬蟲**（Playwright，文字+正則解析；選擇器需對實際頁面微調，ToS 禁爬請告知客戶） |
+| `amadeus_flights.py` | Amadeus 版（其免費自助版 2026/7/17 關閉，留作參考） |
 
 ---
 
-## 5. 接案時記得提醒客戶的事（保護自己）
+## ⚖️ 誠實的限制
 
-- **目標網站的服務條款（ToS）**：很多網站禁止爬取，Google 系列尤其嚴。先讓客戶知道法律/封號風險，別自己默默扛。
-- **頻率 vs 風險**：抓越兇越容易被封。把頻率寫進報價、並設禮貌等待。
-- **反爬升級不是免費維修**：網站改版、加驗證碼、封 IP，要不要處理、代理 IP 費用誰出，先講清楚、寫進範圍。
+- 免費的 Travelpayouts 資料 API 給的是「**其他使用者近期搜尋過、被快取的價格**」，
+  所以**冷門航線 / 太遠的日期可能查無資料**——這不是 bug，是免費資料的天性。
+- 適合「**監測熱門航線的降價**」；若要「任何航線都保證即時報價」，需付費的即時搜尋 API。
+- 想盯「我一定要飛的那幾條」最穩的免費做法：搭配 **Google Flights 內建的「追蹤價格」**。
+- 雙向 bot 跑在本機，**電腦關著時不會回應**；要 24 小時即時聊天需自備雲端主機。
+
+---
+
+## 🛠️ 也可當「資料擷取接案」起點
+
+`scraper.py` / `scraper_playwright.py` 是通用骨架，已把接案要交付的「高穩定性結構」
+（重試、log、CSV、排程、失敗通知）搭好。要改去爬別的網站，只需替換解析那一小塊。
+接案前提醒：先確認目標網站服務條款、抓取頻率、反爬處理範圍，寫進報價保護自己。

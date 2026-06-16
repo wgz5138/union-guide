@@ -57,11 +57,19 @@ ROUTES = [
     # 國家（查整個國家最便宜的城市）
     "日本": "JP", "韓國": "KR", "泰國": "TH", "越南": "VN",
     "香港": "HK", "新加坡": "SG", "馬來西亞": "MY", "菲律賓": "PH", "中國": "CN",
-    # 城市
-    "東京": "TYO", "大阪": "OSA", "福岡": "FUK", "名古屋": "NGO", "沖繩": "OKA",
-    "首爾": "SEL", "釜山": "PUS", "曼谷": "BKK", "清邁": "CNX",
-    "河內": "HAN", "胡志明": "SGN", "峴港": "DAD",
-    "吉隆坡": "KUL", "馬尼拉": "MNL", "宿霧": "CEB", "上海": "SHA", "北京": "BJS",
+    # 日本城市
+    "東京": "TYO", "大阪": "OSA", "福岡": "FUK", "名古屋": "NGO",
+    "沖繩": "OKA", "那霸": "OKA", "札幌": "SPK", "北海道": "SPK",
+    # 韓國城市
+    "首爾": "SEL", "釜山": "PUS", "濟州": "CJU", "大邱": "TAE",
+    # 東南亞城市
+    "曼谷": "BKK", "清邁": "CNX", "普吉島": "HKT", "河內": "HAN",
+    "胡志明": "SGN", "峴港": "DAD", "吉隆坡": "KUL", "馬尼拉": "MNL",
+    "宿霧": "CEB", "峇里島": "DPS", "澳門": "MFM",
+    # 中國城市
+    "上海": "SHA", "北京": "BJS", "重慶": "CKG", "成都": "CTU",
+    "廣州": "CAN", "深圳": "SZX", "杭州": "HGH", "廈門": "XMN",
+    "南京": "NKG", "青島": "TAO", "西安": "SIA", "武漢": "WUH", "昆明": "KMG",
 }
 
 
@@ -154,10 +162,10 @@ def build_skyscanner_link(origin, destination, outbound, inbound=""):
 
 
 # ─────────────────────────────────────────────────────────────
-# 查最便宜的票
+# 查票：底層拿回所有票，再給上層挑「最便宜一張」或「列出多個選項」
 # ─────────────────────────────────────────────────────────────
-def search_cheapest(route):
-    """查單一條航線最便宜的票。route 有 return 就查來回，否則查單程。"""
+def _fetch_offers(route):
+    """打 API 拿回這條航線的所有票。回傳 (offers, currency, round_trip)。"""
     if not TOKEN:
         raise RuntimeError(
             "找不到 token！請先設定環境變數 TRAVELPAYOUTS_TOKEN"
@@ -177,46 +185,60 @@ def search_cheapest(route):
         params["return_at"] = route["return"]  # 回程月份
 
     result = get_json_with_retry(
-        API_URL,
-        headers={"X-Access-Token": TOKEN},
-        params=params,
-    )
-
+        API_URL, headers={"X-Access-Token": TOKEN}, params=params)
     if not result.get("success", True):
         raise RuntimeError(f"API 回報錯誤：{result}")
 
     offers = result.get("data", [])
+    currency = result.get("currency", CURRENCY).upper()
+    return offers, currency, round_trip
+
+
+def _build_row(offer, route, currency, round_trip):
+    """把一張票的原始資料整理成統一格式（含中文 Skyscanner 連結）。"""
+    depart_at = offer.get("departure_at", "")[:10]
+    return_at = offer.get("return_at", "")[:10]
+    dest_code = (offer.get("destination_airport")
+                 or offer.get("destination") or 轉代碼(route["dest"]))
+    full_link = build_skyscanner_link(
+        offer.get("origin_airport") or 轉代碼(route["origin"]),
+        dest_code, depart_at, return_at if round_trip else "")
+    return {
+        "date": str(date.today()),
+        "trip": "來回" if round_trip else "單程",
+        "depart_at": depart_at,
+        "return_at": return_at,
+        "route": f"{route['origin']}-{route['dest']}",
+        "dest_code": dest_code,                          # 實際抵達城市代碼
+        "price": offer["price"],
+        "currency": currency,
+        "airline": offer.get("airline", "?"),
+        "transfers": offer.get("transfers", "?"),        # 0=直飛
+        "link": full_link,
+    }
+
+
+def search_cheapest(route):
+    """查單一條航線『最便宜的一張』。route 有 return 就查來回，否則單程。"""
+    offers, currency, round_trip = _fetch_offers(route)
     if not offers:
         log.info("　%s→%s（%s）查無票價（換個月份試試）。",
                  route["origin"], route["dest"], route["month"])
         return None
-
     cheapest = min(offers, key=lambda o: o["price"])
-    currency = result.get("currency", CURRENCY).upper()
+    return _build_row(cheapest, route, currency, round_trip)
 
-    depart_at = cheapest.get("departure_at", "")[:10]
-    return_at = cheapest.get("return_at", "")[:10]
-    # 用實際查到的「機場代碼」組一個【繁體中文 Skyscanner】連結，一點開就是中文頁
-    full_link = build_skyscanner_link(
-        cheapest.get("origin_airport") or 轉代碼(route["origin"]),
-        cheapest.get("destination_airport") or cheapest.get("destination")
-        or 轉代碼(route["dest"]),
-        depart_at,
-        return_at if round_trip else "",
-    )
 
-    return {
-        "date": str(date.today()),                       # 今天（記價日）
-        "trip": "來回" if round_trip else "單程",
-        "depart_at": depart_at,                          # 去程哪天
-        "return_at": return_at,                          # 回程哪天（單程為空）
-        "route": f"{route['origin']}-{route['dest']}",
-        "price": cheapest["price"],
-        "currency": currency,
-        "airline": cheapest.get("airline", "?"),         # 航空公司代碼
-        "transfers": cheapest.get("transfers", "?"),     # 0=直飛
-        "link": full_link,
-    }
+def search_offers(route, top=5, direct_first=True):
+    """列出『多張』便宜的票（給使用者挑）。查整個國家時會看到不同城市。
+    direct_first=True：若有直飛，優先只列直飛；都沒有才列含轉機的。"""
+    offers, currency, round_trip = _fetch_offers(route)
+    if not offers:
+        return []
+    directs = [o for o in offers if o.get("transfers") == 0]
+    use = directs if (direct_first and directs) else offers
+    use = sorted(use, key=lambda o: o["price"])[:top]
+    return [_build_row(o, route, currency, round_trip) for o in use]
 
 
 # ─────────────────────────────────────────────────────────────

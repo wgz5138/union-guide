@@ -10,11 +10,9 @@ name: flight-prices
 on:
   schedule:
     - cron: '0 1 * * *'   # 每天 01:00 UTC（台灣 09:00）
-  workflow_dispatch:
-  push:
-    paths:
-      - 'freelance-flights-mvp/travelpayouts_flights.py'
-      - '.github/workflows/flight-prices.yml'
+  workflow_dispatch:       # 也可到 Actions 頁面手動 Run workflow
+# 註：刻意不設 push 觸發——否則每次推程式碼都會跑＋自動提交 price_state.json，
+#     造成本機 git pull 一直卡（非快進）。排程＋手動就夠了。
 
 permissions:
   contents: write   # 為了把 price_state.json（價格記憶）提交回 repo
