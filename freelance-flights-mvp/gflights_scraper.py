@@ -400,34 +400,6 @@ def fetch_detail_text(page):
     return ""
 
 
-def expand_detail(page):
-    """展開詳情頁裡『航班詳細資訊』(下拉箭頭/可展開區塊)，讓航班號(如 BR 198 / 華航 6)
-    渲染出來，再讀一次全文。全程防呆：點錯/失敗都不影響主流程，回展開後的文字。"""
-    # 點開尚未展開的可展開元素（aria-expanded=false）；數量設上限避免亂點太久
-    for sel in ['button[aria-expanded="false"]', '[role="button"][aria-expanded="false"]']:
-        try:
-            els = page.query_selector_all(sel)
-        except Exception:
-            els = []
-        for el in els[:10]:
-            try:
-                el.click(timeout=1200)
-                page.wait_for_timeout(250)
-            except Exception:
-                pass
-    # 也試著點含「詳情/詳細資訊/航班」字樣的展開鈕
-    for label in ["航班詳情", "詳細資訊", "航班資訊", "詳情"]:
-        try:
-            page.get_by_text(label, exact=False).first.click(timeout=1200)
-            page.wait_for_timeout(350)
-        except Exception:
-            pass
-    try:
-        return page.inner_text("body")
-    except Exception:
-        return ""
-
-
 def extract(page, route):
     # 1) 先像人一樣邊看邊往下捲（順便讓 lazy-load 卡片長出來），再抓各航班（去重）
     human_scroll(page)
@@ -461,27 +433,25 @@ def extract(page, route):
                     log.info("　[行李] 第 %d 班 %s：%s", idx,
                              row["airline"] or "(未知航空)",
                              row["baggage"] or "（沒抓到）")
-                    # ① 航班號探測：先從現有詳情文字找；找不到就展開『航班詳情』再讀一次
-                    fno, cands = (parse_flight_no(dtext, row["airline"])
-                                  if dtext else ("", []))
-                    if not fno and dtext:
-                        dtext2 = expand_detail(page)
-                        if dtext2:
-                            f2, c2 = parse_flight_no(dtext2, row["airline"])
-                            if f2:
-                                fno = f2
-                            else:
-                                dtext, cands = dtext2, c2   # 用展開後文字做診斷
+                    # ① 航班號探測：從詳情文字找（Google 格式為『代碼 數字』，如 UA 838）
+                    fno, _ = (parse_flight_no(dtext, row["airline"])
+                              if dtext else ("", []))
                     row["flight_no"] = fno
-                    # 每班都印『航空名前後』節錄，方便核對抓到的號碼對不對（驗證期）
-                    snip = ""
-                    if dtext and row["airline"]:
-                        pos = dtext.find(row["airline"])
-                        if pos >= 0:
-                            snip = " ".join(dtext[max(0, pos - 6):pos + 90].split())
-                    log.info("　[航班號] 第 %d 班 %s → %s｜節錄「%s」", idx,
-                             row["airline"] or "(未知)", fno or "未抓到",
-                             snip or "（找不到航空名）")
+                    if fno:
+                        log.info("　[航班號] 第 %d 班 %s → %s", idx,
+                                 row["airline"] or "(未知)", fno)
+                    else:
+                        # 診斷：航班號就在『機型』區段旁，找找這份文字裡有沒有機型，確認號碼在不在
+                        anchor = ""
+                        for kw in ["Passenger", "Boeing", "Airbus", "Embraer",
+                                   "波音", "空中巴士", "客機", "機型"]:
+                            p = dtext.find(kw) if dtext else -1
+                            if p >= 0:
+                                anchor = " ".join(dtext[max(0, p - 20):p + 55].split())
+                                break
+                        log.info("　[航班號] 第 %d 班 %s → 未抓到｜機型區段：%s", idx,
+                                 row["airline"] or "(未知)",
+                                 anchor or "（這份文字裡沒有機型/航班號區段）")
                     try:
                         page.go_back()
                         page.wait_for_timeout(3000)
