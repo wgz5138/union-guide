@@ -25,6 +25,7 @@ import csv
 import json
 import logging
 import os
+import random
 import re
 from datetime import date, datetime
 from logging.handlers import RotatingFileHandler
@@ -44,6 +45,9 @@ MAX_TRIES = 8           # 每條航線最多重試幾次（高穩定性的關鍵
 WAIT_MS = 11_000        # 每次載入後等待毫秒
 FETCH_BAGGAGE = True    # 是否逐班點詳情抓「行李額度」（較慢：詳情頁也會間歇報錯需重試）
 BAGGAGE_TOP = 5         # 每條航線最多抓前幾班的行李（控制時間；其餘行李留空）
+# 禮貌間隔（毫秒，隨機區間）：班與班之間稍等再點，降低「系統發生錯誤」頻率、較不像機器人、較耐封。
+POLITE_WAIT_MS = (1500, 3500)
+SETTLE_MS = 1800        # 點開詳情後先給頁面這麼久 settle，再開始判斷，避免把載入瞬間誤當錯誤
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 PROFILE = os.path.join(HERE, "data", ".gf_profile")   # 持久設定檔（gitignore）
@@ -212,10 +216,23 @@ def click_flight(page, price, depart):
     return "no_match"
 
 
+def polite_wait(page):
+    """班與班之間的隨機禮貌間隔：降低觸發 Google 間歇錯誤、較不像機器人、較耐封。"""
+    try:
+        page.wait_for_timeout(random.randint(*POLITE_WAIT_MS))
+    except Exception:
+        pass
+
+
 def fetch_baggage(page):
     """在詳情頁抓行李；詳情頁也會間歇報錯，比照列表重試。
     全程防呆：任何步驟出錯都不拋例外（行李是加值，不該中斷主流程）。
     各種「沒抓到」的原因都記 log，方便診斷成功率為何偏低。"""
+    # 先給詳情頁一點時間 settle，避免把「正在載入的瞬間」誤判成錯誤就急著重載
+    try:
+        page.wait_for_timeout(SETTLE_MS)
+    except Exception:
+        pass
     for outer in range(5):
         got_error = False
         for _ in range(16):
@@ -243,7 +260,7 @@ def fetch_baggage(page):
                 log.info("　　[行李] 重載失敗放棄（frame detached 等）：%s", e)
                 return ""      # reload 失敗 → 放棄這班行李
         try:
-            page.wait_for_timeout(5000)
+            page.wait_for_timeout(random.randint(4000, 7000))  # 重載後等待加抖動
         except Exception:
             return ""
     log.info("　　[行李] 重試 5 輪仍抓不到，放棄這班")
@@ -274,6 +291,7 @@ def extract(page, route):
         log.info("　[行李] 開始逐班抓（前 %d 班）", min(BAGGAGE_TOP, len(rows)))
         for idx, row in enumerate(rows[:BAGGAGE_TOP], 1):
             try:
+                polite_wait(page)   # 點下一班前先禮貌等一下（隨機）
                 status = click_flight(page, row["price_twd"], row["depart_time"])
                 if status == "ok":
                     row["baggage"] = fetch_baggage(page)
