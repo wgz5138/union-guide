@@ -167,11 +167,15 @@ def click_flight(page, price, depart):
 
 
 def fetch_baggage(page):
-    """在詳情頁抓行李；詳情頁也會間歇報錯，比照列表重試。"""
+    """在詳情頁抓行李；詳情頁也會間歇報錯，比照列表重試。
+    全程防呆：任何步驟出錯都不拋例外（行李是加值，不該中斷主流程）。"""
     for _ in range(5):
         for _ in range(16):
-            page.wait_for_timeout(500)
-            d = page.inner_text("body")
+            try:
+                page.wait_for_timeout(500)
+                d = page.inner_text("body")
+            except Exception:
+                return ""
             if "手提行李" in d or "託運行李" in d:
                 return parse_baggage(d)
             if "系統發生錯誤" in d:
@@ -179,8 +183,14 @@ def fetch_baggage(page):
         try:
             page.get_by_text("重新載入", exact=False).first.click(timeout=3000)
         except Exception:
-            page.reload(timeout=60_000)
-        page.wait_for_timeout(5000)
+            try:
+                page.reload(timeout=60_000)
+            except Exception:
+                return ""      # reload 失敗（frame detached 等）→ 放棄這班行李
+        try:
+            page.wait_for_timeout(5000)
+        except Exception:
+            return ""
     return ""
 
 
@@ -203,14 +213,29 @@ def extract(page, route):
         seen.add(key); rows.append(row)
 
     # 2) 逐班點詳情補「行李額度」（前 BAGGAGE_TOP 班，控制時間）
+    #    全程防呆：任何一班出錯都只略過該班，絕不中斷整體抓取。
     if FETCH_BAGGAGE:
         for row in rows[:BAGGAGE_TOP]:
-            if click_flight(page, row["price_twd"], row["depart_time"]):
-                row["baggage"] = fetch_baggage(page)
-                page.go_back()
-                page.wait_for_timeout(3000)
-                if not (any(k in page.inner_text("body") for k in 結果線索)):
-                    load_with_retry(page, route)  # 返回失敗就重載列表
+            try:
+                if click_flight(page, row["price_twd"], row["depart_time"]):
+                    row["baggage"] = fetch_baggage(page)
+                    try:
+                        page.go_back()
+                        page.wait_for_timeout(3000)
+                    except Exception:
+                        pass
+                    # 確認回到列表，否則重載
+                    try:
+                        if not any(k in page.inner_text("body") for k in 結果線索):
+                            load_with_retry(page, route)
+                    except Exception:
+                        load_with_retry(page, route)
+            except Exception as e:
+                log.warning("　某班抓行李失敗（略過該班，不影響其餘）：%s", e)
+                try:
+                    load_with_retry(page, route)   # 嘗試回到可用列表
+                except Exception:
+                    pass
     return rows
 
 
