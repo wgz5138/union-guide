@@ -45,29 +45,38 @@ def main():
         ctx.add_init_script(STEALTH_JS)
         page = ctx.pages[0] if ctx.pages else ctx.new_page()
 
-        # 載入（重試）
-        for _ in range(8):
+        # 載入（重試），確認真的有結果才繼續
+        loaded = False
+        for i in range(1, 9):
             page.goto(URL, timeout=60_000)
             page.wait_for_timeout(11000)
             body = page.inner_text("body")
             if any(k in body for k in 結果線索) and not any(e in body for e in 錯誤線索):
+                loaded = True
+                print(f"第 {i} 次：結果已載出")
                 break
-        else:
-            print("⚠ 沒載出結果，再跑一次試試。")
+            print(f"第 {i} 次：未載出（間歇錯誤），重試…")
 
-        # 找第一張航班卡並點開
+        if not loaded:
+            print("\n⚠ 這次沒載出結果（Google 間歇性反爬）。")
+            print("　請『再跑一次』：python gf_step7_detail.py（持久設定檔會越跑越穩）")
+            ctx.close()
+            return
+
+        # 找第一張航班卡並點開（要求 價格+小時+時間 三者，避開頁尾誤判）
         target = None
         for li in page.query_selector_all("li"):
             try:
                 txt = li.inner_text()
             except Exception:
                 continue
-            if re.search(r"\$\s*[\d,]{3,}", txt) and "小時" in txt:
+            if (re.search(r"\$\s*[\d,]{3,}", txt) and "小時" in txt
+                    and re.search(r"\d{1,2}:\d{2}", txt)):
                 target = li
                 break
 
         if not target:
-            print("⚠ 找不到航班卡。")
+            print("⚠ 找不到航班卡（可再跑一次）。")
         else:
             print("找到第一張卡，嘗試點開詳情…")
             try:
