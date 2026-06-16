@@ -46,7 +46,7 @@ function colMap_(headers) {
 function doGet() {
   return HtmlService.createHtmlOutputFromFile('Index')
     .setTitle('工會籌備 · 工作分配')
-    .setMeta('viewport', 'width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no')
+    .addMetaTag('viewport', 'width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no')
     .addMetaTag('apple-mobile-web-app-capable', 'yes')
     .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
 }
