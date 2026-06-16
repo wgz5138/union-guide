@@ -86,10 +86,15 @@ def main():
                 break
             try:
                 cards[idx].click(timeout=5000)
-                page.wait_for_timeout(3500)
-                detail = page.inner_text("body")
-                bag = parse_baggage(detail)
-                print(f"  第 {idx+1} 班行李：{bag or '（沒抓到，可能版面不同）'}")
+                # 輪詢等行李資訊渲染（最多 ~9 秒），出現再讀，避免讀太早
+                bag = ""
+                for _ in range(18):
+                    page.wait_for_timeout(500)
+                    detail = page.inner_text("body")
+                    if "手提行李" in detail or "託運行李" in detail:
+                        bag = parse_baggage(detail)
+                        break
+                print(f"  第 {idx+1} 班行李：{bag or '（等 9 秒仍沒出現行李字樣）'}")
                 page.go_back()              # 返回列表
                 page.wait_for_timeout(3000)
                 back_ok = len(找卡(page)) > 0
