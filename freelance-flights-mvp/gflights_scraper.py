@@ -48,6 +48,10 @@ BAGGAGE_TOP = 5         # 每條航線最多抓前幾班的行李（控制時間
 # 禮貌間隔（毫秒，隨機區間）：班與班之間稍等再點，降低「系統發生錯誤」頻率、較不像機器人、較耐封。
 POLITE_WAIT_MS = (1500, 3500)
 SETTLE_MS = 1800        # 點開詳情後先給頁面這麼久 settle，再開始判斷，避免把載入瞬間誤當錯誤
+# 代理 IP（選配）：預設不使用（直連）。臨時被封/急用時，設環境變數 GF_PROXY 即可啟用，無需改程式：
+#   set GF_PROXY=http://host:port              （或 socks5://host:port）
+#   set GF_PROXY=http://帳號:密碼@host:port    （需帳密的付費代理）
+# 留空＝不走代理。委託方自備代理服務、費用自負（見「維護保固與責任說明」）。
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 PROFILE = os.path.join(HERE, "data", ".gf_profile")   # 持久設定檔（gitignore）
@@ -91,6 +95,29 @@ def build_url(route):
     from urllib.parse import urlencode
     return ("https://www.google.com/travel/flights?"
             + urlencode({"q": q, "curr": "TWD", "hl": "zh-TW", "gl": "TW"}))
+
+
+def build_proxy():
+    """讀環境變數 GF_PROXY 決定是否走代理；沒設就回 None（直連，預設行為）。
+    支援：http://host:port、socks5://host:port、http://帳號:密碼@host:port、host:port。
+    讓委託方在『臨時被封、急用』時，買個代理填進環境變數就立刻解，無需改程式。"""
+    raw = os.environ.get("GF_PROXY", "").strip()
+    if not raw:
+        return None
+    if "://" not in raw:
+        raw = "http://" + raw
+    from urllib.parse import urlparse
+    u = urlparse(raw)
+    if not u.hostname:
+        log.warning("　GF_PROXY 格式無法解析，改用直連：%r", raw)
+        return None
+    server = f"{u.scheme}://{u.hostname}" + (f":{u.port}" if u.port else "")
+    proxy = {"server": server}
+    if u.username:
+        proxy["username"] = u.username
+    if u.password:
+        proxy["password"] = u.password
+    return proxy
 
 
 def parse(text, route):
@@ -485,6 +512,13 @@ def main():
             ignore_default_args=["--enable-automation"],
             user_agent=UA, locale="zh-TW", timezone_id="Asia/Taipei",
             viewport={"width": 1366, "height": 850})
+        # 代理 IP（選配）：有設 GF_PROXY 才走代理；沒設＝直連（預設）
+        proxy = build_proxy()
+        if proxy:
+            launch_kw["proxy"] = proxy
+            log.info("　使用代理 IP：%s", proxy["server"])   # 不印帳密
+        else:
+            log.info("　未使用代理 IP（直連）")
         try:
             ctx = p.chromium.launch_persistent_context(channel="chrome", **launch_kw)
             log.info("　使用真 Chrome（channel=chrome）")
