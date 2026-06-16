@@ -198,20 +198,35 @@ def parse_baggage(text):
 def click_flight(page, price, depart):
     """在列表找出「票價＋出發時間」相符的航班並點開。
     回傳 'ok'（點到）/ 'click_fail'（找到卡但點不開）/ 'no_match'（找不到對應卡）。
-    （為了診斷行李抓不到的真因，把三種結果分開回報並記 log。）"""
+    Google 列表是虛擬捲動/lazy-load，下方卡片可能還沒在 DOM →
+    找不到時往下捲、邊捲邊找，把卡片逼出來再點（最多幾輪）。"""
     pf = f"{price:,}"
-    for li in page.query_selector_all("li"):
-        try:
-            t = li.inner_text()
-        except Exception:
-            continue
-        if pf in t and depart and depart in t and "小時" in t:
+    # 先回到列表頂端，從頭往下找，避免從半路開始漏掉上面的卡
+    try:
+        page.mouse.wheel(0, -4000)
+        page.wait_for_timeout(400)
+    except Exception:
+        pass
+    for attempt in range(7):
+        for li in page.query_selector_all("li"):
             try:
-                human_click(page, li)   # 擬真點擊（hover＋滑鼠軌跡＋微停）
-                return "ok"
-            except Exception as e:
-                log.info("　　[行李] 找到卡但點不開（價%s 出發%s）：%s", pf, depart, e)
-                return "click_fail"
+                t = li.inner_text()
+            except Exception:
+                continue
+            if pf in t and depart and depart in t and "小時" in t:
+                try:
+                    human_click(page, li)   # 擬真點擊（hover＋滑鼠軌跡＋微停）
+                    return "ok"
+                except Exception as e:
+                    log.info("　　[行李] 找到卡但點不開（價%s 出發%s）：%s",
+                             pf, depart, e)
+                    return "click_fail"
+        # 這一屏沒有 → 往下捲一段，讓更下面的卡片載出來再找
+        try:
+            page.mouse.wheel(0, random.randint(600, 1000))
+            page.wait_for_timeout(random.randint(500, 900))
+        except Exception:
+            break
     log.info("　　[行李] 列表找不到對應航班卡（價%s 出發%s）", pf, depart)
     return "no_match"
 
