@@ -30,7 +30,6 @@ import re
 from datetime import date, datetime
 from logging.handlers import RotatingFileHandler
 
-import requests
 from playwright.sync_api import sync_playwright
 
 # ─────────────────────────────────────────────────────────────
@@ -50,14 +49,10 @@ BAGGAGE_TOP = 5         # 每條航線最多抓前幾班的行李（控制時間
 POLITE_WAIT_MS = (1500, 3500)
 SETTLE_MS = 1800        # 點開詳情後先給頁面這麼久 settle，再開始判斷，避免把載入瞬間誤當錯誤
 
-NOTIFY_PRICE_DROP = True   # 抓完後比對「上次最低價」，變便宜就推 Telegram（不洗版）
-
 HERE = os.path.dirname(os.path.abspath(__file__))
 PROFILE = os.path.join(HERE, "data", ".gf_profile")   # 持久設定檔（gitignore）
 OUTPUT_CSV = os.path.join(HERE, "data", "gflights.csv")
 OUTPUT_JSON = os.path.join(HERE, "data", "gflights.json")
-# Google 版自己的「上次最低價」狀態（放 data/，與 API 版的 price_state.json 分開、互不干擾）
-PRICE_STATE_FILE = os.path.join(HERE, "data", "gflights_price_state.json")
 LOG_FILE = os.path.join(HERE, "logs", "gflights.log")
 
 UA = ("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
@@ -417,86 +412,11 @@ def save(rows):
              len(rows), len(existing), OUTPUT_CSV)
 
 
-# ─────────────────────────────────────────────────────────────
-# 降價偵測 + Telegram 通知（重用 API 版同一組環境變數 TG_TOKEN / TG_CHAT）
-# ─────────────────────────────────────────────────────────────
-def load_price_state():
-    """讀回各航線『上次最低價』{KHH-NRT: 5699}。檔案不存在/壞掉就回空的。"""
-    if not os.path.exists(PRICE_STATE_FILE):
-        return {}
-    try:
-        with open(PRICE_STATE_FILE, encoding="utf-8") as f:
-            d = json.load(f)
-        return d if isinstance(d, dict) else {}
-    except Exception:
-        return {}
-
-
-def save_price_state(state):
-    try:
-        os.makedirs(os.path.dirname(PRICE_STATE_FILE), exist_ok=True)
-        with open(PRICE_STATE_FILE, "w", encoding="utf-8") as f:
-            json.dump(state, f, ensure_ascii=False, indent=2)
-    except OSError as e:
-        log.warning("　價格狀態存檔失敗（不影響抓取）：%s", e)
-
-
-def tg_send(text):
-    """推到 Telegram；TG_TOKEN/TG_CHAT 沒設就只印畫面，不會出錯（防呆）。"""
-    token = os.environ.get("TG_TOKEN")
-    chat_id = os.environ.get("TG_CHAT")
-    if not (token and chat_id):
-        log.info("　（未設 TG_TOKEN/TG_CHAT，僅印畫面、不推播）")
-        return
-    try:
-        requests.post(
-            f"https://api.telegram.org/bot{token}/sendMessage",
-            data={"chat_id": chat_id, "text": text},
-            timeout=10,
-        )
-        log.info("　已推送到 Telegram。")
-    except requests.RequestException as e:
-        # 通知失敗不該害抓取掛掉，記一筆就好
-        log.warning("　Telegram 推送失敗（不影響抓取）：%s", e)
-
-
-def notify_if_cheaper(route, rows, state):
-    """找本航線最低價，與上次比；只在『變便宜』時推 Telegram（不洗版）。
-    會就地更新 state[航線] = 這次最低價。"""
-    priced = [r for r in rows if r.get("price_twd")]
-    if not priced:
-        return
-    best = min(priced, key=lambda r: r["price_twd"])
-    key = f"{route['origin']}-{route['dest']}"
-    now = best["price_twd"]
-    last = state.get(key)
-
-    trans = "直飛" if best["transfers"] == 0 else f"轉機{best['transfers']}次"
-    when = best["depart_time"] + (
-        "→" + best["arrive_time"] if best["arrive_time"] else "")
-    bag = f"\n🧳 {best['baggage']}" if best.get("baggage") else ""
-    head = (f"✈️ {route['origin']}→{route['dest']} {route['date']}\n"
-            f"最低 NT${now:,}（{best['airline'] or '航空未知'}・{trans}・{when}）")
-    link = "\n" + build_url(route)
-
-    if last is None:
-        log.info("　[降價] %s 首次記錄基準價 NT$%s（不推播）", key, f"{now:,}")
-    elif now < last:
-        msg = (f"📉 降價通知！{head}\n"
-               f"比上次便宜 {last - now:,} 元（上次 NT${last:,}）{bag}{link}")
-        log.info("🔔 %s", msg.replace("\n", " "))
-        tg_send(msg)
-    else:
-        log.info("　[降價] %s 沒變便宜（現 NT$%s／上次 NT$%s），不推播",
-                 key, f"{now:,}", f"{last:,}")
-    state[key] = now
-
-
 def main():
     log.info("=== Google Flights 抓取開始（%d 條航線）===", len(ROUTES))
     os.makedirs(os.path.dirname(PROFILE), exist_ok=True)
     total = 0
-    state = load_price_state() if NOTIFY_PRICE_DROP else {}  # 上次各航線最低價
+    all_rows = []   # 收集所有航班，供呼叫端（例如個人通知腳本）取用
     with sync_playwright() as p:
         # 啟動參數共用；優先用「你電腦真的 Chrome」(channel="chrome")，
         # 它的指紋(WebGL/字型/codec)就是真瀏覽器，比內建 Chromium 不易被偵測。
@@ -525,8 +445,7 @@ def main():
                              route["dest"], len(rows))
                     save(rows)            # ★ 抓完一條就先存，中途崩潰也不丟已抓到的
                     total += len(rows)
-                    if NOTIFY_PRICE_DROP:
-                        notify_if_cheaper(route, rows, state)
+                    all_rows.extend(rows)
                 else:
                     log.warning("　%s→%s：重試 %d 次仍未載出，略過。",
                                 route["origin"], route["dest"], MAX_TRIES)
@@ -534,9 +453,8 @@ def main():
                 log.warning("　%s→%s：發生未預期錯誤，略過此航線：%s",
                             route["origin"], route["dest"], e)
         ctx.close()
-    if NOTIFY_PRICE_DROP:
-        save_price_state(state)   # 把這次各航線最低價記起來，給下次比對
     log.info("=== 完成，本次共 %d 班 ===", total)
+    return all_rows
 
 
 if __name__ == "__main__":
