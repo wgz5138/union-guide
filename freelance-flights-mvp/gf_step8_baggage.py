@@ -40,14 +40,14 @@ def parse_baggage(text):
 
 
 def 找卡(page):
+    # 與 step7（有抓到行李的版本）一致：第一層用 價格+小時 即可
     cards = []
     for li in page.query_selector_all("li"):
         try:
             t = li.inner_text()
         except Exception:
             continue
-        if (re.search(r"\$\s*[\d,]{3,}", t) and "小時" in t
-                and re.search(r"\d{1,2}:\d{2}", t)):
+        if re.search(r"\$\s*[\d,]{3,}", t) and "小時" in t:
             cards.append(li)
     return cards
 
@@ -94,7 +94,11 @@ def main():
                     if "手提行李" in detail or "託運行李" in detail:
                         bag = parse_baggage(detail)
                         break
-                print(f"  第 {idx+1} 班行李：{bag or '（等 9 秒仍沒出現行李字樣）'}")
+                print(f"  第 {idx+1} 班行李：{bag or '（沒出現行李字樣）'}")
+                if not bag:
+                    # 診斷：把點開後的畫面文字印出來看跑到哪個畫面
+                    print("  ── 點開後畫面文字(前 700 字)──")
+                    print("  " + page.inner_text("body")[:700].replace("\n", " "))
                 page.go_back()              # 返回列表
                 page.wait_for_timeout(3000)
                 back_ok = len(找卡(page)) > 0
