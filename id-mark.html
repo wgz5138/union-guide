@@ -3,145 +3,202 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
-<title>身分證影本 加注記工具</title>
+<title>證件影本 加註記 · A4整理列印</title>
 <style>
   :root{ --red:#C0392B; --red-deep:#7B1818; --gold:#B7860B; --bg:#F6F3EF; --ink:#222; --soft:#777; --border:#E2DED7; }
   *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;}
   body{font-family:-apple-system,"PingFang TC","Noto Sans TC",sans-serif;background:var(--bg);color:var(--ink);line-height:1.6;}
-  .bar{background:var(--red);color:#fff;padding:14px 16px;text-align:center;}
-  .bar h1{font-size:18px;font-weight:700;}
+  .bar{background:var(--red);color:#fff;padding:13px 16px;text-align:center;}
+  .bar h1{font-size:17px;font-weight:700;}
   .bar p{font-size:11.5px;opacity:.85;margin-top:2px;}
-  main{max-width:560px;margin:0 auto;padding:16px;}
-  .card{background:#fff;border:1px solid var(--border);border-radius:14px;padding:16px;margin-bottom:14px;}
+  main{max-width:600px;margin:0 auto;padding:14px;}
+  .card{background:#fff;border:1px solid var(--border);border-radius:14px;padding:14px;margin-bottom:12px;}
   label{display:block;font-size:13px;font-weight:600;color:var(--red-deep);margin-bottom:6px;}
-  textarea,input[type=text]{width:100%;border:1.5px solid var(--border);border-radius:10px;padding:10px;font-size:15px;font-family:inherit;}
-  textarea{height:62px;resize:vertical;}
+  textarea,select,input[type=text]{width:100%;border:1.5px solid var(--border);border-radius:10px;padding:9px;font-size:15px;font-family:inherit;}
+  textarea{height:74px;resize:vertical;}
   .row{display:flex;gap:10px;align-items:center;margin-top:10px;}
-  .row label{margin:0;font-weight:500;color:var(--ink);}
+  .row label{margin:0;font-weight:500;color:var(--ink);white-space:nowrap;}
+  .row select{flex:1;}
   input[type=range]{flex:1;}
-  .btn{display:block;width:100%;border:none;border-radius:12px;padding:14px;font-size:16px;font-weight:700;cursor:pointer;}
+  .btn{display:block;width:100%;border:none;border-radius:12px;padding:13px;font-size:16px;font-weight:700;cursor:pointer;}
   .btn-pick{background:var(--gold);color:#fff;}
-  .btn-save{background:var(--red);color:#fff;margin-top:6px;}
+  .btn-make{background:#2E7D32;color:#fff;margin-top:6px;}
+  .btn-print{background:var(--red);color:#fff;margin-top:6px;}
   .btn:disabled{opacity:.4;}
   .hint{font-size:12px;color:var(--soft);margin-top:8px;}
-  .safe{background:#EAFAF1;border:1px solid #B8DCC4;color:#1A5C38;font-size:12.5px;padding:10px 12px;border-radius:10px;margin-bottom:14px;}
-  #preview{width:100%;border-radius:10px;margin-top:12px;display:none;border:1px solid var(--border);}
+  .safe{background:#EAFAF1;border:1px solid #B8DCC4;color:#1A5C38;font-size:12.5px;padding:10px 12px;border-radius:10px;margin-bottom:12px;}
   input[type=file]{display:none;}
-  select{width:100%;padding:10px;border:1.5px solid var(--border);border-radius:10px;font-size:15px;}
+  .item{display:flex;gap:10px;align-items:center;border:1px solid var(--border);border-radius:10px;padding:8px;margin-top:8px;}
+  .item img{width:64px;height:48px;object-fit:cover;border-radius:6px;flex-shrink:0;border:1px solid var(--border);}
+  .item select{flex:1;}
+  .item .del{background:#eee;border:none;border-radius:8px;padding:8px 10px;cursor:pointer;font-size:14px;}
+
+  #print{margin-top:14px;}
+  .page{width:210mm;min-height:297mm;padding:10mm;background:#fff;margin:0 auto 12px;box-shadow:0 0 8px rgba(0,0,0,.18);}
+  .page.grid{display:flex;flex-wrap:wrap;align-content:flex-start;}
+  .page:not(.grid) .slot{height:133mm;}
+  .page.grid .slot{width:50%;height:128mm;padding:0 3mm 4mm;}
+  .cap{font-weight:700;font-size:12pt;margin-bottom:2mm;color:#000;}
+  .slot .imgwrap{text-align:center;}
+  .slot img{max-width:100%;max-height:116mm;object-fit:contain;border:1px solid #bbb;}
+  .page.grid .slot img{max-height:104mm;}
+
+  @media screen{ .page{transform:scale(.46);transform-origin:top center;margin-bottom:-150mm;} }
+  @media print{
+    @page{ size:A4; margin:0; }
+    body{background:#fff;}
+    .noprint{display:none !important;}
+    #print{margin:0;}
+    .page{box-shadow:none;margin:0;transform:none;page-break-after:always;}
+  }
 </style>
 </head>
 <body>
   <div class="bar">
-    <h1>🪪 身分證影本 加注記</h1>
-    <p>防盜用 · 全程手機本機處理，照片不上傳</p>
+    <h1>🪪 證件影本 加註記 · A4整理列印</h1>
+    <p>身分證正反面／職員證／勞保證明，整理到一張 A4 列印 · 全程本機處理不上傳</p>
   </div>
 
   <main>
-    <div class="safe">🔒 你的證件照片<strong>只在這支手機裡處理</strong>，不會傳到網路或任何伺服器，請安心使用。</div>
+    <div class="safe noprint">🔒 你的證件照片<strong>只在這支手機/電腦本機處理，不會上傳</strong>任何伺服器。</div>
 
-    <div class="card">
-      <label>1. 注記文字（可改）</label>
-      <textarea id="text">本影本僅供「高雄榮民總醫院企業工會」籌組連署使用，他用無效</textarea>
+    <div class="card noprint">
+      <label>1. 註記文字（三行＋自動加上下劃線，防止被加字）</label>
+      <textarea id="anno">僅提供高雄榮民總醫院企業工會
+作為籌組連署發起之用
+塗改、他用無效</textarea>
       <div class="row">
-        <label>顏色</label>
-        <select id="color">
-          <option value="#C0392B">紅色（推薦）</option>
-          <option value="#1A4FA0">藍色</option>
-          <option value="#222222">黑色</option>
+        <label>註記位置</label>
+        <select id="pos">
+          <option value="tl">左上角空白處（推薦）</option>
+          <option value="tr">右上角</option>
+          <option value="bl">左下角</option>
+          <option value="br">右下角</option>
+          <option value="center">置中（較淡）</option>
         </select>
       </div>
-      <div class="row"><label>濃淡</label><input type="range" id="alpha" min="15" max="70" value="38"></div>
-      <div class="row"><label>字級</label><input type="range" id="size" min="14" max="44" value="24"></div>
-      <div class="hint">浮水印會半透明斜蓋整張，不會完全擋住號碼；送件仍看得清。</div>
+      <div class="row"><label>濃淡</label><input type="range" id="alpha" min="30" max="95" value="70"></div>
+      <div class="hint">⚠️ 送件版請確認存檔後「姓名・身分證字號・出生年月日・照片」都清楚看得到，否則勞工局核對不了會退件。</div>
     </div>
 
-    <div class="card">
-      <label>2. 選身分證照片</label>
-      <button class="btn btn-pick" onclick="document.getElementById('file').click()">📷 拍照 / 選照片</button>
-      <input type="file" id="file" accept="image/*" capture="environment">
-      <img id="preview" alt="預覽">
+    <div class="card noprint">
+      <label>2. 加入證件照片（可一次多張）</label>
+      <button class="btn btn-pick" onclick="document.getElementById('file').click()">➕ 拍照 / 從相簿選</button>
+      <input type="file" id="file" accept="image/*" multiple>
+      <div id="list"></div>
     </div>
 
-    <button class="btn btn-save" id="save" disabled onclick="save()">⬇ 存成有注記的圖片</button>
-    <p class="hint" id="status">尚未選擇照片。</p>
+    <button class="btn btn-make noprint" id="make" disabled onclick="build()">② 整理成 A4（預覽）</button>
+    <div class="row noprint" style="margin-top:8px">
+      <label>每頁張數</label>
+      <select id="perPage" onchange="if(window._built)build()">
+        <option value="2">2 張／頁（證件較大，推薦）</option>
+        <option value="4">4 張／頁（省紙）</option>
+      </select>
+    </div>
+    <button class="btn btn-print noprint" id="prn" disabled onclick="window.print()">🖨 列印 / 存成 PDF（一張 A4）</button>
+    <p class="hint noprint" id="status">尚未加入照片。加入後按「整理成 A4」。</p>
+
+    <div id="print"></div>
   </main>
 
 <script>
-  var canvas = document.createElement('canvas');
-  var ctx = canvas.getContext('2d');
-  var imgBitmap = null;
+  var items = [];   // {url, bitmap, label}
   var $ = function(id){ return document.getElementById(id); };
+  var TYPES = ['身分證正面','身分證反面','職員證正面','職員證反面','勞保投保證明','薪資證明','其他'];
 
   $('file').addEventListener('change', async function(e){
-    var f = e.target.files[0];
-    if(!f) return;
-    $('status').textContent = '處理中…';
-    try{
-      // 盡量依 EXIF 自動轉正
-      imgBitmap = await createImageBitmap(f, { imageOrientation: 'from-image' });
-    }catch(_){
-      imgBitmap = await loadFallback(f);
+    var files = Array.from(e.target.files || []);
+    for (var i=0;i<files.length;i++){
+      var f = files[i];
+      var bmp;
+      try { bmp = await createImageBitmap(f, { imageOrientation:'from-image' }); }
+      catch(_){ bmp = await loadFallback(f); }
+      var guess = TYPES[Math.min(items.length, TYPES.length-1)];
+      items.push({ url: URL.createObjectURL(f), bitmap: bmp, label: guess });
     }
-    render();
-    $('save').disabled = false;
-    $('status').textContent = '完成預覽，按下方存檔即可。';
+    e.target.value = '';
+    renderList();
   });
 
   function loadFallback(file){
-    return new Promise(function(res){
-      var img = new Image();
-      img.onload = function(){ res(img); };
-      img.src = URL.createObjectURL(file);
-    });
+    return new Promise(function(res){ var img=new Image(); img.onload=function(){res(img);}; img.src=URL.createObjectURL(file); });
   }
 
-  ['text','color','alpha','size'].forEach(function(id){
-    $(id).addEventListener('input', function(){ if(imgBitmap) render(); });
-  });
-
-  function render(){
-    var w = imgBitmap.width, h = imgBitmap.height;
-    canvas.width = w; canvas.height = h;
-    ctx.clearRect(0,0,w,h);
-    ctx.drawImage(imgBitmap, 0, 0, w, h);
-    drawWatermark(w, h);
-    var url = canvas.toDataURL('image/jpeg', 0.92);
-    var p = $('preview'); p.src = url; p.style.display = 'block';
+  function renderList(){
+    var box = $('list');
+    box.innerHTML = items.map(function(it, idx){
+      var opts = TYPES.map(function(t){ return '<option '+(t===it.label?'selected':'')+'>'+t+'</option>'; }).join('');
+      return '<div class="item">'+
+        '<img src="'+it.url+'">'+
+        '<select onchange="items['+idx+'].label=this.value">'+opts+'</select>'+
+        '<button class="del" onclick="removeItem('+idx+')">刪除</button>'+
+      '</div>';
+    }).join('');
+    var has = items.length>0;
+    $('make').disabled = !has;
+    $('status').textContent = has ? ('已加入 '+items.length+' 張，按「整理成 A4」。') : '尚未加入照片。';
   }
+  function removeItem(i){ items.splice(i,1); renderList(); $('print').innerHTML=''; $('prn').disabled=true; window._built=false; }
 
-  function drawWatermark(w, h){
-    var text = ($('text').value || '僅供連署使用').trim();
-    var base = Math.min(w, h);
-    var fs = Math.max(14, Math.round(base * ($('size').value/600)));
-    ctx.save();
-    ctx.globalAlpha = $('alpha').value/100;
-    ctx.fillStyle = $('color').value;
-    ctx.font = 'bold ' + fs + 'px sans-serif';
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
-    ctx.translate(w/2, h/2);
-    ctx.rotate(-26 * Math.PI/180);
-    var diag = Math.sqrt(w*w + h*h);
-    var tw = ctx.measureText(text).width;
-    var stepX = tw + fs * 2.2;
-    var stepY = fs * 3.4;
-    for(var y = -diag/2; y < diag/2; y += stepY){
-      var offset = (Math.round(y/stepY) % 2) ? stepX/2 : 0;
-      for(var x = -diag/2 - stepX; x < diag/2 + stepX; x += stepX){
-        ctx.fillText(text, x + offset, y);
-      }
+  // 把註記烤進圖片（角落框 + 上下劃線，不蓋整張）
+  function bake(bitmap){
+    var w=bitmap.width, h=bitmap.height;
+    var c=document.createElement('canvas'); c.width=w; c.height=h;
+    var x=c.getContext('2d');
+    x.drawImage(bitmap,0,0,w,h);
+
+    var lines=($('anno').value||'').split('\n').map(function(s){return s.trim();}).filter(Boolean);
+    if(lines.length){
+      var pos=$('pos').value, alpha=$('alpha').value/100;
+      var base=Math.min(w,h);
+      var fs=Math.max(13, Math.round(base*0.046));
+      x.font='bold '+fs+'px sans-serif';
+      var tw=0; lines.forEach(function(l){ tw=Math.max(tw, x.measureText(l).width); });
+      var pad=fs*0.55, lh=fs*1.3;
+      var bw=tw+pad*2, bh=lh*lines.length+pad*2;
+      var m=base*0.03, bx, by;
+      if(pos==='tl'){bx=m;by=m;}
+      else if(pos==='tr'){bx=w-bw-m;by=m;}
+      else if(pos==='bl'){bx=m;by=h-bh-m;}
+      else if(pos==='br'){bx=w-bw-m;by=h-bh-m;}
+      else {bx=(w-bw)/2;by=(h-bh)/2; alpha=Math.min(alpha,0.5);}
+      x.globalAlpha=Math.min(0.6, alpha*0.7);
+      x.fillStyle='#fff'; x.fillRect(bx,by,bw,bh);
+      x.globalAlpha=Math.max(alpha,0.6);
+      x.fillStyle='#C0392B'; x.textAlign='left'; x.textBaseline='top';
+      x.fillRect(bx,by,bw,Math.max(2,fs*0.08));
+      lines.forEach(function(l,i){ x.fillText(l, bx+pad, by+pad+i*lh); });
+      x.fillRect(bx,by+bh-Math.max(2,fs*0.08),bw,Math.max(2,fs*0.08));
+      x.globalAlpha=1;
     }
-    ctx.restore();
+    return c.toDataURL('image/jpeg',0.9);
   }
 
-  function save(){
-    canvas.toBlob(function(blob){
-      var a = document.createElement('a');
-      a.href = URL.createObjectURL(blob);
-      a.download = '身分證影本_已注記_' + Date.now() + '.jpg';
-      document.body.appendChild(a); a.click(); a.remove();
-      $('status').textContent = '已存檔！手機可長按預覽圖另存，或到下載夾找。';
-    }, 'image/jpeg', 0.92);
+  function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+
+  function build(){
+    if(!items.length){ alert('請先加入證件照片'); return; }
+    $('status').textContent='整理中…';
+    var per=parseInt($('perPage').value,10);
+    var grid = per===4;
+    var baked = items.map(function(it){ return { src: bake(it.bitmap), label: it.label }; });
+
+    var html='';
+    for(var i=0;i<baked.length;i+=per){
+      var group=baked.slice(i,i+per);
+      html+='<div class="page'+(grid?' grid':'')+'">';
+      group.forEach(function(b){
+        html+='<div class="slot"><div class="cap">'+esc(b.label)+'</div>'+
+              '<div class="imgwrap"><img src="'+b.src+'"></div></div>';
+      });
+      html+='</div>';
+    }
+    $('print').innerHTML=html;
+    window._built=true;
+    $('prn').disabled=false;
+    $('status').textContent='已整理成 A4，下方可預覽。確認資料清楚後按「列印/存PDF」。';
+    $('print').scrollIntoView({behavior:'smooth'});
   }
 </script>
 </body>
