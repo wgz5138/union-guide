@@ -143,6 +143,7 @@
   <button class="tab" data-p="report">法定報表</button>
   <button class="tab" data-p="public">公開查詢</button>
   <button class="tab" data-p="audit">查核就緒</button>
+  <button class="tab" data-p="tax">報稅</button>
   <button class="tab" data-p="law">法規依據</button>
   <button class="tab" data-p="set">設定</button>
 </div>
@@ -324,6 +325,14 @@
       </div>
     </div>
     <button class="btn full no-print" onclick="genAuditOpinion()">📝 產生監事審核意見書（範本 §13·§28·§30）</button>
+  </section>
+
+  <!-- ========== 報稅 ========== -->
+  <section class="panel" id="p-tax">
+    <div class="help">工會屬人民團體。<b>本身的會費、捐贈、基金存款利息</b>等非銷售收入，符合 <b>所得稅法§4①13、§11④</b> 與「免納所得稅適用標準」要件者免納所得稅；<b>符合免稅要件且無銷售/作業收入者，可免辦結算申報</b>（財政部）。但<b>發薪資、講師費等仍要扣繳</b>。以下逐項提醒並附官方條文，個案請洽國稅局／會計師確認。</div>
+    <div class="card"><div class="card-title">📋 報稅要確認的事（白話）</div><div id="taxChecklist"></div></div>
+    <div class="card"><div class="card-title">📖 相關稅法條文（官方）</div><div id="taxLaws"><p class="muted">載入中…</p></div></div>
+    <p class="footer-note" style="margin-top:0">稅務個案複雜，最終以國稅局核定為準。本頁條文取自全國法規資料庫（隨法規更新）。</p>
   </section>
 
   <!-- ========== 法規依據 ========== -->
@@ -581,6 +590,7 @@ document.getElementById('tabs').addEventListener('click',e=>{
   if(b.dataset.p==='asset') renderAssets();
   if(b.dataset.p==='book') renderReceipts();
   if(b.dataset.p==='home') renderHome();
+  if(b.dataset.p==='tax') renderTax();
   window.scrollTo(0,0);
 });
 function gotoLaw(art){ document.querySelector('.tab[data-p="law"]').click(); const el=document.getElementById('law-'+art); if(el){el.open=true; el.scrollIntoView({behavior:'smooth',block:'center'});} }
@@ -611,6 +621,8 @@ function renderHome(){
   }
   // 決算 §13
   todos.push(['todo','§13',`年底結帳：${Y} 年度<b>決算</b>要在 ${Y+1}/3/31 前編好。`,`白話：年度結束算總帳，送${DB.settings.supBoard?'監事會':'監事'}審核、大會通過後30日內報主管機關。`,'產生決算書','decal']);
+  // 報稅（所得稅法）
+  todos.push(['todo','所得稅法','<b>報稅</b>：確認免稅資格、要不要辦結算申報，發薪資/講師費記得<b>扣繳</b>。','白話：工會多半免稅，但有發錢給人就要扣稅、申報憑單；個案問國稅局。','看報稅提醒','tax']);
   document.getElementById('todoList').innerHTML=todos.map(t=>{
     const [lv,ref,txt,plain,btn,act]=t;
     const ico=lv==='ok'?'✅':lv==='warn'?'🟡':'🟠';
@@ -629,6 +641,7 @@ function renderHome(){
 }
 function homeAct(act){
   if(act==='budget') goTab('budget');
+  else if(act==='tax') goTab('tax');
   else if(act==='decal'){ goTab('report'); setTimeout(()=>genDecal(),300); }
   else if(act&&act.startsWith('pubq:')){ const key=act.slice(5); goTab('public'); if(confirm('要把這一季標記為「已公開」嗎？（請先確認真的已公告給會員）')) markPublished(key); }
 }
@@ -1075,6 +1088,39 @@ function genAuditOpinion(){
 <p style="margin-top:1.5rem">中華民國 ______ 年 ______ 月 ______ 日</p>
 <p class="note">本意見書由「工會透明帳本」依工會財務處理準則產生範本，實際審核結果與意見應由${sup}本於查核事實填載。pcode N0020014。</p>`;
   docShell(`${roc(Y)}年度 ${sup}財務審核意見書`, '依工會財務處理準則第13條、第28條、第30條辦理', inner, `高雄榮總護理工會_${Y}年度監事審核意見書.html`);
+}
+
+/* ===================== 報稅（資料驅動，條文取自 laws.json）===================== */
+let TAXLAWS=null;
+const TAX_NAMES=["所得稅法","加值型及非加值型營業稅法","教育文化公益慈善機關或團體免納所得稅適用標準"];
+function renderTaxChecklist(){
+  const items=[
+    ['免稅資格','所得稅法§4①13·§11④',`工會（人民團體）符合免稅要件者，其<b>會費、捐贈、基金存款利息</b>等非銷售收入免納所得稅。要件含：依法登記、章程載明任務、不分配盈餘、剩餘財產歸屬地方政府或其他公益團體等（見下方「免納所得稅適用標準」）。<b>請向轄區國稅局確認本會是否符合。</b>`],
+    ['要不要辦結算申報','所得稅法§71',`財政部：符合免稅要件、<b>且無銷售貨物或勞務收入</b>，只有會費／捐贈／利息者，<b>可免辦所得稅結算申報</b>；若有銷售或作業組織收入，仍須依§71辦理（一般為每年 5/1～5/31，以條文為準）。`],
+    ['扣繳（最常碰到）','所得稅法§88·§89·§92',`本會<b>給付薪資、講師鐘點費、執行業務報酬</b>時是「扣繳義務人」，應依§88、§89辦理扣繳，並依§92期限申報扣繳憑單。發講師費、會務人員薪水都算。`],
+    ['營業稅','營業稅法§1·§3·§8·§28·§35',`若有<b>銷售貨物或勞務</b>（附表的「銷售收入／進項稅額／銷項稅額」），涉及營業稅（登記§28、申報§35）。純收會費／補助通常不涉及。`],
+    ['政府補助款','工會財務處理準則§27·§30⑧',`受政府補助者，核銷與留存依政府規定（與免稅無關，但憑證要留）。已在「單據快拍／記帳」標記政府補助。`]
+  ];
+  document.getElementById('taxChecklist').innerHTML = items.map(([t,ref,txt])=>
+    `<div class="alert ok" style="flex-direction:column;align-items:stretch"><div><b>${t}</b>　<span class="law-pill" onclick="goTax('${esc(ref)}')">${esc(ref)}</span></div><div style="font-size:13px;margin-top:4px;color:var(--ink-mid)">${txt}</div></div>`
+  ).join('') + `<div class="alert warn"><span class="ico">⚠️</span><div>稅務個案複雜，<b>最終以國稅局核定為準</b>。金額大或不確定，請洽轄區國稅局或會計師。</div></div>`;
+}
+function goTax(){ document.getElementById('taxLaws').scrollIntoView({behavior:'smooth'}); }
+async function renderTax(){
+  renderTaxChecklist();
+  const box=document.getElementById('taxLaws');
+  if(TAXLAWS===null){
+    try{ const r=await fetch('./laws.json',{cache:'no-store'}); const d=await r.json(); TAXLAWS=(d.laws||[]).filter(L=>TAX_NAMES.indexOf(L.law)>=0); }
+    catch(e){ TAXLAWS=[]; }
+  }
+  if(!TAXLAWS.length){ box.innerHTML='<div class="alert warn"><span class="ico">⏳</span><div>稅法條文尚未匯入（需連網，或待法規自動更新後顯示官方全文）。上方提醒仍可參考；條文請暫至全國法規資料庫查 所得稅法、營業稅法、免納所得稅適用標準。</div></div>'; return; }
+  let html='';
+  TAX_NAMES.forEach(nm=>{
+    const arts=TAXLAWS.filter(a=>a.law===nm); if(!arts.length) return;
+    html+=`<div style="font-weight:600;margin:10px 0 4px;color:var(--green-deep)">${esc(nm)}</div>`;
+    arts.forEach(a=>{ html+=`<details class="law-art"><summary>${esc(a.art)}</summary><div class="txt">${esc(a.text)}</div></details>`; });
+  });
+  box.innerHTML=html;
 }
 
 /* ===================== 法規依據 ===================== */
