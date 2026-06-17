@@ -177,7 +177,7 @@ const IDB={db:null,
   async del(id){const s=await this.st('readwrite');return new Promise(res=>{const r=s.delete(id);r.onsuccess=()=>res();r.onerror=()=>res();});}
 };
 function fmt(n){return "$"+(Math.round(n)||0).toLocaleString('en-US');}
-function esc(s){return (s||'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));}
+function esc(s){return (s==null?'':''+s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
 /* SHA-256 數位指紋（瀏覽器內建，純本機）。回傳 64 字 16 進位字串；不支援時回 null。 */
 async function sha256(str){ try{ if(!(crypto&&crypto.subtle))return null; const buf=new TextEncoder().encode(str); const h=await crypto.subtle.digest('SHA-256',buf); return [...new Uint8Array(h)].map(b=>b.toString(16).padStart(2,'0')).join(''); }catch(e){ return null; } }
 

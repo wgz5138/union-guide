@@ -418,14 +418,28 @@ const DB_KEY="union_fin_db";
 let DB = load();
 let curType="out";
 
-function load(){
-  try{ const d=JSON.parse(localStorage.getItem(DB_KEY)); if(d&&d.entries){ if(!d.assets)d.assets=[]; if(!d.budget)d.budget={income:{},expense:{},note:''}; if(!d.published)d.published={}; if(d.settings.priorCum==null)d.settings.priorCum=0; if(d.settings.liab==null)d.settings.liab=0; return d; } }catch(e){}
-  return { year:new Date().getFullYear(), entries:[], assets:[], budget:{income:{},expense:{},note:''}, published:{},
-    settings:{secretary:false,supBoard:false,invest:false,opening:0,pettyCap:100000,reserve:0,priorCum:0,liab:0} };
+function normalize(d){ // 補齊缺漏欄位，避免舊備份/部分資料造成崩潰或資料被丟棄
+  d=d&&typeof d==='object'?d:{};
+  d.entries=Array.isArray(d.entries)?d.entries:[];
+  d.assets=Array.isArray(d.assets)?d.assets:[];
+  d.budget=(d.budget&&typeof d.budget==='object')?d.budget:{income:{},expense:{},note:''};
+  d.budget.income=d.budget.income||{}; d.budget.expense=d.budget.expense||{};
+  d.published=(d.published&&typeof d.published==='object')?d.published:{};
+  d.year=d.year||new Date().getFullYear();
+  const s=d.settings=(d.settings&&typeof d.settings==='object')?d.settings:{};
+  const def={secretary:false,supBoard:false,invest:false,opening:0,pettyCap:100000,reserve:0,priorCum:0,liab:0};
+  for(const k in def) if(s[k]==null) s[k]=def[k];
+  return d;
 }
-function save(){ localStorage.setItem(DB_KEY, JSON.stringify(DB)); }
+function load(){
+  try{ const d=JSON.parse(localStorage.getItem(DB_KEY)); if(d&&d.entries) return normalize(d); }catch(e){}
+  return normalize({});
+}
+function save(){ try{ localStorage.setItem(DB_KEY, JSON.stringify(DB)); }catch(e){ alert('⚠ 儲存失敗：本機儲存空間可能已滿。請到「設定 → 匯出全部資料」備份後再清理舊資料。'); } }
 function fmt(n){ return "$"+(Math.round(n)||0).toLocaleString('en-US'); }
-function esc(s){ return (s||'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
+function esc(s){ return (s==null?'':''+s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+function sid(x){ return String(x==null?'':x).replace(/[^A-Za-z0-9_-]/g,''); }            // 安全 id（防 onclick 注入）
+function safeImg(u){ return (typeof u==='string' && /^data:image\//.test(u))? u : ''; }   // 只允許 data:image 影像
 async function sha256(str){ try{ if(!(crypto&&crypto.subtle))return null; const buf=new TextEncoder().encode(str); const h=await crypto.subtle.digest('SHA-256',buf); return [...new Uint8Array(h)].map(b=>b.toString(16).padStart(2,'0')).join(''); }catch(e){ return null; } }
 
 /* ===================== 單據快拍 IndexedDB（與 receipt.html 共用 unionFin/receipts）===================== */
@@ -443,7 +457,7 @@ async function renderReceipts(){
   if(!pending.length){ card.style.display='none'; empty.style.display='block'; return; }
   card.style.display='block'; empty.style.display='none';
   document.getElementById('rcptPending').innerHTML=pending.sort((a,b)=>b.created-a.created).map(r=>
-    `<div class="entry"><div class="e-amt out">−${fmt(r.amt).slice(1)}</div><div class="e-body"><div class="e-sum">${esc(r.sum||r.cat)} ${r.img?'📎':''}</div><div class="e-meta"><span class="e-tag">${esc(r.cat)}</span>${r.cash?'<span class="e-tag cash">現金</span>':''}${r.gov?'<span class="e-tag gov">政府補助</span>':''}${r.date}　${esc(r.handler||'')}</div></div><button class="e-del no-print" onclick="ingestOne('${r.id}')" style="color:var(--green);font-size:13px">收進↓</button></div>`
+    `<div class="entry"><div class="e-amt out">−${fmt(r.amt).slice(1)}</div><div class="e-body"><div class="e-sum">${esc(r.sum||r.cat)} ${r.img?'📎':''}</div><div class="e-meta"><span class="e-tag">${esc(r.cat)}</span>${r.cash?'<span class="e-tag cash">現金</span>':''}${r.gov?'<span class="e-tag gov">政府補助</span>':''}${esc(r.date)}　${esc(r.handler||'')}</div></div><button class="e-del no-print" onclick="ingestOne('${sid(r.id)}')" style="color:var(--green);font-size:13px">收進↓</button></div>`
   ).join('');
 }
 async function ingestOne(id){
@@ -470,16 +484,28 @@ function importBundle(ev){
   rd.onload=async()=>{ try{
     const d=JSON.parse(rd.result);
     const list=d.receipts||d; if(!Array.isArray(list))throw 0;
-    let n=0; for(const r of list){ if(r&&r.id&&r.amt!=null){ r.imported=false; await IDB.put(r); n++; } }
-    ev.target.value=''; renderReceipts(); alert('已匯入 '+n+' 筆單據，請於上方「收進帳本」。');
-  }catch(e){ alert('單據檔格式不正確'); } };
+    let n=0,skip=0;
+    for(const r of list){
+      if(!r||r.id==null){skip++;continue;}
+      r.id=sid(r.id);
+      const amt=Math.round(+r.amt);
+      if(!isFinite(amt)||amt<=0){skip++;continue;}              // §5：金額須為正整數，過濾異常
+      r.amt=amt;
+      if(r.img&&!/^data:image\//.test(r.img)) r.img=null;        // 丟棄非影像（防注入）
+      const ex=await IDB.get(r.id);
+      r.imported=(ex&&ex.imported)?true:false;                  // 已收過者保持，避免重複收進雙計
+      await IDB.put(r); n++;
+    }
+    renderReceipts(); alert('已匯入 '+n+' 筆單據'+(skip?('（略過 '+skip+' 筆異常）'):'')+'，請於上方「收進帳本」。');
+  }catch(e){ alert('單據檔格式不正確'); } finally{ ev.target.value=''; } };
   rd.readAsText(f);
 }
 async function viewReceipt(rcptId){
   const r=await IDB.get(rcptId);
   if(!r){alert('找不到此單據影像（可能在另一台裝置）。');return;}
   const w=window.open('','_blank');
-  const html=`<!DOCTYPE html><meta charset=utf-8><title>單據 ${r.date}</title><body style="margin:0;background:#222;text-align:center;font-family:sans-serif"><div style="color:#ccc;padding:8px;font-size:13px">${esc(r.sum||r.cat)} · ${fmt(r.amt)} · ${r.date} · 憑證保存至 ${(+(r.date||'2026').slice(0,4))+5} 年（§27）${r.hash?'<br>數位指紋 '+esc(r.hash.slice(0,32))+'…':''}</div>${r.img?`<img src="${r.img}" style="max-width:100%">`:'<p style="color:#ccc">（此單據無照片）</p>'}</body>`;
+  const im=safeImg(r.img);
+  const html=`<!DOCTYPE html><meta charset=utf-8><title>單據 ${esc(r.date)}</title><body style="margin:0;background:#222;text-align:center;font-family:sans-serif"><div style="color:#ccc;padding:8px;font-size:13px">${esc(r.sum||r.cat)} · ${fmt(r.amt)} · ${esc(r.date)} · 憑證保存至 ${(+(''+(r.date||'2026')).slice(0,4))+5} 年（§27）${r.hash?'<br>數位指紋 '+esc((''+r.hash).slice(0,32))+'…':''}</div>${im?`<img src="${im}" style="max-width:100%">`:'<p style="color:#ccc">（此單據無照片）</p>'}</body>`;
   if(w){w.document.write(html);w.document.close();}
 }
 async function verifyReceipt(rcptId){
@@ -504,7 +530,7 @@ async function genReceiptPDF(q){
   // 數位指紋清單（供核對/簽名；SHA-256，純本機計算）
   let fp=`<tr class="t"><td>#</td><td>日期</td><td>用途</td><td>數位指紋（SHA-256）</td></tr>`;
   list.forEach((r,i)=>{ fp+=`<tr><td>${i+1}</td><td>${r.date}</td><td>${esc(r.sum||r.cat)}</td><td style="font-family:monospace;font-size:10px;word-break:break-all">${r.hash?esc(r.hash):'（無照片，無指紋）'}</td></tr>`; });
-  const pages=list.map((r,i)=>`<div class="r"><div class="cap"><b>單據 ${i+1} / ${list.length}</b>　${r.date}　${esc(r.sum||r.cat)}　${fmt(r.amt)}　${r.cat}　${r.cash?'現金':'轉帳'}${r.gov?'（政府補助）':''}${r.shotAt?'　｜拍攝 '+esc(r.shotAt.slice(0,16).replace('T',' ')):''}${r.geo?'　GPS '+r.geo.lat.toFixed(4)+','+r.geo.lng.toFixed(4):''}　｜保存至 ${(+(r.date||'2026').slice(0,4))+5} 年（§27）${r.hash?'<br>數位指紋 '+esc(r.hash):''}</div>${r.img?`<img src="${r.img}">`:'<p style="color:#999">（此單據無照片，僅有帳載資料）</p>'}</div>`).join('');
+  const pages=list.map((r,i)=>`<div class="r"><div class="cap"><b>單據 ${i+1} / ${list.length}</b>　${r.date}　${esc(r.sum||r.cat)}　${fmt(r.amt)}　${r.cat}　${r.cash?'現金':'轉帳'}${r.gov?'（政府補助）':''}${r.shotAt?'　｜拍攝 '+esc(r.shotAt.slice(0,16).replace('T',' ')):''}${r.geo?'　GPS '+r.geo.lat.toFixed(4)+','+r.geo.lng.toFixed(4):''}　｜保存至 ${(+(''+(r.date||'2026')).slice(0,4))+5} 年（§27）${r.hash?'<br>數位指紋 '+esc(r.hash):''}</div>${safeImg(r.img)?`<img src="${safeImg(r.img)}">`:'<p style="color:#999">（此單據無照片，僅有帳載資料）</p>'}</div>`).join('');
   const html=`<!DOCTYPE html><html lang="zh-TW"><head><meta charset="utf-8"><title>${esc('高雄榮總護理工會 '+title)}</title>
 <style>@page{size:A4;margin:1.4cm}*{box-sizing:border-box}body{font-family:'Noto Sans TC',sans-serif;color:#1a1a1a;margin:0}
 h1{text-align:center;font-size:18px;font-family:'Noto Serif TC',serif;margin:.2rem 0}.sub{text-align:center;color:#555;font-size:12px;margin-bottom:12px}
@@ -680,7 +706,7 @@ function renderEntries(){
     return `<div class="entry">
       <div class="e-amt ${e.type}">${e.type==='in'?'+':'−'}${fmt(e.amt).slice(1)}</div>
       <div class="e-body">
-        <div class="e-sum">${esc(e.sum||e.cat)}${e.rcptId?` <span class="e-tag cash" style="cursor:pointer" onclick="viewReceipt('${e.rcptId}')">📎 單據</span> <span class="e-tag" style="cursor:pointer" onclick="verifyReceipt('${e.rcptId}')">🔒 驗證</span>`:''}</div>
+        <div class="e-sum">${esc(e.sum||e.cat)}${e.rcptId?` <span class="e-tag cash" style="cursor:pointer" onclick="viewReceipt('${sid(e.rcptId)}')">📎 單據</span> <span class="e-tag" style="cursor:pointer" onclick="verifyReceipt('${sid(e.rcptId)}')">🔒 驗證</span>`:''}</div>
         <div class="e-meta">
           <span class="e-tag">${esc(e.cat)}</span>
           ${e.cash?'<span class="e-tag cash">零用金</span>':''}
@@ -689,7 +715,7 @@ function renderEntries(){
           <br>憑證保存至 ${retY} 年（§27 至少5年）
         </div>
       </div>
-      <button class="e-del no-print" onclick="delEntry('${e.id}')">✕</button>
+      <button class="e-del no-print" onclick="delEntry('${sid(e.id)}')">✕</button>
     </div>`;
   }).join('');
 }
@@ -1110,15 +1136,27 @@ function saveSettings(){
   DB.settings.liab=+document.getElementById('setLiab').value||0;
   save(); fillSettings(); refreshKPI(); renderEntries(); alert('已儲存');
 }
-function exportJSON(){
-  const blob=new Blob([JSON.stringify(DB,null,2)],{type:'application/json'});
+async function exportJSON(){
+  let receipts=[]; try{ receipts=await IDB.all(); }catch(e){}
+  const payload=Object.assign({_backupVer:1,_exported:new Date().toISOString(),_receipts:receipts}, DB);
+  const blob=new Blob([JSON.stringify(payload)],{type:'application/json'});
   const a=document.createElement('a'); a.href=URL.createObjectURL(blob);
   a.download=`工會帳本備份_${DB.year}_${new Date().toISOString().slice(0,10)}.json`; a.click();
+  alert('已匯出完整備份（含 '+receipts.length+' 張單據照片）。請妥善保存此檔，這是換手機/清資料後唯一的還原來源。');
 }
 function importJSON(ev){
   const f=ev.target.files[0]; if(!f) return;
   const r=new FileReader();
-  r.onload=()=>{ try{ const d=JSON.parse(r.result); if(!d.entries) throw 0; if(!confirm('將覆蓋現有資料，確定匯入？')) return; DB=d; save(); fillSettings(); renderEntries(); refreshKPI(); alert('匯入完成'); }catch(e){ alert('檔案格式不正確'); } };
+  r.onload=async()=>{ try{
+    const d=JSON.parse(r.result); if(!d.entries) throw 0;
+    if(!confirm('將覆蓋現有帳目資料，確定匯入？')) { ev.target.value=''; return; }
+    const receipts=Array.isArray(d._receipts)?d._receipts:null;
+    delete d._receipts; delete d._backupVer; delete d._exported;
+    DB=normalize(d); save();
+    if(receipts){ let n=0; for(const rc of receipts){ if(rc&&rc.id!=null){ rc.id=sid(rc.id); try{ await IDB.put(rc); n++; }catch(e){} } } }
+    fillSettings(); renderEntries(); refreshKPI(); renderReceipts(); renderHome();
+    alert('匯入完成'+(receipts?('（含 '+receipts.length+' 張單據照片）'):''));
+  }catch(e){ alert('檔案格式不正確'); } finally{ ev.target.value=''; } };
   r.readAsText(f);
 }
 function exportCSV(){
@@ -1132,7 +1170,7 @@ function exportCSV(){
   const a=document.createElement('a'); a.href=URL.createObjectURL(blob);
   a.download=`工會帳本_${DB.year}.csv`; a.click();
 }
-function wipe(){ if(prompt('將清空本機所有帳目，無法復原。請輸入「清空」確認')==='清空'){ DB=load(); DB.entries=[]; save(); renderEntries(); refreshKPI(); alert('已清空'); } }
+function wipe(){ if(prompt('將清空本機所有帳目（明細、財產、預算、公開紀錄），無法復原。單據照片不受影響。請輸入「清空」確認')==='清空'){ DB.entries=[]; DB.assets=[]; DB.budget={income:{},expense:{},note:''}; DB.published={}; save(); renderEntries(); refreshKPI(); renderHome(); alert('已清空帳目（單據照片仍在；如需刪除請至單據快拍）'); } }
 
 /* ===================== init ===================== */
 (function init(){
