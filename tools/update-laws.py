@@ -215,6 +215,30 @@ def main():
     if not out:
         raise RuntimeError("沒有收到任何法條，疑似結構改變，中止（不覆蓋 laws.json）。")
 
+    # 併入補充條目（官方 API 抓不到的附表／附件，例如工會財務處理準則的會計科目表）。
+    # 放在 tools/supplements.json，每次自動更新都會一併併入、不被覆蓋。
+    try:
+        with open("tools/supplements.json", encoding="utf-8") as f:
+            supp = json.load(f)
+        have = {(norm_name(o["law"]), o["art"].replace(" ", "")) for o in out}
+        added = 0
+        for s in supp:
+            if not s.get("law") or not s.get("art") or not s.get("text"):
+                continue
+            key = (norm_name(s["law"]), s["art"].replace(" ", ""))
+            if key in have:
+                continue
+            out.append({"law": s["law"].strip(), "art": s["art"].strip(),
+                        "title": s.get("title", "").strip(), "text": s["text"].strip(),
+                        "cat": s.get("cat", "其他").strip(), "modified": s.get("modified", "")})
+            added += 1
+        if added:
+            print("  併入補充條目 %d 條（supplements.json）" % added)
+    except FileNotFoundError:
+        pass
+    except Exception as e:
+        print("⚠ 讀取 supplements.json 失敗（略過）：", e, file=sys.stderr)
+
     payload = {
         "updated": update_date,
         "source": "全國法規資料庫 law.moj.gov.tw（api/Ch/Law/JSON）",
