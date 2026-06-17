@@ -136,6 +136,9 @@
 
 <div class="tabs" id="tabs">
   <button class="tab active" data-p="book">記帳</button>
+  <button class="tab" data-p="journal">日記簿</button>
+  <button class="tab" data-p="budget">預算</button>
+  <button class="tab" data-p="asset">財產清冊</button>
   <button class="tab" data-p="report">法定報表</button>
   <button class="tab" data-p="public">公開查詢</button>
   <button class="tab" data-p="audit">查核就緒</button>
@@ -196,6 +199,59 @@
     </div>
   </section>
 
+  <!-- ========== 日記簿 ========== -->
+  <section class="panel" id="p-journal">
+    <div class="help"><b>第8條</b>：年度決算收入 ≤ 300萬者得僅置<b>日記簿</b>乙種（本會適用）。下表為依日期排序之流水帳，含逐筆結存，可列印裝訂成冊。有財產購置/處分另見「財產清冊」。</div>
+    <div class="card">
+      <div class="card-title">日記簿 · <span id="jYear"></span> 年度 <span class="law-pill" onclick="gotoLaw('第8條')">§8</span></div>
+      <div id="journalTable"></div>
+    </div>
+    <button class="btn ghost full no-print" onclick="window.print()">🖨 列印日記簿 / 存 PDF</button>
+  </section>
+
+  <!-- ========== 預算 ========== -->
+  <section class="panel" id="p-budget">
+    <div class="help"><b>第12條</b>：年度開始前，由<b>理事會</b>編「年度工作計畫及收支預算表」，提經會員（代表）大會議決後，<b>報主管機關備查</b>。下方填列各科目預算，並自動與本年實際（決算）對照。</div>
+    <div class="card">
+      <div class="card-title">收支預算表 · <span id="bYear"></span> 年度 <span class="law-pill" onclick="gotoLaw('第12條')">§12</span></div>
+      <p class="muted" style="margin-bottom:6px">收入預算（附表收入類 §7）</p>
+      <div id="budgetIn"></div>
+      <p class="muted" style="margin:10px 0 6px">支出預算（附表支出類 §7）</p>
+      <div id="budgetOut"></div>
+      <label>編列說明 / 工作計畫摘要</label>
+      <textarea id="budgetNote" placeholder="例：本年度勞工教育、會員福利、會務運作重點…"></textarea>
+      <button class="btn full no-print" style="margin-top:10px" onclick="saveBudget()">儲存預算</button>
+    </div>
+    <div class="card" id="budgetCompare"></div>
+    <button class="btn ghost full no-print" onclick="window.print()">🖨 列印預算表 / 存 PDF</button>
+  </section>
+
+  <!-- ========== 財產清冊 ========== -->
+  <section class="panel" id="p-asset">
+    <div class="help"><b>第6條⑤</b>財產清冊、<b>第14條</b>財產＝投資＋固定資產＋其他資產。<b>第19條</b>：財物須以<b>工會名義</b>登記，不得登記他人名下、不得挪為私用。<b>第16條</b>：不動產購置/出售/轉讓/負擔須<b>大會議決</b>；<b>第14條</b>：投資種類、比例須大會議決。</div>
+    <div class="card">
+      <div class="card-title">登記一項財產 <span class="law-pill" onclick="gotoLaw('第14條')">§14·§19</span></div>
+      <div class="row">
+        <div><label>取得日期</label><input type="date" id="aDate"></div>
+        <div><label>科目（附表）</label><select id="aCat"></select></div>
+      </div>
+      <label>名稱 / 內容</label>
+      <input id="aName" placeholder="例：會所影印機 / ○○定存 / 辦公桌椅">
+      <div class="row">
+        <div><label>金額（取得成本，元 §5）</label><input type="number" id="aAmt" inputmode="numeric" min="0" step="1" placeholder="0"></div>
+        <div><label>憑證/契約號</label><input id="aVno" placeholder="發票/契約"></div>
+      </div>
+      <label class="chk"><input type="checkbox" id="aOwner" checked> 已以「工會名義」登記（§19 不得登記他人名下）</label>
+      <div id="assetAlerts" style="margin-top:8px"></div>
+      <button class="btn full" style="margin-top:8px" onclick="addAsset()">＋ 登記財產</button>
+    </div>
+    <div class="card">
+      <div class="card-title">財產清冊 <span class="law-pill" onclick="gotoLaw('第6條')">§6⑤</span></div>
+      <div id="assetList"></div>
+    </div>
+    <button class="btn ghost full no-print" onclick="window.print()">🖨 列印財產清冊 / 存 PDF</button>
+  </section>
+
   <!-- ========== 法定報表 ========== -->
   <section class="panel" id="p-report">
     <div class="help">依 <b>第6條</b>，工會會計報告包括：①資產負債表 ②收支餘絀表 ③現金流量表 ④淨值變動表 ⑤財產清冊。下方依本機帳目即時產生（收支餘絀表為主），可列印給監事 / 大會 / 主管機關。</div>
@@ -250,6 +306,11 @@
       <button class="btn ghost full sm" style="margin-top:8px" onclick="saveSettings()">儲存</button>
     </div>
     <div class="card">
+      <div class="card-title">財務處理辦法範本 <span class="law-pill" onclick="gotoLaw('第15條')">§15·§17</span></div>
+      <p class="muted" style="margin-bottom:8px">§15：工會應訂定財務處理辦法，經會員（代表）大會議決後實施（含財產登記、增置、增減值、處分、負擔及保管運用程序）。§17·§18：應訂普通會計、出納會計、財物會計處理程序。下方依本準則產生草稿，供理事會修訂、提大會議決。</p>
+      <button class="btn full" onclick="genRules()">📄 產生「財務處理辦法」草稿（可列印）</button>
+    </div>
+    <div class="card">
       <div class="card-title">備份 / 交接 / 給會計師</div>
       <p class="muted" style="margin-bottom:8px">資料只在本機。請定期匯出備份；換手交接、送監事或會計師查核時匯出 JSON。</p>
       <button class="btn full" onclick="exportJSON()">⬇ 匯出全部資料（JSON 備份）</button>
@@ -284,6 +345,11 @@ const ACCOUNTS = {
 };
 // §21：事業費＋辦公費 須 ≥ 總支出 40%
 const CORE_OUT = ["事業費","辦公費"];
+// 財產科目（附表：固定資產＋基金及投資＋其他資產 §14）
+const ACCOUNTS_ASSET = ["土地","房屋及建築","運輸設備","辦公設備","其他設備","基金","長期投資","存出保證金","遞延費用","其他資產"];
+// §16 不動產相關、§14 投資相關 → 需大會議決
+const REALTY_CATS = ["土地","房屋及建築"];
+const INVEST_CATS = ["基金","長期投資"];
 
 const PW_KEY="union_fin_pw", SES="union_fin_session";
 const DEFAULT_PW="union2026";
@@ -292,9 +358,9 @@ let DB = load();
 let curType="out";
 
 function load(){
-  try{ const d=JSON.parse(localStorage.getItem(DB_KEY)); if(d&&d.entries) return d; }catch(e){}
-  return { year:new Date().getFullYear(), entries:[],
-    settings:{secretary:false,supBoard:true,invest:false,opening:0,pettyCap:100000,reserve:0} };
+  try{ const d=JSON.parse(localStorage.getItem(DB_KEY)); if(d&&d.entries){ if(!d.assets)d.assets=[]; if(!d.budget)d.budget={income:{},expense:{},note:''}; return d; } }catch(e){}
+  return { year:new Date().getFullYear(), entries:[], assets:[], budget:{income:{},expense:{},note:''},
+    settings:{secretary:false,supBoard:false,invest:false,opening:0,pettyCap:100000,reserve:0} };
 }
 function save(){ localStorage.setItem(DB_KEY, JSON.stringify(DB)); }
 function fmt(n){ return "$"+(Math.round(n)||0).toLocaleString('en-US'); }
@@ -322,6 +388,9 @@ document.getElementById('tabs').addEventListener('click',e=>{
   if(b.dataset.p==='report') renderReports();
   if(b.dataset.p==='public') renderPublic();
   if(b.dataset.p==='audit') renderAudit();
+  if(b.dataset.p==='journal') renderJournal();
+  if(b.dataset.p==='budget') renderBudget();
+  if(b.dataset.p==='asset') renderAssets();
   window.scrollTo(0,0);
 });
 function gotoLaw(art){ document.querySelector('.tab[data-p="law"]').click(); const el=document.getElementById('law-'+art); if(el){el.open=true; el.scrollIntoView({behavior:'smooth',block:'center'});} }
@@ -522,6 +591,115 @@ function renderAudit(){
     `<p class="muted" style="margin-top:8px">受政府補助者，應依政府相關規定辦理（§27）。留痕原則：避免直接刪除已了結紀錄。</p>`;
 }
 
+/* ===================== 日記簿（§8）===================== */
+function renderJournal(){
+  document.getElementById('jYear').textContent=DB.year;
+  const list=yearEntries().sort((a,b)=>a.date.localeCompare(b.date)||a.id.localeCompare(b.id));
+  let bal=DB.settings.opening||0;
+  let rows=`<tr class="sub"><td>日期</td><td>摘要</td><td>科目</td><td class="num">收入</td><td class="num">支出</td><td class="num">結存</td></tr>`;
+  rows+=`<tr><td>—</td><td>期初結存</td><td>§6</td><td class="num"></td><td class="num"></td><td class="num">${fmt(bal)}</td></tr>`;
+  let ti=0,to=0;
+  list.forEach(e=>{ bal+= e.type==='in'?e.amt:-e.amt; if(e.type==='in')ti+=e.amt; else to+=e.amt;
+    rows+=`<tr><td>${e.date.slice(5)}</td><td>${esc(e.sum||e.cat)}${e.vno?'<br><span class="muted">憑'+esc(e.vno)+'</span>':''}</td><td>${esc(e.cat)}</td><td class="num">${e.type==='in'?fmt(e.amt):''}</td><td class="num">${e.type==='out'?fmt(e.amt):''}</td><td class="num">${fmt(bal)}</td></tr>`; });
+  rows+=`<tr class="tot"><td colspan="3">合計</td><td class="num">${fmt(ti)}</td><td class="num">${fmt(to)}</td><td class="num">${fmt(bal)}</td></tr>`;
+  document.getElementById('journalTable').innerHTML = list.length? `<table>${rows}</table>` : '<p class="muted">尚無紀錄，請至「記帳」登記。</p>';
+}
+
+/* ===================== 預算（§12）===================== */
+function renderBudget(){
+  document.getElementById('bYear').textContent=DB.year;
+  const mk=(type)=>ACCOUNTS[type].map(c=>{
+    const v=(DB.budget[type==='in'?'income':'expense'][c])||'';
+    return `<div class="row" style="align-items:center;gap:6px;margin-bottom:4px"><div style="flex:1.2;font-size:13px">${c}</div><div style="flex:1"><input type="number" min="0" step="1" data-bt="${type}" data-bc="${c}" value="${v}" placeholder="0" style="padding:.35rem .5rem"></div></div>`;
+  }).join('');
+  document.getElementById('budgetIn').innerHTML=mk('in');
+  document.getElementById('budgetOut').innerHTML=mk('out');
+  document.getElementById('budgetNote').value=DB.budget.note||'';
+  renderBudgetCompare();
+}
+function saveBudget(){
+  const inc={},exp={};
+  document.querySelectorAll('[data-bt]').forEach(el=>{ const v=+el.value||0; if(v>0){ (el.dataset.bt==='in'?inc:exp)[el.dataset.bc]=v; } });
+  DB.budget={income:inc,expense:exp,note:document.getElementById('budgetNote').value.trim()};
+  save(); renderBudgetCompare(); alert('已儲存預算（提理事會編製→大會議決→報主管機關備查 §12）');
+}
+function renderBudgetCompare(){
+  const inAct=sumByCat('in'), outAct=sumByCat('out');
+  const bi=DB.budget.income||{}, be=DB.budget.expense||{};
+  const totBI=Object.values(bi).reduce((a,b)=>a+b,0), totBE=Object.values(be).reduce((a,b)=>a+b,0);
+  const totAI=Object.values(inAct).reduce((a,b)=>a+b,0), totAO=Object.values(outAct).reduce((a,b)=>a+b,0);
+  let r=`<tr class="sub"><td>項目</td><td class="num">預算 §12</td><td class="num">實際 §13</td><td class="num">執行率</td></tr>`;
+  const line=(label,bud,act)=>`<tr><td>${label}</td><td class="num">${fmt(bud)}</td><td class="num">${fmt(act)}</td><td class="num">${bud?(act/bud*100).toFixed(0)+'%':'—'}</td></tr>`;
+  r+=line('收入合計',totBI,totAI);
+  r+=line('支出合計',totBE,totAO);
+  r+=`<tr class="tot"><td>賸餘（預算 vs 實際）</td><td class="num">${fmt(totBI-totBE)}</td><td class="num">${fmt(totAI-totAO)}</td><td class="num"></td></tr>`;
+  document.getElementById('budgetCompare').innerHTML=`<div class="card-title">預算 vs 決算對照 <span class="law-pill" onclick="gotoLaw('第13條')">§13</span></div><table>${r}</table><p class="muted" style="margin-top:8px">決算於年度結束後3個月內由理事會編製，經監事審核、大會議決後30日內報主管機關備查（§13）。</p>`;
+}
+
+/* ===================== 財產清冊（§6⑤·§14·§16·§19）===================== */
+function fillAssetCat(){ const s=document.getElementById('aCat'); s.innerHTML=''; ACCOUNTS_ASSET.forEach(c=>{const o=document.createElement('option');o.value=c;o.textContent=c;s.appendChild(o);}); }
+document.addEventListener('change',e=>{ if(e.target.id==='aCat'||e.target.id==='aOwner') assetLiveCheck(); });
+function assetLiveCheck(){
+  const cat=document.getElementById('aCat').value, owner=document.getElementById('aOwner').checked;
+  const out=[];
+  if(!owner) out.push(['bad','§19','財物須以「工會名義」登記，不得登記於他人名下，並不得挪為私用。']);
+  if(REALTY_CATS.includes(cat)) out.push(['warn','§16','不動產之購置/出售/轉讓/負擔或其他權利設定，應經會員（代表）大會議決。']);
+  if(INVEST_CATS.includes(cat)) out.push(['warn','§14','投資之種類、比例，應經會員（代表）大會議決。']);
+  renderAlerts(document.getElementById('assetAlerts'),out);
+}
+function addAsset(){
+  const date=document.getElementById('aDate').value, name=document.getElementById('aName').value.trim();
+  const amt=+document.getElementById('aAmt').value||0, cat=document.getElementById('aCat').value;
+  if(!date){alert('請選取得日期');return;}
+  if(!name){alert('請填名稱');return;}
+  if(!amt||amt<=0){alert('請填金額');return;}
+  DB.assets.push({id:Date.now()+''+Math.floor(Math.random()*1000),date,cat,name,amt,
+    vno:document.getElementById('aVno').value.trim(), owner:document.getElementById('aOwner').checked});
+  save();
+  ['aName','aAmt','aVno'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('aOwner').checked=true; document.getElementById('assetAlerts').innerHTML='';
+  renderAssets();
+}
+function delAsset(id){ if(!confirm('刪除這項財產？')) return; DB.assets=DB.assets.filter(a=>a.id!==id); save(); renderAssets(); }
+function renderAssets(){
+  fillAssetCat();
+  const list=(DB.assets||[]).slice().sort((a,b)=>a.cat.localeCompare(b.cat)||a.date.localeCompare(b.date));
+  const box=document.getElementById('assetList');
+  if(!list.length){ box.innerHTML='<p class="muted">尚無財產登記。固定資產、投資、其他資產於此造冊（§6⑤）。</p>'; return; }
+  const tot=list.reduce((a,x)=>a+x.amt,0);
+  let r=`<tr class="sub"><td>科目</td><td>名稱</td><td>取得日</td><td class="num">金額</td><td class="no-print"></td></tr>`;
+  list.forEach(a=>{ r+=`<tr><td>${esc(a.cat)}${a.owner?'':' <span style="color:var(--red)">⛔非工會名義</span>'}</td><td>${esc(a.name)}${a.vno?'<br><span class="muted">'+esc(a.vno)+'</span>':''}</td><td>${a.date}</td><td class="num">${fmt(a.amt)}</td><td class="no-print"><button class="e-del" onclick="delAsset('${a.id}')">✕</button></td></tr>`; });
+  r+=`<tr class="tot"><td colspan="3">財產總額</td><td class="num">${fmt(tot)}</td><td class="no-print"></td></tr>`;
+  box.innerHTML=`<table>${r}</table>`;
+}
+
+/* ===================== 財務處理辦法範本（§15·§17·§18）===================== */
+function genRules(){
+  const sup=DB.settings.supBoard?'監事會':'監事';
+  const sealPpl=DB.settings.secretary?'理事長、秘書長及會計出納人員':'理事長、（未設秘書長者由其他相關職務人員）及會計出納人員';
+  const html=`<!DOCTYPE html><html lang="zh-TW"><head><meta charset="utf-8"><title>高雄榮總護理工會 財務處理辦法（草稿）</title>
+<style>body{font-family:'Noto Serif TC',serif;max-width:760px;margin:2rem auto;padding:0 1.5rem;line-height:1.9;color:#1a1a1a}h1{text-align:center;font-size:20px}h2{font-size:15px;border-left:4px solid #1A7A4A;padding-left:8px;margin-top:1.4rem}p,li{font-size:14px}.note{color:#777;font-size:12px}ol{padding-left:1.4rem}</style></head><body>
+<h1>高雄榮總護理工會 財務處理辦法（草稿）</h1>
+<p class="note">依《工會財務處理準則》（工會法第30條第2項授權）第15、17、18條訂定。本草稿由工具自動產生，須提理事會修訂、經會員（代表）大會議決後實施。</p>
+<h2>第一條（依據）</h2><p>本辦法依工會法及工會財務處理準則第十五條規定訂定之。</p>
+<h2>第二條（會計年度與基礎）</h2><p>本會會計年度採曆年制，自每年一月一日起至十二月三十一日止（準則§3）。會計基礎採權責發生制，平時得採現金收付制，年終結算時調整為權責發生制（準則§4）。財務以新臺幣元為單位（準則§5）。</p>
+<h2>第三條（會計科目與報告）</h2><p>會計科目依準則§7及附表分資產、負債、淨值、收入、支出五類。會計報告包括資產負債表、收支餘絀表、現金流量表、淨值變動表、財產清冊（準則§6）。</p>
+<h2>第四條（簿籍與憑證）</h2><p>本會年度決算收入在新臺幣三百萬元以下，得僅置日記簿乙種，有財產購置或處分者另置財產登記簿（準則§8）。會計憑證分原始憑證與記帳憑證，並列明製作、審核人員之責任（準則§9～§11、§18）。</p>
+<h2>第五條（出納與用印）</h2><p>提用存款時，應由${sealPpl}於領款憑證上共同蓋章，並承擔用印之法律責任（準則§20）。零用金不得超過新臺幣十萬元，其額度及運用規則經理事會決議並交財務人員保管；日常開支每筆在一萬元以下者，得在零用金項下以現金支付（準則§19）。</p>
+<h2>第六條（財產之登記、增置、處分、保管運用）</h2><ol><li>財物應以本會名義登記，不得登記於他人名下，不得挪為私用（準則§19）。</li><li>不動產之購置、出售、轉讓、負擔或其他權利之設定，應經會員（代表）大會議決（準則§16）。</li><li>投資之種類、比例，應經會員（代表）大會議決（準則§14）。</li><li>固定資產按耐用年數計提折舊（附表累積折舊）。</li></ol>
+<h2>第七條（預算與決算）</h2><p>年度開始前由理事會編年度工作計畫及收支預算表，提大會議決後報主管機關備查（準則§12）。年度結束後三個月內由理事會編業務報告書、決算書（表），經${sup}審核後，提大會議決後三十日內報主管機關備查；決算金額在三千萬元以上且有投資事業者，應委請會計師簽證（準則§13）。</p>
+<h2>第八條（支出限制）</h2><p>年度事業費及辦公費支出不得少於總支出百分之四十（準則§21）。歷年決算結餘應作以後年度支出之財源，不得做結餘之分配（準則§23）。應逐年提列足夠之準備金，決算虧損者得不提列（準則§22）。</p>
+<h2>第九條（財務公開）</h2><p>本會財務收支不得匿報或虛報，並按季公開揭示（準則§26）。</p>
+<h2>第十條（查核）</h2><p>本會辦理定期及臨時財務查核，由${sup}為之；會員或會員代表查核財務狀況，依工會法第二十九條辦理（準則§28）。</p>
+<h2>第十一條（檔案保存）</h2><p>各種會計簿籍及會計報告，自決算程序終了之日起至少保存十年；各種憑證（未了結之債權債務除外）至少保存五年；受政府補助者依政府相關規定辦理（準則§27）。</p>
+<h2>第十二條（施行）</h2><p>本辦法經會員（代表）大會議決後施行，修正時亦同。</p>
+<p class="note" style="margin-top:2rem">※ 本草稿僅供參考，實際條文與金額、職稱請依本會章程與理事會、大會決議調整。</p>
+</body></html>`;
+  const w=window.open('','_blank');
+  if(w){ w.document.write(html); w.document.close(); }
+  else { const blob=new Blob([html],{type:'text/html'}); const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='工會財務處理辦法_草稿.html'; a.click(); }
+}
+
 /* ===================== 法規依據 ===================== */
 function renderLaw(){
   const L=window.UNION_LAW;
@@ -579,7 +757,10 @@ function wipe(){ if(prompt('將清空本機所有帳目，無法復原。請輸�
 
 /* ===================== init ===================== */
 (function init(){
-  document.getElementById('fDate').value=new Date().toISOString().slice(0,10);
+  const today=new Date().toISOString().slice(0,10);
+  document.getElementById('fDate').value=today;
+  document.getElementById('aDate').value=today;
+  fillAssetCat();
   setType('out'); fillSettings(); renderEntries(); refreshKPI(); renderLaw();
 })();
 if('serviceWorker' in navigator){ navigator.serviceWorker.register('sw.js').catch(()=>{}); }
