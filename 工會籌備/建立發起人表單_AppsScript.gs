@@ -62,7 +62,8 @@ function buildForm() {
 
   form.addMultipleChoiceItem()
     .setTitle('在職證明，您可提供的方式（擇一即可，現場再交）')
-    .setChoiceValues(['勞保投保資料表', '薪資單／薪資轉帳明細', '人資開立之在職證明', '職員證／識別證影本', '需協助'])
+    .setHelpText('最推薦「勞保投保資料表」：自己用勞動部APP／勞保局e化就能下載，不必經過人資。職員證僅供輔助，單獨恐不足。')
+    .setChoiceValues(['勞保投保資料表（最推薦，自己可下載）', '薪資單／薪資轉帳明細', '人資開立之在職證明', '職員證／識別證影本（僅輔助，建議再附勞保資料）', '需協助'])
     .showOtherOption(true)
     .setRequired(false);
 
