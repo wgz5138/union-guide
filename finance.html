@@ -258,7 +258,8 @@
     <div class="card" id="repIncome"></div>
     <div class="card" id="repCompliance"></div>
     <div class="card" id="repBudget"></div>
-    <button class="btn ghost full no-print" onclick="window.print()">🖨 列印 / 存 PDF</button>
+    <button class="btn full no-print" onclick="genDecal()">📑 產生決算書（正式格式 §6·§13）</button>
+    <button class="btn ghost full no-print" style="margin-top:8px" onclick="window.print()">🖨 列印 / 存 PDF</button>
   </section>
 
   <!-- ========== 公開查詢 ========== -->
@@ -274,6 +275,7 @@
     <div class="help"><b>第28-30條</b>：監事（監事會）辦定期及臨時查核、會員依工會法第29條查核、主管機關得委託專業團體查核。<b>第30條</b>查核範圍9項，逐項對照如下。<b>第27條</b>：簿籍/報告至少存10年、憑證至少存5年。</div>
     <div class="card" id="auditScope"></div>
     <div class="card" id="auditRetention"></div>
+    <button class="btn full no-print" onclick="genAuditOpinion()">📝 產生監事審核意見書（範本 §13·§28·§30）</button>
   </section>
 
   <!-- ========== 法規依據 ========== -->
@@ -695,9 +697,112 @@ function genRules(){
 <h2>第十二條（施行）</h2><p>本辦法經會員（代表）大會議決後施行，修正時亦同。</p>
 <p class="note" style="margin-top:2rem">※ 本草稿僅供參考，實際條文與金額、職稱請依本會章程與理事會、大會決議調整。</p>
 </body></html>`;
-  const w=window.open('','_blank');
-  if(w){ w.document.write(html); w.document.close(); }
-  else { const blob=new Blob([html],{type:'text/html'}); const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='工會財務處理辦法_草稿.html'; a.click(); }
+  openDoc(html,'工會財務處理辦法_草稿.html');
+}
+const DOC_CSS=`body{font-family:'Noto Serif TC',serif;max-width:780px;margin:1.5rem auto;padding:0 1.5rem;line-height:1.85;color:#1a1a1a}h1{text-align:center;font-size:21px;margin-bottom:2px}.sub{text-align:center;color:#555;font-size:13px;margin-bottom:1.2rem}h2{font-size:15px;border-left:4px solid #1A7A4A;padding-left:8px;margin-top:1.4rem}p,li,td,th{font-size:13.5px}table{width:100%;border-collapse:collapse;margin:.5rem 0}th,td{border:1px solid #ccc;padding:.4rem .55rem;text-align:left}td.n,th.n{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}tr.t td{font-weight:700;background:#f3f8f5}.fill{color:#999}.sign{margin-top:2rem;display:flex;flex-wrap:wrap;gap:1.5rem;font-size:13px}.sign div{flex:1;min-width:180px;border-top:1px solid #999;padding-top:6px}.note{color:#777;font-size:11.5px;line-height:1.7;margin-top:1.5rem;border-top:1px dashed #ccc;padding-top:8px}@media print{body{margin:0}}`;
+function openDoc(html,fname){ const w=window.open('','_blank'); if(w){ w.document.write(html); w.document.close(); } else { const b=new Blob([html],{type:'text/html'}); const a=document.createElement('a'); a.href=URL.createObjectURL(b); a.download=fname; a.click(); } }
+function roc(y){ return '中華民國 '+(y-1911)+' 年'; }
+
+/* ===================== 決算書（正式格式 §6·§13）===================== */
+function genDecal(){
+  const Y=DB.year, inM=sumByCat('in'), outM=sumByCat('out');
+  const totIn=Object.values(inM).reduce((a,b)=>a+b,0), totOut=Object.values(outM).reduce((a,b)=>a+b,0);
+  const surplus=totIn-totOut, open=DB.settings.opening||0, endCash=open+surplus;
+  const assets=(DB.assets||[]), assetTot=assets.reduce((a,x)=>a+x.amt,0), reserve=DB.settings.reserve||0;
+  const sup=DB.settings.supBoard?'監事會':'監事';
+  const f=fmt;
+  let incRows=ACCOUNTS.in.filter(c=>inM[c]).map(c=>`<tr><td>${c}</td><td class="n">${f(inM[c])}</td></tr>`).join('')||'<tr><td class="fill">（無）</td><td class="n">$0</td></tr>';
+  let outRows=ACCOUNTS.out.filter(c=>outM[c]).map(c=>`<tr><td>${c}</td><td class="n">${f(outM[c])}</td></tr>`).join('')||'<tr><td class="fill">（無）</td><td class="n">$0</td></tr>';
+  let assetRows=assets.length?assets.map(a=>`<tr><td>${esc(a.cat)}</td><td>${esc(a.name)}</td><td>${a.date}</td><td class="n">${f(a.amt)}</td></tr>`).join(''):'<tr><td colspan="3" class="fill">（尚無財產登記）</td><td class="n">$0</td></tr>';
+  const html=`<!DOCTYPE html><html lang="zh-TW"><head><meta charset="utf-8"><title>高雄榮總護理工會 ${Y}年度決算書</title><style>${DOC_CSS}</style></head><body>
+<h1>高雄榮總護理工會</h1><h1 style="font-size:18px">${roc(Y)}年度決算書</h1>
+<div class="sub">依工會財務處理準則第6條、第13條編製 · 會計年度 ${Y}/1/1～${Y}/12/31（§3）· 新臺幣元（§5）</div>
+
+<h2>一、業務報告書（§13）</h2>
+<p class="fill">（請由理事會填列本年度會務、財務及業務執行概況。）</p>
+
+<h2>二、收支餘絀表（§6②）</h2>
+<table>
+<tr class="t"><td>收入科目</td><td class="n">金額</td></tr>${incRows}
+<tr class="t"><td>收入合計</td><td class="n">${f(totIn)}</td></tr>
+<tr class="t"><td>支出科目</td><td class="n">金額</td></tr>${outRows}
+<tr class="t"><td>支出合計</td><td class="n">${f(totOut)}</td></tr>
+<tr class="t"><td>本期餘絀</td><td class="n">${f(surplus)}</td></tr>
+</table>
+
+<h2>三、資產負債表（§6①）</h2>
+<table>
+<tr class="t"><td>資產</td><td class="n">金額</td></tr>
+<tr><td>現金及銀行存款（期末）</td><td class="n">${f(endCash)}</td></tr>
+<tr><td>財產（投資＋固定資產＋其他資產 §14）</td><td class="n">${f(assetTot)}</td></tr>
+<tr class="t"><td>資產合計</td><td class="n">${f(endCash+assetTot)}</td></tr>
+<tr class="t"><td>負債及淨值</td><td class="n">金額</td></tr>
+<tr><td>負債（應付款等 §7）</td><td class="n fill">　（依實際填列）</td></tr>
+<tr><td>準備金（§22）</td><td class="n">${f(reserve)}</td></tr>
+<tr><td>本期餘絀</td><td class="n">${f(surplus)}</td></tr>
+<tr><td>累計餘絀（§7）</td><td class="n fill">　（依上年度結轉填列）</td></tr>
+</table>
+<p class="note">※ 本表資產面由本機帳目自動帶出；負債及累計餘絀因屬跨年度科目，請依實際帳載填列後使本表平衡（資產＝負債＋淨值）。</p>
+
+<h2>四、現金流量表（§6③，現金基礎）</h2>
+<table>
+<tr><td>期初現金及約當現金</td><td class="n">${f(open)}</td></tr>
+<tr><td>本期現金流入（收入）</td><td class="n">${f(totIn)}</td></tr>
+<tr><td>本期現金流出（支出）</td><td class="n">${f(totOut)}</td></tr>
+<tr class="t"><td>期末現金及約當現金</td><td class="n">${f(endCash)}</td></tr>
+</table>
+
+<h2>五、淨值變動表（§6④）</h2>
+<table>
+<tr><td>期初淨值</td><td class="n fill">　（依上年度填列）</td></tr>
+<tr><td>本期餘絀</td><td class="n">${f(surplus)}</td></tr>
+<tr><td>本期提列準備金（§22）</td><td class="n">${f(reserve)}</td></tr>
+<tr class="t"><td>期末淨值</td><td class="n fill">　（合計）</td></tr>
+</table>
+<p class="note">※ 歷年決算結餘應作以後年度支出之財源，不得做結餘之分配（§23）。</p>
+
+<h2>六、財產清冊（§6⑤）</h2>
+<table>
+<tr class="t"><td>科目</td><td>名稱／內容</td><td>取得日</td><td class="n">金額</td></tr>${assetRows}
+<tr class="t"><td colspan="3">財產總額</td><td class="n">${f(assetTot)}</td></tr>
+</table>
+
+<h2>七、決算審查與報備（§13）</h2>
+<p>本決算書於 ${roc(Y+1)} ____ 月 ____ 日（年度結束後三個月內）由理事會編製，經 ${sup} 審核，並提 ${roc(Y+1)} ____ 月 ____ 日會員（代表）大會議決，於議決後三十日內報請主管機關備查。${DB.settings.invest&&totIn>=30000000?'<b>本年度決算金額達三千萬元以上且有投資事業，業依規定委請會計師簽證。</b>':''}</p>
+<div class="sign"><div>理事長（蓋章）</div><div>會計（蓋章）</div><div>出納（蓋章）</div><div>${sup}（蓋章）</div></div>
+<p class="note">本決算書由「工會透明帳本」依工會財務處理準則自動產生草稿，金額以本機帳載為準，須經理事會、${sup}及大會程序確認。pcode N0020014。</p>
+</body></html>`;
+  openDoc(html,`高雄榮總護理工會_${Y}年度決算書.html`);
+}
+
+/* ===================== 監事審核意見書（範本 §13·§28·§30）===================== */
+function genAuditOpinion(){
+  const Y=DB.year, sup=DB.settings.supBoard?'監事會':'監事';
+  const inM=sumByCat('in'),outM=sumByCat('out');
+  const totIn=Object.values(inM).reduce((a,b)=>a+b,0),totOut=Object.values(outM).reduce((a,b)=>a+b,0);
+  const items=['會計憑證','會計帳簿','會計報告','預算、決算','財產保管','各項資產、負債及淨值之評核','會員申訴有關財務事項','有關政府補助經費事項','其他有關財務事項'];
+  const rows=items.map((t,i)=>`<tr><td>${i+1}</td><td>${t}</td><td style="text-align:center">□ 符合　□ 建議改善</td><td class="fill"></td></tr>`).join('');
+  const html=`<!DOCTYPE html><html lang="zh-TW"><head><meta charset="utf-8"><title>高雄榮總護理工會 ${Y}年度 ${sup}審核意見書</title><style>${DOC_CSS}</style></head><body>
+<h1>高雄榮總護理工會</h1><h1 style="font-size:18px">${roc(Y)}年度 ${sup}財務審核意見書</h1>
+<div class="sub">依工會財務處理準則第13條、第28條、第30條辦理</div>
+<p>本${sup}依工會財務處理準則第二十八條規定，就本會 ${roc(Y)}年度財務辦理${DB.settings.supBoard?'定期':'定期及臨時'}查核，查核範圍依同準則第三十條所列事項，結果如下：</p>
+<h2>一、查核範圍與結果（§30）</h2>
+<table><tr class="t"><td>項次</td><td>查核項目</td><td style="text-align:center">查核結果</td><td>說明</td></tr>${rows}</table>
+<h2>二、財務概要（依決算 §6·§13）</h2>
+<table>
+<tr><td>本年度收入合計</td><td class="n">${fmt(totIn)}</td></tr>
+<tr><td>本年度支出合計</td><td class="n">${fmt(totOut)}</td></tr>
+<tr class="t"><td>本期餘絀</td><td class="n">${fmt(totIn-totOut)}</td></tr>
+</table>
+<h2>三、審核意見</h2>
+<p>經查本會 ${roc(Y)}年度各項收支均檢附憑證、帳簿記載與決算書（表）相符，財務收支無匿報或虛報情事（§26），事業費及辦公費支出${(()=>{const c=(outM['事業費']||0)+(outM['辦公費']||0);const r=totOut?c/totOut*100:0;return r>=40?'已達總支出百分之四十以上（符合§21）':'<b class="fill">（占 '+(totOut?(c/totOut*100).toFixed(1):0)+'%，未達§21之40%，建議檢討）</b>';})()}。</p>
+<p class="fill">（如有應改善或建議事項，請於此處敘明。）</p>
+<p>上開決算書（表）經本${sup}審核${DB.settings.supBoard?'並決議':''}，造具本審核意見書，送請理事會提報會員（代表）大會議決。</p>
+<div class="sign">${DB.settings.supBoard?'<div>常務監事（蓋章）</div><div>監事（蓋章）</div><div>監事（蓋章）</div>':'<div>監事（蓋章）</div>'}</div>
+<p style="margin-top:1.5rem">中華民國 ______ 年 ______ 月 ______ 日</p>
+<p class="note">本意見書由「工會透明帳本」依工會財務處理準則產生範本，實際審核結果與意見應由${sup}本於查核事實填載。pcode N0020014。</p>
+</body></html>`;
+  openDoc(html,`高雄榮總護理工會_${Y}年度監事審核意見書.html`);
 }
 
 /* ===================== 法規依據 ===================== */
