@@ -27,6 +27,8 @@
   .btn:disabled{opacity:.4;}
   .hint{font-size:12px;color:var(--soft);margin-top:8px;}
   .safe{background:#EAFAF1;border:1px solid #B8DCC4;color:#1A5C38;font-size:12.5px;padding:10px 12px;border-radius:10px;margin-bottom:12px;}
+  .warn{background:#FDECEA;border:1.5px solid #E8A29A;color:#7B1818;font-size:13px;padding:11px 13px;border-radius:10px;margin-bottom:12px;line-height:1.65;}
+  .warn b{color:#C0392B;}
   input[type=file]{display:none;}
 
   /* 每張證件編輯卡 */
@@ -70,6 +72,9 @@
 
   <main>
     <div class="safe noprint">🔒 你的證件照片<strong>只在本機處理，不會上傳</strong>任何伺服器。</div>
+
+    <div class="warn noprint">⚠️ <b>重要：註記千萬不要蓋到「姓名・身分證字號・出生年月日・照片」</b>！<br>
+      勞工局送件要核對身分，這四項只要被蓋住看不清，<b>整份會被退件</b>。請把紅色註記拖到<b>空白邊角</b>，並在「整理成 A4」後再檢查一次都看得清楚。</div>
 
     <div class="card noprint">
       <label>1. 註記文字（三行＋上下劃線，防止被加字）</label>
