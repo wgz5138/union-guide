@@ -301,6 +301,17 @@
       <button class="btn full" style="margin-top:12px" onclick="saveSettings()">儲存設定</button>
     </div>
     <div class="card">
+      <div class="card-title">資產負債表平衡 <span class="law-pill" onclick="gotoLaw('第6條')">§6①·§7</span></div>
+      <p class="muted" style="margin-bottom:6px">決算書「資產負債表」需平衡（資產＝負債＋淨值）。「累計餘絀」屬跨年度科目，請填上年度結轉數；負債（應付款等）請填期末實際數。</p>
+      <label>上年度累計餘絀（期初淨值，可為負）</label>
+      <input type="number" id="setPriorCum" step="1" placeholder="0">
+      <label>期末負債合計（應付款等 §7，無則 0）</label>
+      <input type="number" id="setLiab" min="0" step="1" placeholder="0">
+      <button class="btn full" style="margin-top:10px" onclick="saveSettings()">儲存</button>
+      <button class="btn ghost full sm" style="margin-top:8px" onclick="autoBalance()">⚖ 自動帶入平衡值（依現有帳目反推上年度累計餘絀）</button>
+      <p class="muted" id="balPreview" style="margin-top:8px;font-size:11.5px"></p>
+    </div>
+    <div class="card">
       <div class="card-title">準備金（§22）</div>
       <p class="muted" style="margin-bottom:6px">應逐年提列足夠之準備金，金額由理事會訂定經大會議決；決算虧損者得不提列。</p>
       <label>本年度提列準備金金額</label>
@@ -360,9 +371,9 @@ let DB = load();
 let curType="out";
 
 function load(){
-  try{ const d=JSON.parse(localStorage.getItem(DB_KEY)); if(d&&d.entries){ if(!d.assets)d.assets=[]; if(!d.budget)d.budget={income:{},expense:{},note:''}; return d; } }catch(e){}
+  try{ const d=JSON.parse(localStorage.getItem(DB_KEY)); if(d&&d.entries){ if(!d.assets)d.assets=[]; if(!d.budget)d.budget={income:{},expense:{},note:''}; if(d.settings.priorCum==null)d.settings.priorCum=0; if(d.settings.liab==null)d.settings.liab=0; return d; } }catch(e){}
   return { year:new Date().getFullYear(), entries:[], assets:[], budget:{income:{},expense:{},note:''},
-    settings:{secretary:false,supBoard:false,invest:false,opening:0,pettyCap:100000,reserve:0} };
+    settings:{secretary:false,supBoard:false,invest:false,opening:0,pettyCap:100000,reserve:0,priorCum:0,liab:0} };
 }
 function save(){ localStorage.setItem(DB_KEY, JSON.stringify(DB)); }
 function fmt(n){ return "$"+(Math.round(n)||0).toLocaleString('en-US'); }
@@ -679,10 +690,7 @@ function renderAssets(){
 function genRules(){
   const sup=DB.settings.supBoard?'監事會':'監事';
   const sealPpl=DB.settings.secretary?'理事長、秘書長及會計出納人員':'理事長、（未設秘書長者由其他相關職務人員）及會計出納人員';
-  const html=`<!DOCTYPE html><html lang="zh-TW"><head><meta charset="utf-8"><title>高雄榮總護理工會 財務處理辦法（草稿）</title>
-<style>body{font-family:'Noto Serif TC',serif;max-width:760px;margin:2rem auto;padding:0 1.5rem;line-height:1.9;color:#1a1a1a}h1{text-align:center;font-size:20px}h2{font-size:15px;border-left:4px solid #1A7A4A;padding-left:8px;margin-top:1.4rem}p,li{font-size:14px}.note{color:#777;font-size:12px}ol{padding-left:1.4rem}</style></head><body>
-<h1>高雄榮總護理工會 財務處理辦法（草稿）</h1>
-<p class="note">依《工會財務處理準則》（工會法第30條第2項授權）第15、17、18條訂定。本草稿由工具自動產生，須提理事會修訂、經會員（代表）大會議決後實施。</p>
+  const inner=`<p class="note" style="margin-top:0;border:none;padding-top:0">依《工會財務處理準則》（工會法第30條第2項授權）第15、17、18條訂定。本草稿由工具自動產生，須提理事會修訂、經會員（代表）大會議決後實施。</p>
 <h2>第一條（依據）</h2><p>本辦法依工會法及工會財務處理準則第十五條規定訂定之。</p>
 <h2>第二條（會計年度與基礎）</h2><p>本會會計年度採曆年制，自每年一月一日起至十二月三十一日止（準則§3）。會計基礎採權責發生制，平時得採現金收付制，年終結算時調整為權責發生制（準則§4）。財務以新臺幣元為單位（準則§5）。</p>
 <h2>第三條（會計科目與報告）</h2><p>會計科目依準則§7及附表分資產、負債、淨值、收入、支出五類。會計報告包括資產負債表、收支餘絀表、現金流量表、淨值變動表、財產清冊（準則§6）。</p>
@@ -695,11 +703,50 @@ function genRules(){
 <h2>第十條（查核）</h2><p>本會辦理定期及臨時財務查核，由${sup}為之；會員或會員代表查核財務狀況，依工會法第二十九條辦理（準則§28）。</p>
 <h2>第十一條（檔案保存）</h2><p>各種會計簿籍及會計報告，自決算程序終了之日起至少保存十年；各種憑證（未了結之債權債務除外）至少保存五年；受政府補助者依政府相關規定辦理（準則§27）。</p>
 <h2>第十二條（施行）</h2><p>本辦法經會員（代表）大會議決後施行，修正時亦同。</p>
-<p class="note" style="margin-top:2rem">※ 本草稿僅供參考，實際條文與金額、職稱請依本會章程與理事會、大會決議調整。</p>
-</body></html>`;
-  openDoc(html,'工會財務處理辦法_草稿.html');
+<p class="note" style="margin-top:2rem">※ 本草稿僅供參考，實際條文與金額、職稱請依本會章程與理事會、大會決議調整。</p>`;
+  docShell('財務處理辦法（草稿）','依工會財務處理準則第15·17·18條訂定 · pcode N0020014', inner, '工會財務處理辦法_草稿.html');
 }
-const DOC_CSS=`body{font-family:'Noto Serif TC',serif;max-width:780px;margin:1.5rem auto;padding:0 1.5rem;line-height:1.85;color:#1a1a1a}h1{text-align:center;font-size:21px;margin-bottom:2px}.sub{text-align:center;color:#555;font-size:13px;margin-bottom:1.2rem}h2{font-size:15px;border-left:4px solid #1A7A4A;padding-left:8px;margin-top:1.4rem}p,li,td,th{font-size:13.5px}table{width:100%;border-collapse:collapse;margin:.5rem 0}th,td{border:1px solid #ccc;padding:.4rem .55rem;text-align:left}td.n,th.n{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}tr.t td{font-weight:700;background:#f3f8f5}.fill{color:#999}.sign{margin-top:2rem;display:flex;flex-wrap:wrap;gap:1.5rem;font-size:13px}.sign div{flex:1;min-width:180px;border-top:1px solid #999;padding-top:6px}.note{color:#777;font-size:11.5px;line-height:1.7;margin-top:1.5rem;border-top:1px dashed #ccc;padding-top:8px}@media print{body{margin:0}}`;
+const A4CSS=`
+@page{size:A4;margin:2.2cm 2cm 2cm 2.4cm;@bottom-right{content:"第 " counter(page) " 頁，共 " counter(pages) " 頁";font-size:10px;color:#555;font-family:'Noto Serif TC',serif;}}
+*{box-sizing:border-box}
+body{font-family:'Noto Serif TC',serif;color:#1a1a1a;line-height:1.85;margin:0;counter-reset:page;}
+.doc{max-width:760px;margin:0 auto;}
+.dochead{text-align:center;border-bottom:2.5px solid #1A7A4A;padding-bottom:10px;margin-bottom:18px}
+.org{font-size:15px;letter-spacing:.35em;color:#0F5C36;font-weight:600}
+.dtype{font-size:22px;font-weight:700;margin-top:4px}
+.dochead .sub{font-size:12px;color:#555;margin-top:7px;letter-spacing:.02em;line-height:1.6}
+h2{font-size:15px;border-left:4px solid #1A7A4A;padding-left:8px;margin-top:1.3rem;page-break-after:avoid}
+p,li,td,th{font-size:13.5px}
+table{width:100%;border-collapse:collapse;margin:.5rem 0;page-break-inside:auto}
+tr{page-break-inside:avoid}
+th,td{border:1px solid #bbb;padding:.42rem .55rem;text-align:left}
+td.n,th.n{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+tr.t td{font-weight:700;background:#f3f8f5}
+.fill{color:#999}
+.bad{color:#C0392B;font-weight:600}
+.sign{margin-top:2.2rem;display:flex;flex-wrap:wrap;gap:1.4rem;font-size:13px;page-break-inside:avoid}
+.sign div{flex:1;min-width:150px;border-top:1px solid #999;padding-top:6px;text-align:center}
+.note{color:#777;font-size:11.5px;line-height:1.7;margin-top:1.4rem;border-top:1px dashed #ccc;padding-top:8px}
+.qf{position:fixed;top:0;bottom:0;left:.35cm;width:1.15cm;display:none;align-items:center;justify-content:center;border-right:1px dashed #aaa;color:#bbb;font-size:11px;letter-spacing:.45em;writing-mode:vertical-rl;}
+.pf{position:fixed;bottom:.55cm;left:0;right:0;text-align:center;font-size:10px;color:#999;display:none}
+.hint{background:#FEF9E7;border:1px solid #EAD67A;color:#5C4000;border-radius:8px;padding:.6rem .8rem;font-size:12.5px;line-height:1.7;margin:0 auto 1.2rem;max-width:760px}
+.hint button{margin-left:6px;background:#1A7A4A;color:#fff;border:none;border-radius:6px;padding:.3rem .7rem;font-family:inherit;font-size:12px;cursor:pointer}
+@media screen{body{background:#e9e9e9;padding:1.2rem .8rem}.doc{background:#fff;padding:2.6rem 2.4rem;box-shadow:0 2px 14px rgba(0,0,0,.18);border-radius:2px}}
+@media print{.hint{display:none}.qf,.pf{display:flex}}
+`;
+function docShell(docType, subtitle, inner, fname){
+  const html=`<!DOCTYPE html><html lang="zh-TW"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${esc('高雄榮總護理工會 '+docType)}</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@400;600;700&display=swap" rel="stylesheet">
+<style>${A4CSS}</style></head><body>
+<div class="qf">高雄榮總護理工會　騎　縫　章</div>
+<div class="pf">高雄榮總護理工會　${esc(docType)}</div>
+<div class="hint">🖨 列印請選 <b>A4 直式</b>。頁碼／騎縫章僅於列印或存 PDF 時顯示；若頁碼未出現，請在列印對話框勾選「<b>頁首及頁尾</b>」。<button onclick="window.print()">立即列印 / 存 PDF</button></div>
+<div class="doc">
+  <div class="dochead"><div class="org">高雄榮總護理工會</div><div class="dtype">${esc(docType)}</div><div class="sub">${subtitle}</div></div>
+  ${inner}
+</div></body></html>`;
+  openDoc(html,fname);
+}
 function openDoc(html,fname){ const w=window.open('','_blank'); if(w){ w.document.write(html); w.document.close(); } else { const b=new Blob([html],{type:'text/html'}); const a=document.createElement('a'); a.href=URL.createObjectURL(b); a.download=fname; a.click(); } }
 function roc(y){ return '中華民國 '+(y-1911)+' 年'; }
 
@@ -709,15 +756,16 @@ function genDecal(){
   const totIn=Object.values(inM).reduce((a,b)=>a+b,0), totOut=Object.values(outM).reduce((a,b)=>a+b,0);
   const surplus=totIn-totOut, open=DB.settings.opening||0, endCash=open+surplus;
   const assets=(DB.assets||[]), assetTot=assets.reduce((a,x)=>a+x.amt,0), reserve=DB.settings.reserve||0;
+  const priorCum=DB.settings.priorCum||0, liab=DB.settings.liab||0;
+  const assetTotal=endCash+assetTot, endCum=priorCum+surplus, liabNet=liab+endCum, diff=assetTotal-liabNet;
   const sup=DB.settings.supBoard?'監事會':'監事';
   const f=fmt;
   let incRows=ACCOUNTS.in.filter(c=>inM[c]).map(c=>`<tr><td>${c}</td><td class="n">${f(inM[c])}</td></tr>`).join('')||'<tr><td class="fill">（無）</td><td class="n">$0</td></tr>';
   let outRows=ACCOUNTS.out.filter(c=>outM[c]).map(c=>`<tr><td>${c}</td><td class="n">${f(outM[c])}</td></tr>`).join('')||'<tr><td class="fill">（無）</td><td class="n">$0</td></tr>';
   let assetRows=assets.length?assets.map(a=>`<tr><td>${esc(a.cat)}</td><td>${esc(a.name)}</td><td>${a.date}</td><td class="n">${f(a.amt)}</td></tr>`).join(''):'<tr><td colspan="3" class="fill">（尚無財產登記）</td><td class="n">$0</td></tr>';
-  const html=`<!DOCTYPE html><html lang="zh-TW"><head><meta charset="utf-8"><title>高雄榮總護理工會 ${Y}年度決算書</title><style>${DOC_CSS}</style></head><body>
-<h1>高雄榮總護理工會</h1><h1 style="font-size:18px">${roc(Y)}年度決算書</h1>
-<div class="sub">依工會財務處理準則第6條、第13條編製 · 會計年度 ${Y}/1/1～${Y}/12/31（§3）· 新臺幣元（§5）</div>
-
+  const balRow = diff===0 ? `<tr class="t"><td>平衡檢查（資產＝負債＋淨值）</td><td class="n">✓ 平衡</td></tr>` : `<tr class="t"><td>平衡差額（待調整）</td><td class="n bad">${f(diff)}</td></tr>`;
+  const balNote = diff===0 ? '※ 資產＝負債＋淨值，本表已平衡。' : `※ 尚有差額 ${f(diff)}。請至「設定」核對「上年度累計餘絀」與「期末負債合計」，或按〔自動帶入平衡值〕，使資產＝負債＋淨值（§6①）。`;
+  const inner=`
 <h2>一、業務報告書（§13）</h2>
 <p class="fill">（請由理事會填列本年度會務、財務及業務執行概況。）</p>
 
@@ -735,14 +783,17 @@ function genDecal(){
 <tr class="t"><td>資產</td><td class="n">金額</td></tr>
 <tr><td>現金及銀行存款（期末）</td><td class="n">${f(endCash)}</td></tr>
 <tr><td>財產（投資＋固定資產＋其他資產 §14）</td><td class="n">${f(assetTot)}</td></tr>
-<tr class="t"><td>資產合計</td><td class="n">${f(endCash+assetTot)}</td></tr>
+<tr class="t"><td>資產合計</td><td class="n">${f(assetTotal)}</td></tr>
 <tr class="t"><td>負債及淨值</td><td class="n">金額</td></tr>
-<tr><td>負債（應付款等 §7）</td><td class="n fill">　（依實際填列）</td></tr>
-<tr><td>準備金（§22）</td><td class="n">${f(reserve)}</td></tr>
-<tr><td>本期餘絀</td><td class="n">${f(surplus)}</td></tr>
-<tr><td>累計餘絀（§7）</td><td class="n fill">　（依上年度結轉填列）</td></tr>
+<tr><td>負債合計（應付款等 §7）</td><td class="n">${f(liab)}</td></tr>
+<tr><td>淨值—累計餘絀（期末）</td><td class="n">${f(endCum)}</td></tr>
+<tr><td style="padding-left:1.6rem">　其中：上年度累計餘絀</td><td class="n">${f(priorCum)}</td></tr>
+<tr><td style="padding-left:1.6rem">　其中：本期餘絀</td><td class="n">${f(surplus)}</td></tr>
+<tr><td style="padding-left:1.6rem">　其中：已依§22提列準備金</td><td class="n">${f(reserve)}</td></tr>
+<tr class="t"><td>負債及淨值合計</td><td class="n">${f(liabNet)}</td></tr>
+${balRow}
 </table>
-<p class="note">※ 本表資產面由本機帳目自動帶出；負債及累計餘絀因屬跨年度科目，請依實際帳載填列後使本表平衡（資產＝負債＋淨值）。</p>
+<p class="note">${balNote}</p>
 
 <h2>四、現金流量表（§6③，現金基礎）</h2>
 <table>
@@ -754,10 +805,10 @@ function genDecal(){
 
 <h2>五、淨值變動表（§6④）</h2>
 <table>
-<tr><td>期初淨值</td><td class="n fill">　（依上年度填列）</td></tr>
-<tr><td>本期餘絀</td><td class="n">${f(surplus)}</td></tr>
-<tr><td>本期提列準備金（§22）</td><td class="n">${f(reserve)}</td></tr>
-<tr class="t"><td>期末淨值</td><td class="n fill">　（合計）</td></tr>
+<tr><td>期初淨值（上年度累計餘絀）</td><td class="n">${f(priorCum)}</td></tr>
+<tr><td>加：本期餘絀</td><td class="n">${f(surplus)}</td></tr>
+<tr class="t"><td>期末淨值（累計餘絀）</td><td class="n">${f(endCum)}</td></tr>
+<tr><td style="padding-left:1.6rem">　其中：本年度提列準備金（§22）</td><td class="n">${f(reserve)}</td></tr>
 </table>
 <p class="note">※ 歷年決算結餘應作以後年度支出之財源，不得做結餘之分配（§23）。</p>
 
@@ -770,9 +821,8 @@ function genDecal(){
 <h2>七、決算審查與報備（§13）</h2>
 <p>本決算書於 ${roc(Y+1)} ____ 月 ____ 日（年度結束後三個月內）由理事會編製，經 ${sup} 審核，並提 ${roc(Y+1)} ____ 月 ____ 日會員（代表）大會議決，於議決後三十日內報請主管機關備查。${DB.settings.invest&&totIn>=30000000?'<b>本年度決算金額達三千萬元以上且有投資事業，業依規定委請會計師簽證。</b>':''}</p>
 <div class="sign"><div>理事長（蓋章）</div><div>會計（蓋章）</div><div>出納（蓋章）</div><div>${sup}（蓋章）</div></div>
-<p class="note">本決算書由「工會透明帳本」依工會財務處理準則自動產生草稿，金額以本機帳載為準，須經理事會、${sup}及大會程序確認。pcode N0020014。</p>
-</body></html>`;
-  openDoc(html,`高雄榮總護理工會_${Y}年度決算書.html`);
+<p class="note">本決算書由「工會透明帳本」依工會財務處理準則自動產生草稿，金額以本機帳載為準，須經理事會、${sup}及大會程序確認。pcode N0020014。</p>`;
+  docShell(`${roc(Y)}年度決算書`, `依工會財務處理準則第6條、第13條編製 · 會計年度 ${Y}/1/1～${Y}/12/31（§3）· 新臺幣元（§5）`, inner, `高雄榮總護理工會_${Y}年度決算書.html`);
 }
 
 /* ===================== 監事審核意見書（範本 §13·§28·§30）===================== */
@@ -782,9 +832,7 @@ function genAuditOpinion(){
   const totIn=Object.values(inM).reduce((a,b)=>a+b,0),totOut=Object.values(outM).reduce((a,b)=>a+b,0);
   const items=['會計憑證','會計帳簿','會計報告','預算、決算','財產保管','各項資產、負債及淨值之評核','會員申訴有關財務事項','有關政府補助經費事項','其他有關財務事項'];
   const rows=items.map((t,i)=>`<tr><td>${i+1}</td><td>${t}</td><td style="text-align:center">□ 符合　□ 建議改善</td><td class="fill"></td></tr>`).join('');
-  const html=`<!DOCTYPE html><html lang="zh-TW"><head><meta charset="utf-8"><title>高雄榮總護理工會 ${Y}年度 ${sup}審核意見書</title><style>${DOC_CSS}</style></head><body>
-<h1>高雄榮總護理工會</h1><h1 style="font-size:18px">${roc(Y)}年度 ${sup}財務審核意見書</h1>
-<div class="sub">依工會財務處理準則第13條、第28條、第30條辦理</div>
+  const inner=`
 <p>本${sup}依工會財務處理準則第二十八條規定，就本會 ${roc(Y)}年度財務辦理${DB.settings.supBoard?'定期':'定期及臨時'}查核，查核範圍依同準則第三十條所列事項，結果如下：</p>
 <h2>一、查核範圍與結果（§30）</h2>
 <table><tr class="t"><td>項次</td><td>查核項目</td><td style="text-align:center">查核結果</td><td>說明</td></tr>${rows}</table>
@@ -800,9 +848,8 @@ function genAuditOpinion(){
 <p>上開決算書（表）經本${sup}審核${DB.settings.supBoard?'並決議':''}，造具本審核意見書，送請理事會提報會員（代表）大會議決。</p>
 <div class="sign">${DB.settings.supBoard?'<div>常務監事（蓋章）</div><div>監事（蓋章）</div><div>監事（蓋章）</div>':'<div>監事（蓋章）</div>'}</div>
 <p style="margin-top:1.5rem">中華民國 ______ 年 ______ 月 ______ 日</p>
-<p class="note">本意見書由「工會透明帳本」依工會財務處理準則產生範本，實際審核結果與意見應由${sup}本於查核事實填載。pcode N0020014。</p>
-</body></html>`;
-  openDoc(html,`高雄榮總護理工會_${Y}年度監事審核意見書.html`);
+<p class="note">本意見書由「工會透明帳本」依工會財務處理準則產生範本，實際審核結果與意見應由${sup}本於查核事實填載。pcode N0020014。</p>`;
+  docShell(`${roc(Y)}年度 ${sup}財務審核意見書`, '依工會財務處理準則第13條、第28條、第30條辦理', inner, `高雄榮總護理工會_${Y}年度監事審核意見書.html`);
 }
 
 /* ===================== 法規依據 ===================== */
@@ -823,6 +870,32 @@ function fillSettings(){
   document.getElementById('setOpening').value=DB.settings.opening||0;
   document.getElementById('setPettyCap').value=DB.settings.pettyCap||100000;
   document.getElementById('setReserve').value=DB.settings.reserve||0;
+  document.getElementById('setPriorCum').value=DB.settings.priorCum||0;
+  document.getElementById('setLiab').value=DB.settings.liab||0;
+  updateBalPreview();
+}
+function balanceFigures(){
+  let i=0,o=0; yearEntries().forEach(e=>{ if(e.type==='in')i+=e.amt; else o+=e.amt; });
+  const surplus=i-o, endCash=(DB.settings.opening||0)+surplus;
+  const assetTot=(DB.assets||[]).reduce((a,x)=>a+x.amt,0);
+  const assetTotal=endCash+assetTot;
+  const priorCum=DB.settings.priorCum||0, liab=DB.settings.liab||0;
+  const netValue=priorCum+surplus, diff=assetTotal-(liab+netValue);
+  return {surplus,assetTotal,priorCum,liab,netValue,diff,endCash,assetTot};
+}
+function updateBalPreview(){
+  const b=balanceFigures();
+  document.getElementById('balPreview').innerHTML = b.diff===0
+    ? `✅ 目前資產 ${fmt(b.assetTotal)} ＝ 負債 ${fmt(b.liab)} ＋ 淨值 ${fmt(b.netValue)}，已平衡。`
+    : `⚠ 目前資產 ${fmt(b.assetTotal)} 與 負債＋淨值 ${fmt(b.liab+b.netValue)} 差 ${fmt(b.diff)}。可按下方「自動帶入平衡值」。`;
+}
+function autoBalance(){
+  // 期初累計餘絀 = 期初現金 + 財產 − 負債（使資產＝負債＋淨值）
+  const b=balanceFigures();
+  const newPrior=(DB.settings.opening||0)+b.assetTot-b.liab;
+  document.getElementById('setPriorCum').value=newPrior;
+  DB.settings.priorCum=newPrior; save(); updateBalPreview();
+  alert('已將「上年度累計餘絀」設為 '+fmt(newPrior)+'，資產負債表即可平衡。\n（此即期初淨資產＝期初現金＋財產−負債，請與上年度決算核對。）');
 }
 function saveSettings(){
   DB.year=+document.getElementById('setYear').value||DB.year;
@@ -834,6 +907,8 @@ function saveSettings(){
   if(cap>100000){cap=100000; alert('§19：零用金不得超過 10 萬，已自動設為上限。');}
   DB.settings.pettyCap=cap;
   DB.settings.reserve=+document.getElementById('setReserve').value||0;
+  DB.settings.priorCum=+document.getElementById('setPriorCum').value||0;
+  DB.settings.liab=+document.getElementById('setLiab').value||0;
   save(); fillSettings(); refreshKPI(); renderEntries(); alert('已儲存');
 }
 function exportJSON(){
