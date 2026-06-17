@@ -97,6 +97,9 @@
       </select>
     </div>
     <button class="btn btn-print noprint" id="prn" disabled onclick="window.print()">🖨 列印 / 存成 PDF（一張 A4）</button>
+    <div class="safe noprint" id="printTip" style="background:#FEF9E7;border-color:#EAD67A;color:#5C4000;margin-top:8px;">
+      📡 <strong>已用藍牙／Wi-Fi 連好印表機？</strong>按上面「列印」後，手機會跳出<strong>系統列印視窗</strong>，在「印表機」欄選你那台（AirPrint／藍牙／無線印表機都會出現）即可直接印；沒連印表機則可選「儲存為 PDF」。
+    </div>
     <p class="hint noprint" id="status">尚未加入照片。加入後按「整理成 A4」。</p>
 
     <div id="print"></div>
@@ -200,6 +203,16 @@
     $('status').textContent='已整理成 A4，下方可預覽。確認資料清楚後按「列印/存PDF」。';
     $('print').scrollIntoView({behavior:'smooth'});
   }
+
+  // 依手機系統給更具體的列印指引
+  (function(){
+    var ua=navigator.userAgent, tip=$('printTip'); if(!tip) return;
+    if(/iPhone|iPad|iPod/.test(ua)){
+      tip.innerHTML='📡 <strong>iPhone 列印：</strong>按「列印」後出現預覽 → 上方「<strong>印表機</strong>」選你已連線的 AirPrint／藍牙印表機即可直接印；或點右上「分享」<strong>存成 PDF</strong>。（印表機需先在 iPhone「設定」連好）';
+    } else if(/Android/.test(ua)){
+      tip.innerHTML='📡 <strong>Android 列印：</strong>按「列印」後，上方下拉選「<strong>所有印表機／儲存成 PDF</strong>」，選你已連線的無線／藍牙印表機即可；找不到請先在系統「設定→列印服務」加入。';
+    }
+  })();
 </script>
 </body>
 </html>
