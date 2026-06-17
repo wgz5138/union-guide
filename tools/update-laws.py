@@ -45,6 +45,7 @@ WANT = {
     "大量解僱勞工保護法": None,
     "工會法": None,
     "工會法施行細則": None,
+    "工會財務處理準則": None,
     "團體協約法": None,
     "不當勞動行為裁決辦法": None,   # 工會被打壓救濟（工會法§35）
     "勞資爭議調解辦法": None,       # 取代已廢止的勞資爭議處理法施行細則之調解部分
@@ -81,7 +82,7 @@ CAT = {
     "勞工退休金條例": "勞動", "性別平等工作法": "勞動", "職業安全衛生法": "勞動",
     "勞資爭議處理法": "勞動",
     "就業服務法": "勞動", "勞工保險條例": "勞動", "勞工職業災害保險及保護法": "勞動",
-    "大量解僱勞工保護法": "勞動", "工會法": "勞動", "工會法施行細則": "勞動", "團體協約法": "勞動",
+    "大量解僱勞工保護法": "勞動", "工會法": "勞動", "工會法施行細則": "勞動", "工會財務處理準則": "勞動", "團體協約法": "勞動",
     "不當勞動行為裁決辦法": "勞動", "勞資爭議調解辦法": "勞動",
     "就業保險法": "勞動", "勞工請假規則": "勞動", "勞資會議實施辦法": "勞動",
     "個人資料保護法": "個資",
@@ -213,6 +214,30 @@ def main():
 
     if not out:
         raise RuntimeError("沒有收到任何法條，疑似結構改變，中止（不覆蓋 laws.json）。")
+
+    # 併入補充條目（官方 API 抓不到的附表／附件，例如工會財務處理準則的會計科目表）。
+    # 放在 tools/supplements.json，每次自動更新都會一併併入、不被覆蓋。
+    try:
+        with open("tools/supplements.json", encoding="utf-8") as f:
+            supp = json.load(f)
+        have = {(norm_name(o["law"]), o["art"].replace(" ", "")) for o in out}
+        added = 0
+        for s in supp:
+            if not s.get("law") or not s.get("art") or not s.get("text"):
+                continue
+            key = (norm_name(s["law"]), s["art"].replace(" ", ""))
+            if key in have:
+                continue
+            out.append({"law": s["law"].strip(), "art": s["art"].strip(),
+                        "title": s.get("title", "").strip(), "text": s["text"].strip(),
+                        "cat": s.get("cat", "其他").strip(), "modified": s.get("modified", "")})
+            added += 1
+        if added:
+            print("  併入補充條目 %d 條（supplements.json）" % added)
+    except FileNotFoundError:
+        pass
+    except Exception as e:
+        print("⚠ 讀取 supplements.json 失敗（略過）：", e, file=sys.stderr)
 
     payload = {
         "updated": update_date,
