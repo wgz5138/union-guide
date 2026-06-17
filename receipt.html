@@ -112,6 +112,7 @@
     </label>
     <input type="file" id="file" accept="image/*" capture="environment">
     <div class="preview" id="preview" style="display:none"><img id="prevImg" alt="單據預覽"><button class="re" onclick="clearPhoto()">✕ 重拍</button></div>
+    <p class="muted" id="geoNote" style="margin:-4px 0 6px;color:var(--green-deep)"></p>
 
     <label>這筆是買什麼？（點一下快速帶入）</label>
     <div class="chips" id="chips"></div>
@@ -178,21 +179,46 @@ const IDB={db:null,
 function fmt(n){return "$"+(Math.round(n)||0).toLocaleString('en-US');}
 function esc(s){return (s||'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));}
 
-/* ---------- 影像壓縮 ---------- */
-function compress(file,maxDim=1400,q=0.72){return new Promise(res=>{const img=new Image();const url=URL.createObjectURL(file);img.onload=()=>{let w=img.width,h=img.height;if(Math.max(w,h)>maxDim){const s=maxDim/Math.max(w,h);w=Math.round(w*s);h=Math.round(h*s);}const c=document.createElement('canvas');c.width=w;c.height=h;c.getContext('2d').drawImage(img,0,0,w,h);URL.revokeObjectURL(url);res({dataURL:c.toDataURL('image/jpeg',q),w,h});};img.onerror=()=>{URL.revokeObjectURL(url);res(null);};img.src=url;});}
+/* ---------- 影像壓縮＋GPS／時間浮水印（防造假，§10 原始憑證存證）---------- */
+function getGeo(){return new Promise(res=>{ if(!navigator.geolocation)return res(null); navigator.geolocation.getCurrentPosition(p=>res({lat:p.coords.latitude,lng:p.coords.longitude,acc:Math.round(p.coords.accuracy||0)}),()=>res(null),{enableHighAccuracy:false,timeout:7000,maximumAge:60000}); });}
+function pad(n){return (n<10?'0':'')+n;}
+function nowStamp(d){return d.getFullYear()+'/'+pad(d.getMonth()+1)+'/'+pad(d.getDate())+' '+pad(d.getHours())+':'+pad(d.getMinutes());}
+function stampImage(file,maxDim=1400,q=0.74){return new Promise(async res=>{
+  const geo=await getGeo();
+  const ts=new Date();
+  const img=new Image(); const url=URL.createObjectURL(file);
+  img.onload=()=>{
+    let w=img.width,h=img.height;
+    if(Math.max(w,h)>maxDim){const s=maxDim/Math.max(w,h);w=Math.round(w*s);h=Math.round(h*s);}
+    const c=document.createElement('canvas'); c.width=w; c.height=h;
+    const ctx=c.getContext('2d'); ctx.drawImage(img,0,0,w,h); URL.revokeObjectURL(url);
+    // 浮水印列（兩行）
+    const fs=Math.max(13,Math.round(w/42));
+    const lh=Math.round(fs*1.35), barH=lh*2+Math.round(fs*0.8);
+    ctx.fillStyle='rgba(0,0,0,.56)'; ctx.fillRect(0,h-barH,w,barH);
+    ctx.fillStyle='#fff'; ctx.font='600 '+fs+'px "Noto Sans TC",sans-serif'; ctx.textBaseline='top';
+    const padx=Math.round(fs*0.6), top=h-barH+Math.round(fs*0.4);
+    ctx.fillText('高雄榮總護理工會 · 單據存證　'+nowStamp(ts), padx, top);
+    ctx.fillText(geo?('GPS '+geo.lat.toFixed(5)+', '+geo.lng.toFixed(5)+'（±'+geo.acc+'m）'):'GPS：未授權或無訊號', padx, top+lh);
+    res({dataURL:c.toDataURL('image/jpeg',q),w,h,geo,ts:ts.toISOString()});
+  };
+  img.onerror=()=>{URL.revokeObjectURL(url);res(null);};
+  img.src=url;
+});}
 
 document.getElementById('file').addEventListener('change',async e=>{
   const f=e.target.files[0]; if(!f)return;
-  const box=document.getElementById('shootBox'); box.querySelector('.t').textContent='處理照片中…';
-  const r=await compress(f);
-  box.querySelector('.t').textContent='拍照 / 選擇單據照片';
+  const box=document.getElementById('shootBox'); const tt=box.querySelector('.t'); tt.textContent='處理照片＋定位中…';
+  const r=await stampImage(f);
+  tt.textContent='拍照 / 選擇單據照片';
   if(!r){alert('讀取照片失敗，請再試一次');return;}
   photo=r;
   document.getElementById('prevImg').src=r.dataURL;
   document.getElementById('preview').style.display='block';
   document.getElementById('shootBox').style.display='none';
+  document.getElementById('geoNote').textContent = r.geo? ('✅ 已蓋章：'+nowStamp(new Date(r.ts))+'　GPS '+r.geo.lat.toFixed(4)+','+r.geo.lng.toFixed(4)) : '⚠️ 已蓋時間章；GPS 未授權（可到手機設定開定位權限，更防造假）';
 });
-function clearPhoto(){photo=null;document.getElementById('file').value='';document.getElementById('preview').style.display='none';document.getElementById('shootBox').style.display='flex';}
+function clearPhoto(){photo=null;document.getElementById('file').value='';document.getElementById('preview').style.display='none';document.getElementById('shootBox').style.display='flex';document.getElementById('geoNote').textContent='';}
 
 function setPay(p){curPay=p;document.getElementById('payCash').className=p==='cash'?'on':'';document.getElementById('payBank').className=p==='bank'?'on':'';liveCheck();}
 function renderChips(){
@@ -230,6 +256,7 @@ async function saveReceipt(){
     handler:document.getElementById('fHandler').value.trim(),
     cash:curPay==='cash', gov:document.getElementById('fGov').checked,
     img:photo?photo.dataURL:null, w:photo?photo.w:0, h:photo?photo.h:0,
+    geo:photo?photo.geo:null, shotAt:photo?photo.ts:null,
     imported:false, created:Date.now(), src:'receipt'
   };
   try{ await IDB.put(rec); }catch(e){ alert('儲存失敗（可能空間不足），請先匯出舊單據再試。'); return; }
@@ -272,6 +299,7 @@ async function view(id){
       <div class="mrow"><span class="k">日期</span><span>${r.date}</span></div>
       <div class="mrow"><span class="k">經辦</span><span>${esc(r.handler||'—')}</span></div>
       <div class="mrow"><span class="k">付款</span><span>${r.cash?'現金':'轉帳／刷卡'}${r.gov?'（政府補助）':''}</span></div>
+      <div class="mrow"><span class="k">拍攝存證</span><span>${r.shotAt?nowStamp(new Date(r.shotAt)):'—'}${r.geo?'　GPS '+r.geo.lat.toFixed(4)+','+r.geo.lng.toFixed(4):''}</span></div>
       <div class="mrow"><span class="k">憑證保存至</span><span>${(+(r.date||'2026').slice(0,4))+5} 年（§27 至少5年）</span></div>
     </div>
     <div style="display:flex;gap:8px;margin-top:12px">

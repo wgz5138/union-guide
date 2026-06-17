@@ -135,7 +135,8 @@
 <div class="lawbar">本工具依 <b>工會財務處理準則</b>（工會法第30條第2項授權）設計，每項功能皆標明條號。資料僅存本機，<b>絕不上傳</b>。</div>
 
 <div class="tabs" id="tabs">
-  <button class="tab active" data-p="book">記帳</button>
+  <button class="tab active" data-p="home">總覽</button>
+  <button class="tab" data-p="book">記帳</button>
   <button class="tab" data-p="journal">日記簿</button>
   <button class="tab" data-p="budget">預算</button>
   <button class="tab" data-p="asset">財產清冊</button>
@@ -147,8 +148,29 @@
 </div>
 
 <main>
+  <!-- ========== 總覽 / 待辦 ========== -->
+  <section class="panel active" id="p-home">
+    <div class="card" style="background:linear-gradient(135deg,#E8F6EE,#D7EFE0);border-color:#B8DCC4">
+      <div class="card-title" style="color:var(--green-deep)">👋 你不用懂會計</div>
+      <p style="font-size:13.5px;color:#1A5C38;line-height:1.85">這裡會幫你看著「法律要工會做的事」。照下面的提醒做就好；要記一筆就按 <b>記帳</b>，幹部買東西用 <b>單據快拍</b> 拍照即可。專有名詞旁都有白話說明。</p>
+    </div>
+    <div class="kpi">
+      <div class="k"><div class="lab">今年收到的錢</div><div class="val in" id="hIn">$0</div></div>
+      <div class="k"><div class="lab">今年花掉的錢</div><div class="val out" id="hOut">$0</div></div>
+      <div class="k"><div class="lab">還剩（結餘）</div><div class="val bal" id="hBal">$0</div></div>
+    </div>
+    <div class="card">
+      <div class="card-title">📋 法律要工會做的事（照做就好）</div>
+      <div id="todoList"></div>
+    </div>
+    <div class="card">
+      <div class="card-title">🩺 財務健檢</div>
+      <div id="healthList"></div>
+    </div>
+  </section>
+
   <!-- ========== 記帳 ========== -->
-  <section class="panel active" id="p-book">
+  <section class="panel" id="p-book">
     <div class="kpi">
       <div class="k"><div class="lab">本年收入</div><div class="val in" id="kIn">$0</div></div>
       <div class="k"><div class="lab">本年支出</div><div class="val out" id="kOut">$0</div></div>
@@ -290,6 +312,17 @@
     <div class="help"><b>第28-30條</b>：監事（監事會）辦定期及臨時查核、會員依工會法第29條查核、主管機關得委託專業團體查核。<b>第30條</b>查核範圍9項，逐項對照如下。<b>第27條</b>：簿籍/報告至少存10年、憑證至少存5年。</div>
     <div class="card" id="auditScope"></div>
     <div class="card" id="auditRetention"></div>
+    <div class="card">
+      <div class="card-title">📚 單據存檔（合併 PDF） <span class="law-pill" onclick="gotoLaw('第27條')">§27</span></div>
+      <p class="muted" style="margin-bottom:8px">把某一季（或全年）拍的單據照片合併成一份 PDF，封面附清單，每張單據各一頁、含拍攝時間/GPS 浮水印，方便存查與交主管機關。</p>
+      <div class="row" style="gap:6px;flex-wrap:wrap">
+        <button class="btn ghost sm" onclick="genReceiptPDF(1)">第1季</button>
+        <button class="btn ghost sm" onclick="genReceiptPDF(2)">第2季</button>
+        <button class="btn ghost sm" onclick="genReceiptPDF(3)">第3季</button>
+        <button class="btn ghost sm" onclick="genReceiptPDF(4)">第4季</button>
+        <button class="btn sm" onclick="genReceiptPDF(0)">全年</button>
+      </div>
+    </div>
     <button class="btn full no-print" onclick="genAuditOpinion()">📝 產生監事審核意見書（範本 §13·§28·§30）</button>
   </section>
 
@@ -386,8 +419,8 @@ let DB = load();
 let curType="out";
 
 function load(){
-  try{ const d=JSON.parse(localStorage.getItem(DB_KEY)); if(d&&d.entries){ if(!d.assets)d.assets=[]; if(!d.budget)d.budget={income:{},expense:{},note:''}; if(d.settings.priorCum==null)d.settings.priorCum=0; if(d.settings.liab==null)d.settings.liab=0; return d; } }catch(e){}
-  return { year:new Date().getFullYear(), entries:[], assets:[], budget:{income:{},expense:{},note:''},
+  try{ const d=JSON.parse(localStorage.getItem(DB_KEY)); if(d&&d.entries){ if(!d.assets)d.assets=[]; if(!d.budget)d.budget={income:{},expense:{},note:''}; if(!d.published)d.published={}; if(d.settings.priorCum==null)d.settings.priorCum=0; if(d.settings.liab==null)d.settings.liab=0; return d; } }catch(e){}
+  return { year:new Date().getFullYear(), entries:[], assets:[], budget:{income:{},expense:{},note:''}, published:{},
     settings:{secretary:false,supBoard:false,invest:false,opening:0,pettyCap:100000,reserve:0,priorCum:0,liab:0} };
 }
 function save(){ localStorage.setItem(DB_KEY, JSON.stringify(DB)); }
@@ -448,6 +481,37 @@ async function viewReceipt(rcptId){
   const html=`<!DOCTYPE html><meta charset=utf-8><title>單據 ${r.date}</title><body style="margin:0;background:#222;text-align:center;font-family:sans-serif"><div style="color:#ccc;padding:8px;font-size:13px">${esc(r.sum||r.cat)} · ${fmt(r.amt)} · ${r.date} · 憑證保存至 ${(+(r.date||'2026').slice(0,4))+5} 年（§27）</div>${r.img?`<img src="${r.img}" style="max-width:100%">`:'<p style="color:#ccc">（此單據無照片）</p>'}</body>`;
   if(w){w.document.write(html);w.document.close();}
 }
+/* ② 季度單據合併 PDF（§27 存檔） */
+async function genReceiptPDF(q){
+  let all=[]; try{ all=await IDB.all(); }catch(e){}
+  const Y=DB.year;
+  const list=all.filter(r=>(r.date||'').slice(0,4)==''+Y && (!q || Math.ceil((+((r.date||'').slice(5,7))||1)/3)===q))
+                .sort((a,b)=>(a.date||'').localeCompare(b.date||''));
+  if(!list.length){ alert(q?('第'+q+'季沒有單據'):'本年度沒有單據'); return; }
+  const tot=list.reduce((a,r)=>a+r.amt,0);
+  const title=`${roc(Y)}年度${q?'第 '+q+' 季':'全年'}單據存檔`;
+  let cover=`<tr class="t"><td>日期</td><td>用途</td><td>科目</td><td class="n">金額</td><td>付款</td></tr>`;
+  list.forEach((r,i)=>{ cover+=`<tr><td>${r.date}</td><td>${esc(r.sum||'')}</td><td>${esc(r.cat)}</td><td class="n">${fmt(r.amt)}</td><td>${r.cash?'現金':'轉帳'}${r.gov?'/補助':''}</td></tr>`; });
+  cover+=`<tr class="t"><td colspan="3">合計（${list.length} 筆）</td><td class="n">${fmt(tot)}</td><td></td></tr>`;
+  const pages=list.map((r,i)=>`<div class="r"><div class="cap"><b>單據 ${i+1} / ${list.length}</b>　${r.date}　${esc(r.sum||r.cat)}　${fmt(r.amt)}　${r.cat}　${r.cash?'現金':'轉帳'}${r.gov?'（政府補助）':''}${r.shotAt?'　｜拍攝 '+esc(r.shotAt.slice(0,16).replace('T',' ')):''}${r.geo?'　GPS '+r.geo.lat.toFixed(4)+','+r.geo.lng.toFixed(4):''}　｜保存至 ${(+(r.date||'2026').slice(0,4))+5} 年（§27）</div>${r.img?`<img src="${r.img}">`:'<p style="color:#999">（此單據無照片，僅有帳載資料）</p>'}</div>`).join('');
+  const html=`<!DOCTYPE html><html lang="zh-TW"><head><meta charset="utf-8"><title>${esc('高雄榮總護理工會 '+title)}</title>
+<style>@page{size:A4;margin:1.4cm}*{box-sizing:border-box}body{font-family:'Noto Sans TC',sans-serif;color:#1a1a1a;margin:0}
+h1{text-align:center;font-size:18px;font-family:'Noto Serif TC',serif;margin:.2rem 0}.sub{text-align:center;color:#555;font-size:12px;margin-bottom:12px}
+table{width:100%;border-collapse:collapse;font-size:12.5px}th,td{border:1px solid #bbb;padding:.35rem .5rem;text-align:left}td.n{text-align:right;font-variant-numeric:tabular-nums}tr.t td{font-weight:700;background:#f3f8f5}
+.r{page-break-before:always;text-align:center}.r img{max-width:100%;max-height:23cm;border:1px solid #ccc;margin-top:6px}
+.cap{font-size:12px;text-align:left;background:#f3f8f5;border:1px solid #cfe3d6;border-radius:6px;padding:.4rem .6rem;line-height:1.6}
+.hint{background:#FEF9E7;border:1px solid #EAD67A;color:#5C4000;border-radius:8px;padding:.5rem .7rem;font-size:12px;margin-bottom:10px}
+@media print{.hint{display:none}}
+.note{color:#777;font-size:11px;margin-top:10px}</style></head><body>
+<div class="hint">🖨 請選「另存為 PDF / 儲存成 PDF」，紙張 A4。這份檔案把本季每張單據各放一頁，封面是清單，方便存查與交主管機關。<button onclick="window.print()" style="margin-left:6px;background:#1A7A4A;color:#fff;border:none;border-radius:6px;padding:.3rem .7rem">立即存 PDF</button></div>
+<h1>高雄榮總護理工會 ${esc(title)}</h1>
+<div class="sub">依工會財務處理準則 §27（憑證至少保存5年）彙整 · 共 ${list.length} 筆 · 合計 ${fmt(tot)}</div>
+<table>${cover}</table>
+<p class="note">※ 每張單據照片含拍攝時間／GPS 浮水印存證。本檔為單據影像彙編，正式決算另見決算書。pcode N0020014。</p>
+${pages}
+</body></html>`;
+  openDoc(html,`高雄榮總護理工會_${Y}_${q?('Q'+q):'全年'}_單據存檔.html`);
+}
 
 /* ===================== 進場鎖 ===================== */
 function pwHash(s){ let h=0; for(let i=0;i<s.length;i++){h=(h*31+s.charCodeAt(i))>>>0;} return ''+h; }
@@ -475,9 +539,58 @@ document.getElementById('tabs').addEventListener('click',e=>{
   if(b.dataset.p==='budget') renderBudget();
   if(b.dataset.p==='asset') renderAssets();
   if(b.dataset.p==='book') renderReceipts();
+  if(b.dataset.p==='home') renderHome();
   window.scrollTo(0,0);
 });
 function gotoLaw(art){ document.querySelector('.tab[data-p="law"]').click(); const el=document.getElementById('law-'+art); if(el){el.open=true; el.scrollIntoView({behavior:'smooth',block:'center'});} }
+
+/* ===================== 總覽 / 待辦 ===================== */
+function goTab(p){ document.querySelector(`.tab[data-p="${p}"]`).click(); }
+function markPublished(qKey){ DB.published[qKey]=true; save(); renderHome(); }
+function renderHome(){
+  const Y=DB.year, now=new Date();
+  let i=0,o=0; yearEntries().forEach(e=>{ if(e.type==='in')i+=e.amt; else o+=e.amt; });
+  document.getElementById('hIn').textContent=fmt(i);
+  document.getElementById('hOut').textContent=fmt(o);
+  document.getElementById('hBal').textContent=fmt(i-o);
+  const todos=[];
+  // 預算 §12
+  const hasBudget=Object.keys(DB.budget.income||{}).length||Object.keys(DB.budget.expense||{}).length;
+  todos.push(hasBudget
+    ? ['ok','§12',`${Y} 年度<b>預算</b>已編。`,'記得經會員（代表）大會通過、報主管機關備查。','去看預算','budget']
+    : ['todo','§12',`還沒編 ${Y} 年度<b>預算</b>（每年開始前要編好）。`,'白話：先估今年大概會收多少、花多少，送大會通過。','去編預算','budget']);
+  // 按季公開 §26（已結束且未公開的季）
+  const qEnd=[null,[2,31],[5,30],[8,30],[11,31]];
+  for(let q=1;q<=4;q++){
+    const ended = now > new Date(Y,qEnd[q][0],qEnd[q][1],23,59);
+    if(!ended) continue;
+    const key=Y+'Q'+q;
+    if(DB.published[key]) todos.push(['ok','§26',`第 ${q} 季財務<b>已公開</b>。`,'',null,null]);
+    else todos.push(['warn','§26',`第 ${q} 季已結束，要<b>公開揭示</b>財務給會員。`,'白話：把這季收支貼公布欄/群組讓大家看得到。','去公開→標記','pubq:'+key]);
+  }
+  // 決算 §13
+  todos.push(['todo','§13',`年底結帳：${Y} 年度<b>決算</b>要在 ${Y+1}/3/31 前編好。`,`白話：年度結束算總帳，送${DB.settings.supBoard?'監事會':'監事'}審核、大會通過後30日內報主管機關。`,'產生決算書','decal']);
+  document.getElementById('todoList').innerHTML=todos.map(t=>{
+    const [lv,ref,txt,plain,btn,act]=t;
+    const ico=lv==='ok'?'✅':lv==='warn'?'🟡':'🟠';
+    const button = btn? `<button class="btn ghost sm no-print" style="margin-top:6px" onclick="homeAct('${act}')">${btn}</button>`:'';
+    return `<div class="alert ${lv==='ok'?'ok':lv==='warn'?'warn':'warn'}" style="flex-direction:column;align-items:stretch"><div style="display:flex;gap:8px"><span class="ico">${ico}</span><div>${txt}<span class="ref">依 ${ref}${plain?'　·　'+plain:''}</span></div></div>${button}</div>`;
+  }).join('');
+  // 健檢
+  const outM=sumByCat('out'); const totOut=o;
+  const core=(outM['事業費']||0)+(outM['辦公費']||0); const ratio=totOut?core/totOut*100:0;
+  const h=[];
+  h.push(totOut===0?['ok','還沒有支出。','§21']
+    : [ratio>=40?'ok':'bad',`事業費＋辦公費佔總支出 ${ratio.toFixed(0)}%（法律要求至少40%）。${ratio>=40?'OK！':'偏低，錢要多用在會務/活動上。'}`,'§21']);
+  h.push((i-o)>0 ? [DB.settings.reserve>0?'ok':'warn', DB.settings.reserve>0?`今年有提存準備金 ${fmt(DB.settings.reserve)}。`:'今年有結餘，建議提一點「準備金」存著（到設定填）。','§22'] : ['ok','今年沒有結餘，準備金可不提。','§22']);
+  h.push(['ok','歷年結餘只能留作以後年度用，<b>不可以分給個人</b>。','§23']);
+  document.getElementById('healthList').innerHTML=h.map(([lv,txt,ref])=>`<div class="alert ${lv==='bad'?'bad':lv==='warn'?'warn':'ok'}"><span class="ico">${lv==='bad'?'⛔':lv==='warn'?'🟡':'✅'}</span><div>${txt}<span class="ref">依 ${ref}</span></div></div>`).join('');
+}
+function homeAct(act){
+  if(act==='budget') goTab('budget');
+  else if(act==='decal'){ goTab('report'); setTimeout(()=>genDecal(),300); }
+  else if(act&&act.startsWith('pubq:')){ const key=act.slice(5); goTab('public'); if(confirm('要把這一季標記為「已公開」嗎？（請先確認真的已公告給會員）')) markPublished(key); }
+}
 
 /* ===================== 記帳 ===================== */
 function setType(t){
@@ -1012,7 +1125,7 @@ function wipe(){ if(prompt('將清空本機所有帳目，無法復原。請輸�
   document.getElementById('fDate').value=today;
   document.getElementById('aDate').value=today;
   fillAssetCat();
-  setType('out'); fillSettings(); renderEntries(); refreshKPI(); renderLaw(); renderReceipts();
+  setType('out'); fillSettings(); renderEntries(); refreshKPI(); renderLaw(); renderReceipts(); renderHome();
 })();
 if('serviceWorker' in navigator){ navigator.serviceWorker.register('sw.js').catch(()=>{}); }
 </script>
