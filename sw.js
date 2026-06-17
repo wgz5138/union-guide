@@ -2,7 +2,7 @@
    策略：HTML 走「網路優先」——有網路永遠拿最新（自動更新偵測照常運作），沒網路才退回快取。
         圖示/設定/CDN 走「快取優先」。ver.txt 完全不攔，保持每次連線即時比對版本。
    ⚠️ 每次部署若想讓離線快取也更新，把下面 CACHE 後面的版本號改成跟 ver.txt 一樣。 */
-const CACHE = "ebn-2026061704";
+const CACHE = "ebn-2026061705";
 const SHELL = [
   "./evidence.html", "./search.html", "./lawyer.html", "./share.html",
   "./finance.html", "./finance-law.js", "./receipt.html",

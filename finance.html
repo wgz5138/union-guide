@@ -426,6 +426,7 @@ function load(){
 function save(){ localStorage.setItem(DB_KEY, JSON.stringify(DB)); }
 function fmt(n){ return "$"+(Math.round(n)||0).toLocaleString('en-US'); }
 function esc(s){ return (s||'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
+async function sha256(str){ try{ if(!(crypto&&crypto.subtle))return null; const buf=new TextEncoder().encode(str); const h=await crypto.subtle.digest('SHA-256',buf); return [...new Uint8Array(h)].map(b=>b.toString(16).padStart(2,'0')).join(''); }catch(e){ return null; } }
 
 /* ===================== 單據快拍 IndexedDB（與 receipt.html 共用 unionFin/receipts）===================== */
 const IDB={db:null,
@@ -478,8 +479,15 @@ async function viewReceipt(rcptId){
   const r=await IDB.get(rcptId);
   if(!r){alert('找不到此單據影像（可能在另一台裝置）。');return;}
   const w=window.open('','_blank');
-  const html=`<!DOCTYPE html><meta charset=utf-8><title>單據 ${r.date}</title><body style="margin:0;background:#222;text-align:center;font-family:sans-serif"><div style="color:#ccc;padding:8px;font-size:13px">${esc(r.sum||r.cat)} · ${fmt(r.amt)} · ${r.date} · 憑證保存至 ${(+(r.date||'2026').slice(0,4))+5} 年（§27）</div>${r.img?`<img src="${r.img}" style="max-width:100%">`:'<p style="color:#ccc">（此單據無照片）</p>'}</body>`;
+  const html=`<!DOCTYPE html><meta charset=utf-8><title>單據 ${r.date}</title><body style="margin:0;background:#222;text-align:center;font-family:sans-serif"><div style="color:#ccc;padding:8px;font-size:13px">${esc(r.sum||r.cat)} · ${fmt(r.amt)} · ${r.date} · 憑證保存至 ${(+(r.date||'2026').slice(0,4))+5} 年（§27）${r.hash?'<br>數位指紋 '+esc(r.hash.slice(0,32))+'…':''}</div>${r.img?`<img src="${r.img}" style="max-width:100%">`:'<p style="color:#ccc">（此單據無照片）</p>'}</body>`;
   if(w){w.document.write(html);w.document.close();}
+}
+async function verifyReceipt(rcptId){
+  const r=await IDB.get(rcptId);
+  if(!r||!r.img||!r.hash){alert('此單據無照片或指紋可驗。');return;}
+  const h=await sha256(r.img);
+  if(h===null){alert('此瀏覽器無法計算指紋（需 https 環境）。');return;}
+  alert(h===r.hash ? '✅ 驗證通過：此單據自拍攝後未被更動（指紋一致）。' : '⛔ 警告：指紋不一致，照片可能已被更動！\n\n現在：'+h.slice(0,24)+'…\n原始：'+r.hash.slice(0,24)+'…');
 }
 /* ② 季度單據合併 PDF（§27 存檔） */
 async function genReceiptPDF(q){
@@ -493,7 +501,10 @@ async function genReceiptPDF(q){
   let cover=`<tr class="t"><td>日期</td><td>用途</td><td>科目</td><td class="n">金額</td><td>付款</td></tr>`;
   list.forEach((r,i)=>{ cover+=`<tr><td>${r.date}</td><td>${esc(r.sum||'')}</td><td>${esc(r.cat)}</td><td class="n">${fmt(r.amt)}</td><td>${r.cash?'現金':'轉帳'}${r.gov?'/補助':''}</td></tr>`; });
   cover+=`<tr class="t"><td colspan="3">合計（${list.length} 筆）</td><td class="n">${fmt(tot)}</td><td></td></tr>`;
-  const pages=list.map((r,i)=>`<div class="r"><div class="cap"><b>單據 ${i+1} / ${list.length}</b>　${r.date}　${esc(r.sum||r.cat)}　${fmt(r.amt)}　${r.cat}　${r.cash?'現金':'轉帳'}${r.gov?'（政府補助）':''}${r.shotAt?'　｜拍攝 '+esc(r.shotAt.slice(0,16).replace('T',' ')):''}${r.geo?'　GPS '+r.geo.lat.toFixed(4)+','+r.geo.lng.toFixed(4):''}　｜保存至 ${(+(r.date||'2026').slice(0,4))+5} 年（§27）</div>${r.img?`<img src="${r.img}">`:'<p style="color:#999">（此單據無照片，僅有帳載資料）</p>'}</div>`).join('');
+  // 數位指紋清單（供核對/簽名；SHA-256，純本機計算）
+  let fp=`<tr class="t"><td>#</td><td>日期</td><td>用途</td><td>數位指紋（SHA-256）</td></tr>`;
+  list.forEach((r,i)=>{ fp+=`<tr><td>${i+1}</td><td>${r.date}</td><td>${esc(r.sum||r.cat)}</td><td style="font-family:monospace;font-size:10px;word-break:break-all">${r.hash?esc(r.hash):'（無照片，無指紋）'}</td></tr>`; });
+  const pages=list.map((r,i)=>`<div class="r"><div class="cap"><b>單據 ${i+1} / ${list.length}</b>　${r.date}　${esc(r.sum||r.cat)}　${fmt(r.amt)}　${r.cat}　${r.cash?'現金':'轉帳'}${r.gov?'（政府補助）':''}${r.shotAt?'　｜拍攝 '+esc(r.shotAt.slice(0,16).replace('T',' ')):''}${r.geo?'　GPS '+r.geo.lat.toFixed(4)+','+r.geo.lng.toFixed(4):''}　｜保存至 ${(+(r.date||'2026').slice(0,4))+5} 年（§27）${r.hash?'<br>數位指紋 '+esc(r.hash):''}</div>${r.img?`<img src="${r.img}">`:'<p style="color:#999">（此單據無照片，僅有帳載資料）</p>'}</div>`).join('');
   const html=`<!DOCTYPE html><html lang="zh-TW"><head><meta charset="utf-8"><title>${esc('高雄榮總護理工會 '+title)}</title>
 <style>@page{size:A4;margin:1.4cm}*{box-sizing:border-box}body{font-family:'Noto Sans TC',sans-serif;color:#1a1a1a;margin:0}
 h1{text-align:center;font-size:18px;font-family:'Noto Serif TC',serif;margin:.2rem 0}.sub{text-align:center;color:#555;font-size:12px;margin-bottom:12px}
@@ -507,6 +518,10 @@ table{width:100%;border-collapse:collapse;font-size:12.5px}th,td{border:1px soli
 <h1>高雄榮總護理工會 ${esc(title)}</h1>
 <div class="sub">依工會財務處理準則 §27（憑證至少保存5年）彙整 · 共 ${list.length} 筆 · 合計 ${fmt(tot)}</div>
 <table>${cover}</table>
+<h2 style="font-size:14px;margin:14px 0 4px;border-left:4px solid #1A7A4A;padding-left:8px">數位指紋清單（防竄改存證）</h2>
+<p class="note" style="margin-top:0">每張照片以 SHA-256 算出唯一指紋；日後重算比對即可證明照片未被更動。建議本頁由理事長、監事簽名／用印（§20·§28），使指紋之存在時間有所佐證。</p>
+<table>${fp}</table>
+<div style="display:flex;gap:2rem;margin-top:1.5rem;font-size:12px"><div style="flex:1;border-top:1px solid #999;padding-top:6px;text-align:center">理事長（簽章）</div><div style="flex:1;border-top:1px solid #999;padding-top:6px;text-align:center">${DB.settings.supBoard?'監事會':'監事'}（簽章）</div><div style="flex:1;border-top:1px solid #999;padding-top:6px;text-align:center">日期</div></div>
 <p class="note">※ 每張單據照片含拍攝時間／GPS 浮水印存證。本檔為單據影像彙編，正式決算另見決算書。pcode N0020014。</p>
 ${pages}
 </body></html>`;
@@ -665,7 +680,7 @@ function renderEntries(){
     return `<div class="entry">
       <div class="e-amt ${e.type}">${e.type==='in'?'+':'−'}${fmt(e.amt).slice(1)}</div>
       <div class="e-body">
-        <div class="e-sum">${esc(e.sum||e.cat)}${e.rcptId?` <span class="e-tag cash" style="cursor:pointer" onclick="viewReceipt('${e.rcptId}')">📎 單據</span>`:''}</div>
+        <div class="e-sum">${esc(e.sum||e.cat)}${e.rcptId?` <span class="e-tag cash" style="cursor:pointer" onclick="viewReceipt('${e.rcptId}')">📎 單據</span> <span class="e-tag" style="cursor:pointer" onclick="verifyReceipt('${e.rcptId}')">🔒 驗證</span>`:''}</div>
         <div class="e-meta">
           <span class="e-tag">${esc(e.cat)}</span>
           ${e.cash?'<span class="e-tag cash">零用金</span>':''}

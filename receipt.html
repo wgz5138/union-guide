@@ -178,6 +178,8 @@ const IDB={db:null,
 };
 function fmt(n){return "$"+(Math.round(n)||0).toLocaleString('en-US');}
 function esc(s){return (s||'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));}
+/* SHA-256 數位指紋（瀏覽器內建，純本機）。回傳 64 字 16 進位字串；不支援時回 null。 */
+async function sha256(str){ try{ if(!(crypto&&crypto.subtle))return null; const buf=new TextEncoder().encode(str); const h=await crypto.subtle.digest('SHA-256',buf); return [...new Uint8Array(h)].map(b=>b.toString(16).padStart(2,'0')).join(''); }catch(e){ return null; } }
 
 /* ---------- 影像壓縮＋GPS／時間浮水印（防造假，§10 原始憑證存證）---------- */
 function getGeo(){return new Promise(res=>{ if(!navigator.geolocation)return res(null); navigator.geolocation.getCurrentPosition(p=>res({lat:p.coords.latitude,lng:p.coords.longitude,acc:Math.round(p.coords.accuracy||0)}),()=>res(null),{enableHighAccuracy:false,timeout:7000,maximumAge:60000}); });}
@@ -259,6 +261,7 @@ async function saveReceipt(){
     geo:photo?photo.geo:null, shotAt:photo?photo.ts:null,
     imported:false, created:Date.now(), src:'receipt'
   };
+  rec.hash = photo? await sha256(rec.img) : null; // 數位指紋存證
   try{ await IDB.put(rec); }catch(e){ alert('儲存失敗（可能空間不足），請先匯出舊單據再試。'); return; }
   // reset
   clearPhoto();
@@ -300,8 +303,10 @@ async function view(id){
       <div class="mrow"><span class="k">經辦</span><span>${esc(r.handler||'—')}</span></div>
       <div class="mrow"><span class="k">付款</span><span>${r.cash?'現金':'轉帳／刷卡'}${r.gov?'（政府補助）':''}</span></div>
       <div class="mrow"><span class="k">拍攝存證</span><span>${r.shotAt?nowStamp(new Date(r.shotAt)):'—'}${r.geo?'　GPS '+r.geo.lat.toFixed(4)+','+r.geo.lng.toFixed(4):''}</span></div>
+      <div class="mrow"><span class="k">數位指紋</span><span style="word-break:break-all;font-size:11px">${r.hash?esc(r.hash.slice(0,24))+'…':'（無）'}</span></div>
       <div class="mrow"><span class="k">憑證保存至</span><span>${(+(r.date||'2026').slice(0,4))+5} 年（§27 至少5年）</span></div>
     </div>
+    ${r.hash?`<button class="btn ghost sm" style="width:100%;margin-top:8px" onclick="verifyRec('${r.id}')">🔒 驗證未竄改</button>`:''}
     <div style="display:flex;gap:8px;margin-top:12px">
       ${r.img?`<a class="btn ghost sm" style="flex:1;text-decoration:none" href="${r.img}" download="單據_${r.date}_${r.amt}.jpg">⬇ 下載圖檔</a>`:''}
       <button class="btn gray sm" style="flex:1" onclick="closeModal()">關閉</button>
@@ -310,6 +315,12 @@ async function view(id){
   document.getElementById('modal').classList.add('on');
 }
 function closeModal(){document.getElementById('modal').classList.remove('on');}
+async function verifyRec(id){
+  const r=(await IDB.all()).find(x=>x.id===id); if(!r||!r.img||!r.hash){alert('此單據無照片或指紋可驗。');return;}
+  const h=await sha256(r.img);
+  if(h===null){alert('此瀏覽器無法計算指紋（需 https 環境）。');return;}
+  alert(h===r.hash ? '✅ 驗證通過：這張單據自拍攝後未被更動過（指紋一致）。' : '⛔ 警告：指紋不一致，照片可能已被更動！\n\n現在指紋：'+h.slice(0,24)+'…\n原始指紋：'+r.hash.slice(0,24)+'…');
+}
 async function delRec(id){ if(!confirm('刪除這筆單據？電子憑證將消失，無法復原。')) return; await IDB.del(id); closeModal(); refresh(); }
 
 async function exportBundle(){
