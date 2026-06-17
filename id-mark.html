@@ -51,6 +51,18 @@
   .croprow input{width:auto;flex:0 0 auto;}
   .dragtip{font-size:12px;color:#7A5600;background:#FEF9E7;border:1px solid #EAD67A;border-radius:8px;padding:7px 9px;margin-top:7px;}
 
+  /* 傳送 / 信箱自動補全 */
+  .btn-share{background:#1565C0;color:#fff;margin-top:6px;}
+  .btn-dl{background:#5B6770;color:#fff;margin-top:6px;}
+  .btn-mail{background:#2E7D32;color:#fff;margin-top:6px;}
+  .destwrap{position:relative;margin-top:10px;}
+  .sugbox{position:absolute;left:0;right:0;top:100%;z-index:5;background:#fff;border:1px solid var(--border);
+    border-radius:10px;box-shadow:0 6px 16px rgba(0,0,0,.14);overflow:hidden;display:none;margin-top:4px;}
+  .sugbox .sug{padding:11px 13px;font-size:14.5px;cursor:pointer;border-bottom:1px solid #f0ece6;}
+  .sugbox .sug:last-child{border-bottom:none;}
+  .sugbox .sug:active{background:#f3efe9;}
+  .sugbox .sug small{color:var(--soft);}
+
   /* 內建掃描相機（全螢幕，僅螢幕顯示，絕不列印）*/
   .cam{position:fixed;inset:0;z-index:999;background:#000;display:none;flex-direction:column;align-items:center;justify-content:center;}
   .cam video{width:100%;height:100%;object-fit:cover;}
@@ -140,6 +152,21 @@
       📡 <strong>已用藍牙／Wi-Fi 連好印表機？</strong>按「列印」後手機會跳出系統列印視窗，在「印表機」選你那台直接印；沒連則可「儲存為 PDF」。
     </div>
     <p class="hint noprint" id="status">尚未加入照片。</p>
+
+    <div class="card noprint" id="shareCard" style="display:none">
+      <label>③ 傳送 / 存雲端 / 寄信（整理成 A4 後使用）</label>
+      <button class="btn btn-share" id="shareBtn" onclick="shareFiles()">📤 傳送…（寄信／Google雲端／檔案／AirDrop／LINE）</button>
+      <button class="btn btn-dl" onclick="downloadFiles()">⬇️ 下載到手機（相簿／檔案）</button>
+      <div class="destwrap">
+        <label style="margin-top:0">常用信箱（選填，填過會記住）</label>
+        <input type="text" id="dest" inputmode="email" autocomplete="off" placeholder="例如 yourname@gmail.com"
+               oninput="suggest()" onfocus="suggest()" onblur="setTimeout(hideSug,200)">
+        <div class="sugbox" id="destSug"></div>
+      </div>
+      <button class="btn btn-mail" onclick="emailTo()">✉️ 寄到我的信箱</button>
+      <div class="hint">按「傳送…」會跳出手機的系統選單，<strong>自己選要送去哪</strong>（郵件／雲端硬碟／檔案／AirDrop…）。<br>
+        ℹ️ 因瀏覽器安全限制，網頁無法自動把檔案塞進信件；選「郵件」時系統會<strong>自動幫你夾帶附件</strong>，你填收件人即可（信箱已幫你複製）。</div>
+    </div>
 
     <div id="print"></div>
   </main>
@@ -452,7 +479,8 @@
   window.addEventListener('resize', function(){ items.forEach(function(it,idx){ it._base=null; if(!it._cropping) paintItem(idx); }); });
 
   function removeItem(i){ items.splice(i,1); renderList(); resetBuilt(); }
-  function resetBuilt(){ $('print').innerHTML=''; $('prn').disabled=true; window._built=false; }
+  function resetBuilt(){ $('print').innerHTML=''; $('prn').disabled=true; window._built=false;
+    window._shareFiles=null; var sc=$('shareCard'); if(sc) sc.style.display='none'; }
 
   // ---- 輸出 ----
   function bake(it){
@@ -484,8 +512,109 @@
       html+='</div>';
     }
     $('print').innerHTML=html; window._built=true; $('prn').disabled=false;
-    $('status').textContent='已整理成 A4，下方可預覽。確認資料清楚後按「列印/存PDF」。';
+    $('status').textContent='已整理成 A4，下方可預覽。確認資料清楚後按「列印/存PDF」或「傳送」。';
+
+    // 同步產生可分享/下載/寄信的 A4 圖檔（每頁一張）
+    $('shareCard').style.display=''; window._shareFiles=null;
+    composePages(baked).then(function(pages){
+      return Promise.all(pages.map(function(c,i){
+        return new Promise(function(r){ c.toBlob(function(b){ r(new File([b],'證件A4_'+(i+1)+'.jpg',{type:'image/jpeg'})); },'image/jpeg',0.92); });
+      }));
+    }).then(function(files){ window._shareFiles=files; }).catch(function(){});
+
     $('print').scrollIntoView({behavior:'smooth'});
+  }
+
+  // ---- 把每頁排版烤成一張 A4 圖（給分享/下載/寄信用）----
+  function loadImg(src){ return new Promise(function(res){ var i=new Image(); i.onload=function(){res(i);}; i.src=src; }); }
+  function drawSlot(x, label, img, sx, sy, sw, sh){
+    var capH=44;
+    x.fillStyle='#000'; x.font='bold 28px sans-serif'; x.textAlign='left'; x.textBaseline='top';
+    x.fillText(label, sx, sy);
+    var iy=sy+capH, ih=sh-capH-8, iw=sw;
+    var s=Math.min(iw/img.width, ih/img.height), dw=img.width*s, dh=img.height*s;
+    x.drawImage(img, sx+(iw-dw)/2, iy+(ih-dh)/2, dw, dh);
+  }
+  async function composePages(baked){
+    var per=parseInt($('perPage').value,10), grid=per===4;
+    var imgs=await Promise.all(baked.map(function(b){ return loadImg(b.src); }));
+    var PW=1240, PH=1754, M=58, pages=[];   // ≈150dpi A4
+    for(var i=0;i<baked.length;i+=per){
+      var c=document.createElement('canvas'); c.width=PW; c.height=PH;
+      var x=c.getContext('2d'); x.fillStyle='#fff'; x.fillRect(0,0,PW,PH);
+      var gi=imgs.slice(i,i+per), gb=baked.slice(i,i+per);
+      if(!grid){
+        var sh=(PH-2*M)/2;
+        gb.forEach(function(b,k){ drawSlot(x,b.label,gi[k], M, M+k*sh, PW-2*M, sh); });
+      } else {
+        var sw=(PW-2*M)/2, sh4=(PH-2*M)/2;
+        gb.forEach(function(b,k){ drawSlot(x,b.label,gi[k], M+(k%2)*sw, M+((k/2)|0)*sh4, sw, sh4); });
+      }
+      pages.push(c);
+    }
+    return pages;
+  }
+
+  // ---- 傳送 / 下載 / 寄信 ----
+  function notReady(){ if(!window._shareFiles||!window._shareFiles.length){ alert('檔案產生中，請等 1～2 秒再按一次。'); return true; } return false; }
+  function shareFiles(){
+    if(notReady()) return;
+    if(navigator.canShare && navigator.canShare({files:window._shareFiles})){
+      navigator.share({ files:window._shareFiles, title:'證件影本（高榮企業工會連署）' }).catch(function(){});
+    } else { downloadFiles(); alert('此瀏覽器不支援直接分享，已改為下載到裝置，可再自行夾帶寄出或上傳雲端。'); }
+  }
+  function downloadFiles(){
+    if(notReady()) return;
+    window._shareFiles.forEach(function(f){
+      var u=URL.createObjectURL(f), a=document.createElement('a');
+      a.href=u; a.download=f.name; document.body.appendChild(a); a.click(); a.remove();
+      setTimeout(function(){ URL.revokeObjectURL(u); }, 4000);
+    });
+  }
+  function emailTo(){
+    if(notReady()) return;
+    var em=getEmail();
+    if(em && validEmail(em)){ remember(em); try{ navigator.clipboard && navigator.clipboard.writeText(em); }catch(_){} }
+    if(navigator.canShare && navigator.canShare({files:window._shareFiles})){
+      navigator.share({ files:window._shareFiles, title:'證件影本（高榮企業工會連署）' }).catch(function(){});
+    } else {
+      downloadFiles();
+      if(em && validEmail(em))
+        location.href='mailto:'+encodeURIComponent(em)+'?subject='+encodeURIComponent('證件影本（高榮企業工會連署）')+
+          '&body='+encodeURIComponent('附件為證件影本，請從剛剛下載到裝置的檔案夾帶後寄出。');
+    }
+  }
+
+  // ---- 信箱 @ 自動補全 + 記住常用 ----
+  var DOMAINS=['gmail.com','yahoo.com.tw','yahoo.com','hotmail.com','outlook.com','icloud.com','msn.com','me.com','livemail.tw','vghks.gov.tw'];
+  function getEmail(){ return ($('dest').value||'').trim(); }
+  function validEmail(s){ return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(s); }
+  function getSaved(){ try{ return JSON.parse(localStorage.getItem('idmark_emails')||'[]'); }catch(_){ return []; } }
+  function remember(em){
+    var a=getSaved().filter(function(x){ return x!==em; }); a.unshift(em);
+    try{ localStorage.setItem('idmark_emails', JSON.stringify(a.slice(0,8))); }catch(_){}
+  }
+  function hideSug(){ $('destSug').style.display='none'; }
+  function suggest(){
+    var v=getEmail(), box=$('destSug'), saved=getSaved(), list=[];
+    if(!v){ list=saved.slice(0,6); }
+    else if(v.indexOf('@')>=0){
+      var at=v.indexOf('@'), local=v.slice(0,at), dom=v.slice(at+1);
+      saved.forEach(function(s){ if(s.indexOf(v)===0) list.push(s); });
+      DOMAINS.filter(function(d){ return d.indexOf(dom)===0; }).forEach(function(d){ var e=local+'@'+d; if(list.indexOf(e)<0) list.push(e); });
+    } else {
+      saved.forEach(function(s){ if(s.indexOf(v)===0) list.push(s); });
+      DOMAINS.forEach(function(d){ list.push(v+'@'+d); });
+    }
+    list=list.slice(0,6);
+    if(!list.length){ hideSug(); return; }
+    box.innerHTML='';
+    list.forEach(function(s){
+      var d=document.createElement('div'); d.className='sug'; d.textContent=s;
+      d.addEventListener('mousedown', function(ev){ ev.preventDefault(); $('dest').value=s; hideSug(); });
+      box.appendChild(d);
+    });
+    box.style.display='block';
   }
 
   (function(){
