@@ -1,0 +1,13 @@
+{
+  "name": "單據快拍",
+  "short_name": "單據快拍",
+  "start_url": "./receipt.html",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#1A7A4A",
+  "theme_color": "#1A7A4A",
+  "icons": [
+    { "src": "icon-evidence.png", "sizes": "512x512", "type": "image/png", "purpose": "any" }
+  ]
+}

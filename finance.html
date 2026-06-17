@@ -185,6 +185,21 @@
       <button class="btn full" style="margin-top:10px" onclick="addEntry()">＋ 記一筆</button>
     </div>
 
+    <div class="card" id="rcptCard" style="display:none">
+      <div class="card-title">📷 單據快拍待收 <span class="law-pill" onclick="gotoLaw('第10條')">§10 原始憑證</span></div>
+      <p class="muted" style="margin-bottom:8px">幹部用「單據快拍」拍的支出單據，收進帳本後會自動建立支出明細，照片即原始憑證留底（§10·§27）。</p>
+      <div id="rcptPending"></div>
+      <div class="row" style="margin-top:8px">
+        <button class="btn ghost sm" style="flex:1" onclick="ingestAll()">全部收進帳本</button>
+        <label class="btn gray sm" style="flex:1;cursor:pointer;text-align:center">匯入單據檔<input type="file" id="rcptFile" accept=".json" onchange="importBundle(event)" style="display:none"></label>
+      </div>
+    </div>
+    <div class="card" id="rcptEmpty">
+      <div class="card-title">📷 單據快拍 <span class="law-pill" onclick="gotoLaw('第10條')">§10</span></div>
+      <p class="muted">目前沒有待收單據。請用「單據快拍」拍照記錄支出，或按下方匯入幹部傳來的單據檔。</p>
+      <label class="btn gray sm" style="margin-top:8px;cursor:pointer;text-align:center;display:inline-flex">匯入單據檔（.json）<input type="file" id="rcptFile2" accept=".json" onchange="importBundle(event)" style="display:none"></label>
+    </div>
+
     <div class="card">
       <div class="card-title">本年明細 <span class="law-pill" onclick="gotoLaw('第8條')">日記簿 §8</span></div>
       <div class="row no-print" style="margin-bottom:8px">
@@ -379,6 +394,61 @@ function save(){ localStorage.setItem(DB_KEY, JSON.stringify(DB)); }
 function fmt(n){ return "$"+(Math.round(n)||0).toLocaleString('en-US'); }
 function esc(s){ return (s||'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
 
+/* ===================== 單據快拍 IndexedDB（與 receipt.html 共用 unionFin/receipts）===================== */
+const IDB={db:null,
+  open(){return new Promise((res,rej)=>{const r=indexedDB.open('unionFin',1);r.onupgradeneeded=e=>{const d=e.target.result;if(!d.objectStoreNames.contains('receipts'))d.createObjectStore('receipts',{keyPath:'id'});};r.onsuccess=e=>{this.db=e.target.result;res(this.db);};r.onerror=e=>rej(e);});},
+  async st(mode){if(!this.db)await this.open();return this.db.transaction('receipts',mode).objectStore('receipts');},
+  async put(o){const s=await this.st('readwrite');return new Promise((res,rej)=>{const r=s.put(o);r.onsuccess=()=>res();r.onerror=()=>rej(r.error);});},
+  async get(id){const s=await this.st('readonly');return new Promise(res=>{const r=s.get(id);r.onsuccess=()=>res(r.result);r.onerror=()=>res(null);});},
+  async all(){const s=await this.st('readonly');return new Promise(res=>{const r=s.getAll();r.onsuccess=()=>res(r.result||[]);r.onerror=()=>res([]);});}
+};
+async function renderReceipts(){
+  let all=[]; try{ all=await IDB.all(); }catch(e){ all=[]; }
+  const pending=all.filter(r=>!r.imported);
+  const card=document.getElementById('rcptCard'), empty=document.getElementById('rcptEmpty');
+  if(!pending.length){ card.style.display='none'; empty.style.display='block'; return; }
+  card.style.display='block'; empty.style.display='none';
+  document.getElementById('rcptPending').innerHTML=pending.sort((a,b)=>b.created-a.created).map(r=>
+    `<div class="entry"><div class="e-amt out">−${fmt(r.amt).slice(1)}</div><div class="e-body"><div class="e-sum">${esc(r.sum||r.cat)} ${r.img?'📎':''}</div><div class="e-meta"><span class="e-tag">${esc(r.cat)}</span>${r.cash?'<span class="e-tag cash">現金</span>':''}${r.gov?'<span class="e-tag gov">政府補助</span>':''}${r.date}　${esc(r.handler||'')}</div></div><button class="e-del no-print" onclick="ingestOne('${r.id}')" style="color:var(--green);font-size:13px">收進↓</button></div>`
+  ).join('');
+}
+async function ingestOne(id){
+  const r=await IDB.get(id); if(!r)return;
+  DB.entries.push({id:Date.now()+''+Math.floor(Math.random()*1000),date:r.date,type:'out',cat:r.cat,amt:r.amt,sum:r.sum||r.cat,vno:r.vno||'',handler:r.handler||'',reviewer:'',cash:!!r.cash,gov:!!r.gov,seal:false,rcptId:r.id});
+  save(); r.imported=true; await IDB.put(r);
+  renderEntries(); refreshKPI(); renderReceipts();
+}
+async function ingestAll(){
+  let all=[]; try{ all=await IDB.all(); }catch(e){}
+  const pending=all.filter(r=>!r.imported);
+  if(!pending.length){alert('沒有待收單據');return;}
+  if(!confirm('將把 '+pending.length+' 筆單據收進帳本（建立支出明細）？')) return;
+  for(const r of pending){
+    DB.entries.push({id:Date.now()+''+Math.floor(Math.random()*1000)+r.id,date:r.date,type:'out',cat:r.cat,amt:r.amt,sum:r.sum||r.cat,vno:r.vno||'',handler:r.handler||'',reviewer:'',cash:!!r.cash,gov:!!r.gov,seal:false,rcptId:r.id});
+    r.imported=true; await IDB.put(r);
+  }
+  save(); renderEntries(); refreshKPI(); renderReceipts();
+  alert('已收進 '+pending.length+' 筆。照片留存為原始憑證（§10·§27）。');
+}
+function importBundle(ev){
+  const f=ev.target.files[0]; if(!f)return;
+  const rd=new FileReader();
+  rd.onload=async()=>{ try{
+    const d=JSON.parse(rd.result);
+    const list=d.receipts||d; if(!Array.isArray(list))throw 0;
+    let n=0; for(const r of list){ if(r&&r.id&&r.amt!=null){ r.imported=false; await IDB.put(r); n++; } }
+    ev.target.value=''; renderReceipts(); alert('已匯入 '+n+' 筆單據，請於上方「收進帳本」。');
+  }catch(e){ alert('單據檔格式不正確'); } };
+  rd.readAsText(f);
+}
+async function viewReceipt(rcptId){
+  const r=await IDB.get(rcptId);
+  if(!r){alert('找不到此單據影像（可能在另一台裝置）。');return;}
+  const w=window.open('','_blank');
+  const html=`<!DOCTYPE html><meta charset=utf-8><title>單據 ${r.date}</title><body style="margin:0;background:#222;text-align:center;font-family:sans-serif"><div style="color:#ccc;padding:8px;font-size:13px">${esc(r.sum||r.cat)} · ${fmt(r.amt)} · ${r.date} · 憑證保存至 ${(+(r.date||'2026').slice(0,4))+5} 年（§27）</div>${r.img?`<img src="${r.img}" style="max-width:100%">`:'<p style="color:#ccc">（此單據無照片）</p>'}</body>`;
+  if(w){w.document.write(html);w.document.close();}
+}
+
 /* ===================== 進場鎖 ===================== */
 function pwHash(s){ let h=0; for(let i=0;i<s.length;i++){h=(h*31+s.charCodeAt(i))>>>0;} return ''+h; }
 function curPwHash(){ return localStorage.getItem(PW_KEY) || pwHash(DEFAULT_PW); }
@@ -404,6 +474,7 @@ document.getElementById('tabs').addEventListener('click',e=>{
   if(b.dataset.p==='journal') renderJournal();
   if(b.dataset.p==='budget') renderBudget();
   if(b.dataset.p==='asset') renderAssets();
+  if(b.dataset.p==='book') renderReceipts();
   window.scrollTo(0,0);
 });
 function gotoLaw(art){ document.querySelector('.tab[data-p="law"]').click(); const el=document.getElementById('law-'+art); if(el){el.open=true; el.scrollIntoView({behavior:'smooth',block:'center'});} }
@@ -481,7 +552,7 @@ function renderEntries(){
     return `<div class="entry">
       <div class="e-amt ${e.type}">${e.type==='in'?'+':'−'}${fmt(e.amt).slice(1)}</div>
       <div class="e-body">
-        <div class="e-sum">${esc(e.sum||e.cat)}</div>
+        <div class="e-sum">${esc(e.sum||e.cat)}${e.rcptId?` <span class="e-tag cash" style="cursor:pointer" onclick="viewReceipt('${e.rcptId}')">📎 單據</span>`:''}</div>
         <div class="e-meta">
           <span class="e-tag">${esc(e.cat)}</span>
           ${e.cash?'<span class="e-tag cash">零用金</span>':''}
@@ -941,7 +1012,7 @@ function wipe(){ if(prompt('將清空本機所有帳目，無法復原。請輸�
   document.getElementById('fDate').value=today;
   document.getElementById('aDate').value=today;
   fillAssetCat();
-  setType('out'); fillSettings(); renderEntries(); refreshKPI(); renderLaw();
+  setType('out'); fillSettings(); renderEntries(); refreshKPI(); renderLaw(); renderReceipts();
 })();
 if('serviceWorker' in navigator){ navigator.serviceWorker.register('sw.js').catch(()=>{}); }
 </script>
