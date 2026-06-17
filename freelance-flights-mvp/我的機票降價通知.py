@@ -84,7 +84,9 @@ def notify_if_cheaper(route, rows, state):
     now = best["price_twd"]
     last = state.get(key)
 
-    trans = "直飛" if best["transfers"] == 0 else f"轉機{best['transfers']}次"
+    trans = ("直飛" if best["transfers"] == 0
+             else "轉機(次數未知)" if best["transfers"] in (None, "", "?")
+             else f"轉機{best['transfers']}次")
     when = best["depart_time"] + (
         "→" + best["arrive_time"] if best["arrive_time"] else "")
     bag = f"\n🧳 {best['baggage']}" if best.get("baggage") else ""

@@ -210,10 +210,10 @@ def _build_row(offer, route, currency, round_trip):
         "return_at": return_at,
         "route": f"{route['origin']}-{route['dest']}",
         "dest_code": dest_code,                          # 實際抵達城市代碼
-        "price": offer["price"],
+        "price": offer.get("price", 0),
         "currency": currency,
         "airline": offer.get("airline", "?"),
-        "transfers": offer.get("transfers", "?"),        # 0=直飛
+        "transfers": offer.get("transfers"),             # 0=直飛；缺值為 None
         "link": full_link,
     }
 

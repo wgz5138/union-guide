@@ -5,7 +5,7 @@
 不依賴爬蟲版本：直接讀 data/gflights.csv，把直飛班的 flight_no 補上後存回。
 對照來源：①本檔內建對照（寫死，保證可用）②data/flight_no_map.csv（有就一起用）。
 
-用法：在專案資料夾裡執行  python 補航班號.py
+用法：在專案資料夾裡執行  python fill_flight_no.py（或雙擊 fill_flight_no.bat）
 """
 import csv
 import os
@@ -94,8 +94,8 @@ def main():
     for r in rows:
         if r.get("flight_no"):                      # 已有就不動
             continue
-        if str(r.get("transfers", "")).strip() not in ("0", ""):
-            continue                                # 只補直飛
+        if str(r.get("transfers", "")).strip() != "0":
+            continue                                # 只補直飛（轉機/未知不補，較誠實）
         carrier = NAME_IATA.get((r.get("airline") or "").strip(), "")
         hhmm = norm_time(r.get("depart_time", ""))
         fn = m.get((r.get("origin"), r.get("dest"), carrier, hhmm), "")

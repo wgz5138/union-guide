@@ -91,7 +91,9 @@ def handle(text):
     trip = rows[0]["trip"]
     lines = [f"✈️ {origin}→{dest}（{trip}）便宜的幾個（點連結看/訂）："]
     for i, r in enumerate(rows, 1):
-        飛行 = "直飛" if r["transfers"] == 0 else f"轉{r['transfers']}次"
+        飛行 = ("直飛" if r["transfers"] == 0
+                else "轉機(次數未知)" if r["transfers"] in (None, "", "?")
+                else f"轉{r['transfers']}次")
         when = r["depart_at"]
         if trip == "來回" and r["return_at"]:
             when += f"→{r['return_at']}回"
