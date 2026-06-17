@@ -22,10 +22,13 @@
   .row .val{font-size:13px;color:var(--soft);min-width:34px;text-align:right;}
   input[type=range]{flex:1;}
   .btn{display:block;width:100%;border:none;border-radius:12px;padding:13px;font-size:16px;font-weight:700;cursor:pointer;}
-  .btn-pick{background:var(--gold);color:#fff;}
   .btn-make{background:#2E7D32;color:#fff;margin-top:6px;}
   .btn-print{background:var(--red);color:#fff;margin-top:6px;}
   .btn:disabled{opacity:.4;}
+  .pick{display:flex;gap:10px;}
+  .pick .btn{margin:0;}
+  .btn-cam{background:var(--gold);color:#fff;}
+  .btn-alb{background:#5B6770;color:#fff;}
   .hint{font-size:12px;color:var(--soft);margin-top:8px;}
   .safe{background:#EAFAF1;border:1px solid #B8DCC4;color:#1A5C38;font-size:12.5px;padding:10px 12px;border-radius:10px;margin-bottom:12px;}
   .warn{background:#FDECEA;border:1.5px solid #E8A29A;color:#7B1818;font-size:13px;padding:11px 13px;border-radius:10px;margin-bottom:12px;line-height:1.65;}
@@ -39,13 +42,26 @@
   .pv{position:relative;width:100%;text-align:center;background:#faf8f5;border:1px solid var(--border);border-radius:8px;overflow:hidden;}
   .pv canvas{display:block;max-width:100%;height:auto;margin:0 auto;touch-action:none;}
   .tools{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px;}
-  .tools button{flex:1;min-width:62px;background:#f1eeea;border:1px solid var(--border);border-radius:9px;padding:9px 6px;cursor:pointer;font-size:13px;font-weight:600;color:#444;}
+  .tools button{flex:1;min-width:58px;background:#f1eeea;border:1px solid var(--border);border-radius:9px;padding:9px 5px;cursor:pointer;font-size:13px;font-weight:600;color:#444;}
+  .tools button.on{background:#FCEFB4;border-color:#E0C44A;color:#7A5600;}
   .tools button.danger{color:#B0392B;}
   .tools button.go{background:#2E7D32;color:#fff;border-color:#2E7D32;}
   .tools button.cancel{background:#fff;}
   .croprow{display:flex;align-items:center;gap:7px;margin-top:8px;font-size:13px;color:#5C4000;background:#FEF9E7;border:1px solid #EAD67A;border-radius:8px;padding:8px 10px;}
   .croprow input{width:auto;flex:0 0 auto;}
   .dragtip{font-size:12px;color:#7A5600;background:#FEF9E7;border:1px solid #EAD67A;border-radius:8px;padding:7px 9px;margin-top:7px;}
+
+  /* 內建掃描相機（全螢幕，僅螢幕顯示，絕不列印）*/
+  .cam{position:fixed;inset:0;z-index:999;background:#000;display:none;flex-direction:column;align-items:center;justify-content:center;}
+  .cam video{width:100%;height:100%;object-fit:cover;}
+  .camframe{position:absolute;left:50%;top:46%;transform:translate(-50%,-50%);
+    width:88vw;max-width:520px;aspect-ratio:8.56/5.4;border:2.5px dashed #fff;border-radius:10px;
+    box-shadow:0 0 0 9999px rgba(0,0,0,.45);pointer-events:none;}
+  .camtip{position:absolute;top:max(14px,env(safe-area-inset-top));left:0;right:0;text-align:center;color:#fff;font-size:13px;text-shadow:0 1px 3px #000;padding:0 16px;}
+  .cambtns{position:absolute;bottom:max(24px,env(safe-area-inset-bottom));left:0;right:0;display:flex;align-items:center;justify-content:space-around;}
+  .cambtns button{background:rgba(255,255,255,.18);color:#fff;border:none;border-radius:24px;padding:11px 16px;font-size:15px;font-weight:700;}
+  .cambtns .shoot{width:72px;height:72px;border-radius:50%;background:#fff;border:5px solid rgba(255,255,255,.45);}
+  .cambtns button.on{background:var(--gold);}
 
   #print{margin-top:14px;}
   .page{width:210mm;min-height:297mm;padding:10mm;background:#fff;margin:0 auto 12px;box-shadow:0 0 8px rgba(0,0,0,.18);}
@@ -63,6 +79,7 @@
     body{background:#fff;}
     .noprint{display:none !important;}
     .bar{display:none !important;}            /* ① 不印紅色標題列，省墨水 */
+    .cam{display:none !important;}             /* 掃描相機/框線 絕不列印 */
     main{max-width:none;padding:0;margin:0;}   /* ⑤ 避免被 600px 擠出空白頁 */
     #print{margin:0;}
     .page{box-shadow:none;margin:0;transform:none;}
@@ -73,7 +90,7 @@
 <body>
   <div class="bar">
     <h1>🪪 證件影本 加註記 · A4整理列印</h1>
-    <p>拖曳註記 · 可旋轉/裁切 · 多張整理成 A4 · 全程本機處理不上傳</p>
+    <p>掃描對齊框 · 補光 · 旋轉/裁切 · 多張整理成 A4 · 全程本機處理不上傳</p>
   </div>
 
   <main>
@@ -99,9 +116,14 @@
     </div>
 
     <div class="card noprint">
-      <label>2. 加入證件照片（可一次多張）</label>
-      <button class="btn btn-pick" onclick="document.getElementById('file').click()">➕ 拍照 / 從相簿選</button>
+      <label>2. 加入證件照片</label>
+      <div class="pick">
+        <button class="btn btn-cam" onclick="openCam()">📷 拍照</button>
+        <button class="btn btn-alb" onclick="document.getElementById('file').click()">🖼 相簿</button>
+      </div>
       <input type="file" id="file" accept="image/*" multiple>
+      <input type="file" id="camfile" accept="image/*" capture="environment">
+      <div class="hint">「拍照」會開啟<strong>掃描對齊框</strong>幫你框住證件；不支援時自動改用系統相機。</div>
       <div id="list"></div>
     </div>
 
@@ -122,33 +144,90 @@
     <div id="print"></div>
   </main>
 
+  <!-- 內建掃描相機 -->
+  <div class="cam noprint" id="cam">
+    <video id="camv" playsinline autoplay muted></video>
+    <div class="camframe"></div>
+    <div class="camtip">把證件對進虛線框內，盡量填滿、保持平整清晰</div>
+    <div class="cambtns">
+      <button onclick="closeCam()">✕ 取消</button>
+      <button class="shoot" aria-label="拍照" onclick="shoot()"></button>
+      <button id="torchBtn" style="visibility:hidden" onclick="toggleTorch()">🔦 補光</button>
+    </div>
+  </div>
+
 <script>
-  var items = [];   // {bitmap, label, rot, crop, pos, _canvas, _box, _cropping, _cropRect}
+  var items = [];   // {bitmap,label,rot,crop,pos,enhance,_canvas,_base,_box,_cropping,_cropRect,_lockRatio}
   var $ = function(id){ return document.getElementById(id); };
   var TYPES = ['身分證正面','身分證反面','職員證正面','職員證反面','勞保投保證明','薪資證明','其他'];
-  var ID_RATIO = 8.56/5.4;            // 證件長寬比（裁切對齊用）
-  var fontK   = function(){ return $('fsize').value/1000; };   // 字級 = 圖寬 * K
+  var ID_RATIO = 8.56/5.4;            // 證件長寬比（裁切/對齊框）
+  var fontK   = function(){ return $('fsize').value/1000; };
   var alphaVal= function(){ return $('alpha').value/100; };
   var ruleFactor = function(){ var v=$('rule').value; return v==='none'?0:(v==='thick'?0.085:0.03); };
+  var ENHANCE_FILTER = 'brightness(1.16) contrast(1.12) saturate(1.04)';
 
-  // ---- 載入照片 ----
-  $('file').addEventListener('change', async function(e){
-    var files = Array.from(e.target.files || []);
+  // ---- 檔案載入（相簿可多張；系統相機備援單張）----
+  function newItem(bmp, crop){
+    items.push({ bitmap:bmp, label:TYPES[Math.min(items.length,TYPES.length-1)],
+                 rot:0, crop:crop||null, pos:{x:0.035,y:0.04}, enhance:false });
+  }
+  async function addFiles(files){
     for (var i=0;i<files.length;i++){
-      var f = files[i], bmp;
+      var f=files[i], bmp;
       try { bmp = await createImageBitmap(f, { imageOrientation:'from-image' }); }
       catch(_){ bmp = await loadFallback(f); }
-      items.push({ bitmap: bmp, label: TYPES[Math.min(items.length, TYPES.length-1)],
-                   rot:0, crop:null, pos:{x:0.035,y:0.04} });
+      newItem(bmp);
     }
-    e.target.value = '';
     renderList();
-  });
+  }
+  $('file').addEventListener('change', function(e){ var fs=Array.from(e.target.files||[]); e.target.value=''; if(fs.length) addFiles(fs); });
+  $('camfile').addEventListener('change', function(e){ var fs=Array.from(e.target.files||[]); e.target.value=''; if(fs.length) addFiles(fs); });
   function loadFallback(file){
     return new Promise(function(res){ var img=new Image(); img.onload=function(){res(img);}; img.src=URL.createObjectURL(file); });
   }
 
   function annoLines(){ return ($('anno').value||'').split('\n').map(function(s){return s.trim();}).filter(Boolean); }
+  function defaultIdCrop(w,h){
+    var rW=0.92, rH=rW*(w/h)/ID_RATIO;
+    if(rH>0.92){ rH=0.92; rW=rH*ID_RATIO*(h/w); }
+    return {x:(1-rW)/2, y:(1-rH)/2, w:rW, h:rH};
+  }
+
+  // ---- 內建掃描相機 ----
+  async function openCam(){
+    if(!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia){ $('camfile').click(); return; }
+    try{
+      var stream=await navigator.mediaDevices.getUserMedia({
+        video:{ facingMode:{ideal:'environment'}, width:{ideal:1920}, height:{ideal:1080} }, audio:false });
+      window._camStream=stream;
+      var v=$('camv'); v.srcObject=stream; try{ await v.play(); }catch(_){}
+      var track=stream.getVideoTracks()[0]; window._camTrack=track; window._torchOn=false;
+      var caps=(track.getCapabilities&&track.getCapabilities())||{};
+      var tb=$('torchBtn'); tb.classList.remove('on'); tb.style.visibility = caps.torch ? 'visible':'hidden';
+      $('cam').style.display='flex';
+    }catch(err){ $('camfile').click(); }   // 不支援或拒絕授權 → 退回系統相機
+  }
+  function closeCam(){
+    var s=window._camStream; if(s){ s.getTracks().forEach(function(t){t.stop();}); }
+    window._camStream=null; window._camTrack=null;
+    $('camv').srcObject=null; $('cam').style.display='none';
+  }
+  function toggleTorch(){
+    var t=window._camTrack; if(!t) return;
+    window._torchOn=!window._torchOn;
+    t.applyConstraints({advanced:[{torch:window._torchOn}]}).then(function(){
+      $('torchBtn').classList.toggle('on', window._torchOn);
+    }).catch(function(){ alert('此裝置/瀏覽器不支援手電筒補光，可改用環境光或相簿。'); });
+  }
+  function shoot(){
+    var v=$('camv'), w=v.videoWidth, h=v.videoHeight;
+    if(!w||!h){ alert('相機尚未就緒，請稍候再按'); return; }
+    var c=document.createElement('canvas'); c.width=w; c.height=h;
+    c.getContext('2d').drawImage(v,0,0,w,h);
+    newItem(c, defaultIdCrop(w,h));   // 預設依對齊框裁出證件範圍（可再調整）
+    closeCam(); renderList();
+    $('status').textContent='已拍 1 張，已自動框出證件範圍，可按 ✂️ 微調或加更多張。';
+  }
 
   // ---- 影像處理：旋轉 + 裁切 ----
   function orientedCanvas(it){
@@ -170,8 +249,15 @@
     c.getContext('2d').drawImage(o, sx,sy,sw,sh, 0,0,c.width,c.height);
     return c;
   }
+  // 把 working 影像（含自動補光）畫進 ctx（目標 w×h）
+  function drawWorking(ctx, it, w, h){
+    var work=workingCanvas(it), useF = it.enhance && ('filter' in ctx);
+    if(useF) ctx.filter=ENHANCE_FILTER;
+    ctx.drawImage(work,0,0,w,h);
+    if(useF) ctx.filter='none';
+  }
 
-  // ---- 註記繪製（預覽與輸出共用同一套邏輯，所見即所得）----
+  // ---- 註記（預覽與輸出共用，所見即所得）----
   function wrapLine(ctx,text,maxW){
     if(ctx.measureText(text).width<=maxW) return [text];
     var out=[],cur='';
@@ -179,13 +265,12 @@
       if(ctx.measureText(t).width>maxW && cur){ out.push(cur); cur=text[i]; } else cur=t; }
     if(cur) out.push(cur); return out;
   }
-  // 在 ctx 上（畫布尺寸 cw×ch）依 it.pos 畫註記；回傳方框 {x,y,w,h}
   function drawAnno(ctx, cw, ch, it){
     var lines=annoLines(); if(!lines.length) return null;
     var fs=Math.max(11, Math.round(cw*fontK()));
     ctx.font='bold '+fs+'px sans-serif'; ctx.textAlign='left'; ctx.textBaseline='top';
     var bx0=it.pos.x*cw, by0=it.pos.y*ch;
-    var maxTextW=Math.max(cw*0.25, cw*0.95-bx0);     // 從目前位置到右邊界內自動跳行
+    var maxTextW=Math.max(cw*0.25, cw*0.95-bx0);
     var wrapped=[]; lines.forEach(function(l){ wrapLine(ctx,l,maxTextW).forEach(function(w){wrapped.push(w);}); });
     var tw=0; wrapped.forEach(function(l){ tw=Math.max(tw, ctx.measureText(l).width); });
     var pad=fs*0.45, lh=fs*1.3, rule=Math.round(ruleFactor()*fs);
@@ -201,110 +286,111 @@
     return {x:bx,y:by,w:bw,h:bh};
   }
 
-  // ---- 列表渲染 ----
+  // ---- 列表 ----
+  function toolsHTML(idx){
+    var on=items[idx].enhance?' on':'';
+    return '<button onclick="rotate('+idx+',-90)">↺ 左轉</button>'+
+           '<button onclick="rotate('+idx+',90)">↻ 右轉</button>'+
+           '<button onclick="enterCrop('+idx+')">✂️ 裁切</button>'+
+           '<button class="'+(on?'on':'')+'" onclick="toggleEnhance('+idx+')">✨ 補光</button>'+
+           '<button onclick="saveOne('+idx+')">💾 存圖</button>'+
+           '<button class="danger" onclick="removeItem('+idx+')">🗑 刪除</button>';
+  }
   function renderList(){
     var wrap=$('list'); wrap.innerHTML='';
     items.forEach(function(it, idx){
       var div=document.createElement('div'); div.className='item';
       var opts=TYPES.map(function(t){ return '<option '+(t===it.label?'selected':'')+'>'+t+'</option>'; }).join('');
       div.innerHTML=
-        '<div class="ihead">'+
-          '<select onchange="items['+idx+'].label=this.value">'+opts+'</select>'+
-        '</div>'+
+        '<div class="ihead"><select onchange="items['+idx+'].label=this.value">'+opts+'</select></div>'+
         '<div class="pv"><canvas></canvas></div>'+
         '<div class="dragtip">👆 把紅色註記拖到空白處（避開姓名／號碼／照片）</div>'+
-        '<div class="tools">'+
-          '<button onclick="rotate('+idx+',-90)">↺ 左轉</button>'+
-          '<button onclick="rotate('+idx+',90)">↻ 右轉</button>'+
-          '<button onclick="enterCrop('+idx+')">✂️ 裁切</button>'+
-          '<button onclick="saveOne('+idx+')">💾 存圖</button>'+
-          '<button class="danger" onclick="removeItem('+idx+')">🗑 刪除</button>'+
-        '</div>';
+        '<div class="tools">'+toolsHTML(idx)+'</div>';
       wrap.appendChild(div);
-      it._canvas = div.querySelector('canvas');
-      paintItem(idx);
-      attachDrag(idx);
+      it._canvas=div.querySelector('canvas'); it._base=null;
+      paintItem(idx); attachDrag(idx);
     });
     var has=items.length>0;
     $('make').disabled=!has;
-    $('status').textContent = has ? ('已加入 '+items.length+' 張，調整好後按「整理成 A4」。') : '尚未加入照片。';
+    if(!/已拍|已輸出/.test($('status').textContent))
+      $('status').textContent = has ? ('已加入 '+items.length+' 張，調整好後按「整理成 A4」。') : '尚未加入照片。';
   }
-
   function dispWidth(){ return Math.min((window.innerWidth||520)-64, 520); }
 
-  // 一般預覽：working 影像 + 註記
+  // 快取顯示底圖（旋轉/裁切/補光/寬度改變才重建）→ 拖曳超順
+  function ensureBase(it){
+    var work=workingCanvas(it), W=dispWidth(), H=Math.round(W*work.height/work.width);
+    if(it._base && it._base.width===W && it._base.height===H && it._baseTag===baseTag(it)) return;
+    var b=document.createElement('canvas'); b.width=W; b.height=H;
+    drawWorking(b.getContext('2d'), it, W, H);
+    it._base=b; it._baseTag=baseTag(it);
+  }
+  function baseTag(it){ return it.rot+'|'+JSON.stringify(it.crop)+'|'+(it.enhance?1:0); }
+
   function paintItem(idx){
     var it=items[idx], cv=it._canvas; if(!cv) return;
     if(it._cropping){ paintCrop(idx); return; }
-    var work=workingCanvas(it);
-    var W=dispWidth(), H=Math.round(W*work.height/work.width);
+    ensureBase(it);
+    var W=it._base.width, H=it._base.height;
     cv.width=W; cv.height=H; cv.style.width=W+'px';
     var ctx=cv.getContext('2d');
-    ctx.clearRect(0,0,W,H);
-    ctx.drawImage(work,0,0,W,H);
+    ctx.clearRect(0,0,W,H); ctx.drawImage(it._base,0,0);
     it._box=drawAnno(ctx,W,H,it);
   }
 
-  // 拖曳註記
+  // ---- 拖曳註記（只重畫文字，不重算原圖）----
   function attachDrag(idx){
     var it=items[idx], cv=it._canvas;
     cv.addEventListener('pointerdown', function(ev){
       if(it._cropping) return cropPointerDown(idx,ev);
       var p=canvasPoint(cv,ev), b=it._box; if(!b) return;
-      if(p.x<b.x||p.x>b.x+b.w||p.y<b.y||p.y>b.y+b.h) return;  // 沒點到註記就不拖
+      if(p.x<b.x||p.x>b.x+b.w||p.y<b.y||p.y>b.y+b.h) return;
       ev.preventDefault();
       var offX=p.x-b.x, offY=p.y-b.y;
       function move(e){
         var q=canvasPoint(cv,e);
-        var nx=q.x-offX, ny=q.y-offY;
-        nx=Math.max(0,Math.min(nx, cv.width-b.w));
-        ny=Math.max(0,Math.min(ny, cv.height-b.h));
+        var nx=Math.max(0,Math.min(q.x-offX, cv.width-b.w));
+        var ny=Math.max(0,Math.min(q.y-offY, cv.height-b.h));
         it.pos={x:nx/cv.width, y:ny/cv.height};
-        paintItem(idx);
+        var ctx=cv.getContext('2d'); ctx.clearRect(0,0,cv.width,cv.height);
+        ctx.drawImage(it._base,0,0); it._box=drawAnno(ctx,cv.width,cv.height,it);
       }
       function up(){ document.removeEventListener('pointermove',move); document.removeEventListener('pointerup',up); }
       document.addEventListener('pointermove',move); document.addEventListener('pointerup',up);
     });
   }
   function canvasPoint(cv,ev){
-    var r=cv.getBoundingClientRect(), sx=cv.width/r.width, sy=cv.height/r.height;
-    return { x:(ev.clientX-r.left)*sx, y:(ev.clientY-r.top)*sy };
+    var r=cv.getBoundingClientRect();
+    return { x:(ev.clientX-r.left)*cv.width/r.width, y:(ev.clientY-r.top)*cv.height/r.height };
   }
 
-  // ---- 旋轉 ----
-  function rotate(idx,deg){ items[idx].rot=(items[idx].rot+deg+360)%360; items[idx].crop=null; paintItem(idx); resetBuilt(); }
+  // ---- 旋轉 / 補光 ----
+  function rotate(idx,deg){ var it=items[idx]; it.rot=(it.rot+deg+360)%360; it.crop=null; it._base=null; paintItem(idx); resetBuilt(); }
+  function toggleEnhance(idx){
+    var it=items[idx]; it.enhance=!it.enhance; it._base=null; paintItem(idx); resetBuilt();
+    var b=it._canvas.closest('.item').querySelector('.tools'); if(b) b.innerHTML=toolsHTML(idx);
+  }
 
   // ---- 裁切 ----
   function enterCrop(idx){
-    var it=items[idx];
-    var o=orientedCanvas(it);
-    // 預設：依證件比例置中（橫式照片→橫框）
-    var rW=0.9, rH=rW*(o.width/o.height)/ID_RATIO;
-    if(rH>0.9){ rH=0.9; rW=rH*ID_RATIO*(o.height/o.width); }
-    it._cropRect = it.crop ? Object.assign({},it.crop) : {x:(1-rW)/2, y:(1-rH)/2, w:rW, h:rH};
-    it._cropping = true; it._lockRatio = true;
-    renderItemControls(idx);
+    var it=items[idx], o=orientedCanvas(it);
+    it._cropRect = it.crop ? Object.assign({},it.crop) : defaultIdCrop(o.width,o.height);
+    it._cropping=true; it._lockRatio=true;
+    var div=it._canvas.closest('.item');
+    div.querySelector('.dragtip').style.display='none';
+    var bar=div.querySelector('.tools');
+    bar.innerHTML='<button class="go" onclick="applyCrop('+idx+')">✓ 套用裁切</button>'+
+                  '<button class="cancel" onclick="cancelCrop('+idx+')">取消</button>';
+    var cr=document.createElement('div'); cr.className='croprow';
+    cr.innerHTML='<input type="checkbox" id="lk'+idx+'" checked onchange="items['+idx+']._lockRatio=this.checked;"> 對齊證件比例（8.56×5.4）｜拖框移動、拖四角縮放';
+    bar.parentNode.insertBefore(cr,bar.nextSibling);
     paintCrop(idx);
-  }
-  function renderItemControls(idx){
-    var it=items[idx], div=it._canvas.closest('.item');
-    var bar=div.querySelector('.tools'), tip=div.querySelector('.dragtip');
-    if(it._cropping){
-      tip.style.display='none';
-      bar.innerHTML=
-        '<button class="go" onclick="applyCrop('+idx+')">✓ 套用裁切</button>'+
-        '<button class="cancel" onclick="cancelCrop('+idx+')">取消</button>';
-      var cr=document.createElement('div'); cr.className='croprow';
-      cr.innerHTML='<input type="checkbox" id="lk'+idx+'" '+(it._lockRatio?'checked':'')+' onchange="items['+idx+']._lockRatio=this.checked;"> 對齊證件比例（8.56×5.4）｜拖框移動、拖四角縮放';
-      bar.parentNode.insertBefore(cr,bar.nextSibling);
-    }
   }
   function paintCrop(idx){
     var it=items[idx], cv=it._canvas, o=orientedCanvas(it);
     var W=dispWidth(), H=Math.round(W*o.height/o.width);
     cv.width=W; cv.height=H; cv.style.width=W+'px';
-    var ctx=cv.getContext('2d');
-    ctx.clearRect(0,0,W,H); ctx.drawImage(o,0,0,W,H);
+    var ctx=cv.getContext('2d'); ctx.clearRect(0,0,W,H); ctx.drawImage(o,0,0,W,H);
     var r=it._cropRect, x=r.x*W, y=r.y*H, w=r.w*W, h=r.h*H;
     ctx.fillStyle='rgba(0,0,0,.5)';
     ctx.fillRect(0,0,W,y); ctx.fillRect(0,y+h,W,H-y-h); ctx.fillRect(0,y,x,h); ctx.fillRect(x+w,y,W-x-w,h);
@@ -314,9 +400,7 @@
   }
   function cropPointerDown(idx,ev){
     ev.preventDefault();
-    var it=items[idx], cv=it._canvas, r=it._cropRect;
-    var W=cv.width, H=cv.height, hs=16;
-    var corners=[['x','y'],['x2','y'],['x','y2'],['x2','y2']];
+    var it=items[idx], cv=it._canvas, r=it._cropRect, W=cv.width, H=cv.height, hs=16;
     var px=r.x*W, py=r.y*H, pw=r.w*W, ph=r.h*H;
     var pts=[[px,py],[px+pw,py],[px,py+ph],[px+pw,py+ph]];
     var p=canvasPoint(cv,ev), grab=-1;
@@ -330,18 +414,15 @@
         r.x=Math.max(0,Math.min(start.rx+dx, 1-start.rw));
         r.y=Math.max(0,Math.min(start.ry+dy, 1-start.rh));
       } else {
-        // 對角固定的角落縮放
-        var ax = (grab===1||grab===3)? start.rx : start.rx+start.rw;   // 固定 x
-        var ay = (grab===2||grab===3)? start.ry : start.ry+start.rh;   // 固定 y
-        var cx = q.x/W, cy = q.y/H;
+        var ax=(grab===1||grab===3)? start.rx : start.rx+start.rw;
+        var ay=(grab===2||grab===3)? start.ry : start.ry+start.rh;
+        var cx=q.x/W, cy=q.y/H;
         var nx=Math.min(ax,cx), nw=Math.abs(cx-ax);
         var ny=Math.min(ay,cy), nh=Math.abs(cy-ay);
         if(it._lockRatio){
-          var o=orientedCanvas(it), fr=ID_RATIO*(o.height/o.width); // 分數空間比例
-          nh=nw/fr;
-          ny = (grab===0||grab===1)? ay-nh : ay;   // 上方角落往上長
+          var fr=ID_RATIO*(H/W);            // 顯示畫布即 oriented 比例
+          nh=nw/fr; ny=(grab===0||grab===1)? ay-nh : ay;
         }
-        // 邊界夾擠
         nw=Math.max(0.05,Math.min(nw,1)); nh=Math.max(0.05,Math.min(nh,1));
         if(nx<0)nx=0; if(ny<0)ny=0; if(nx+nw>1)nw=1-nx; if(ny+nh>1)nh=1-ny;
         r.x=nx; r.y=ny; r.w=nw; r.h=nh;
@@ -351,23 +432,16 @@
     function up(){ document.removeEventListener('pointermove',move); document.removeEventListener('pointerup',up); }
     document.addEventListener('pointermove',move); document.addEventListener('pointerup',up);
   }
-  function applyCrop(idx){ var it=items[idx]; it.crop=Object.assign({},it._cropRect); it._cropping=false; it.pos={x:0.035,y:0.04};
-    cleanCropUI(idx); paintItem(idx); resetBuilt(); }
-  function cancelCrop(idx){ var it=items[idx]; it._cropping=false; cleanCropUI(idx); paintItem(idx); }
+  function applyCrop(idx){ var it=items[idx]; it.crop=Object.assign({},it._cropRect); it._cropping=false; it.pos={x:0.035,y:0.04}; it._base=null; cleanCropUI(idx); paintItem(idx); resetBuilt(); }
+  function cancelCrop(idx){ items[idx]._cropping=false; cleanCropUI(idx); paintItem(idx); }
   function cleanCropUI(idx){
     var div=items[idx]._canvas.closest('.item');
     var cr=div.querySelector('.croprow'); if(cr) cr.remove();
     div.querySelector('.dragtip').style.display='';
-    var bar=div.querySelector('.tools');
-    bar.innerHTML=
-      '<button onclick="rotate('+idx+',-90)">↺ 左轉</button>'+
-      '<button onclick="rotate('+idx+',90)">↻ 右轉</button>'+
-      '<button onclick="enterCrop('+idx+')">✂️ 裁切</button>'+
-      '<button onclick="saveOne('+idx+')">💾 存圖</button>'+
-      '<button class="danger" onclick="removeItem('+idx+')">🗑 刪除</button>';
+    div.querySelector('.tools').innerHTML=toolsHTML(idx);
   }
 
-  // ---- 文字／字級／濃淡／線條改變時，即時刷新所有預覽 ----
+  // ---- 即時刷新（文字/字級/濃淡/線條）----
   ['anno','fsize','alpha','rule'].forEach(function(id){
     $(id).addEventListener('input', function(){
       if(id==='fsize') $('fsizeV').textContent=$('fsize').value;
@@ -375,25 +449,23 @@
       items.forEach(function(it,idx){ if(!it._cropping) paintItem(idx); });
     });
   });
+  window.addEventListener('resize', function(){ items.forEach(function(it,idx){ it._base=null; if(!it._cropping) paintItem(idx); }); });
 
   function removeItem(i){ items.splice(i,1); renderList(); resetBuilt(); }
   function resetBuilt(){ $('print').innerHTML=''; $('prn').disabled=true; window._built=false; }
 
-  // ---- 烤進全解析度（輸出/存檔/列印共用）----
+  // ---- 輸出 ----
   function bake(it){
     var work=workingCanvas(it), c=document.createElement('canvas');
     c.width=work.width; c.height=work.height;
-    var x=c.getContext('2d'); x.drawImage(work,0,0);
-    drawAnno(x, c.width, c.height, it);
+    drawWorking(c.getContext('2d'), it, c.width, c.height);
+    drawAnno(c.getContext('2d'), c.width, c.height, it);
     return c.toDataURL('image/jpeg',0.92);
   }
   function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
-
-  // ⑦ 把單張成品存成圖檔（暫存新檔）
   function saveOne(idx){
-    var it=items[idx], data=bake(it);
-    var a=document.createElement('a');
-    a.href=data; a.download=(it.label||'證件')+'_加註記.jpg';
+    var it=items[idx], a=document.createElement('a');
+    a.href=bake(it); a.download=(it.label||'證件')+'_加註記.jpg';
     document.body.appendChild(a); a.click(); a.remove();
     $('status').textContent='已輸出「'+it.label+'」圖檔。手機若直接開啟，請長按圖片→儲存到相簿。';
   }
@@ -408,13 +480,10 @@
     for(var i=0;i<baked.length;i+=per){
       var group=baked.slice(i,i+per);
       html+='<div class="page'+(grid?' grid':'')+'">';
-      group.forEach(function(b){
-        html+='<div class="slot"><div class="cap">'+esc(b.label)+'</div><div class="imgwrap"><img src="'+b.src+'"></div></div>';
-      });
+      group.forEach(function(b){ html+='<div class="slot"><div class="cap">'+esc(b.label)+'</div><div class="imgwrap"><img src="'+b.src+'"></div></div>'; });
       html+='</div>';
     }
-    $('print').innerHTML=html;
-    window._built=true; $('prn').disabled=false;
+    $('print').innerHTML=html; window._built=true; $('prn').disabled=false;
     $('status').textContent='已整理成 A4，下方可預覽。確認資料清楚後按「列印/存PDF」。';
     $('print').scrollIntoView({behavior:'smooth'});
   }
