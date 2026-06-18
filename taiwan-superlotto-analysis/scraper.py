@@ -230,10 +230,24 @@ def save(records):
     print(f"\n已輸出：\n  {json_path}\n  {csv_path}\n共 {len(records)} 期")
 
 
+def load_existing():
+    """載入既有 data/superlotto638.json 的開獎紀錄（dict: period -> record）。"""
+    path = os.path.join(DATA_DIR, "superlotto638.json")
+    if not os.path.exists(path):
+        return {}
+    try:
+        meta = json.load(open(path, encoding="utf-8"))
+        return {r["period"]: r for r in meta.get("draws", [])}
+    except Exception:  # noqa: BLE001
+        return {}
+
+
 def main():
     ap = argparse.ArgumentParser(description="威力彩官方開獎資料爬蟲")
     ap.add_argument("--from", dest="from_month", default=None,
                     help="起始月份 YYYY-MM（預設 2008-01）")
+    ap.add_argument("--update", action="store_true",
+                    help="增量更新：保留既有歷史，只補抓最新月份（適合排程定期執行）")
     ap.add_argument("--dump-raw", dest="dump_raw", default=None,
                     help="只抓某月並印出原始 JSON，用來核對官方欄位 (YYYY-MM)")
     args = ap.parse_args()
@@ -244,7 +258,19 @@ def main():
         print(json.dumps(payload, ensure_ascii=False, indent=2))
         return
 
-    if args.from_month:
+    existing = {}
+    if args.update:
+        existing = load_existing()
+        if existing:
+            last = max(existing.values(), key=lambda r: (r["date"], r["period"]))
+            ly, lm = int(last["date"][:4]), int(last["date"][5:7])
+            start = (ly, lm)   # 從最後一期所在月份重抓，補當月新開出的期
+            print(f"增量更新：既有 {len(existing)} 期，最新到 {last['date']}，"
+                  f"從 {start[0]}-{start[1]:02d} 起補抓。")
+        else:
+            start = FIRST_MONTH
+            print("增量更新：找不到既有資料，改為全量抓取。")
+    elif args.from_month:
         y, m = map(int, args.from_month.split("-"))
         start = (y, m)
     else:
@@ -255,11 +281,20 @@ def main():
 
     print(f"開始抓取威力彩官方開獎資料：{start[0]}-{start[1]:02d} ~ {end[0]}-{end[1]:02d}")
     records, failed = scrape(start, end)
-    if not records:
+    if not records and not existing:
         print("沒有抓到任何資料——可能是網路被擋或 API 變動。請檢查網路 egress 設定。",
               file=sys.stderr)
         sys.exit(1)
-    save(records)
+
+    # 合併既有 + 新抓（以期別去重，新抓覆蓋同期）
+    merged = dict(existing)
+    for r in records:
+        merged[r["period"]] = r
+    final = sorted(merged.values(), key=lambda r: (r["date"], r["period"]))
+    added = len(final) - len(existing)
+    save(final)
+    if args.update:
+        print(f"增量更新完成：新增 {max(added,0)} 期，總計 {len(final)} 期。")
     if failed:
         print(f"\n⚠ 有 {len(failed)} 個月份抓取失敗（未用假資料補）：{', '.join(failed)}",
               file=sys.stderr)
