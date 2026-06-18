@@ -2,7 +2,7 @@
 <html lang="zh-TW">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<meta name="viewport" content="width=device-width, initial-scale=1">
 <title>證件影本 加註記 · A4整理列印</title>
 <link rel="manifest" href="idmark.webmanifest">
 <meta name="theme-color" content="#C0392B">
@@ -88,6 +88,16 @@
   .cambtns button{background:rgba(255,255,255,.18);color:#fff;border:none;border-radius:24px;padding:11px 16px;font-size:15px;font-weight:700;}
   .cambtns .shoot{width:72px;height:72px;border-radius:50%;background:#fff;border:5px solid rgba(255,255,255,.45);}
   .cambtns button.on{background:var(--gold);}
+  .cambtns button.go{background:#1A7A4A;}
+  /* B：拍完先預覽 */
+  .camconfirm{position:absolute;inset:0;background:#000;display:none;flex-direction:column;align-items:center;justify-content:center;z-index:10;}
+  .camconfirm.show{display:flex;}
+  .camconfirm img{max-width:94%;max-height:74%;object-fit:contain;border-radius:8px;box-shadow:0 4px 20px rgba(0,0,0,.5);}
+  .camconfirm .ctip{color:#fff;font-size:13px;margin-top:12px;opacity:.85;}
+  /* C：點一下對焦的圈圈 */
+  .focusring{position:fixed;width:62px;height:62px;border:2.5px solid #FFD400;border-radius:50%;margin:-31px 0 0 -31px;pointer-events:none;opacity:0;z-index:20;box-shadow:0 0 6px rgba(0,0,0,.4);}
+  .focusring.show{animation:fpulse .55s ease;}
+  @keyframes fpulse{0%{opacity:1;transform:scale(1.5)}80%{opacity:1}100%{opacity:0;transform:scale(1)}}
 
   #print{margin-top:14px;}
   .page{width:210mm;min-height:297mm;padding:10mm;background:#fff;margin:0 auto 12px;box-shadow:0 0 8px rgba(0,0,0,.18);}
@@ -191,10 +201,19 @@
     <div class="camframe"></div>
     <div class="camtip">把證件對進虛線框內，盡量填滿、平整清晰<br>護貝證件<b>別開🔦補光</b>、斜一點、用窗邊光，避免反光</div>
     <div class="glarewarn" id="glareWarn">⚠️ 偵測到反光<br><span>把證件或手機斜一點、避開頭頂燈光</span></div>
-    <div class="cambtns">
+    <div class="cambtns" id="camLiveBtns">
       <button onclick="closeCam()">✕ 取消</button>
       <button class="shoot" aria-label="拍照" onclick="shoot()"></button>
       <button id="torchBtn" style="visibility:hidden" onclick="toggleTorch()">🔦 補光</button>
+    </div>
+    <div class="focusring" id="focusRing"></div>
+    <div class="camconfirm" id="camConfirm">
+      <img id="camShot" alt="剛拍好的證件預覽">
+      <div class="ctip">看清楚了嗎?模糊或反光就「重拍」</div>
+      <div class="cambtns">
+        <button onclick="retake()">↩ 重拍</button>
+        <button class="go" onclick="acceptShot()">✓ 採用這張</button>
+      </div>
     </div>
   </div>
 
@@ -225,7 +244,7 @@
   $('file').addEventListener('change', function(e){ var fs=Array.from(e.target.files||[]); e.target.value=''; if(fs.length) addFiles(fs); });
   $('camfile').addEventListener('change', function(e){ var fs=Array.from(e.target.files||[]); e.target.value=''; if(fs.length) addFiles(fs); });
   function loadFallback(file){
-    return new Promise(function(res){ var img=new Image(); img.onload=function(){res(img);}; img.src=URL.createObjectURL(file); });
+    return new Promise(function(res){ var u=URL.createObjectURL(file); var img=new Image(); img.onload=function(){ URL.revokeObjectURL(u); res(img); }; img.src=u; });
   }
 
   function annoLines(){ return ($('anno').value||'').split('\n').map(function(s){return s.trim();}).filter(Boolean); }
@@ -244,8 +263,10 @@
       window._camStream=stream;
       var v=$('camv'); v.srcObject=stream; try{ await v.play(); }catch(_){}
       var track=stream.getVideoTracks()[0]; window._camTrack=track; window._torchOn=false;
+      try{ track.applyConstraints({advanced:[{focusMode:'continuous'}]}); }catch(_){}   // C：連續自動對焦
       var caps=(track.getCapabilities&&track.getCapabilities())||{};
       var tb=$('torchBtn'); tb.classList.remove('on'); tb.style.visibility = caps.torch ? 'visible':'hidden';
+      $('camConfirm').classList.remove('show'); $('camLiveBtns').style.display='flex'; window._pendingShot=null;
       $('cam').style.display='flex';
       startGlareWatch();
     }catch(err){ $('camfile').click(); }   // 不支援或拒絕授權 → 退回系統相機
@@ -280,15 +301,64 @@
       $('torchBtn').classList.toggle('on', window._torchOn);
     }).catch(function(){ alert('此裝置/瀏覽器不支援手電筒補光，可改用環境光或相簿。'); });
   }
-  function shoot(){
-    var v=$('camv'), w=v.videoWidth, h=v.videoHeight;
-    if(!w||!h){ alert('相機尚未就緒，請稍候再按'); return; }
-    var c=document.createElement('canvas'); c.width=w; c.height=h;
-    c.getContext('2d').drawImage(v,0,0,w,h);
-    newItem(c, defaultIdCrop(w,h));   // 預設依對齊框裁出證件範圍（可再調整）
-    closeCam(); renderList();
-    $('status').textContent='已拍 1 張，已自動框出證件範圍，可按 ✂️ 微調或加更多張。';
+  // A：把螢幕上的對齊框換算成「影片畫面中的裁切範圍」（考慮 object-fit:cover 的縮放/裁邊）
+  function frameRectInVideo(v){
+    var vw=v.videoWidth, vh=v.videoHeight, ew=v.clientWidth||vw, eh=v.clientHeight||vh;
+    var s=Math.max(ew/vw, eh/vh), ox=(ew-vw*s)/2, oy=(eh-vh*s)/2;
+    var fw=Math.min(0.88*ew,520), fh=fw*5.4/8.56, fx=(ew-fw)/2, fy=0.46*eh-fh/2;
+    var sx=(fx-ox)/s, sy=(fy-oy)/s, sw=fw/s, sh=fh/s;
+    sx=Math.max(0,Math.min(sx,vw)); sy=Math.max(0,Math.min(sy,vh));
+    sw=Math.min(sw,vw-sx); sh=Math.min(sh,vh-sy);
+    return {sx:sx,sy:sy,sw:sw,sh:sh};
   }
+  // D：盡量用全解析度靜態拍照（Android Chrome 支援；不支援或比例不符就退回即時影格，確保對齊正確）
+  async function grabSource(v){
+    if(window.ImageCapture && window._camTrack){
+      try{
+        var bmp=await createImageBitmap(await new ImageCapture(window._camTrack).takePhoto());
+        if(Math.abs(bmp.width/bmp.height - v.videoWidth/v.videoHeight) < 0.06) return { img:bmp, scale:bmp.width/v.videoWidth };
+      }catch(_){}
+    }
+    return { img:v, scale:1 };
+  }
+  async function shoot(){
+    var v=$('camv'); if(!v.videoWidth){ alert('相機尚未就緒，請稍候再按'); return; }
+    var r=frameRectInVideo(v), src=await grabSource(v), k=src.scale;
+    var c=document.createElement('canvas');
+    c.width=Math.max(1,Math.round(r.sw*k)); c.height=Math.max(1,Math.round(r.sh*k));
+    c.getContext('2d').drawImage(src.img, r.sx*k, r.sy*k, r.sw*k, r.sh*k, 0,0,c.width,c.height);
+    showConfirm(c);
+  }
+  // B：拍完先預覽，讓使用者「重拍」或「採用」
+  function showConfirm(canvas){
+    window._pendingShot=canvas; stopGlareWatch();
+    $('camShot').src=canvas.toDataURL('image/jpeg',0.9);
+    $('camLiveBtns').style.display='none'; $('camConfirm').classList.add('show');
+  }
+  function retake(){
+    window._pendingShot=null;
+    $('camConfirm').classList.remove('show'); $('camLiveBtns').style.display='flex'; startGlareWatch();
+  }
+  function acceptShot(){
+    var c=window._pendingShot; if(!c) return; window._pendingShot=null;
+    newItem(c, null);   // 已裁成對齊框範圍，直接採用
+    closeCam(); renderList();
+    $('status').textContent='已拍 1 張（已依對齊框裁好），可按 ✂️ 微調或加更多張。';
+  }
+  // C：點畫面對焦（支援的裝置）+ 對焦圈回饋
+  function tapFocus(ev){
+    showFocusRing(ev.clientX, ev.clientY);
+    var t=window._camTrack; if(!t||!t.applyConstraints) return;
+    var caps=(t.getCapabilities&&t.getCapabilities())||{}, v=$('camv'), rc=v.getBoundingClientRect(), adv=[];
+    if(caps.pointsOfInterest) adv.push({pointsOfInterest:[{x:(ev.clientX-rc.left)/rc.width, y:(ev.clientY-rc.top)/rc.height}]});
+    if(caps.focusMode && caps.focusMode.indexOf('single-shot')>=0) adv.push({focusMode:'single-shot'});
+    if(adv.length) t.applyConstraints({advanced:adv}).catch(function(){});
+  }
+  function showFocusRing(x,y){
+    var r=$('focusRing'); r.style.left=x+'px'; r.style.top=y+'px';
+    r.classList.remove('show'); void r.offsetWidth; r.classList.add('show');
+  }
+  $('camv').addEventListener('click', tapFocus);
 
   // ---- 影像處理：旋轉 + 裁切 ----
   function orientedCanvas(it){
@@ -687,15 +757,12 @@
   function emailTo(){
     if(notReady()) return;
     var em=getEmail();
-    if(em && validEmail(em)){ remember(em); try{ navigator.clipboard && navigator.clipboard.writeText(em); }catch(_){} }
-    if(navigator.canShare && navigator.canShare({files:window._shareFiles})){
-      navigator.share({ files:window._shareFiles, title:'證件影本（高榮企業工會連署）' }).catch(function(){});
-    } else {
-      downloadFiles();
-      if(em && validEmail(em))
-        location.href='mailto:'+encodeURIComponent(em)+'?subject='+encodeURIComponent('證件影本（高榮企業工會連署）')+
-          '&body='+encodeURIComponent('附件為證件影本，請從剛剛下載到裝置的檔案夾帶後寄出。');
-    }
+    if(!em || !validEmail(em)){ alert('請先在上面填一個正確的信箱（例如 yourname@gmail.com）'); $('dest').focus(); return; }
+    remember(em); try{ navigator.clipboard && navigator.clipboard.writeText(em); }catch(_){}
+    // 先把 A4 檔下載到裝置（瀏覽器無法自動把檔案塞進信件），再開啟郵件、收件人帶入你填的信箱
+    downloadFiles();
+    location.href='mailto:'+encodeURIComponent(em)+'?subject='+encodeURIComponent('證件影本（高榮企業工會連署）')+
+      '&body='+encodeURIComponent('附件為證件影本，請把剛剛下載到裝置的「證件A4_…jpg」夾帶後寄出。');
   }
 
   // ---- 信箱 @ 自動補全 + 記住常用 ----
