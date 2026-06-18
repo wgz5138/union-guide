@@ -19,7 +19,7 @@ strong { color:#11244e; }
 ul,ol { margin:6px 0 6px 22px; }
 li { margin:3px 0; }
 </style></head><body><h1>驗收標準（A2310 機票監測系統）</h1>
-<blockquote>本文件定義雙方對「完成」與「成功率」的共同認定，作為驗收與付款依據。<br>與「維護保固與責任說明」搭配使用；名詞與責任歸屬以該說明為準。<br><br><strong>開發方：</strong>【請填您的名字】　<strong>委託方：</strong>＿＿＿＿＿＿　<strong>日期：</strong>＿＿＿＿</blockquote>
+<blockquote>本文件定義雙方對「完成」與「成功率」的共同認定，作為驗收與付款依據。<br>與「維護保固與責任說明」搭配使用；名詞與責任歸屬以該說明為準。<br><br><strong>開發方：</strong>巫佳容　<strong>委託方：</strong>＿＿＿＿＿＿　<strong>日期：</strong>＿＿＿＿</blockquote>
 <hr>
 <h2>一、交付清單（驗收時應齊備）</h2>
 <ul><li>[ ] <code>gflights_scraper.py</code>：Google Flights 抓取主程式（票價、轉機次數、起降時間、航空公司、行李額度）</li><li>[ ] 結構化輸出：<code>data/gflights.csv</code>、<code>data/gflights.json</code></li><li>[ ] 排程設定：<code>設定Google機票每天自動跑.bat</code> 等（含失敗重跑、錯過補跑、執行紀錄）</li><li>[ ] 使用說明（README）與本驗收標準、維護保固說明</li><li>[ ] 反爬：真實 Chrome 指紋、擬真操作、自動重試；<strong>代理 IP 選配</strong>（環境變數 <code>GF_PROXY</code>）</li></ul>
