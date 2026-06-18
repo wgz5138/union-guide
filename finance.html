@@ -133,6 +133,7 @@
   <div class="header-sub">財務清晰 · 經得起查 · 一切有法源依據</div>
 </div>
 <div class="lawbar">本工具依 <b>工會財務處理準則</b>（工會法第30條第2項授權）設計，每項功能皆標明條號。資料僅存本機，<b>絕不上傳</b>。</div>
+<div class="lawbar" id="prepBanner" style="background:#8A6D0B;display:none">🏗 <b>籌備中</b>：本會尚未成立（工會法§11）。先把籌備收支記清楚、留單據，成立後辦理結算移交。決算/監事查核/報主管機關等於成立後啟用。</div>
 
 <div class="tabs" id="tabs">
   <button class="tab active" data-p="home">總覽</button>
@@ -346,6 +347,12 @@
   <section class="panel" id="p-set">
     <div class="card">
       <div class="card-title">工會基本設定</div>
+      <label>本會狀態（影響用字與待辦）</label>
+      <div class="seg">
+        <button type="button" id="stPrep" onclick="setPrep(true)">🏗 籌備中</button>
+        <button type="button" id="stDone" class="on-in" onclick="setPrep(false)">✅ 已成立</button>
+      </div>
+      <p class="muted" style="margin:4px 0 2px">籌備中＝尚無理事長/監事/會員大會（工會法§11）；改用籌備會召集人、發起人會議。成立後切「已成立」，帳目延續不需重記。</p>
       <label>會計年度（曆年制 §3）</label>
       <input type="number" id="setYear" min="2011" step="1">
       <label class="chk"><input type="checkbox" id="setSecretary"> 本會設有「秘書長」（影響 §20 用印人員）</label>
@@ -436,7 +443,7 @@ function normalize(d){ // 補齊缺漏欄位，避免舊備份/部分資料造�
   d.published=(d.published&&typeof d.published==='object')?d.published:{};
   d.year=d.year||new Date().getFullYear();
   const s=d.settings=(d.settings&&typeof d.settings==='object')?d.settings:{};
-  const def={secretary:false,supBoard:false,invest:false,opening:0,pettyCap:100000,reserve:0,priorCum:0,liab:0};
+  const def={secretary:false,supBoard:false,invest:false,opening:0,pettyCap:100000,reserve:0,priorCum:0,liab:0,prep:false};
   for(const k in def) if(s[k]==null) s[k]=def[k];
   return d;
 }
@@ -595,6 +602,17 @@ document.getElementById('tabs').addEventListener('click',e=>{
 });
 function gotoLaw(art){ document.querySelector('.tab[data-p="law"]').click(); const el=document.getElementById('law-'+art); if(el){el.open=true; el.scrollIntoView({behavior:'smooth',block:'center'});} }
 
+/* ===================== 籌備中模式 ===================== */
+function chair(){ return DB.settings.prep?'籌備會召集人':'理事長'; }
+function assembly(){ return DB.settings.prep?'發起人會議（成立大會）':'會員（代表）大會'; }
+function setPrep(p){ DB.settings.prep=p; save(); applyPrep(); renderHome(); }
+function applyPrep(){
+  const prep=!!DB.settings.prep;
+  const bn=document.getElementById('prepBanner'); if(bn) bn.style.display=prep?'block':'none';
+  const sp=document.getElementById('stPrep'), sd=document.getElementById('stDone');
+  if(sp&&sd){ sp.className=prep?'on-out':''; sd.className=prep?'':'on-in'; }
+}
+
 /* ===================== 總覽 / 待辦 ===================== */
 function goTab(p){ document.querySelector(`.tab[data-p="${p}"]`).click(); }
 function markPublished(qKey){ DB.published[qKey]=true; save(); renderHome(); }
@@ -605,6 +623,15 @@ function renderHome(){
   document.getElementById('hOut').textContent=fmt(o);
   document.getElementById('hBal').textContent=fmt(i-o);
   const todos=[];
+  if(DB.settings.prep){
+    // —— 籌備中（工會法§11、施行細則§9）——
+    todos.push(['todo','工會法§11','<b>連署發起</b>：勞工 30 人以上連署，組成<b>籌備會</b>。','白話：先湊滿30位同單位勞工連署當發起人。',null,null]);
+    todos.push(['todo','工會法§11','辦理<b>公開徵求會員、擬定章程、召開成立大會</b>。','',null,null]);
+    todos.push(['todo','工會法§13','章程須經成立大會出席會員過半出席、出席2/3以上同意通過。','',null,null]);
+    todos.push(['todo','工會法§11·細則§9','成立大會後 <b>30 日內</b>，檢具章程、會員名冊、理事/監事名冊，向主管機關<b>請領登記證書</b>。','逾期或缺件不予登記（細則§9）。',null,null]);
+    todos.push(['warn','移交','<b>財務</b>：把籌備收支（發起人款、成立大會開銷、刻印章、文具）記清楚、留單據；成立後辦理結算移交給正式工會。','現在就用「記帳＋單據快拍」做起來。','去記帳','book']);
+    todos.push(['ok','成立後','正式成立後，到「設定」把狀態切「已成立」，預算/決算/公開/查核/報稅就會自動啟用，帳目延續。','',null,null]);
+  } else {
   // 預算 §12
   const hasBudget=Object.keys(DB.budget.income||{}).length||Object.keys(DB.budget.expense||{}).length;
   todos.push(hasBudget
@@ -623,6 +650,7 @@ function renderHome(){
   todos.push(['todo','§13',`年底結帳：${Y} 年度<b>決算</b>要在 ${Y+1}/3/31 前編好。`,`白話：年度結束算總帳，送${DB.settings.supBoard?'監事會':'監事'}審核、大會通過後30日內報主管機關。`,'產生決算書','decal']);
   // 報稅（所得稅法）
   todos.push(['todo','所得稅法','<b>報稅</b>：確認免稅資格、要不要辦結算申報，發薪資/講師費記得<b>扣繳</b>。','白話：工會多半免稅，但有發錢給人就要扣稅、申報憑單；個案問國稅局。','看報稅提醒','tax']);
+  }
   document.getElementById('todoList').innerHTML=todos.map(t=>{
     const [lv,ref,txt,plain,btn,act]=t;
     const ico=lv==='ok'?'✅':lv==='warn'?'🟡':'🟠';
@@ -630,6 +658,10 @@ function renderHome(){
     return `<div class="alert ${lv==='ok'?'ok':lv==='warn'?'warn':'warn'}" style="flex-direction:column;align-items:stretch"><div style="display:flex;gap:8px"><span class="ico">${ico}</span><div>${txt}<span class="ref">依 ${ref}${plain?'　·　'+plain:''}</span></div></div>${button}</div>`;
   }).join('');
   // 健檢
+  if(DB.settings.prep){
+    document.getElementById('healthList').innerHTML='<div class="alert ok"><span class="ico">🏗</span><div>籌備期：財務健檢（§21 事業費比例、§22 準備金、§23 結餘）於工會<b>成立後</b>啟用。現階段重點＝收支記清楚、單據留底。</div></div>';
+    return;
+  }
   const outM=sumByCat('out'); const totOut=o;
   const core=(outM['事業費']||0)+(outM['辦公費']||0); const ratio=totOut?core/totOut*100:0;
   const h=[];
@@ -673,7 +705,7 @@ function liveCheck(){
     const cap=DB.settings.pettyCap||100000;
     if(pettyBalance()-amt < -cap) out.push(['warn','§19','零用金額度上限 '+fmt(cap)+'（不得超過 10 萬）。']);
   }
-  if(curType==='out' && !cash && amt>0) out.push(['warn','§20','提用存款支出：須由理事長、'+(DB.settings.secretary?'秘書長':'相關職務人員')+'及會計出納人員於領款憑證上共同蓋章，並承擔用印法律責任。']);
+  if(curType==='out' && !cash && amt>0) out.push(['warn','§20','提用存款支出：須由'+chair()+'、'+(DB.settings.secretary?'秘書長':'相關職務人員')+'及會計出納人員於領款憑證上共同蓋章，並承擔用印法律責任。']);
   if(curType==='out' && document.getElementById('fCat').value==='其他支出' && amt>0) out.push(['warn','§7','「其他支出」僅限不屬前七項者；可歸入事業費/辦公費請改選，以利 §21 比例。']);
   renderAlerts(box,out);
 }
@@ -1056,15 +1088,17 @@ ${balRow}
 <tr class="t"><td colspan="3">財產總額</td><td class="n">${f(assetTot)}</td></tr>
 </table>
 
-<h2>七、決算審查與報備（§13）</h2>
-<p>本決算書於 ${roc(Y+1)} ____ 月 ____ 日（年度結束後三個月內）由理事會編製，經 ${sup} 審核，並提 ${roc(Y+1)} ____ 月 ____ 日會員（代表）大會議決，於議決後三十日內報請主管機關備查。${DB.settings.invest&&totIn>=30000000?'<b>本年度決算金額達三千萬元以上且有投資事業，業依規定委請會計師簽證。</b>':''}</p>
-<div class="sign"><div>理事長（蓋章）</div><div>會計（蓋章）</div><div>出納（蓋章）</div><div>${sup}（蓋章）</div></div>
-<p class="note">本決算書由「工會透明帳本」依工會財務處理準則自動產生草稿，金額以本機帳載為準，須經理事會、${sup}及大會程序確認。pcode N0020014。</p>`;
-  docShell(`${roc(Y)}年度決算書`, `依工會財務處理準則第6條、第13條編製 · 會計年度 ${Y}/1/1～${Y}/12/31（§3）· 新臺幣元（§5）`, inner, `高雄榮總護理工會_${Y}年度決算書.html`);
+<h2>七、${DB.settings.prep?'籌備期收支結算（供移交）':'決算審查與報備（§13）'}</h2>
+${DB.settings.prep
+  ? `<p>本表為<b>籌備期</b>收支結算，供工會成立後辦理結算、移交之用；正式決算於工會成立後依工會財務處理準則第13條辦理。</p><div class="sign"><div>${chair()}（蓋章）</div><div>出納（蓋章）</div><div>會計（蓋章）</div></div>`
+  : `<p>本決算書於 ${roc(Y+1)} ____ 月 ____ 日（年度結束後三個月內）由理事會編製，經 ${sup} 審核，並提 ${roc(Y+1)} ____ 月 ____ 日${assembly()}議決，於議決後三十日內報請主管機關備查。${DB.settings.invest&&totIn>=30000000?'<b>本年度決算金額達三千萬元以上且有投資事業，業依規定委請會計師簽證。</b>':''}</p><div class="sign"><div>理事長（蓋章）</div><div>會計（蓋章）</div><div>出納（蓋章）</div><div>${sup}（蓋章）</div></div>`}
+<p class="note">本表由「工會透明帳本」依工會財務處理準則自動產生草稿，金額以本機帳載為準${DB.settings.prep?'；籌備期供結算移交參考':'，須經理事會、'+sup+'及大會程序確認'}。pcode N0020014。</p>`;
+  docShell(`${roc(Y)}年度${DB.settings.prep?'籌備期收支結算表':'決算書'}`, `依工會財務處理準則第6條${DB.settings.prep?'（籌備期供移交參考）':'、第13條'}編製 · 會計年度 ${Y}/1/1～${Y}/12/31（§3）· 新臺幣元（§5）`, inner, `高雄榮總護理工會_${Y}年度${DB.settings.prep?'籌備期收支結算':'決算書'}.html`);
 }
 
 /* ===================== 監事審核意見書（範本 §13·§28·§30）===================== */
 function genAuditOpinion(){
+  if(DB.settings.prep){ alert('籌備期尚無監事（工會法§11：監事於成立大會選出）。監事審核意見書於工會成立、選出監事後再產生。'); return; }
   const Y=DB.year, sup=DB.settings.supBoard?'監事會':'監事';
   const inM=sumByCat('in'),outM=sumByCat('out');
   const totIn=Object.values(inM).reduce((a,b)=>a+b,0),totOut=Object.values(outM).reduce((a,b)=>a+b,0);
@@ -1143,6 +1177,7 @@ function fillSettings(){
   document.getElementById('setReserve').value=DB.settings.reserve||0;
   document.getElementById('setPriorCum').value=DB.settings.priorCum||0;
   document.getElementById('setLiab').value=DB.settings.liab||0;
+  applyPrep();
   updateBalPreview();
 }
 function balanceFigures(){
