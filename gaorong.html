@@ -438,7 +438,11 @@ function goJoin(){
 
 /* ---------- 平滑捲動（導覽列） ---------- */
 document.querySelectorAll('.navbar a').forEach(a=>{
-  a.addEventListener('click',e=>{ e.preventDefault(); const t=document.querySelector(a.getAttribute('href')); if(t) t.scrollIntoView({behavior:'smooth'}); });
+  a.addEventListener('click',e=>{
+    const href=a.getAttribute('href');
+    if(!href || href.charAt(0)!=='#') return;   // 像「幹部專區」這種跳到別頁的連結，照常跳轉、不要攔
+    e.preventDefault(); const t=document.querySelector(href); if(t) t.scrollIntoView({behavior:'smooth'});
+  });
 });
 
 /* ============================================================
