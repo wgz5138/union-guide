@@ -57,6 +57,10 @@
   .croprow{display:flex;align-items:center;gap:7px;margin-top:8px;font-size:13px;color:#5C4000;background:#FEF9E7;border:1px solid #EAD67A;border-radius:8px;padding:8px 10px;}
   .croprow input{width:auto;flex:0 0 auto;}
   .dragtip{font-size:12px;color:#7A5600;background:#FEF9E7;border:1px solid #EAD67A;border-radius:8px;padding:7px 9px;margin-top:7px;}
+  .posrow{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-top:7px;font-size:12.5px;color:#555;}
+  .posrow .lbl{flex:0 0 auto;color:#888;}
+  .posrow button{flex:0 0 auto;padding:8px 11px;font-size:13.5px;border:1px solid var(--border);background:#fff;border-radius:9px;cursor:pointer;}
+  .posrow button:active{background:#FDECEA;border-color:#E8A29A;}
 
   /* 傳送 / 信箱自動補全 */
   .btn-share{background:#1565C0;color:#fff;margin-top:6px;}
@@ -311,7 +315,7 @@
     var bw=tw+pad*2, bh=lh*wrapped.length+pad*2+rule*2;
     var bx=Math.max(0,Math.min(bx0, cw-bw)), by=Math.max(0,Math.min(by0, ch-bh));
     var a=alphaVal();
-    ctx.globalAlpha=Math.min(0.55, a*0.65); ctx.fillStyle='#fff'; ctx.fillRect(bx,by,bw,bh);
+    ctx.globalAlpha=Math.min(0.85, a*0.95); ctx.fillStyle='#fff'; ctx.fillRect(bx,by,bw,bh);
     ctx.globalAlpha=Math.max(a,0.6); ctx.fillStyle='#C0392B';
     if(rule) ctx.fillRect(bx,by,bw,rule);
     wrapped.forEach(function(l,i){ ctx.fillText(l, bx+pad, by+rule+pad+i*lh); });
@@ -338,7 +342,14 @@
       div.innerHTML=
         '<div class="ihead"><select onchange="items['+idx+'].label=this.value">'+opts+'</select></div>'+
         '<div class="pv"><canvas></canvas></div>'+
-        '<div class="dragtip">👆 把紅色註記拖到空白處（避開姓名／號碼／照片）</div>'+
+        '<div class="dragtip">👆 用下面按鈕把紅色註記丟到空白角落，或直接用手指拖（避開姓名／號碼／照片）</div>'+
+        '<div class="posrow"><span class="lbl">註記放：</span>'+
+          '<button onclick="moveAnno('+idx+',\'tl\')">↖ 左上</button>'+
+          '<button onclick="moveAnno('+idx+',\'tr\')">↗ 右上</button>'+
+          '<button onclick="moveAnno('+idx+',\'bl\')">↙ 左下</button>'+
+          '<button onclick="moveAnno('+idx+',\'br\')">↘ 右下</button>'+
+          '<button onclick="moveAnno('+idx+',\'bc\')">⬇ 正下方</button>'+
+        '</div>'+
         '<div class="tools">'+toolsHTML(idx)+'</div>';
       wrap.appendChild(div);
       it._canvas=div.querySelector('canvas'); it._base=null;
@@ -396,6 +407,13 @@
   function canvasPoint(cv,ev){
     var r=cv.getBoundingClientRect();
     return { x:(ev.clientX-r.left)*cv.width/r.width, y:(ev.clientY-r.top)*cv.height/r.height };
+  }
+
+  // ---- 一鍵把註記放到角落（比手指拖好按）----
+  function moveAnno(idx, where){
+    var map={ tl:{x:0.02,y:0.03}, tr:{x:0.99,y:0.03}, bl:{x:0.02,y:0.99}, br:{x:0.99,y:0.99}, bc:{x:0.5,y:0.99} };
+    var it=items[idx]; if(!map[where]) return;
+    it.pos=map[where]; paintItem(idx); resetBuilt();
   }
 
   // ---- 旋轉 / 補光 ----
