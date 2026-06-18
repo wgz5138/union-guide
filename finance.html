@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>工會透明帳本 — 高雄榮總護理工會</title>
+<title>工會透明帳本 — 高榮企業工會</title>
 <meta name="theme-color" content="#1A7A4A">
 <link rel="manifest" href="finance.webmanifest">
 <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@400;600;700&family=Noto+Sans+TC:wght@300;400;500;700&display=swap" rel="stylesheet">
@@ -119,7 +119,7 @@
 <div class="lock" id="lock">
   <div class="box">
     <h2>工會透明帳本</h2>
-    <p class="muted" style="margin-bottom:12px">高雄榮總護理工會 · 幹部記帳<br>資料只存在本機瀏覽器，不上傳。</p>
+    <p class="muted" style="margin-bottom:12px"><span id="lockOrg">高榮企業工會</span> · 幹部記帳<br>資料只存在本機瀏覽器，不上傳。</p>
     <input id="pw" type="password" placeholder="請輸入密碼" style="text-align:center" autocomplete="current-password">
     <button class="btn full" style="margin-top:10px" onclick="tryUnlock()">進入</button>
     <p class="muted" id="pwErr" style="color:var(--red);margin-top:8px;display:none">密碼不對</p>
@@ -128,7 +128,7 @@
 </div>
 
 <div class="header">
-  <div class="header-label">高雄榮總護理工會 · 工會財務處理準則</div>
+  <div class="header-label"><span id="hdrOrg">高榮企業工會</span> · 工會財務處理準則</div>
   <h1>工會透明帳本</h1>
   <div class="header-sub">財務清晰 · 經得起查 · 一切有法源依據</div>
 </div>
@@ -347,6 +347,8 @@
   <section class="panel" id="p-set">
     <div class="card">
       <div class="card-title">工會基本設定</div>
+      <label>工會名稱（顯示在標題、報表、公文上，可隨時改）</label>
+      <input id="setOrgName" placeholder="例：高榮企業工會">
       <label>本會狀態（影響用字與待辦）</label>
       <div class="seg">
         <button type="button" id="stPrep" onclick="setPrep(true)">🏗 籌備中</button>
@@ -405,7 +407,7 @@
     </div>
   </section>
 
-  <p class="footer-note">高雄榮總護理工會 · 工會透明帳本<br>法源：工會財務處理準則（pcode N0020014，工會法第30條第2項授權）<br>真實財務數字僅存本機瀏覽器，不上傳、不進公開原始碼庫。</p>
+  <p class="footer-note"><span id="ftOrg">高榮企業工會</span> · 工會透明帳本<br>法源：工會財務處理準則（pcode N0020014，工會法第30條第2項授權）<br>真實財務數字僅存本機瀏覽器，不上傳、不進公開原始碼庫。</p>
 </main>
 
 <script src="finance-law.js"></script>
@@ -443,7 +445,7 @@ function normalize(d){ // 補齊缺漏欄位，避免舊備份/部分資料造�
   d.published=(d.published&&typeof d.published==='object')?d.published:{};
   d.year=d.year||new Date().getFullYear();
   const s=d.settings=(d.settings&&typeof d.settings==='object')?d.settings:{};
-  const def={secretary:false,supBoard:false,invest:false,opening:0,pettyCap:100000,reserve:0,priorCum:0,liab:0,prep:true};
+  const def={orgName:'高榮企業工會',secretary:false,supBoard:false,invest:false,opening:0,pettyCap:100000,reserve:0,priorCum:0,liab:0,prep:true};
   for(const k in def) if(s[k]==null) s[k]=def[k];
   return d;
 }
@@ -547,7 +549,7 @@ async function genReceiptPDF(q){
   let fp=`<tr class="t"><td>#</td><td>日期</td><td>用途</td><td>數位指紋（SHA-256）</td></tr>`;
   list.forEach((r,i)=>{ fp+=`<tr><td>${i+1}</td><td>${r.date}</td><td>${esc(r.sum||r.cat)}</td><td style="font-family:monospace;font-size:10px;word-break:break-all">${r.hash?esc(r.hash):'（無照片，無指紋）'}</td></tr>`; });
   const pages=list.map((r,i)=>`<div class="r"><div class="cap"><b>單據 ${i+1} / ${list.length}</b>　${r.date}　${esc(r.sum||r.cat)}　${fmt(r.amt)}　${r.cat}　${r.cash?'現金':'轉帳'}${r.gov?'（政府補助）':''}${r.shotAt?'　｜拍攝 '+esc(r.shotAt.slice(0,16).replace('T',' ')):''}${r.geo?'　GPS '+r.geo.lat.toFixed(4)+','+r.geo.lng.toFixed(4):''}　｜保存至 ${(+(''+(r.date||'2026')).slice(0,4))+5} 年（§27）${r.hash?'<br>數位指紋 '+esc(r.hash):''}</div>${safeImg(r.img)?`<img src="${safeImg(r.img)}">`:'<p style="color:#999">（此單據無照片，僅有帳載資料）</p>'}</div>`).join('');
-  const html=`<!DOCTYPE html><html lang="zh-TW"><head><meta charset="utf-8"><title>${esc('高雄榮總護理工會 '+title)}</title>
+  const html=`<!DOCTYPE html><html lang="zh-TW"><head><meta charset="utf-8"><title>${esc(org()+' '+title)}</title>
 <style>@page{size:A4;margin:1.4cm}*{box-sizing:border-box}body{font-family:'Noto Sans TC',sans-serif;color:#1a1a1a;margin:0}
 h1{text-align:center;font-size:18px;font-family:'Noto Serif TC',serif;margin:.2rem 0}.sub{text-align:center;color:#555;font-size:12px;margin-bottom:12px}
 table{width:100%;border-collapse:collapse;font-size:12.5px}th,td{border:1px solid #bbb;padding:.35rem .5rem;text-align:left}td.n{text-align:right;font-variant-numeric:tabular-nums}tr.t td{font-weight:700;background:#f3f8f5}
@@ -557,7 +559,7 @@ table{width:100%;border-collapse:collapse;font-size:12.5px}th,td{border:1px soli
 @media print{.hint{display:none}}
 .note{color:#777;font-size:11px;margin-top:10px}</style></head><body>
 <div class="hint">🖨 請選「另存為 PDF / 儲存成 PDF」，紙張 A4。這份檔案把本季每張單據各放一頁，封面是清單，方便存查與交主管機關。<button onclick="window.print()" style="margin-left:6px;background:#1A7A4A;color:#fff;border:none;border-radius:6px;padding:.3rem .7rem">立即存 PDF</button></div>
-<h1>高雄榮總護理工會 ${esc(title)}</h1>
+<h1>${esc(org())} ${esc(title)}</h1>
 <div class="sub">依工會財務處理準則 §27（憑證至少保存5年）彙整 · 共 ${list.length} 筆 · 合計 ${fmt(tot)}</div>
 <table>${cover}</table>
 <h2 style="font-size:14px;margin:14px 0 4px;border-left:4px solid #1A7A4A;padding-left:8px">數位指紋清單（防竄改存證）</h2>
@@ -567,7 +569,7 @@ table{width:100%;border-collapse:collapse;font-size:12.5px}th,td{border:1px soli
 <p class="note">※ 每張單據照片含拍攝時間／GPS 浮水印存證。本檔為單據影像彙編，正式決算另見決算書。pcode N0020014。</p>
 ${pages}
 </body></html>`;
-  openDoc(html,`高雄榮總護理工會_${Y}_${q?('Q'+q):'全年'}_單據存檔.html`);
+  openDoc(html,`${org()}_${Y}_${q?('Q'+q):'全年'}_單據存檔.html`);
 }
 
 /* ===================== 進場鎖 ===================== */
@@ -601,6 +603,14 @@ document.getElementById('tabs').addEventListener('click',e=>{
   window.scrollTo(0,0);
 });
 function gotoLaw(art){ document.querySelector('.tab[data-p="law"]').click(); const el=document.getElementById('law-'+art); if(el){el.open=true; el.scrollIntoView({behavior:'smooth',block:'center'});} }
+
+/* ===================== 工會名稱（可自行設定）===================== */
+function org(){ return (DB.settings.orgName||'').trim() || '本工會'; }
+function applyOrg(){
+  const n=org();
+  document.title = '工會透明帳本 — '+n;
+  ['hdrOrg','ftOrg','lockOrg'].forEach(id=>{ const el=document.getElementById(id); if(el) el.textContent=n; });
+}
 
 /* ===================== 籌備中模式 ===================== */
 function chair(){ return DB.settings.prep?'籌備會召集人':'理事長'; }
@@ -1005,14 +1015,14 @@ tr.t td{font-weight:700;background:#f3f8f5}
 @media print{.hint{display:none}.qf,.pf{display:flex}}
 `;
 function docShell(docType, subtitle, inner, fname){
-  const html=`<!DOCTYPE html><html lang="zh-TW"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${esc('高雄榮總護理工會 '+docType)}</title>
+  const html=`<!DOCTYPE html><html lang="zh-TW"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${esc(org()+' '+docType)}</title>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@400;600;700&display=swap" rel="stylesheet">
 <style>${A4CSS}</style></head><body>
-<div class="qf">高雄榮總護理工會　騎　縫　章</div>
-<div class="pf">高雄榮總護理工會　${esc(docType)}</div>
+<div class="qf">${esc(org())}　騎　縫　章</div>
+<div class="pf">${esc(org())}　${esc(docType)}</div>
 <div class="hint">🖨 列印請選 <b>A4 直式</b>。頁碼／騎縫章僅於列印或存 PDF 時顯示；若頁碼未出現，請在列印對話框勾選「<b>頁首及頁尾</b>」。<button onclick="window.print()">立即列印 / 存 PDF</button></div>
 <div class="doc">
-  <div class="dochead"><div class="org">高雄榮總護理工會</div><div class="dtype">${esc(docType)}</div><div class="sub">${subtitle}</div></div>
+  <div class="dochead"><div class="org">${esc(org())}</div><div class="dtype">${esc(docType)}</div><div class="sub">${subtitle}</div></div>
   ${inner}
 </div></body></html>`;
   openDoc(html,fname);
@@ -1093,7 +1103,7 @@ ${DB.settings.prep
   ? `<p>本表為<b>籌備期</b>收支結算，供工會成立後辦理結算、移交之用；正式決算於工會成立後依工會財務處理準則第13條辦理。</p><div class="sign"><div>${chair()}（蓋章）</div><div>出納（蓋章）</div><div>會計（蓋章）</div></div>`
   : `<p>本決算書於 ${roc(Y+1)} ____ 月 ____ 日（年度結束後三個月內）由理事會編製，經 ${sup} 審核，並提 ${roc(Y+1)} ____ 月 ____ 日${assembly()}議決，於議決後三十日內報請主管機關備查。${DB.settings.invest&&totIn>=30000000?'<b>本年度決算金額達三千萬元以上且有投資事業，業依規定委請會計師簽證。</b>':''}</p><div class="sign"><div>理事長（蓋章）</div><div>會計（蓋章）</div><div>出納（蓋章）</div><div>${sup}（蓋章）</div></div>`}
 <p class="note">本表由「工會透明帳本」依工會財務處理準則自動產生草稿，金額以本機帳載為準${DB.settings.prep?'；籌備期供結算移交參考':'，須經理事會、'+sup+'及大會程序確認'}。pcode N0020014。</p>`;
-  docShell(`${roc(Y)}年度${DB.settings.prep?'籌備期收支結算表':'決算書'}`, `依工會財務處理準則第6條${DB.settings.prep?'（籌備期供移交參考）':'、第13條'}編製 · 會計年度 ${Y}/1/1～${Y}/12/31（§3）· 新臺幣元（§5）`, inner, `高雄榮總護理工會_${Y}年度${DB.settings.prep?'籌備期收支結算':'決算書'}.html`);
+  docShell(`${roc(Y)}年度${DB.settings.prep?'籌備期收支結算表':'決算書'}`, `依工會財務處理準則第6條${DB.settings.prep?'（籌備期供移交參考）':'、第13條'}編製 · 會計年度 ${Y}/1/1～${Y}/12/31（§3）· 新臺幣元（§5）`, inner, `${org()}_${Y}年度${DB.settings.prep?'籌備期收支結算':'決算書'}.html`);
 }
 
 /* ===================== 監事審核意見書（範本 §13·§28·§30）===================== */
@@ -1121,7 +1131,7 @@ function genAuditOpinion(){
 <div class="sign">${DB.settings.supBoard?'<div>常務監事（蓋章）</div><div>監事（蓋章）</div><div>監事（蓋章）</div>':'<div>監事（蓋章）</div>'}</div>
 <p style="margin-top:1.5rem">中華民國 ______ 年 ______ 月 ______ 日</p>
 <p class="note">本意見書由「工會透明帳本」依工會財務處理準則產生範本，實際審核結果與意見應由${sup}本於查核事實填載。pcode N0020014。</p>`;
-  docShell(`${roc(Y)}年度 ${sup}財務審核意見書`, '依工會財務處理準則第13條、第28條、第30條辦理', inner, `高雄榮總護理工會_${Y}年度監事審核意見書.html`);
+  docShell(`${roc(Y)}年度 ${sup}財務審核意見書`, '依工會財務處理準則第13條、第28條、第30條辦理', inner, `${org()}_${Y}年度監事審核意見書.html`);
 }
 
 /* ===================== 報稅（資料驅動，條文取自 laws.json）===================== */
@@ -1177,7 +1187,8 @@ function fillSettings(){
   document.getElementById('setReserve').value=DB.settings.reserve||0;
   document.getElementById('setPriorCum').value=DB.settings.priorCum||0;
   document.getElementById('setLiab').value=DB.settings.liab||0;
-  applyPrep();
+  document.getElementById('setOrgName').value=DB.settings.orgName||'';
+  applyPrep(); applyOrg();
   updateBalPreview();
 }
 function balanceFigures(){
@@ -1215,7 +1226,8 @@ function saveSettings(){
   DB.settings.reserve=+document.getElementById('setReserve').value||0;
   DB.settings.priorCum=+document.getElementById('setPriorCum').value||0;
   DB.settings.liab=+document.getElementById('setLiab').value||0;
-  save(); fillSettings(); refreshKPI(); renderEntries(); alert('已儲存');
+  DB.settings.orgName=document.getElementById('setOrgName').value.trim()||'本工會';
+  save(); fillSettings(); applyOrg(); refreshKPI(); renderEntries(); alert('已儲存');
 }
 async function exportJSON(){
   let receipts=[]; try{ receipts=await IDB.all(); }catch(e){}

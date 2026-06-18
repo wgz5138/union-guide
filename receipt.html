@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>單據快拍 — 高雄榮總護理工會</title>
+<title>單據快拍 — 高榮企業工會</title>
 <meta name="theme-color" content="#1A7A4A">
 <link rel="manifest" href="receipt.webmanifest">
 <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@400;600;700&family=Noto+Sans+TC:wght@300;400;500;700&display=swap" rel="stylesheet">
@@ -89,7 +89,7 @@
 <body>
 
 <div class="header">
-  <div class="header-label">高雄榮總護理工會 · 工會財務處理準則</div>
+  <div class="header-label"><span id="rHdr">高榮企業工會</span> · 工會財務處理準則</div>
   <h1>📷 單據快拍</h1>
   <div class="header-sub">買文具、刻印章、行政支出 — 拍張單據就記好帳</div>
 </div>
@@ -148,7 +148,7 @@
     <div class="rlist" id="rlist"></div>
   </div>
 
-  <p class="footer-note">高雄榮總護理工會 · 單據快拍<br>法源：工會財務處理準則 §9·§10·§27（pcode N0020014）<br>照片與資料只存在這支手機（IndexedDB），不上傳。請定期「匯出給帳本」交給財務幹部。</p>
+  <p class="footer-note"><span id="rFt">高榮企業工會</span> · 單據快拍<br>法源：工會財務處理準則 §9·§10·§27（pcode N0020014）<br>照片與資料只存在這支手機（IndexedDB），不上傳。請定期「匯出給帳本」交給財務幹部。</p>
 </main>
 
 <!-- 檢視單張 -->
@@ -178,6 +178,8 @@ const IDB={db:null,
 };
 function fmt(n){return "$"+(Math.round(n)||0).toLocaleString('en-US');}
 function esc(s){return (s==null?'':''+s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
+/* 工會名稱：沿用帳本（finance.html）的設定；同裝置沒設過則預設高榮企業工會。 */
+const ORG=(()=>{ try{ const s=JSON.parse(localStorage.getItem('union_fin_db')); return ((s&&s.settings&&s.settings.orgName)||'').trim()||'高榮企業工會'; }catch(e){ return '高榮企業工會'; } })();
 /* SHA-256 數位指紋（瀏覽器內建，純本機）。回傳 64 字 16 進位字串；不支援時回 null。 */
 async function sha256(str){ try{ if(!(crypto&&crypto.subtle))return null; const buf=new TextEncoder().encode(str); const h=await crypto.subtle.digest('SHA-256',buf); return [...new Uint8Array(h)].map(b=>b.toString(16).padStart(2,'0')).join(''); }catch(e){ return null; } }
 
@@ -200,7 +202,7 @@ function stampImage(file,maxDim=1400,q=0.74){return new Promise(async res=>{
     ctx.fillStyle='rgba(0,0,0,.56)'; ctx.fillRect(0,h-barH,w,barH);
     ctx.fillStyle='#fff'; ctx.font='600 '+fs+'px "Noto Sans TC",sans-serif'; ctx.textBaseline='top';
     const padx=Math.round(fs*0.6), top=h-barH+Math.round(fs*0.4);
-    ctx.fillText('高雄榮總護理工會 · 單據存證　'+nowStamp(ts), padx, top);
+    ctx.fillText(ORG+' · 單據存證　'+nowStamp(ts), padx, top);
     ctx.fillText(geo?('GPS '+geo.lat.toFixed(5)+', '+geo.lng.toFixed(5)+'（±'+geo.acc+'m）'):'GPS：未授權或無訊號', padx, top+lh);
     res({dataURL:c.toDataURL('image/jpeg',q),w,h,geo,ts:ts.toISOString()});
   };
@@ -344,6 +346,9 @@ function exportCSV(){
 }
 
 (function init(){
+  document.getElementById('rHdr').textContent=ORG;
+  document.getElementById('rFt').textContent=ORG;
+  document.title='單據快拍 — '+ORG;
   document.getElementById('fDate').value=new Date().toISOString().slice(0,10);
   renderChips(); refresh();
 })();
