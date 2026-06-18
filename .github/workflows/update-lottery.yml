@@ -1,0 +1,64 @@
+name: update-lottery
+
+# 威力彩每週一、週四晚間開獎。此工作流程在開獎日隔天清晨自動：
+#   1. 從台彩官方 API 增量抓取最新開獎號碼（scraper.py --update）
+#   2. 重新產生統計分析報告（analyze.py）
+#   3. 更新網頁用資料檔 lottery-freq.json 與根目錄 lottery.html
+#   4. 有變更才自動提交
+#
+# ⚠️ 注意事項：
+#   - GitHub 排程在 repo 連續 60 天無提交後會被自動停用；需要時可到
+#     Actions 頁面手動「Run workflow」重新觸發。
+#   - 若官方 API 對 GitHub 機房 IP 有阻擋（geo/WAF），抓取步驟可能失敗；
+#     此時不會提交假資料，僅記錄失敗。
+
+on:
+  schedule:
+    - cron: '30 0 * * 2,5'   # 每週二、五 00:30 UTC（台灣 08:30），開獎日隔晨
+  workflow_dispatch:          # 允許手動觸發
+  push:
+    paths:
+      - 'taiwan-superlotto-analysis/scraper.py'
+      - 'taiwan-superlotto-analysis/analyze.py'
+      - 'taiwan-superlotto-analysis/build_web_data.py'
+      - '.github/workflows/update-lottery.yml'
+
+permissions:
+  contents: write
+
+concurrency:
+  group: update-lottery
+  cancel-in-progress: false
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.x'
+      - name: 安裝相依套件
+        run: pip install requests
+      - name: 增量抓取官方開獎資料
+        working-directory: taiwan-superlotto-analysis
+        run: python3 scraper.py --update
+      - name: 重新產生分析報告
+        working-directory: taiwan-superlotto-analysis
+        run: python3 analyze.py
+      - name: 更新網頁資料檔
+        working-directory: taiwan-superlotto-analysis
+        run: python3 build_web_data.py
+      - name: 同步網頁到根目錄 lottery.html
+        run: cp "taiwan-superlotto-analysis/威力彩包牌.html" lottery.html
+      - name: 有變更才提交
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add taiwan-superlotto-analysis/data taiwan-superlotto-analysis/report lottery-freq.json lottery.html
+          if git diff --cached --quiet; then
+            echo "威力彩資料無變更，略過提交。"
+          else
+            git commit -m "chore(lottery): 自動更新威力彩開獎資料與報告"
+            git push
+          fi
