@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<meta name="robots" content="noindex, nofollow">
+<title>工會財務小工具 · 會費試算/收支/分攤</title>
+<style>
+  :root{--red:#C0392B;--red-deep:#7B1818;--gold:#B7860B;--gold-light:#FEF9E7;--bg:#F6F3EF;--ink:#222;--soft:#777;--border:#E2DED7;--green:#1A7A4A;--green-light:#EAFAF1;}
+  *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;}
+  body{font-family:-apple-system,"PingFang TC","Noto Sans TC",sans-serif;background:var(--bg);color:var(--ink);line-height:1.6;}
+  .bar{background:var(--red);color:#fff;padding:13px 16px;text-align:center;}
+  .bar h1{font-size:17px;font-weight:700;}
+  .bar p{font-size:11.5px;opacity:.85;margin-top:2px;}
+  main{max-width:640px;margin:0 auto;padding:12px;}
+  .tabs{display:flex;gap:6px;margin-bottom:12px;}
+  .tabs button{flex:1;padding:11px 6px;border:1px solid var(--border);background:#fff;border-radius:10px;font-size:13.5px;font-weight:700;color:#666;cursor:pointer;}
+  .tabs button.on{background:var(--red);color:#fff;border-color:var(--red);}
+  .card{background:#fff;border:1px solid var(--border);border-radius:14px;padding:14px;margin-bottom:12px;}
+  h2{font-size:15px;color:var(--red-deep);margin-bottom:10px;}
+  label{display:block;font-size:13px;font-weight:600;color:#555;margin:8px 0 4px;}
+  input,select{width:100%;border:1.5px solid var(--border);border-radius:9px;padding:9px;font-size:15px;font-family:inherit;}
+  .row{display:flex;gap:8px;}
+  .row>div{flex:1;}
+  .btn{display:block;width:100%;border:none;border-radius:10px;padding:11px;font-size:15px;font-weight:700;cursor:pointer;margin-top:10px;}
+  .btn-add{background:var(--green);color:#fff;}
+  .btn-csv{background:#5B6770;color:#fff;}
+  .btn-clr{background:#fff;color:#B0392B;border:1px solid #E8A29A;}
+  table{width:100%;border-collapse:collapse;font-size:13px;margin-top:10px;}
+  th,td{border-bottom:1px solid #eee;padding:7px 5px;text-align:right;}
+  th:first-child,td:first-child,th:nth-child(2),td:nth-child(2){text-align:left;}
+  th{color:var(--soft);font-weight:600;font-size:12px;}
+  .in{color:var(--green);font-weight:700;}
+  .out{color:var(--red);font-weight:700;}
+  .del{background:#f1eeea;border:none;border-radius:6px;padding:4px 8px;cursor:pointer;font-size:12px;color:#999;}
+  .big{font-size:26px;font-weight:800;}
+  .stat{display:flex;gap:8px;margin-top:6px;}
+  .stat>div{flex:1;background:var(--gold-light);border:1px solid #EAD67A;border-radius:10px;padding:10px;text-align:center;}
+  .stat .lab{font-size:11.5px;color:#7A5600;}
+  .stat .num{font-size:18px;font-weight:800;color:var(--red-deep);}
+  .pos{color:var(--green);} .neg{color:var(--red);}
+  .hint{font-size:12px;color:var(--soft);margin-top:8px;}
+  .hide{display:none;}
+  .paid{text-decoration:line-through;color:#aaa;}
+</style>
+</head>
+<body>
+  <div class="bar"><h1>💰 工會財務小工具</h1><p>會費試算 · 收支記錄 · 啟動資金分攤 · 全程本機儲存不上傳</p></div>
+  <main>
+    <div class="tabs">
+      <button id="t1" class="on" onclick="tab(1)">會費試算</button>
+      <button id="t2" onclick="tab(2)">收支記錄</button>
+      <button id="t3" onclick="tab(3)">資金分攤</button>
+    </div>
+
+    <!-- 會費試算 -->
+    <section id="s1">
+      <div class="card">
+        <h2>會費試算器</h2>
+        <div class="row">
+          <div><label>預估會員數</label><input type="number" id="mc" value="30" oninput="calc()"></div>
+          <div><label>每月會費(每人)</label><input type="number" id="mf" value="100" oninput="calc()"></div>
+        </div>
+        <div class="row">
+          <div><label>入會費(一次性，每人)</label><input type="number" id="jf" value="200" oninput="calc()"></div>
+          <div><label>每月固定支出</label><input type="number" id="fx" value="0" oninput="calc()"></div>
+        </div>
+        <label>每月固定支出包含什麼(備忘)</label>
+        <input type="text" id="fxnote" placeholder="例：網域、印刷、雜支">
+        <div class="stat">
+          <div><div class="lab">每月會費收入</div><div class="num" id="r_m">—</div></div>
+          <div><div class="lab">每月結餘</div><div class="num" id="r_net">—</div></div>
+        </div>
+        <div class="stat">
+          <div><div class="lab">入會費一次收入</div><div class="num" id="r_join">—</div></div>
+          <div><div class="lab">預估年結餘</div><div class="num" id="r_year">—</div></div>
+        </div>
+        <div class="hint">※ 會費金額由成立大會表決，這裡只是試算規劃。政府對新工會另有教育訓練補助可申請。</div>
+      </div>
+    </section>
+
+    <!-- 收支記錄 -->
+    <section id="s2" class="hide">
+      <div class="card">
+        <h2>新增一筆</h2>
+        <div class="row">
+          <div><label>日期</label><input type="date" id="e_date"></div>
+          <div><label>收/支</label><select id="e_type"><option value="in">收入</option><option value="out">支出</option></select></div>
+        </div>
+        <div class="row">
+          <div><label>項目</label><input type="text" id="e_item" placeholder="例：會費、印刷費"></div>
+          <div><label>金額</label><input type="number" id="e_amt" placeholder="0"></div>
+        </div>
+        <label>類別(選填)</label>
+        <input type="text" id="e_cat" placeholder="例：會費 / 行政 / 活動">
+        <button class="btn btn-add" onclick="addEntry()">＋ 加入記錄</button>
+      </div>
+      <div class="card">
+        <div class="stat">
+          <div><div class="lab">總收入</div><div class="num pos" id="sum_in">0</div></div>
+          <div><div class="lab">總支出</div><div class="num neg" id="sum_out">0</div></div>
+          <div><div class="lab">結餘</div><div class="num" id="sum_bal">0</div></div>
+        </div>
+        <table id="tbl"><thead><tr><th>日期</th><th>項目</th><th>類別</th><th>收</th><th>支</th><th></th></tr></thead><tbody id="tb"></tbody></table>
+        <button class="btn btn-csv" onclick="exportCSV()">⬇️ 匯出 CSV（給 Excel/記帳）</button>
+        <button class="btn btn-clr" onclick="clearAll('ledger')">清空全部記錄</button>
+      </div>
+    </section>
+
+    <!-- 資金分攤 -->
+    <section id="s3" class="hide">
+      <div class="card">
+        <h2>啟動資金分攤</h2>
+        <p class="hint">成立前的開銷(會徽費、印刷、文具…)誰先墊？登記下來，算出每人應分攤，避免「誰出了多少」變糊塗帳。</p>
+        <div class="row">
+          <div><label>墊款人</label><input type="text" id="a_who" placeholder="姓名"></div>
+          <div><label>金額</label><input type="number" id="a_amt" placeholder="0"></div>
+        </div>
+        <label>項目</label>
+        <input type="text" id="a_item" placeholder="例：會徽設計費、連署書印刷">
+        <button class="btn btn-add" onclick="addAdv()">＋ 加入墊款</button>
+      </div>
+      <div class="card">
+        <div class="row">
+          <div><label>參與分攤人數</label><input type="number" id="a_people" value="5" oninput="renderAdv()"></div>
+        </div>
+        <div class="stat">
+          <div><div class="lab">墊款總額</div><div class="num" id="adv_total">0</div></div>
+          <div><div class="lab">每人應分攤</div><div class="num" id="adv_each">0</div></div>
+        </div>
+        <table id="atbl"><thead><tr><th>墊款人</th><th>項目</th><th>金額</th><th>狀態</th></tr></thead><tbody id="atb"></tbody></table>
+        <div class="hint" id="settle"></div>
+        <button class="btn btn-clr" onclick="clearAll('adv')">清空墊款</button>
+      </div>
+    </section>
+  </main>
+<script>
+  var $=function(id){return document.getElementById(id);};
+  var nf=function(n){return 'NT$'+Math.round(n).toLocaleString();};
+  var ledger = load('fin_ledger', []);
+  var advs   = load('fin_adv', []);
+  function load(k,d){ try{return JSON.parse(localStorage.getItem(k))||d;}catch(_){return d;} }
+  function save(){ localStorage.setItem('fin_ledger',JSON.stringify(ledger)); localStorage.setItem('fin_adv',JSON.stringify(advs)); }
+
+  function tab(n){ [1,2,3].forEach(function(i){ $('t'+i).classList.toggle('on',i===n); $('s'+i).classList.toggle('hide',i!==n); }); }
+
+  // 會費試算
+  function calc(){
+    var mc=+$('mc').value||0, mf=+$('mf').value||0, jf=+$('jf').value||0, fx=+$('fx').value||0;
+    var monthIn=mc*mf, net=monthIn-fx, joinIn=mc*jf, year=net*12+joinIn;
+    $('r_m').textContent=nf(monthIn);
+    $('r_net').textContent=nf(net); $('r_net').className='num '+(net>=0?'pos':'neg');
+    $('r_join').textContent=nf(joinIn);
+    $('r_year').textContent=nf(year); $('r_year').className='num '+(year>=0?'pos':'neg');
+  }
+
+  // 收支
+  function addEntry(){
+    var amt=+$('e_amt').value;
+    if(!amt){ alert('請填金額'); return; }
+    ledger.push({date:$('e_date').value||new Date().toISOString().slice(0,10), type:$('e_type').value,
+                 item:$('e_item').value||'(未填)', cat:$('e_cat').value||'', amt:amt});
+    $('e_item').value=''; $('e_amt').value=''; $('e_cat').value='';
+    save(); renderLedger();
+  }
+  function delEntry(i){ ledger.splice(i,1); save(); renderLedger(); }
+  function renderLedger(){
+    ledger.sort(function(a,b){return a.date<b.date?-1:1;});
+    var tb=$('tb'); tb.innerHTML=''; var ti=0,to=0;
+    ledger.forEach(function(e,i){
+      if(e.type==='in') ti+=e.amt; else to+=e.amt;
+      var tr=document.createElement('tr');
+      tr.innerHTML='<td>'+e.date.slice(5)+'</td><td>'+esc(e.item)+'</td><td>'+esc(e.cat)+'</td>'+
+        '<td class="in">'+(e.type==='in'?e.amt.toLocaleString():'')+'</td>'+
+        '<td class="out">'+(e.type==='out'?e.amt.toLocaleString():'')+'</td>'+
+        '<td><button class="del" onclick="delEntry('+i+')">刪</button></td>';
+      tb.appendChild(tr);
+    });
+    $('sum_in').textContent=nf(ti); $('sum_out').textContent=nf(to);
+    var bal=ti-to; $('sum_bal').textContent=nf(bal); $('sum_bal').className='num '+(bal>=0?'pos':'neg');
+  }
+  function exportCSV(){
+    var rows=[['日期','收支','項目','類別','金額']];
+    ledger.forEach(function(e){ rows.push([e.date, e.type==='in'?'收入':'支出', e.item, e.cat, e.amt]); });
+    var csv='﻿'+rows.map(function(r){return r.map(function(c){return '"'+String(c).replace(/"/g,'""')+'"';}).join(',');}).join('\n');
+    var blob=new Blob([csv],{type:'text/csv'}), u=URL.createObjectURL(blob), a=document.createElement('a');
+    a.href=u; a.download='工會收支_'+new Date().toISOString().slice(0,10)+'.csv'; a.click();
+    setTimeout(function(){URL.revokeObjectURL(u);},3000);
+  }
+
+  // 分攤
+  function addAdv(){
+    var amt=+$('a_amt').value;
+    if(!amt){ alert('請填金額'); return; }
+    advs.push({who:$('a_who').value||'(未填)', item:$('a_item').value||'', amt:amt, paid:false});
+    $('a_who').value=''; $('a_amt').value=''; $('a_item').value='';
+    save(); renderAdv();
+  }
+  function togglePaid(i){ advs[i].paid=!advs[i].paid; save(); renderAdv(); }
+  function delAdv(i){ advs.splice(i,1); save(); renderAdv(); }
+  function renderAdv(){
+    var atb=$('atb'); atb.innerHTML=''; var total=0, byWho={};
+    advs.forEach(function(a,i){
+      total+=a.amt; byWho[a.who]=(byWho[a.who]||0)+a.amt;
+      var tr=document.createElement('tr'); if(a.paid) tr.className='paid';
+      tr.innerHTML='<td>'+esc(a.who)+'</td><td>'+esc(a.item)+'</td><td>'+a.amt.toLocaleString()+'</td>'+
+        '<td><button class="del" onclick="togglePaid('+i+')">'+(a.paid?'已還':'未還')+'</button> '+
+        '<button class="del" onclick="delAdv('+i+')">刪</button></td>';
+      atb.appendChild(tr);
+    });
+    var ppl=+$('a_people').value||1, each=total/ppl;
+    $('adv_total').textContent=nf(total); $('adv_each').textContent=nf(each);
+    // 結算：每人墊了多少 vs 應分攤
+    var lines=[];
+    Object.keys(byWho).forEach(function(w){
+      var diff=byWho[w]-each;
+      if(diff>1) lines.push(w+' 墊了 '+nf(byWho[w])+'，應收回 '+nf(diff));
+      else if(diff<-1) lines.push(w+' 應再付 '+nf(-diff));
+    });
+    $('settle').innerHTML = lines.length? ('💡 結算：<br>'+lines.join('<br>')) : '';
+  }
+
+  function clearAll(which){
+    if(!confirm('確定清空？此動作無法復原')) return;
+    if(which==='ledger'){ ledger=[]; } else { advs=[]; }
+    save(); renderLedger(); renderAdv();
+  }
+  function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+
+  // init
+  $('e_date').value=new Date().toISOString().slice(0,10);
+  calc(); renderLedger(); renderAdv();
+</script>
+</body>
+</html>
