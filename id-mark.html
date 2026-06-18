@@ -236,7 +236,7 @@
     if(!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia){ $('camfile').click(); return; }
     try{
       var stream=await navigator.mediaDevices.getUserMedia({
-        video:{ facingMode:{ideal:'environment'}, width:{ideal:1920}, height:{ideal:1080} }, audio:false });
+        video:{ facingMode:{ideal:'environment'}, width:{ideal:3840}, height:{ideal:2160} }, audio:false });   // 盡量抓最高解析度（裝置不支援會自動降）
       window._camStream=stream;
       var v=$('camv'); v.srcObject=stream; try{ await v.play(); }catch(_){}
       var track=stream.getVideoTracks()[0]; window._camTrack=track; window._torchOn=false;
@@ -546,7 +546,7 @@
     c.width=work.width; c.height=work.height;
     drawWorking(c.getContext('2d'), it, c.width, c.height);
     drawAnno(c.getContext('2d'), c.width, c.height, it);
-    return c.toDataURL('image/jpeg',0.92);
+    return c.toDataURL('image/jpeg',0.95);
   }
   function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
   function saveOne(idx){
@@ -576,7 +576,7 @@
     $('shareCard').style.display=''; window._shareFiles=null;
     composePages(baked).then(function(pages){
       return Promise.all(pages.map(function(c,i){
-        return new Promise(function(r){ c.toBlob(function(b){ r(new File([b],'證件A4_'+(i+1)+'.jpg',{type:'image/jpeg'})); },'image/jpeg',0.92); });
+        return new Promise(function(r){ c.toBlob(function(b){ r(new File([b],'證件A4_'+(i+1)+'.jpg',{type:'image/jpeg'})); },'image/jpeg',0.95); });
       }));
     }).then(function(files){ window._shareFiles=files; }).catch(function(){});
 
@@ -586,17 +586,17 @@
   // ---- 把每頁排版烤成一張 A4 圖（給分享/下載/寄信用）----
   function loadImg(src){ return new Promise(function(res){ var i=new Image(); i.onload=function(){res(i);}; i.src=src; }); }
   function drawSlot(x, label, img, sx, sy, sw, sh){
-    var capH=44;
-    x.fillStyle='#000'; x.font='bold 28px sans-serif'; x.textAlign='left'; x.textBaseline='top';
+    var capH=88;
+    x.fillStyle='#000'; x.font='bold 56px sans-serif'; x.textAlign='left'; x.textBaseline='top';
     x.fillText(label, sx, sy);
-    var iy=sy+capH, ih=sh-capH-8, iw=sw;
+    var iy=sy+capH, ih=sh-capH-16, iw=sw;
     var s=Math.min(iw/img.width, ih/img.height), dw=img.width*s, dh=img.height*s;
     x.drawImage(img, sx+(iw-dw)/2, iy+(ih-dh)/2, dw, dh);
   }
   async function composePages(baked){
     var per=parseInt($('perPage').value,10), grid=per===4;
     var imgs=await Promise.all(baked.map(function(b){ return loadImg(b.src); }));
-    var PW=1240, PH=1754, M=58, pages=[];   // ≈150dpi A4
+    var PW=2480, PH=3508, M=116, pages=[];   // ≈300dpi A4（高解析，列印/縮放都清楚）
     for(var i=0;i<baked.length;i+=per){
       var c=document.createElement('canvas'); c.width=PW; c.height=PH;
       var x=c.getContext('2d'); x.fillStyle='#fff'; x.fillRect(0,0,PW,PH);
