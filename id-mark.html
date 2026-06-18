@@ -15,16 +15,20 @@
   .card{background:#fff;border:1px solid var(--border);border-radius:14px;padding:14px;margin-bottom:12px;}
   label{display:block;font-size:13px;font-weight:600;color:var(--red-deep);margin-bottom:6px;}
   textarea,select,input[type=text]{width:100%;border:1.5px solid var(--border);border-radius:10px;padding:9px;font-size:15px;font-family:inherit;}
-  textarea{height:74px;resize:vertical;}
+  textarea{height:64px;resize:vertical;}
   .row{display:flex;gap:10px;align-items:center;margin-top:10px;}
   .row label{margin:0;font-weight:500;color:var(--ink);white-space:nowrap;}
   .row select{flex:1;}
+  .row .val{font-size:13px;color:var(--soft);min-width:34px;text-align:right;}
   input[type=range]{flex:1;}
   .btn{display:block;width:100%;border:none;border-radius:12px;padding:13px;font-size:16px;font-weight:700;cursor:pointer;}
-  .btn-pick{background:var(--gold);color:#fff;}
   .btn-make{background:#2E7D32;color:#fff;margin-top:6px;}
   .btn-print{background:var(--red);color:#fff;margin-top:6px;}
   .btn:disabled{opacity:.4;}
+  .pick{display:flex;gap:10px;}
+  .pick .btn{margin:0;}
+  .btn-cam{background:var(--gold);color:#fff;}
+  .btn-alb{background:#5B6770;color:#fff;}
   .hint{font-size:12px;color:var(--soft);margin-top:8px;}
   .safe{background:#EAFAF1;border:1px solid #B8DCC4;color:#1A5C38;font-size:12.5px;padding:10px 12px;border-radius:10px;margin-bottom:12px;}
   .warn{background:#FDECEA;border:1.5px solid #E8A29A;color:#7B1818;font-size:13px;padding:11px 13px;border-radius:10px;margin-bottom:12px;line-height:1.65;}
@@ -35,14 +39,41 @@
   .item{border:1px solid var(--border);border-radius:12px;padding:10px;margin-top:10px;background:#fff;}
   .ihead{display:flex;gap:8px;align-items:center;margin-bottom:8px;}
   .ihead select{flex:1;}
-  .ihead .del{background:#f1eeea;border:none;border-radius:8px;padding:8px 11px;cursor:pointer;font-size:14px;}
-  .pv{position:relative;width:100%;border:1px solid var(--border);border-radius:8px;overflow:hidden;background:#faf8f5;}
-  .pv img{display:block;width:100%;height:auto;}
-  .abox{position:absolute;left:3.5%;top:4%;background:rgba(255,255,255,.55);
-    color:var(--red);font-weight:700;border-top:2px solid var(--red);border-bottom:2px solid var(--red);
-    padding:.25em .5em;line-height:1.28;cursor:move;touch-action:none;white-space:nowrap;
-    box-shadow:0 1px 4px rgba(0,0,0,.15);user-select:none;}
+  .pv{position:relative;width:100%;text-align:center;background:#faf8f5;border:1px solid var(--border);border-radius:8px;overflow:hidden;}
+  .pv canvas{display:block;max-width:100%;height:auto;margin:0 auto;touch-action:none;}
+  .tools{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px;}
+  .tools button{flex:1;min-width:58px;background:#f1eeea;border:1px solid var(--border);border-radius:9px;padding:9px 5px;cursor:pointer;font-size:13px;font-weight:600;color:#444;}
+  .tools button.on{background:#FCEFB4;border-color:#E0C44A;color:#7A5600;}
+  .tools button.danger{color:#B0392B;}
+  .tools button.go{background:#2E7D32;color:#fff;border-color:#2E7D32;}
+  .tools button.cancel{background:#fff;}
+  .croprow{display:flex;align-items:center;gap:7px;margin-top:8px;font-size:13px;color:#5C4000;background:#FEF9E7;border:1px solid #EAD67A;border-radius:8px;padding:8px 10px;}
+  .croprow input{width:auto;flex:0 0 auto;}
   .dragtip{font-size:12px;color:#7A5600;background:#FEF9E7;border:1px solid #EAD67A;border-radius:8px;padding:7px 9px;margin-top:7px;}
+
+  /* 傳送 / 信箱自動補全 */
+  .btn-share{background:#1565C0;color:#fff;margin-top:6px;}
+  .btn-dl{background:#5B6770;color:#fff;margin-top:6px;}
+  .btn-mail{background:#2E7D32;color:#fff;margin-top:6px;}
+  .destwrap{position:relative;margin-top:10px;}
+  .sugbox{position:absolute;left:0;right:0;top:100%;z-index:5;background:#fff;border:1px solid var(--border);
+    border-radius:10px;box-shadow:0 6px 16px rgba(0,0,0,.14);overflow:hidden;display:none;margin-top:4px;}
+  .sugbox .sug{padding:11px 13px;font-size:14.5px;cursor:pointer;border-bottom:1px solid #f0ece6;}
+  .sugbox .sug:last-child{border-bottom:none;}
+  .sugbox .sug:active{background:#f3efe9;}
+  .sugbox .sug small{color:var(--soft);}
+
+  /* 內建掃描相機（全螢幕，僅螢幕顯示，絕不列印）*/
+  .cam{position:fixed;inset:0;z-index:999;background:#000;display:none;flex-direction:column;align-items:center;justify-content:center;}
+  .cam video{width:100%;height:100%;object-fit:cover;}
+  .camframe{position:absolute;left:50%;top:46%;transform:translate(-50%,-50%);
+    width:88vw;max-width:520px;aspect-ratio:8.56/5.4;border:2.5px dashed #fff;border-radius:10px;
+    box-shadow:0 0 0 9999px rgba(0,0,0,.45);pointer-events:none;}
+  .camtip{position:absolute;top:max(14px,env(safe-area-inset-top));left:0;right:0;text-align:center;color:#fff;font-size:13px;text-shadow:0 1px 3px #000;padding:0 16px;}
+  .cambtns{position:absolute;bottom:max(24px,env(safe-area-inset-bottom));left:0;right:0;display:flex;align-items:center;justify-content:space-around;}
+  .cambtns button{background:rgba(255,255,255,.18);color:#fff;border:none;border-radius:24px;padding:11px 16px;font-size:15px;font-weight:700;}
+  .cambtns .shoot{width:72px;height:72px;border-radius:50%;background:#fff;border:5px solid rgba(255,255,255,.45);}
+  .cambtns button.on{background:var(--gold);}
 
   #print{margin-top:14px;}
   .page{width:210mm;min-height:297mm;padding:10mm;background:#fff;margin:0 auto 12px;box-shadow:0 0 8px rgba(0,0,0,.18);}
@@ -59,15 +90,19 @@
     @page{ size:A4; margin:0; }
     body{background:#fff;}
     .noprint{display:none !important;}
+    .bar{display:none !important;}            /* ① 不印紅色標題列，省墨水 */
+    .cam{display:none !important;}             /* 掃描相機/框線 絕不列印 */
+    main{max-width:none;padding:0;margin:0;}   /* ⑤ 避免被 600px 擠出空白頁 */
     #print{margin:0;}
-    .page{box-shadow:none;margin:0;transform:none;page-break-after:always;}
+    .page{box-shadow:none;margin:0;transform:none;}
+    .page + .page{page-break-before:always;}   /* ⑤ 只在頁與頁之間分頁，最後不留空白頁 */
   }
 </style>
 </head>
 <body>
   <div class="bar">
     <h1>🪪 證件影本 加註記 · A4整理列印</h1>
-    <p>拖曳註記到空白處 · 多張整理成一張 A4 · 全程本機處理不上傳</p>
+    <p>掃描對齊框 · 補光 · 旋轉/裁切 · 多張整理成 A4 · 全程本機處理不上傳</p>
   </div>
 
   <main>
@@ -77,18 +112,30 @@
       勞工局送件要核對身分，這四項只要被蓋住看不清，<b>整份會被退件</b>。請把紅色註記拖到<b>空白邊角</b>，並在「整理成 A4」後再檢查一次都看得清楚。</div>
 
     <div class="card noprint">
-      <label>1. 註記文字（三行＋上下劃線，防止被加字）</label>
-      <textarea id="anno">僅提供高雄榮民總醫院企業工會
-作為籌組連署發起之用
-塗改、他用無效</textarea>
-      <div class="row"><label>濃淡</label><input type="range" id="alpha" min="40" max="100" value="80"></div>
-      <div class="hint">調好文字後，照片加進來會出現紅色註記，<strong>用手指把它拖到空白處</strong>，避開姓名／號碼／照片。</div>
+      <label>1. 註記文字（可多行，會自動跳行）</label>
+      <textarea id="anno">僅供高榮企業工會發起連署用
+它用無效</textarea>
+      <div class="row"><label>字級</label><input type="range" id="fsize" min="30" max="90" value="50"><span class="val" id="fsizeV">50</span></div>
+      <div class="row"><label>濃淡</label><input type="range" id="alpha" min="40" max="100" value="80"><span class="val" id="alphaV">80</span></div>
+      <div class="row"><label>上下線</label>
+        <select id="rule">
+          <option value="thin" selected>細</option>
+          <option value="thick">粗</option>
+          <option value="none">無</option>
+        </select>
+      </div>
+      <div class="hint">調好後，照片加進來會出現紅色註記，<strong>用手指把它拖到空白處</strong>，避開姓名／號碼／照片。</div>
     </div>
 
     <div class="card noprint">
-      <label>2. 加入證件照片（可一次多張）</label>
-      <button class="btn btn-pick" onclick="document.getElementById('file').click()">➕ 拍照 / 從相簿選</button>
+      <label>2. 加入證件照片</label>
+      <div class="pick">
+        <button class="btn btn-cam" onclick="openCam()">📷 拍照</button>
+        <button class="btn btn-alb" onclick="document.getElementById('file').click()">🖼 相簿</button>
+      </div>
       <input type="file" id="file" accept="image/*" multiple>
+      <input type="file" id="camfile" accept="image/*" capture="environment">
+      <div class="hint">「拍照」會開啟<strong>掃描對齊框</strong>幫你框住證件；不支援時自動改用系統相機。</div>
       <div id="list"></div>
     </div>
 
@@ -100,141 +147,360 @@
         <option value="4">4 張／頁（省紙）</option>
       </select>
     </div>
-    <button class="btn btn-print noprint" id="prn" disabled onclick="window.print()">🖨 列印 / 存成 PDF（一張 A4）</button>
+    <button class="btn btn-print noprint" id="prn" disabled onclick="window.print()">🖨 列印 / 存成 PDF（A4）</button>
     <div class="safe noprint" id="printTip" style="background:#FEF9E7;border-color:#EAD67A;color:#5C4000;margin-top:8px;">
       📡 <strong>已用藍牙／Wi-Fi 連好印表機？</strong>按「列印」後手機會跳出系統列印視窗，在「印表機」選你那台直接印；沒連則可「儲存為 PDF」。
     </div>
     <p class="hint noprint" id="status">尚未加入照片。</p>
 
+    <div class="card noprint" id="shareCard" style="display:none">
+      <label>③ 傳送 / 存雲端 / 寄信（整理成 A4 後使用）</label>
+      <button class="btn btn-share" id="shareBtn" onclick="shareFiles()">📤 傳送…（寄信／Google雲端／檔案／AirDrop／LINE）</button>
+      <button class="btn btn-dl" onclick="downloadFiles()">⬇️ 下載到手機（相簿／檔案）</button>
+      <div class="destwrap">
+        <label style="margin-top:0">常用信箱（選填，填過會記住）</label>
+        <input type="text" id="dest" inputmode="email" autocomplete="off" placeholder="例如 yourname@gmail.com"
+               oninput="suggest()" onfocus="suggest()" onblur="setTimeout(hideSug,200)">
+        <div class="sugbox" id="destSug"></div>
+      </div>
+      <button class="btn btn-mail" onclick="emailTo()">✉️ 寄到我的信箱</button>
+      <div class="hint">按「傳送…」會跳出手機的系統選單，<strong>自己選要送去哪</strong>（郵件／雲端硬碟／檔案／AirDrop…）。<br>
+        ℹ️ 因瀏覽器安全限制，網頁無法自動把檔案塞進信件；選「郵件」時系統會<strong>自動幫你夾帶附件</strong>，你填收件人即可（信箱已幫你複製）。</div>
+    </div>
+
     <div id="print"></div>
   </main>
 
+  <!-- 內建掃描相機 -->
+  <div class="cam noprint" id="cam">
+    <video id="camv" playsinline autoplay muted></video>
+    <div class="camframe"></div>
+    <div class="camtip">把證件對進虛線框內，盡量填滿、保持平整清晰</div>
+    <div class="cambtns">
+      <button onclick="closeCam()">✕ 取消</button>
+      <button class="shoot" aria-label="拍照" onclick="shoot()"></button>
+      <button id="torchBtn" style="visibility:hidden" onclick="toggleTorch()">🔦 補光</button>
+    </div>
+  </div>
+
 <script>
-  var items = [];   // {url, bitmap, label, pos:{x,y}}
+  var items = [];   // {bitmap,label,rot,crop,pos,enhance,_canvas,_base,_box,_cropping,_cropRect,_lockRatio}
   var $ = function(id){ return document.getElementById(id); };
   var TYPES = ['身分證正面','身分證反面','職員證正面','職員證反面','勞保投保證明','薪資證明','其他'];
-  var FONT_K = 0.045;        // 字級 = 圖寬 * K
-  var alphaVal = function(){ return $('alpha').value/100; };
+  var ID_RATIO = 8.56/5.4;            // 證件長寬比（裁切/對齊框）
+  var fontK   = function(){ return $('fsize').value/1000; };
+  var alphaVal= function(){ return $('alpha').value/100; };
+  var ruleFactor = function(){ var v=$('rule').value; return v==='none'?0:(v==='thick'?0.085:0.03); };
+  var ENHANCE_FILTER = 'brightness(1.16) contrast(1.12) saturate(1.04)';
 
-  $('file').addEventListener('change', async function(e){
-    var files = Array.from(e.target.files || []);
+  // ---- 檔案載入（相簿可多張；系統相機備援單張）----
+  function newItem(bmp, crop){
+    items.push({ bitmap:bmp, label:TYPES[Math.min(items.length,TYPES.length-1)],
+                 rot:0, crop:crop||null, pos:{x:0.035,y:0.04}, enhance:false });
+  }
+  async function addFiles(files){
     for (var i=0;i<files.length;i++){
-      var f = files[i], bmp;
+      var f=files[i], bmp;
       try { bmp = await createImageBitmap(f, { imageOrientation:'from-image' }); }
       catch(_){ bmp = await loadFallback(f); }
-      items.push({ url: URL.createObjectURL(f), bitmap: bmp,
-                   label: TYPES[Math.min(items.length, TYPES.length-1)], pos:{x:0.035,y:0.04} });
+      newItem(bmp);
     }
-    e.target.value = '';
     renderList();
-  });
+  }
+  $('file').addEventListener('change', function(e){ var fs=Array.from(e.target.files||[]); e.target.value=''; if(fs.length) addFiles(fs); });
+  $('camfile').addEventListener('change', function(e){ var fs=Array.from(e.target.files||[]); e.target.value=''; if(fs.length) addFiles(fs); });
   function loadFallback(file){
     return new Promise(function(res){ var img=new Image(); img.onload=function(){res(img);}; img.src=URL.createObjectURL(file); });
   }
 
   function annoLines(){ return ($('anno').value||'').split('\n').map(function(s){return s.trim();}).filter(Boolean); }
+  function defaultIdCrop(w,h){
+    var rW=0.92, rH=rW*(w/h)/ID_RATIO;
+    if(rH>0.92){ rH=0.92; rW=rH*ID_RATIO*(h/w); }
+    return {x:(1-rW)/2, y:(1-rH)/2, w:rW, h:rH};
+  }
 
+  // ---- 內建掃描相機 ----
+  async function openCam(){
+    if(!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia){ $('camfile').click(); return; }
+    try{
+      var stream=await navigator.mediaDevices.getUserMedia({
+        video:{ facingMode:{ideal:'environment'}, width:{ideal:1920}, height:{ideal:1080} }, audio:false });
+      window._camStream=stream;
+      var v=$('camv'); v.srcObject=stream; try{ await v.play(); }catch(_){}
+      var track=stream.getVideoTracks()[0]; window._camTrack=track; window._torchOn=false;
+      var caps=(track.getCapabilities&&track.getCapabilities())||{};
+      var tb=$('torchBtn'); tb.classList.remove('on'); tb.style.visibility = caps.torch ? 'visible':'hidden';
+      $('cam').style.display='flex';
+    }catch(err){ $('camfile').click(); }   // 不支援或拒絕授權 → 退回系統相機
+  }
+  function closeCam(){
+    var s=window._camStream; if(s){ s.getTracks().forEach(function(t){t.stop();}); }
+    window._camStream=null; window._camTrack=null;
+    $('camv').srcObject=null; $('cam').style.display='none';
+  }
+  function toggleTorch(){
+    var t=window._camTrack; if(!t) return;
+    window._torchOn=!window._torchOn;
+    t.applyConstraints({advanced:[{torch:window._torchOn}]}).then(function(){
+      $('torchBtn').classList.toggle('on', window._torchOn);
+    }).catch(function(){ alert('此裝置/瀏覽器不支援手電筒補光，可改用環境光或相簿。'); });
+  }
+  function shoot(){
+    var v=$('camv'), w=v.videoWidth, h=v.videoHeight;
+    if(!w||!h){ alert('相機尚未就緒，請稍候再按'); return; }
+    var c=document.createElement('canvas'); c.width=w; c.height=h;
+    c.getContext('2d').drawImage(v,0,0,w,h);
+    newItem(c, defaultIdCrop(w,h));   // 預設依對齊框裁出證件範圍（可再調整）
+    closeCam(); renderList();
+    $('status').textContent='已拍 1 張，已自動框出證件範圍，可按 ✂️ 微調或加更多張。';
+  }
+
+  // ---- 影像處理：旋轉 + 裁切 ----
+  function orientedCanvas(it){
+    var b=it.bitmap, sw=b.width, sh=b.height, r=((it.rot%360)+360)%360;
+    var c=document.createElement('canvas'), x=c.getContext('2d');
+    if(r===90||r===270){ c.width=sh; c.height=sw; } else { c.width=sw; c.height=sh; }
+    x.save();
+    if(r===90){ x.translate(sh,0); x.rotate(Math.PI/2); }
+    else if(r===180){ x.translate(sw,sh); x.rotate(Math.PI); }
+    else if(r===270){ x.translate(0,sw); x.rotate(3*Math.PI/2); }
+    x.drawImage(b,0,0,sw,sh); x.restore();
+    return c;
+  }
+  function workingCanvas(it){
+    var o=orientedCanvas(it), cr=it.crop||{x:0,y:0,w:1,h:1};
+    var sx=cr.x*o.width, sy=cr.y*o.height, sw=cr.w*o.width, sh=cr.h*o.height;
+    var c=document.createElement('canvas');
+    c.width=Math.max(1,Math.round(sw)); c.height=Math.max(1,Math.round(sh));
+    c.getContext('2d').drawImage(o, sx,sy,sw,sh, 0,0,c.width,c.height);
+    return c;
+  }
+  // 把 working 影像（含自動補光）畫進 ctx（目標 w×h）
+  function drawWorking(ctx, it, w, h){
+    var work=workingCanvas(it), useF = it.enhance && ('filter' in ctx);
+    if(useF) ctx.filter=ENHANCE_FILTER;
+    ctx.drawImage(work,0,0,w,h);
+    if(useF) ctx.filter='none';
+  }
+
+  // ---- 註記（預覽與輸出共用，所見即所得）----
+  function wrapLine(ctx,text,maxW){
+    if(ctx.measureText(text).width<=maxW) return [text];
+    var out=[],cur='';
+    for(var i=0;i<text.length;i++){ var t=cur+text[i];
+      if(ctx.measureText(t).width>maxW && cur){ out.push(cur); cur=text[i]; } else cur=t; }
+    if(cur) out.push(cur); return out;
+  }
+  function drawAnno(ctx, cw, ch, it){
+    var lines=annoLines(); if(!lines.length) return null;
+    var fs=Math.max(11, Math.round(cw*fontK()));
+    ctx.font='bold '+fs+'px sans-serif'; ctx.textAlign='left'; ctx.textBaseline='top';
+    var bx0=it.pos.x*cw, by0=it.pos.y*ch;
+    var maxTextW=Math.max(cw*0.25, cw*0.95-bx0);
+    var wrapped=[]; lines.forEach(function(l){ wrapLine(ctx,l,maxTextW).forEach(function(w){wrapped.push(w);}); });
+    var tw=0; wrapped.forEach(function(l){ tw=Math.max(tw, ctx.measureText(l).width); });
+    var pad=fs*0.45, lh=fs*1.3, rule=Math.round(ruleFactor()*fs);
+    var bw=tw+pad*2, bh=lh*wrapped.length+pad*2+rule*2;
+    var bx=Math.max(0,Math.min(bx0, cw-bw)), by=Math.max(0,Math.min(by0, ch-bh));
+    var a=alphaVal();
+    ctx.globalAlpha=Math.min(0.55, a*0.65); ctx.fillStyle='#fff'; ctx.fillRect(bx,by,bw,bh);
+    ctx.globalAlpha=Math.max(a,0.6); ctx.fillStyle='#C0392B';
+    if(rule) ctx.fillRect(bx,by,bw,rule);
+    wrapped.forEach(function(l,i){ ctx.fillText(l, bx+pad, by+rule+pad+i*lh); });
+    if(rule) ctx.fillRect(bx,by+bh-rule,bw,rule);
+    ctx.globalAlpha=1;
+    return {x:bx,y:by,w:bw,h:bh};
+  }
+
+  // ---- 列表 ----
+  function toolsHTML(idx){
+    var on=items[idx].enhance?' on':'';
+    return '<button onclick="rotate('+idx+',-90)">↺ 左轉</button>'+
+           '<button onclick="rotate('+idx+',90)">↻ 右轉</button>'+
+           '<button onclick="enterCrop('+idx+')">✂️ 裁切</button>'+
+           '<button class="'+(on?'on':'')+'" onclick="toggleEnhance('+idx+')">✨ 補光</button>'+
+           '<button onclick="saveOne('+idx+')">💾 存圖</button>'+
+           '<button class="danger" onclick="removeItem('+idx+')">🗑 刪除</button>';
+  }
   function renderList(){
-    var html = items.map(function(it, idx){
-      var opts = TYPES.map(function(t){ return '<option '+(t===it.label?'selected':'')+'>'+t+'</option>'; }).join('');
-      return '<div class="item">'+
-        '<div class="ihead">'+
-          '<select onchange="items['+idx+'].label=this.value">'+opts+'</select>'+
-          '<button class="del" onclick="removeItem('+idx+')">刪除</button>'+
-        '</div>'+
-        '<div class="pv" data-idx="'+idx+'"><img src="'+it.url+'"><div class="abox"></div></div>'+
+    var wrap=$('list'); wrap.innerHTML='';
+    items.forEach(function(it, idx){
+      var div=document.createElement('div'); div.className='item';
+      var opts=TYPES.map(function(t){ return '<option '+(t===it.label?'selected':'')+'>'+t+'</option>'; }).join('');
+      div.innerHTML=
+        '<div class="ihead"><select onchange="items['+idx+'].label=this.value">'+opts+'</select></div>'+
+        '<div class="pv"><canvas></canvas></div>'+
         '<div class="dragtip">👆 把紅色註記拖到空白處（避開姓名／號碼／照片）</div>'+
-      '</div>';
-    }).join('');
-    $('list').innerHTML = html;
-
-    // 連結每張的拖曳與排版
-    document.querySelectorAll('#list .pv').forEach(function(pv){
-      var idx = +pv.dataset.idx;
-      var img = pv.querySelector('img');
-      var box = pv.querySelector('.abox');
-      paintBox(box, idx);
-      var doLayout = function(){ layoutBox(pv, box, idx); };
-      if (img.complete) doLayout(); else img.onload = doLayout;
-      box.addEventListener('pointerdown', function(ev){ startDrag(ev, pv, box, idx); });
+        '<div class="tools">'+toolsHTML(idx)+'</div>';
+      wrap.appendChild(div);
+      it._canvas=div.querySelector('canvas'); it._base=null;
+      paintItem(idx); attachDrag(idx);
     });
+    var has=items.length>0;
+    $('make').disabled=!has;
+    if(!/已拍|已輸出/.test($('status').textContent))
+      $('status').textContent = has ? ('已加入 '+items.length+' 張，調整好後按「整理成 A4」。') : '尚未加入照片。';
+  }
+  function dispWidth(){ return Math.min((window.innerWidth||520)-64, 520); }
 
-    var has = items.length>0;
-    $('make').disabled = !has;
-    $('status').textContent = has ? ('已加入 '+items.length+' 張，拖好位置後按「整理成 A4」。') : '尚未加入照片。';
+  // 快取顯示底圖（旋轉/裁切/補光/寬度改變才重建）→ 拖曳超順
+  function ensureBase(it){
+    var work=workingCanvas(it), W=dispWidth(), H=Math.round(W*work.height/work.width);
+    if(it._base && it._base.width===W && it._base.height===H && it._baseTag===baseTag(it)) return;
+    var b=document.createElement('canvas'); b.width=W; b.height=H;
+    drawWorking(b.getContext('2d'), it, W, H);
+    it._base=b; it._baseTag=baseTag(it);
+  }
+  function baseTag(it){ return it.rot+'|'+JSON.stringify(it.crop)+'|'+(it.enhance?1:0); }
+
+  function paintItem(idx){
+    var it=items[idx], cv=it._canvas; if(!cv) return;
+    if(it._cropping){ paintCrop(idx); return; }
+    ensureBase(it);
+    var W=it._base.width, H=it._base.height;
+    cv.width=W; cv.height=H; cv.style.width=W+'px';
+    var ctx=cv.getContext('2d');
+    ctx.clearRect(0,0,W,H); ctx.drawImage(it._base,0,0);
+    it._box=drawAnno(ctx,W,H,it);
   }
 
-  function paintBox(box, idx){
-    box.innerHTML = annoLines().map(function(l){return l.replace(/</g,'&lt;');}).join('<br>');
-    box.style.opacity = Math.max(0.5, alphaVal());
-    box.style.left = (items[idx].pos.x*100)+'%';
-    box.style.top  = (items[idx].pos.y*100)+'%';
+  // ---- 拖曳註記（只重畫文字，不重算原圖）----
+  function attachDrag(idx){
+    var it=items[idx], cv=it._canvas;
+    cv.addEventListener('pointerdown', function(ev){
+      if(it._cropping) return cropPointerDown(idx,ev);
+      var p=canvasPoint(cv,ev), b=it._box; if(!b) return;
+      if(p.x<b.x||p.x>b.x+b.w||p.y<b.y||p.y>b.y+b.h) return;
+      ev.preventDefault();
+      var offX=p.x-b.x, offY=p.y-b.y;
+      function move(e){
+        var q=canvasPoint(cv,e);
+        var nx=Math.max(0,Math.min(q.x-offX, cv.width-b.w));
+        var ny=Math.max(0,Math.min(q.y-offY, cv.height-b.h));
+        it.pos={x:nx/cv.width, y:ny/cv.height};
+        var ctx=cv.getContext('2d'); ctx.clearRect(0,0,cv.width,cv.height);
+        ctx.drawImage(it._base,0,0); it._box=drawAnno(ctx,cv.width,cv.height,it);
+      }
+      function up(){ document.removeEventListener('pointermove',move); document.removeEventListener('pointerup',up); }
+      document.addEventListener('pointermove',move); document.addEventListener('pointerup',up);
+    });
   }
-  function layoutBox(pv, box, idx){
-    var fs = Math.max(11, Math.round(pv.clientWidth * FONT_K));
-    box.style.fontSize = fs+'px';
-    box.style.left = (items[idx].pos.x*100)+'%';
-    box.style.top  = (items[idx].pos.y*100)+'%';
+  function canvasPoint(cv,ev){
+    var r=cv.getBoundingClientRect();
+    return { x:(ev.clientX-r.left)*cv.width/r.width, y:(ev.clientY-r.top)*cv.height/r.height };
   }
 
-  function startDrag(ev, pv, box, idx){
+  // ---- 旋轉 / 補光 ----
+  function rotate(idx,deg){ var it=items[idx]; it.rot=(it.rot+deg+360)%360; it.crop=null; it._base=null; paintItem(idx); resetBuilt(); }
+  function toggleEnhance(idx){
+    var it=items[idx]; it.enhance=!it.enhance; it._base=null; paintItem(idx); resetBuilt();
+    var b=it._canvas.closest('.item').querySelector('.tools'); if(b) b.innerHTML=toolsHTML(idx);
+  }
+
+  // ---- 裁切 ----
+  function enterCrop(idx){
+    var it=items[idx], o=orientedCanvas(it);
+    it._cropRect = it.crop ? Object.assign({},it.crop) : defaultIdCrop(o.width,o.height);
+    it._cropping=true; it._lockRatio=true;
+    var div=it._canvas.closest('.item');
+    div.querySelector('.dragtip').style.display='none';
+    var bar=div.querySelector('.tools');
+    bar.innerHTML='<button class="go" onclick="applyCrop('+idx+')">✓ 套用裁切</button>'+
+                  '<button class="cancel" onclick="cancelCrop('+idx+')">取消</button>';
+    var cr=document.createElement('div'); cr.className='croprow';
+    cr.innerHTML='<input type="checkbox" id="lk'+idx+'" checked onchange="items['+idx+']._lockRatio=this.checked;"> 對齊證件比例（8.56×5.4）｜拖框移動、拖四角縮放';
+    bar.parentNode.insertBefore(cr,bar.nextSibling);
+    paintCrop(idx);
+  }
+  function paintCrop(idx){
+    var it=items[idx], cv=it._canvas, o=orientedCanvas(it);
+    var W=dispWidth(), H=Math.round(W*o.height/o.width);
+    cv.width=W; cv.height=H; cv.style.width=W+'px';
+    var ctx=cv.getContext('2d'); ctx.clearRect(0,0,W,H); ctx.drawImage(o,0,0,W,H);
+    var r=it._cropRect, x=r.x*W, y=r.y*H, w=r.w*W, h=r.h*H;
+    ctx.fillStyle='rgba(0,0,0,.5)';
+    ctx.fillRect(0,0,W,y); ctx.fillRect(0,y+h,W,H-y-h); ctx.fillRect(0,y,x,h); ctx.fillRect(x+w,y,W-x-w,h);
+    ctx.strokeStyle='#C0392B'; ctx.lineWidth=2; ctx.strokeRect(x,y,w,h);
+    ctx.fillStyle='#C0392B'; var hs=9;
+    [[x,y],[x+w,y],[x,y+h],[x+w,y+h]].forEach(function(p){ ctx.fillRect(p[0]-hs,p[1]-hs,hs*2,hs*2); });
+  }
+  function cropPointerDown(idx,ev){
     ev.preventDefault();
-    var rect = pv.getBoundingClientRect();
-    var bx = box.getBoundingClientRect();
-    var offX = ev.clientX - bx.left, offY = ev.clientY - bx.top;
+    var it=items[idx], cv=it._canvas, r=it._cropRect, W=cv.width, H=cv.height, hs=16;
+    var px=r.x*W, py=r.y*H, pw=r.w*W, ph=r.h*H;
+    var pts=[[px,py],[px+pw,py],[px,py+ph],[px+pw,py+ph]];
+    var p=canvasPoint(cv,ev), grab=-1;
+    for(var i=0;i<4;i++){ if(Math.abs(p.x-pts[i][0])<hs && Math.abs(p.y-pts[i][1])<hs){ grab=i; break; } }
+    var moveAll = grab<0 && p.x>px && p.x<px+pw && p.y>py && p.y<py+ph;
+    if(grab<0 && !moveAll) return;
+    var start={x:p.x,y:p.y,rx:r.x,ry:r.y,rw:r.w,rh:r.h};
     function move(e){
-      var left = e.clientX - rect.left - offX;
-      var top  = e.clientY - rect.top  - offY;
-      left = Math.max(0, Math.min(left, pv.clientWidth  - box.offsetWidth));
-      top  = Math.max(0, Math.min(top,  pv.clientHeight - box.offsetHeight));
-      items[idx].pos = { x: left/pv.clientWidth, y: top/pv.clientHeight };
-      box.style.left = (items[idx].pos.x*100)+'%';
-      box.style.top  = (items[idx].pos.y*100)+'%';
+      var q=canvasPoint(cv,e), dx=(q.x-start.x)/W, dy=(q.y-start.y)/H;
+      if(moveAll){
+        r.x=Math.max(0,Math.min(start.rx+dx, 1-start.rw));
+        r.y=Math.max(0,Math.min(start.ry+dy, 1-start.rh));
+      } else {
+        var ax=(grab===1||grab===3)? start.rx : start.rx+start.rw;
+        var ay=(grab===2||grab===3)? start.ry : start.ry+start.rh;
+        var cx=q.x/W, cy=q.y/H;
+        var nx=Math.min(ax,cx), nw=Math.abs(cx-ax);
+        var ny=Math.min(ay,cy), nh=Math.abs(cy-ay);
+        if(it._lockRatio){
+          var fr=ID_RATIO*(H/W);            // 顯示畫布即 oriented 比例
+          nh=nw/fr; ny=(grab===0||grab===1)? ay-nh : ay;
+        }
+        nw=Math.max(0.05,Math.min(nw,1)); nh=Math.max(0.05,Math.min(nh,1));
+        if(nx<0)nx=0; if(ny<0)ny=0; if(nx+nw>1)nw=1-nx; if(ny+nh>1)nh=1-ny;
+        r.x=nx; r.y=ny; r.w=nw; r.h=nh;
+      }
+      paintCrop(idx);
     }
     function up(){ document.removeEventListener('pointermove',move); document.removeEventListener('pointerup',up); }
-    document.addEventListener('pointermove', move);
-    document.addEventListener('pointerup', up);
+    document.addEventListener('pointermove',move); document.addEventListener('pointerup',up);
+  }
+  function applyCrop(idx){ var it=items[idx]; it.crop=Object.assign({},it._cropRect); it._cropping=false; it.pos={x:0.035,y:0.04}; it._base=null; cleanCropUI(idx); paintItem(idx); resetBuilt(); }
+  function cancelCrop(idx){ items[idx]._cropping=false; cleanCropUI(idx); paintItem(idx); }
+  function cleanCropUI(idx){
+    var div=items[idx]._canvas.closest('.item');
+    var cr=div.querySelector('.croprow'); if(cr) cr.remove();
+    div.querySelector('.dragtip').style.display='';
+    div.querySelector('.tools').innerHTML=toolsHTML(idx);
   }
 
-  // 文字 / 濃淡 改變時即時更新所有預覽
-  ['anno','alpha'].forEach(function(id){
+  // ---- 即時刷新（文字/字級/濃淡/線條）----
+  ['anno','fsize','alpha','rule'].forEach(function(id){
     $(id).addEventListener('input', function(){
-      document.querySelectorAll('#list .pv').forEach(function(pv){ paintBox(pv.querySelector('.abox'), +pv.dataset.idx); });
+      if(id==='fsize') $('fsizeV').textContent=$('fsize').value;
+      if(id==='alpha') $('alphaV').textContent=$('alpha').value;
+      items.forEach(function(it,idx){ if(!it._cropping) paintItem(idx); });
     });
   });
+  window.addEventListener('resize', function(){ items.forEach(function(it,idx){ it._base=null; if(!it._cropping) paintItem(idx); }); });
 
-  function removeItem(i){ items.splice(i,1); renderList(); $('print').innerHTML=''; $('prn').disabled=true; window._built=false; }
+  function removeItem(i){ items.splice(i,1); renderList(); resetBuilt(); }
+  function resetBuilt(){ $('print').innerHTML=''; $('prn').disabled=true; window._built=false;
+    window._shareFiles=null; var sc=$('shareCard'); if(sc) sc.style.display='none'; }
 
-  // 依每張自己的位置，把註記烤進全解析度圖片
+  // ---- 輸出 ----
   function bake(it){
-    var bmp=it.bitmap, w=bmp.width, h=bmp.height;
-    var c=document.createElement('canvas'); c.width=w; c.height=h;
-    var x=c.getContext('2d');
-    x.drawImage(bmp,0,0,w,h);
-    var lines=annoLines();
-    if(lines.length){
-      var alpha=alphaVal();
-      var fs=Math.max(13, Math.round(w*FONT_K));
-      x.font='bold '+fs+'px sans-serif';
-      var tw=0; lines.forEach(function(l){ tw=Math.max(tw, x.measureText(l).width); });
-      var pad=fs*0.5, lh=fs*1.28;
-      var bw=tw+pad*2, bh=lh*lines.length+pad*2;
-      var bx=it.pos.x*w, by=it.pos.y*h;
-      bx=Math.max(0,Math.min(bx, w-bw)); by=Math.max(0,Math.min(by, h-bh));
-      var rule=Math.max(2, fs*0.09);
-      x.globalAlpha=Math.min(0.55, alpha*0.65); x.fillStyle='#fff'; x.fillRect(bx,by,bw,bh);
-      x.globalAlpha=Math.max(alpha,0.6); x.fillStyle='#C0392B'; x.textAlign='left'; x.textBaseline='top';
-      x.fillRect(bx,by,bw,rule);
-      lines.forEach(function(l,i){ x.fillText(l, bx+pad, by+rule+pad*0.5+i*lh); });
-      x.fillRect(bx,by+bh-rule,bw,rule);
-      x.globalAlpha=1;
-    }
-    return c.toDataURL('image/jpeg',0.9);
+    var work=workingCanvas(it), c=document.createElement('canvas');
+    c.width=work.width; c.height=work.height;
+    drawWorking(c.getContext('2d'), it, c.width, c.height);
+    drawAnno(c.getContext('2d'), c.width, c.height, it);
+    return c.toDataURL('image/jpeg',0.92);
   }
   function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+  function saveOne(idx){
+    var it=items[idx], a=document.createElement('a');
+    a.href=bake(it); a.download=(it.label||'證件')+'_加註記.jpg';
+    document.body.appendChild(a); a.click(); a.remove();
+    $('status').textContent='已輸出「'+it.label+'」圖檔。手機若直接開啟，請長按圖片→儲存到相簿。';
+  }
 
   function build(){
     if(!items.length){ alert('請先加入證件照片'); return; }
+    if(items.some(function(it){return it._cropping;})){ alert('請先「套用裁切」或「取消」再整理'); return; }
     $('status').textContent='整理中…';
     var per=parseInt($('perPage').value,10), grid=per===4;
     var baked=items.map(function(it){ return { src: bake(it), label: it.label }; });
@@ -242,15 +508,113 @@
     for(var i=0;i<baked.length;i+=per){
       var group=baked.slice(i,i+per);
       html+='<div class="page'+(grid?' grid':'')+'">';
-      group.forEach(function(b){
-        html+='<div class="slot"><div class="cap">'+esc(b.label)+'</div><div class="imgwrap"><img src="'+b.src+'"></div></div>';
-      });
+      group.forEach(function(b){ html+='<div class="slot"><div class="cap">'+esc(b.label)+'</div><div class="imgwrap"><img src="'+b.src+'"></div></div>'; });
       html+='</div>';
     }
-    $('print').innerHTML=html;
-    window._built=true; $('prn').disabled=false;
-    $('status').textContent='已整理成 A4，下方可預覽。確認資料清楚後按「列印/存PDF」。';
+    $('print').innerHTML=html; window._built=true; $('prn').disabled=false;
+    $('status').textContent='已整理成 A4，下方可預覽。確認資料清楚後按「列印/存PDF」或「傳送」。';
+
+    // 同步產生可分享/下載/寄信的 A4 圖檔（每頁一張）
+    $('shareCard').style.display=''; window._shareFiles=null;
+    composePages(baked).then(function(pages){
+      return Promise.all(pages.map(function(c,i){
+        return new Promise(function(r){ c.toBlob(function(b){ r(new File([b],'證件A4_'+(i+1)+'.jpg',{type:'image/jpeg'})); },'image/jpeg',0.92); });
+      }));
+    }).then(function(files){ window._shareFiles=files; }).catch(function(){});
+
     $('print').scrollIntoView({behavior:'smooth'});
+  }
+
+  // ---- 把每頁排版烤成一張 A4 圖（給分享/下載/寄信用）----
+  function loadImg(src){ return new Promise(function(res){ var i=new Image(); i.onload=function(){res(i);}; i.src=src; }); }
+  function drawSlot(x, label, img, sx, sy, sw, sh){
+    var capH=44;
+    x.fillStyle='#000'; x.font='bold 28px sans-serif'; x.textAlign='left'; x.textBaseline='top';
+    x.fillText(label, sx, sy);
+    var iy=sy+capH, ih=sh-capH-8, iw=sw;
+    var s=Math.min(iw/img.width, ih/img.height), dw=img.width*s, dh=img.height*s;
+    x.drawImage(img, sx+(iw-dw)/2, iy+(ih-dh)/2, dw, dh);
+  }
+  async function composePages(baked){
+    var per=parseInt($('perPage').value,10), grid=per===4;
+    var imgs=await Promise.all(baked.map(function(b){ return loadImg(b.src); }));
+    var PW=1240, PH=1754, M=58, pages=[];   // ≈150dpi A4
+    for(var i=0;i<baked.length;i+=per){
+      var c=document.createElement('canvas'); c.width=PW; c.height=PH;
+      var x=c.getContext('2d'); x.fillStyle='#fff'; x.fillRect(0,0,PW,PH);
+      var gi=imgs.slice(i,i+per), gb=baked.slice(i,i+per);
+      if(!grid){
+        var sh=(PH-2*M)/2;
+        gb.forEach(function(b,k){ drawSlot(x,b.label,gi[k], M, M+k*sh, PW-2*M, sh); });
+      } else {
+        var sw=(PW-2*M)/2, sh4=(PH-2*M)/2;
+        gb.forEach(function(b,k){ drawSlot(x,b.label,gi[k], M+(k%2)*sw, M+((k/2)|0)*sh4, sw, sh4); });
+      }
+      pages.push(c);
+    }
+    return pages;
+  }
+
+  // ---- 傳送 / 下載 / 寄信 ----
+  function notReady(){ if(!window._shareFiles||!window._shareFiles.length){ alert('檔案產生中，請等 1～2 秒再按一次。'); return true; } return false; }
+  function shareFiles(){
+    if(notReady()) return;
+    if(navigator.canShare && navigator.canShare({files:window._shareFiles})){
+      navigator.share({ files:window._shareFiles, title:'證件影本（高榮企業工會連署）' }).catch(function(){});
+    } else { downloadFiles(); alert('此瀏覽器不支援直接分享，已改為下載到裝置，可再自行夾帶寄出或上傳雲端。'); }
+  }
+  function downloadFiles(){
+    if(notReady()) return;
+    window._shareFiles.forEach(function(f){
+      var u=URL.createObjectURL(f), a=document.createElement('a');
+      a.href=u; a.download=f.name; document.body.appendChild(a); a.click(); a.remove();
+      setTimeout(function(){ URL.revokeObjectURL(u); }, 4000);
+    });
+  }
+  function emailTo(){
+    if(notReady()) return;
+    var em=getEmail();
+    if(em && validEmail(em)){ remember(em); try{ navigator.clipboard && navigator.clipboard.writeText(em); }catch(_){} }
+    if(navigator.canShare && navigator.canShare({files:window._shareFiles})){
+      navigator.share({ files:window._shareFiles, title:'證件影本（高榮企業工會連署）' }).catch(function(){});
+    } else {
+      downloadFiles();
+      if(em && validEmail(em))
+        location.href='mailto:'+encodeURIComponent(em)+'?subject='+encodeURIComponent('證件影本（高榮企業工會連署）')+
+          '&body='+encodeURIComponent('附件為證件影本，請從剛剛下載到裝置的檔案夾帶後寄出。');
+    }
+  }
+
+  // ---- 信箱 @ 自動補全 + 記住常用 ----
+  var DOMAINS=['gmail.com','yahoo.com.tw','yahoo.com','hotmail.com','outlook.com','icloud.com','msn.com','me.com','livemail.tw','vghks.gov.tw'];
+  function getEmail(){ return ($('dest').value||'').trim(); }
+  function validEmail(s){ return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(s); }
+  function getSaved(){ try{ return JSON.parse(localStorage.getItem('idmark_emails')||'[]'); }catch(_){ return []; } }
+  function remember(em){
+    var a=getSaved().filter(function(x){ return x!==em; }); a.unshift(em);
+    try{ localStorage.setItem('idmark_emails', JSON.stringify(a.slice(0,8))); }catch(_){}
+  }
+  function hideSug(){ $('destSug').style.display='none'; }
+  function suggest(){
+    var v=getEmail(), box=$('destSug'), saved=getSaved(), list=[];
+    if(!v){ list=saved.slice(0,6); }
+    else if(v.indexOf('@')>=0){
+      var at=v.indexOf('@'), local=v.slice(0,at), dom=v.slice(at+1);
+      saved.forEach(function(s){ if(s.indexOf(v)===0) list.push(s); });
+      DOMAINS.filter(function(d){ return d.indexOf(dom)===0; }).forEach(function(d){ var e=local+'@'+d; if(list.indexOf(e)<0) list.push(e); });
+    } else {
+      saved.forEach(function(s){ if(s.indexOf(v)===0) list.push(s); });
+      DOMAINS.forEach(function(d){ list.push(v+'@'+d); });
+    }
+    list=list.slice(0,6);
+    if(!list.length){ hideSug(); return; }
+    box.innerHTML='';
+    list.forEach(function(s){
+      var d=document.createElement('div'); d.className='sug'; d.textContent=s;
+      d.addEventListener('mousedown', function(ev){ ev.preventDefault(); $('dest').value=s; hideSug(); });
+      box.appendChild(d);
+    });
+    box.style.display='block';
   }
 
   (function(){
