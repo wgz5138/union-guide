@@ -161,8 +161,8 @@
    • 想換密碼：用 cyrb53('新密碼') 算出數字，貼到 PW_HASH。
      或直接跟 Claude Code 說「把幹部功能表的密碼改成 XXX」。
    ============================================================ */
-const LOCK = true;
-const PW_HASH = "1621267407177439";   // 目前通行碼：gaorong2026
+const LOCK = false;   // 目前不鎖；等加入「會員名冊／會議文件」有個資時，改回 true 即可
+const PW_HASH = "1621267407177439";   // 通行碼：gaorong2026（改回 LOCK=true 就生效）
 const UNLOCK_KEY = "union_panel_unlocked";
 
 function cyrb53(s,seed=0){ s=s||""; let h1=0xdeadbeef^seed,h2=0x41c6ce57^seed; for(let i=0,c;i<s.length;i++){c=s.charCodeAt(i);h1=Math.imul(h1^c,2654435761);h2=Math.imul(h2^c,1597334677);} h1=Math.imul(h1^(h1>>>16),2246822507);h1^=Math.imul(h2^(h2>>>13),3266489909);h2=Math.imul(h2^(h2>>>16),2246822507);h2^=Math.imul(h1^(h1>>>13),3266489909); return ""+(4294967296*(2097151&h2)+(h1>>>0)); }
