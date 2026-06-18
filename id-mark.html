@@ -80,7 +80,10 @@
   .camframe{position:absolute;left:50%;top:46%;transform:translate(-50%,-50%);
     width:88vw;max-width:520px;aspect-ratio:8.56/5.4;border:2.5px dashed #fff;border-radius:10px;
     box-shadow:0 0 0 9999px rgba(0,0,0,.45);pointer-events:none;}
-  .camtip{position:absolute;top:max(14px,env(safe-area-inset-top));left:0;right:0;text-align:center;color:#fff;font-size:13px;text-shadow:0 1px 3px #000;padding:0 16px;}
+  .camtip{position:absolute;top:max(14px,env(safe-area-inset-top));left:0;right:0;text-align:center;color:#fff;font-size:13px;text-shadow:0 1px 3px #000;padding:0 16px;line-height:1.6;}
+  .glarewarn{position:absolute;top:max(70px,calc(env(safe-area-inset-top) + 56px));left:50%;transform:translateX(-50%);display:none;background:rgba(192,57,43,.95);color:#fff;font-size:14px;font-weight:700;text-align:center;padding:8px 16px;border-radius:10px;box-shadow:0 4px 14px rgba(0,0,0,.4);line-height:1.5;z-index:5;}
+  .glarewarn.show{display:block;}
+  .glarewarn span{font-size:12px;font-weight:400;}
   .cambtns{position:absolute;bottom:max(24px,env(safe-area-inset-bottom));left:0;right:0;display:flex;align-items:center;justify-content:space-around;}
   .cambtns button{background:rgba(255,255,255,.18);color:#fff;border:none;border-radius:24px;padding:11px 16px;font-size:15px;font-weight:700;}
   .cambtns .shoot{width:72px;height:72px;border-radius:50%;background:#fff;border:5px solid rgba(255,255,255,.45);}
@@ -146,7 +149,7 @@
       </div>
       <input type="file" id="file" accept="image/*" multiple>
       <input type="file" id="camfile" accept="image/*" capture="environment">
-      <div class="hint">「拍照」會開啟<strong>掃描對齊框</strong>幫你框住證件；不支援時自動改用系統相機。</div>
+      <div class="hint">「拍照」會開啟<strong>掃描對齊框</strong>幫你框住證件；不支援時自動改用系統相機。<br>📄 <strong>護貝/反光/有陰影</strong>的證件：照片加進來後按每張下面的「<strong>📄 去反光/陰影</strong>」，會自動把光線拉平、字更清楚。</div>
       <div id="list"></div>
     </div>
 
@@ -186,7 +189,8 @@
   <div class="cam noprint" id="cam">
     <video id="camv" playsinline autoplay muted></video>
     <div class="camframe"></div>
-    <div class="camtip">把證件對進虛線框內，盡量填滿、保持平整清晰</div>
+    <div class="camtip">把證件對進虛線框內，盡量填滿、平整清晰<br>護貝證件<b>別開🔦補光</b>、斜一點、用窗邊光，避免反光</div>
+    <div class="glarewarn" id="glareWarn">⚠️ 偵測到反光<br><span>把證件或手機斜一點、避開頭頂燈光</span></div>
     <div class="cambtns">
       <button onclick="closeCam()">✕ 取消</button>
       <button class="shoot" aria-label="拍照" onclick="shoot()"></button>
@@ -207,7 +211,7 @@
   // ---- 檔案載入（相簿可多張；系統相機備援單張）----
   function newItem(bmp, crop){
     items.push({ bitmap:bmp, label:TYPES[Math.min(items.length,TYPES.length-1)],
-                 rot:0, crop:crop||null, pos:{x:0.035,y:0.04}, scale:1, enhance:false, _editing:true });
+                 rot:0, crop:crop||null, pos:{x:0.035,y:0.04}, scale:1, enhance:false, docmode:false, _editing:true });
   }
   async function addFiles(files){
     for (var i=0;i<files.length;i++){
@@ -243,9 +247,28 @@
       var caps=(track.getCapabilities&&track.getCapabilities())||{};
       var tb=$('torchBtn'); tb.classList.remove('on'); tb.style.visibility = caps.torch ? 'visible':'hidden';
       $('cam').style.display='flex';
+      startGlareWatch();
     }catch(err){ $('camfile').click(); }   // 不支援或拒絕授權 → 退回系統相機
   }
+  // ---- 反光偵測：抓畫面中央(對齊框)有沒有大片死白 ----
+  function startGlareWatch(){
+    stopGlareWatch();
+    var probe=document.createElement('canvas'); probe.width=80; probe.height=50;
+    window._glareTimer=setInterval(function(){
+      var v=$('camv'); if(!v||!v.videoWidth) return;
+      var pc=probe.getContext('2d');
+      // 只取畫面中央約 88%×對齊框比例的區域
+      var vw=v.videoWidth, vh=v.videoHeight, cw=vw*0.82, ch=cw*5.4/8.56;
+      if(ch>vh*0.9){ ch=vh*0.9; cw=ch*8.56/5.4; }
+      pc.drawImage(v, (vw-cw)/2,(vh-ch)/2,cw,ch, 0,0,80,50);
+      var d=pc.getImageData(0,0,80,50).data, blown=0, n=80*50;
+      for(var i=0;i<d.length;i+=4){ if(d[i]>249&&d[i+1]>249&&d[i+2]>249) blown++; }
+      $('glareWarn').classList.toggle('show', blown/n > 0.02);   // 死白超過 2% 就警示
+    },450);
+  }
+  function stopGlareWatch(){ if(window._glareTimer){ clearInterval(window._glareTimer); window._glareTimer=null; } $('glareWarn').classList.remove('show'); }
   function closeCam(){
+    stopGlareWatch();
     var s=window._camStream; if(s){ s.getTracks().forEach(function(t){t.stop();}); }
     window._camStream=null; window._camTrack=null;
     $('camv').srcObject=null; $('cam').style.display='none';
@@ -287,11 +310,38 @@
     c.getContext('2d').drawImage(o, sx,sy,sw,sh, 0,0,c.width,c.height);
     return c;
   }
-  // 把 working 影像（含自動補光）畫進 ctx（目標 w×h）
+  // ---- 文件增強：勻光去陰影（估計每區亮度後拉平，順便壓反光、提清晰）----
+  function docEnhance(src){
+    var w=src.width, h=src.height;
+    // 1) 用「大幅縮小再放大」得到一張模糊的「光照圖」（每塊區域的亮度）
+    var dw=Math.max(1,Math.round(w/14)), dh=Math.max(1,Math.round(h/14));
+    var small=document.createElement('canvas'); small.width=dw; small.height=dh;
+    small.getContext('2d').drawImage(src,0,0,dw,dh);
+    var illum=document.createElement('canvas'); illum.width=w; illum.height=h;
+    var ic=illum.getContext('2d'); ic.imageSmoothingEnabled=true; ic.drawImage(small,0,0,w,h);
+    // 2) 每個像素除以「該區亮度」→ 把不均勻的光拉平
+    var sctx=src.getContext('2d'), sd=sctx.getImageData(0,0,w,h), s=sd.data;
+    var im=ic.getImageData(0,0,w,h).data, TARGET=212;
+    for(var p=0;p<s.length;p+=4){
+      var lum=im[p]*0.299+im[p+1]*0.587+im[p+2]*0.114; if(lum<1) lum=1;
+      var gain=TARGET/lum; if(gain<0.55) gain=0.55; if(gain>2.6) gain=2.6;
+      // 輕度提對比，讓字更黑
+      var r=s[p]*gain, g=s[p+1]*gain, b=s[p+2]*gain;
+      r=(r-128)*1.12+128; g=(g-128)*1.12+128; b=(b-128)*1.12+128;
+      s[p]=r<0?0:r>255?255:r; s[p+1]=g<0?0:g>255?255:g; s[p+2]=b<0?0:b>255?255:b;
+    }
+    sctx.putImageData(sd,0,0);
+    return src;
+  }
+  // 把 working 影像（含勻光/補光）畫進 ctx（目標 w×h）
   function drawWorking(ctx, it, w, h){
-    var work=workingCanvas(it), useF = it.enhance && ('filter' in ctx);
-    if(useF) ctx.filter=ENHANCE_FILTER;
-    ctx.drawImage(work,0,0,w,h);
+    var work=workingCanvas(it);
+    var tmp=document.createElement('canvas'); tmp.width=w; tmp.height=h;
+    tmp.getContext('2d').drawImage(work,0,0,w,h);
+    if(it.docmode) tmp=docEnhance(tmp);              // 勻光去陰影/反光
+    var useF = it.enhance && ('filter' in ctx);
+    if(useF) ctx.filter=ENHANCE_FILTER;              // 額外補光（暗的時候）
+    ctx.drawImage(tmp,0,0,w,h);
     if(useF) ctx.filter='none';
   }
 
@@ -349,11 +399,12 @@
 
   // ---- 列表 ----
   function toolsHTML(idx){
-    var on=items[idx].enhance?' on':'';
+    var on=items[idx].enhance?'on':'', dm=items[idx].docmode?'on':'';
     return '<button onclick="rotate('+idx+',-90)">↺ 左轉</button>'+
            '<button onclick="rotate('+idx+',90)">↻ 右轉</button>'+
            '<button onclick="enterCrop('+idx+')">✂️ 裁切</button>'+
-           '<button class="'+(on?'on':'')+'" onclick="toggleEnhance('+idx+')">✨ 補光</button>'+
+           '<button class="'+dm+'" onclick="toggleDoc('+idx+')">📄 去反光/陰影</button>'+
+           '<button class="'+on+'" onclick="toggleEnhance('+idx+')">✨ 補光</button>'+
            '<button onclick="saveOne('+idx+')">💾 存圖</button>'+
            '<button class="danger" onclick="removeItem('+idx+')">🗑 刪除</button>';
   }
@@ -386,7 +437,7 @@
     drawWorking(b.getContext('2d'), it, W, H);
     it._base=b; it._baseTag=baseTag(it);
   }
-  function baseTag(it){ return it.rot+'|'+JSON.stringify(it.crop)+'|'+(it.enhance?1:0); }
+  function baseTag(it){ return it.rot+'|'+JSON.stringify(it.crop)+'|'+(it.enhance?1:0)+'|'+(it.docmode?1:0); }
 
   function paintItem(idx){
     var it=items[idx], cv=it._canvas; if(!cv) return;
@@ -453,6 +504,10 @@
   function rotate(idx,deg){ var it=items[idx]; it.rot=(it.rot+deg+360)%360; it.crop=null; it._base=null; paintItem(idx); resetBuilt(); }
   function toggleEnhance(idx){
     var it=items[idx]; it.enhance=!it.enhance; it._base=null; paintItem(idx); resetBuilt();
+    var b=it._canvas.closest('.item').querySelector('.tools'); if(b) b.innerHTML=toolsHTML(idx);
+  }
+  function toggleDoc(idx){
+    var it=items[idx]; it.docmode=!it.docmode; it._base=null; paintItem(idx); resetBuilt();
     var b=it._canvas.closest('.item').querySelector('.tools'); if(b) b.innerHTML=toolsHTML(idx);
   }
 
