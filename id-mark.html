@@ -1,0 +1,265 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>證件影本 加註記 · A4整理列印</title>
+<style>
+  :root{ --red:#C0392B; --red-deep:#7B1818; --gold:#B7860B; --bg:#F6F3EF; --ink:#222; --soft:#777; --border:#E2DED7; }
+  *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;}
+  body{font-family:-apple-system,"PingFang TC","Noto Sans TC",sans-serif;background:var(--bg);color:var(--ink);line-height:1.6;}
+  .bar{background:var(--red);color:#fff;padding:13px 16px;text-align:center;}
+  .bar h1{font-size:17px;font-weight:700;}
+  .bar p{font-size:11.5px;opacity:.85;margin-top:2px;}
+  main{max-width:600px;margin:0 auto;padding:14px;}
+  .card{background:#fff;border:1px solid var(--border);border-radius:14px;padding:14px;margin-bottom:12px;}
+  label{display:block;font-size:13px;font-weight:600;color:var(--red-deep);margin-bottom:6px;}
+  textarea,select,input[type=text]{width:100%;border:1.5px solid var(--border);border-radius:10px;padding:9px;font-size:15px;font-family:inherit;}
+  textarea{height:74px;resize:vertical;}
+  .row{display:flex;gap:10px;align-items:center;margin-top:10px;}
+  .row label{margin:0;font-weight:500;color:var(--ink);white-space:nowrap;}
+  .row select{flex:1;}
+  input[type=range]{flex:1;}
+  .btn{display:block;width:100%;border:none;border-radius:12px;padding:13px;font-size:16px;font-weight:700;cursor:pointer;}
+  .btn-pick{background:var(--gold);color:#fff;}
+  .btn-make{background:#2E7D32;color:#fff;margin-top:6px;}
+  .btn-print{background:var(--red);color:#fff;margin-top:6px;}
+  .btn:disabled{opacity:.4;}
+  .hint{font-size:12px;color:var(--soft);margin-top:8px;}
+  .safe{background:#EAFAF1;border:1px solid #B8DCC4;color:#1A5C38;font-size:12.5px;padding:10px 12px;border-radius:10px;margin-bottom:12px;}
+  .warn{background:#FDECEA;border:1.5px solid #E8A29A;color:#7B1818;font-size:13px;padding:11px 13px;border-radius:10px;margin-bottom:12px;line-height:1.65;}
+  .warn b{color:#C0392B;}
+  input[type=file]{display:none;}
+
+  /* 每張證件編輯卡 */
+  .item{border:1px solid var(--border);border-radius:12px;padding:10px;margin-top:10px;background:#fff;}
+  .ihead{display:flex;gap:8px;align-items:center;margin-bottom:8px;}
+  .ihead select{flex:1;}
+  .ihead .del{background:#f1eeea;border:none;border-radius:8px;padding:8px 11px;cursor:pointer;font-size:14px;}
+  .pv{position:relative;width:100%;border:1px solid var(--border);border-radius:8px;overflow:hidden;background:#faf8f5;}
+  .pv img{display:block;width:100%;height:auto;}
+  .abox{position:absolute;left:3.5%;top:4%;background:rgba(255,255,255,.55);
+    color:var(--red);font-weight:700;border-top:2px solid var(--red);border-bottom:2px solid var(--red);
+    padding:.25em .5em;line-height:1.28;cursor:move;touch-action:none;white-space:nowrap;
+    box-shadow:0 1px 4px rgba(0,0,0,.15);user-select:none;}
+  .dragtip{font-size:12px;color:#7A5600;background:#FEF9E7;border:1px solid #EAD67A;border-radius:8px;padding:7px 9px;margin-top:7px;}
+
+  #print{margin-top:14px;}
+  .page{width:210mm;min-height:297mm;padding:10mm;background:#fff;margin:0 auto 12px;box-shadow:0 0 8px rgba(0,0,0,.18);}
+  .page.grid{display:flex;flex-wrap:wrap;align-content:flex-start;}
+  .page:not(.grid) .slot{height:133mm;}
+  .page.grid .slot{width:50%;height:128mm;padding:0 3mm 4mm;}
+  .cap{font-weight:700;font-size:12pt;margin-bottom:2mm;color:#000;}
+  .slot .imgwrap{text-align:center;}
+  .slot img{max-width:100%;max-height:116mm;object-fit:contain;border:1px solid #bbb;}
+  .page.grid .slot img{max-height:104mm;}
+
+  @media screen{ .page{transform:scale(.46);transform-origin:top center;margin-bottom:-150mm;} }
+  @media print{
+    @page{ size:A4; margin:0; }
+    body{background:#fff;}
+    .noprint{display:none !important;}
+    #print{margin:0;}
+    .page{box-shadow:none;margin:0;transform:none;page-break-after:always;}
+  }
+</style>
+</head>
+<body>
+  <div class="bar">
+    <h1>🪪 證件影本 加註記 · A4整理列印</h1>
+    <p>拖曳註記到空白處 · 多張整理成一張 A4 · 全程本機處理不上傳</p>
+  </div>
+
+  <main>
+    <div class="safe noprint">🔒 你的證件照片<strong>只在本機處理，不會上傳</strong>任何伺服器。</div>
+
+    <div class="warn noprint">⚠️ <b>重要：註記千萬不要蓋到「姓名・身分證字號・出生年月日・照片」</b>！<br>
+      勞工局送件要核對身分，這四項只要被蓋住看不清，<b>整份會被退件</b>。請把紅色註記拖到<b>空白邊角</b>，並在「整理成 A4」後再檢查一次都看得清楚。</div>
+
+    <div class="card noprint">
+      <label>1. 註記文字（三行＋上下劃線，防止被加字）</label>
+      <textarea id="anno">僅提供高雄榮民總醫院企業工會
+作為籌組連署發起之用
+塗改、他用無效</textarea>
+      <div class="row"><label>濃淡</label><input type="range" id="alpha" min="40" max="100" value="80"></div>
+      <div class="hint">調好文字後，照片加進來會出現紅色註記，<strong>用手指把它拖到空白處</strong>，避開姓名／號碼／照片。</div>
+    </div>
+
+    <div class="card noprint">
+      <label>2. 加入證件照片（可一次多張）</label>
+      <button class="btn btn-pick" onclick="document.getElementById('file').click()">➕ 拍照 / 從相簿選</button>
+      <input type="file" id="file" accept="image/*" multiple>
+      <div id="list"></div>
+    </div>
+
+    <button class="btn btn-make noprint" id="make" disabled onclick="build()">② 整理成 A4（預覽）</button>
+    <div class="row noprint" style="margin-top:8px">
+      <label>每頁張數</label>
+      <select id="perPage" onchange="if(window._built)build()">
+        <option value="2">2 張／頁（證件較大，推薦）</option>
+        <option value="4">4 張／頁（省紙）</option>
+      </select>
+    </div>
+    <button class="btn btn-print noprint" id="prn" disabled onclick="window.print()">🖨 列印 / 存成 PDF（一張 A4）</button>
+    <div class="safe noprint" id="printTip" style="background:#FEF9E7;border-color:#EAD67A;color:#5C4000;margin-top:8px;">
+      📡 <strong>已用藍牙／Wi-Fi 連好印表機？</strong>按「列印」後手機會跳出系統列印視窗，在「印表機」選你那台直接印；沒連則可「儲存為 PDF」。
+    </div>
+    <p class="hint noprint" id="status">尚未加入照片。</p>
+
+    <div id="print"></div>
+  </main>
+
+<script>
+  var items = [];   // {url, bitmap, label, pos:{x,y}}
+  var $ = function(id){ return document.getElementById(id); };
+  var TYPES = ['身分證正面','身分證反面','職員證正面','職員證反面','勞保投保證明','薪資證明','其他'];
+  var FONT_K = 0.045;        // 字級 = 圖寬 * K
+  var alphaVal = function(){ return $('alpha').value/100; };
+
+  $('file').addEventListener('change', async function(e){
+    var files = Array.from(e.target.files || []);
+    for (var i=0;i<files.length;i++){
+      var f = files[i], bmp;
+      try { bmp = await createImageBitmap(f, { imageOrientation:'from-image' }); }
+      catch(_){ bmp = await loadFallback(f); }
+      items.push({ url: URL.createObjectURL(f), bitmap: bmp,
+                   label: TYPES[Math.min(items.length, TYPES.length-1)], pos:{x:0.035,y:0.04} });
+    }
+    e.target.value = '';
+    renderList();
+  });
+  function loadFallback(file){
+    return new Promise(function(res){ var img=new Image(); img.onload=function(){res(img);}; img.src=URL.createObjectURL(file); });
+  }
+
+  function annoLines(){ return ($('anno').value||'').split('\n').map(function(s){return s.trim();}).filter(Boolean); }
+
+  function renderList(){
+    var html = items.map(function(it, idx){
+      var opts = TYPES.map(function(t){ return '<option '+(t===it.label?'selected':'')+'>'+t+'</option>'; }).join('');
+      return '<div class="item">'+
+        '<div class="ihead">'+
+          '<select onchange="items['+idx+'].label=this.value">'+opts+'</select>'+
+          '<button class="del" onclick="removeItem('+idx+')">刪除</button>'+
+        '</div>'+
+        '<div class="pv" data-idx="'+idx+'"><img src="'+it.url+'"><div class="abox"></div></div>'+
+        '<div class="dragtip">👆 把紅色註記拖到空白處（避開姓名／號碼／照片）</div>'+
+      '</div>';
+    }).join('');
+    $('list').innerHTML = html;
+
+    // 連結每張的拖曳與排版
+    document.querySelectorAll('#list .pv').forEach(function(pv){
+      var idx = +pv.dataset.idx;
+      var img = pv.querySelector('img');
+      var box = pv.querySelector('.abox');
+      paintBox(box, idx);
+      var doLayout = function(){ layoutBox(pv, box, idx); };
+      if (img.complete) doLayout(); else img.onload = doLayout;
+      box.addEventListener('pointerdown', function(ev){ startDrag(ev, pv, box, idx); });
+    });
+
+    var has = items.length>0;
+    $('make').disabled = !has;
+    $('status').textContent = has ? ('已加入 '+items.length+' 張，拖好位置後按「整理成 A4」。') : '尚未加入照片。';
+  }
+
+  function paintBox(box, idx){
+    box.innerHTML = annoLines().map(function(l){return l.replace(/</g,'&lt;');}).join('<br>');
+    box.style.opacity = Math.max(0.5, alphaVal());
+    box.style.left = (items[idx].pos.x*100)+'%';
+    box.style.top  = (items[idx].pos.y*100)+'%';
+  }
+  function layoutBox(pv, box, idx){
+    var fs = Math.max(11, Math.round(pv.clientWidth * FONT_K));
+    box.style.fontSize = fs+'px';
+    box.style.left = (items[idx].pos.x*100)+'%';
+    box.style.top  = (items[idx].pos.y*100)+'%';
+  }
+
+  function startDrag(ev, pv, box, idx){
+    ev.preventDefault();
+    var rect = pv.getBoundingClientRect();
+    var bx = box.getBoundingClientRect();
+    var offX = ev.clientX - bx.left, offY = ev.clientY - bx.top;
+    function move(e){
+      var left = e.clientX - rect.left - offX;
+      var top  = e.clientY - rect.top  - offY;
+      left = Math.max(0, Math.min(left, pv.clientWidth  - box.offsetWidth));
+      top  = Math.max(0, Math.min(top,  pv.clientHeight - box.offsetHeight));
+      items[idx].pos = { x: left/pv.clientWidth, y: top/pv.clientHeight };
+      box.style.left = (items[idx].pos.x*100)+'%';
+      box.style.top  = (items[idx].pos.y*100)+'%';
+    }
+    function up(){ document.removeEventListener('pointermove',move); document.removeEventListener('pointerup',up); }
+    document.addEventListener('pointermove', move);
+    document.addEventListener('pointerup', up);
+  }
+
+  // 文字 / 濃淡 改變時即時更新所有預覽
+  ['anno','alpha'].forEach(function(id){
+    $(id).addEventListener('input', function(){
+      document.querySelectorAll('#list .pv').forEach(function(pv){ paintBox(pv.querySelector('.abox'), +pv.dataset.idx); });
+    });
+  });
+
+  function removeItem(i){ items.splice(i,1); renderList(); $('print').innerHTML=''; $('prn').disabled=true; window._built=false; }
+
+  // 依每張自己的位置，把註記烤進全解析度圖片
+  function bake(it){
+    var bmp=it.bitmap, w=bmp.width, h=bmp.height;
+    var c=document.createElement('canvas'); c.width=w; c.height=h;
+    var x=c.getContext('2d');
+    x.drawImage(bmp,0,0,w,h);
+    var lines=annoLines();
+    if(lines.length){
+      var alpha=alphaVal();
+      var fs=Math.max(13, Math.round(w*FONT_K));
+      x.font='bold '+fs+'px sans-serif';
+      var tw=0; lines.forEach(function(l){ tw=Math.max(tw, x.measureText(l).width); });
+      var pad=fs*0.5, lh=fs*1.28;
+      var bw=tw+pad*2, bh=lh*lines.length+pad*2;
+      var bx=it.pos.x*w, by=it.pos.y*h;
+      bx=Math.max(0,Math.min(bx, w-bw)); by=Math.max(0,Math.min(by, h-bh));
+      var rule=Math.max(2, fs*0.09);
+      x.globalAlpha=Math.min(0.55, alpha*0.65); x.fillStyle='#fff'; x.fillRect(bx,by,bw,bh);
+      x.globalAlpha=Math.max(alpha,0.6); x.fillStyle='#C0392B'; x.textAlign='left'; x.textBaseline='top';
+      x.fillRect(bx,by,bw,rule);
+      lines.forEach(function(l,i){ x.fillText(l, bx+pad, by+rule+pad*0.5+i*lh); });
+      x.fillRect(bx,by+bh-rule,bw,rule);
+      x.globalAlpha=1;
+    }
+    return c.toDataURL('image/jpeg',0.9);
+  }
+  function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+
+  function build(){
+    if(!items.length){ alert('請先加入證件照片'); return; }
+    $('status').textContent='整理中…';
+    var per=parseInt($('perPage').value,10), grid=per===4;
+    var baked=items.map(function(it){ return { src: bake(it), label: it.label }; });
+    var html='';
+    for(var i=0;i<baked.length;i+=per){
+      var group=baked.slice(i,i+per);
+      html+='<div class="page'+(grid?' grid':'')+'">';
+      group.forEach(function(b){
+        html+='<div class="slot"><div class="cap">'+esc(b.label)+'</div><div class="imgwrap"><img src="'+b.src+'"></div></div>';
+      });
+      html+='</div>';
+    }
+    $('print').innerHTML=html;
+    window._built=true; $('prn').disabled=false;
+    $('status').textContent='已整理成 A4，下方可預覽。確認資料清楚後按「列印/存PDF」。';
+    $('print').scrollIntoView({behavior:'smooth'});
+  }
+
+  (function(){
+    var ua=navigator.userAgent, tip=$('printTip'); if(!tip) return;
+    if(/iPhone|iPad|iPod/.test(ua))
+      tip.innerHTML='📡 <strong>iPhone 列印：</strong>按「列印」後 →「<strong>印表機</strong>」選已連線的 AirPrint／藍牙印表機直接印；或右上「分享」<strong>存成 PDF</strong>。';
+    else if(/Android/.test(ua))
+      tip.innerHTML='📡 <strong>Android 列印：</strong>按「列印」後上方下拉選你的<strong>無線／藍牙印表機</strong>或「儲存成 PDF」。';
+  })();
+</script>
+</body>
+</html>
