@@ -1,0 +1,48 @@
+name: flight-prices
+
+# 每天在 GitHub 雲端自動查機票，撿到便宜票就推到 Telegram。
+# 電腦關機也照跑（在雲端跑，不在你電腦）。
+# 觸發：每天排程 ＋ 手動（Actions 頁面按 Run workflow）＋ 改腳本時。
+# ⚠️ GitHub 排程在 repo 連續 60 天無提交後會被自動停用；
+#    需要時到 Actions 頁面手動「Run workflow」即可。
+# 注意：雲端跑的 CSV 不會保留（跑完即丟），只負責「查＋推 Telegram」；
+#       歷史價格紀錄仍由你本機那兩個 .bat 累積。
+on:
+  schedule:
+    - cron: '0 1 * * *'   # 每天 01:00 UTC（台灣 09:00）
+  workflow_dispatch:       # 也可到 Actions 頁面手動 Run workflow
+# 註：刻意不設 push 觸發——否則每次推程式碼都會跑＋自動提交 price_state.json，
+#     造成本機 git pull 一直卡（非快進）。排程＋手動就夠了。
+
+permissions:
+  contents: write   # 為了把 price_state.json（價格記憶）提交回 repo
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.x'
+      - name: 安裝套件
+        working-directory: freelance-flights-mvp
+        run: pip install requests
+      - name: 查機票並推 Telegram
+        working-directory: freelance-flights-mvp
+        env:
+          TRAVELPAYOUTS_TOKEN: ${{ secrets.TRAVELPAYOUTS_TOKEN }}
+          TG_TOKEN: ${{ secrets.TG_TOKEN }}
+          TG_CHAT: ${{ secrets.TG_CHAT }}
+        run: python travelpayouts_flights.py
+      - name: 保存價格記憶（讓降價偵測在雲端也有效）
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add freelance-flights-mvp/price_state.json
+          if git diff --cached --quiet; then
+            echo "價格無變化，略過提交。"
+          else
+            git commit -m "chore(flights): 更新價格記憶"
+            git push
+          fi

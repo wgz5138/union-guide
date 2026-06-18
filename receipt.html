@@ -1,0 +1,358 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>單據快拍 — 高榮企業工會</title>
+<meta name="theme-color" content="#1A7A4A">
+<link rel="manifest" href="receipt.webmanifest">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@400;600;700&family=Noto+Sans+TC:wght@300;400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --red:#C0392B; --red-light:#FDECEA; --red-deep:#7B1818;
+    --gold:#B7860B; --gold-light:#FEF9E7;
+    --ink:#1A1A1A; --ink-mid:#444; --ink-soft:#777; --bg:#FAFAF8;
+    --card:#FFFFFF; --border:#E8E4DE;
+    --green:#1A7A4A; --green-light:#EAFAF1; --green-mid:#2D9D6E; --green-deep:#0F5C36;
+    --gray-tag:#8A8A85; --gray-bg:#F0EEEA; --blue:#2E5C8A;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;}
+  body{font-family:'Noto Sans TC',sans-serif;background:var(--bg);color:var(--ink);font-size:15px;line-height:1.7;-webkit-text-size-adjust:100%;}
+  .header{background:var(--green);color:#fff;padding:1.4rem 1.25rem 1.1rem;text-align:center;position:relative;overflow:hidden;}
+  .header::before{content:'';position:absolute;top:-40px;right:-40px;width:160px;height:160px;border-radius:50%;background:rgba(255,255,255,.06);}
+  .header-label{font-size:11px;letter-spacing:.15em;opacity:.8;margin-bottom:5px;}
+  .header h1{font-family:'Noto Serif TC',serif;font-size:20px;font-weight:700;}
+  .header-sub{font-size:12.5px;opacity:.85;margin-top:5px;}
+  .lawbar{background:var(--green-deep);color:#D7EFE0;font-size:11.5px;text-align:center;padding:.4rem 1rem;line-height:1.5;}
+  .lawbar b{color:#fff;}
+  main{max-width:640px;margin:0 auto;padding:1rem 1rem 4rem;}
+  .card{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:1rem 1.1rem;margin-bottom:12px;}
+  .card-title{font-family:'Noto Serif TC',serif;font-size:16px;font-weight:600;display:flex;align-items:center;gap:8px;margin-bottom:.7rem;}
+  .law-pill{font-size:10.5px;font-weight:500;background:var(--green-light);color:var(--green-deep);border:1px solid #C8E6D5;padding:1px 7px;border-radius:20px;white-space:nowrap;}
+  .muted{color:var(--ink-soft);font-size:12.5px;line-height:1.6;}
+
+  .shoot{display:flex;flex-direction:column;align-items:center;gap:10px;padding:1.4rem 1rem;border:2px dashed #C8E6D5;border-radius:14px;background:var(--green-light);cursor:pointer;text-align:center;}
+  .shoot:active{background:#DCEEE2;}
+  .shoot .big{font-size:40px;line-height:1;}
+  .shoot .t{font-weight:600;color:var(--green-deep);font-size:16px;}
+  .shoot .s{font-size:12px;color:#3a7a55;}
+  #file{display:none;}
+  .preview{position:relative;margin-bottom:10px;}
+  .preview img{width:100%;border-radius:10px;border:1px solid var(--border);display:block;}
+  .preview .re{position:absolute;top:8px;right:8px;background:rgba(0,0,0,.6);color:#fff;border:none;border-radius:20px;padding:.35rem .8rem;font-size:12px;font-family:inherit;cursor:pointer;}
+
+  label{display:block;font-size:12px;color:var(--ink-mid);margin:8px 0 3px;font-weight:500;}
+  input,select,textarea{width:100%;font-family:inherit;font-size:14px;padding:.55rem .6rem;border:1px solid var(--border);border-radius:8px;background:#fff;color:var(--ink);}
+  input:focus,select:focus{outline:none;border-color:var(--green-mid);}
+  .row{display:flex;gap:8px;}.row>*{flex:1;min-width:0;}
+  .chips{display:flex;flex-wrap:wrap;gap:6px;margin:4px 0 2px;}
+  .chip{font-size:12.5px;padding:.35rem .7rem;border:1px solid var(--border);border-radius:20px;background:#fff;cursor:pointer;color:var(--ink-mid);font-family:inherit;}
+  .chip.on{background:var(--green);border-color:var(--green);color:#fff;}
+  .seg{display:flex;gap:6px;}
+  .seg button{flex:1;padding:.5rem;border:1px solid var(--border);background:#fff;border-radius:8px;font-family:inherit;font-size:13.5px;cursor:pointer;color:var(--ink-mid);}
+  .seg button.on{background:var(--gold);border-color:var(--gold);color:#fff;}
+  .chk{display:flex;align-items:center;gap:7px;font-size:13px;color:var(--ink-mid);margin-top:8px;cursor:pointer;}
+  .chk input{width:auto;}
+  .btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;padding:.65rem 1rem;border:none;border-radius:9px;font-family:inherit;font-size:15px;font-weight:500;cursor:pointer;background:var(--green);color:#fff;width:100%;}
+  .btn:active{opacity:.85;}
+  .btn.ghost{background:#fff;color:var(--green-deep);border:1px solid var(--green-mid);}
+  .btn.gray{background:var(--gray-bg);color:var(--ink-mid);}
+  .btn.sm{padding:.45rem .7rem;font-size:13px;width:auto;}
+  .alert{border-radius:9px;padding:.6rem .8rem;font-size:12.5px;line-height:1.6;margin-top:8px;display:flex;gap:7px;}
+  .alert.warn{background:var(--gold-light);border:1px solid #F0E0A8;color:#8A6D0B;}
+  .alert.bad{background:var(--red-light);border:1px solid #F5C6C2;color:var(--red-deep);}
+
+  .kpi{display:flex;gap:8px;margin-bottom:12px;}
+  .kpi .k{flex:1;background:#fff;border:1px solid var(--border);border-radius:10px;padding:.55rem;text-align:center;}
+  .kpi .lab{font-size:11px;color:var(--ink-soft);}
+  .kpi .val{font-family:'Noto Serif TC',serif;font-size:18px;font-weight:700;color:var(--green-deep);font-variant-numeric:tabular-nums;}
+
+  .rlist{display:flex;flex-direction:column;gap:8px;}
+  .ritem{display:flex;gap:10px;align-items:center;padding:.5rem;border:1px solid var(--border);border-radius:10px;background:#fff;cursor:pointer;}
+  .ritem img{width:54px;height:54px;object-fit:cover;border-radius:7px;flex-shrink:0;background:var(--gray-bg);}
+  .ritem .noimg{width:54px;height:54px;border-radius:7px;background:var(--gray-bg);display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0;color:var(--ink-soft);}
+  .ritem .b{flex:1;min-width:0;}
+  .ritem .s{font-size:14px;font-weight:500;}
+  .ritem .m{font-size:11.5px;color:var(--ink-soft);margin-top:2px;}
+  .ritem .a{font-family:'Noto Serif TC',serif;font-weight:700;color:var(--red);white-space:nowrap;}
+  .ritem .a.up{color:var(--green-deep);}
+
+  .modal{position:fixed;inset:0;background:rgba(0,0,0,.78);z-index:100;display:none;align-items:flex-start;justify-content:center;padding:1rem;overflow:auto;}
+  .modal.on{display:flex;}
+  .mbox{background:#fff;border-radius:14px;max-width:520px;width:100%;padding:1rem;margin:auto;}
+  .mbox img{width:100%;border-radius:8px;border:1px solid var(--border);}
+  .mrow{display:flex;justify-content:space-between;font-size:13px;padding:5px 0;border-bottom:1px solid #F2EFE9;gap:10px;}
+  .mrow .k{color:var(--ink-soft);}
+  .footer-note{text-align:center;font-size:11px;color:var(--ink-soft);margin-top:1.2rem;line-height:1.7;}
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="header-label"><span id="rHdr">高榮企業工會</span> · 工會財務處理準則</div>
+  <h1>📷 單據快拍</h1>
+  <div class="header-sub">買文具、刻印章、行政支出 — 拍張單據就記好帳</div>
+</div>
+<div class="lawbar">單據（發票／收據）即<b>原始憑證（§10）</b>，依 <b>§27 至少保存 5 年</b>。本工具把單據存成電子檔留底，資料只在<b>本機手機</b>，不上傳。</div>
+
+<main>
+  <div class="kpi">
+    <div class="k"><div class="lab">本月筆數</div><div class="val" id="kCount">0</div></div>
+    <div class="k"><div class="lab">本月金額</div><div class="val" id="kSum">$0</div></div>
+    <div class="k"><div class="lab">待交帳本</div><div class="val" id="kPending">0</div></div>
+  </div>
+
+  <!-- 拍照 / 記一筆 -->
+  <div class="card">
+    <div class="card-title">記一筆支出 <span class="law-pill">§9·§10 憑證</span></div>
+    <label class="shoot" for="file" id="shootBox">
+      <span class="big">📷</span>
+      <span class="t">拍照 / 選擇單據照片</span>
+      <span class="s">手機會直接開相機；發票、收據、估價單都可以</span>
+    </label>
+    <input type="file" id="file" accept="image/*" capture="environment">
+    <div class="preview" id="preview" style="display:none"><img id="prevImg" alt="單據預覽"><button class="re" onclick="clearPhoto()">✕ 重拍</button></div>
+    <p class="muted" id="geoNote" style="margin:-4px 0 6px;color:var(--green-deep)"></p>
+
+    <label>這筆是買什麼？（點一下快速帶入）</label>
+    <div class="chips" id="chips"></div>
+
+    <label>用途摘要</label>
+    <input id="fSum" placeholder="例：買原子筆、便利貼 / 刻工會大小印章">
+    <div class="row">
+      <div><label>會計科目（附表 §7）</label><select id="fCat"></select></div>
+      <div><label>金額（整數元 §5）</label><input id="fAmt" type="number" inputmode="numeric" min="0" step="1" placeholder="0"></div>
+    </div>
+    <div class="row">
+      <div><label>日期</label><input id="fDate" type="date"></div>
+      <div><label>經辦人</label><input id="fHandler" placeholder="你的名字"></div>
+    </div>
+    <label>付款方式</label>
+    <div class="seg">
+      <button type="button" id="payCash" class="on" onclick="setPay('cash')">現金</button>
+      <button type="button" id="payBank" onclick="setPay('bank')">轉帳／刷卡</button>
+    </div>
+    <label class="chk"><input type="checkbox" id="fGov"> 這筆用到政府補助款（§27·§30 另依政府規定）</label>
+    <div id="alerts"></div>
+    <button class="btn" style="margin-top:12px" onclick="saveReceipt()">＋ 儲存這筆單據</button>
+    <p class="muted" style="text-align:center;margin-top:6px">沒有單據也可先記（之後補拍）；但有單據最保險。</p>
+  </div>
+
+  <!-- 清單 -->
+  <div class="card">
+    <div class="card-title">已記錄的單據 <span class="law-pill">§27 留底</span></div>
+    <div class="row" style="margin-bottom:10px;gap:8px">
+      <button class="btn ghost sm" style="flex:1" onclick="exportBundle()">📤 匯出給帳本（幹部）</button>
+      <button class="btn gray sm" style="flex:1" onclick="exportCSV()">匯出 CSV 清單</button>
+    </div>
+    <div class="rlist" id="rlist"></div>
+  </div>
+
+  <p class="footer-note"><span id="rFt">高榮企業工會</span> · 單據快拍<br>法源：工會財務處理準則 §9·§10·§27（pcode N0020014）<br>照片與資料只存在這支手機（IndexedDB），不上傳。請定期「匯出給帳本」交給財務幹部。</p>
+</main>
+
+<!-- 檢視單張 -->
+<div class="modal" id="modal" onclick="if(event.target.id==='modal')closeModal()">
+  <div class="mbox" id="mbox"></div>
+</div>
+
+<script>
+/* 會計科目（附表 §7 支出類） */
+const OUT_CATS=["人事費","辦公費","事業費","雜項購置","特別費","退休撫恤費","預備金","其他支出"];
+/* 常見行政支出 → 用途與對應科目（附表） */
+const CHIPS=[
+  ["文具用品","辦公費"],["影印／印刷","辦公費"],["刻印章","辦公費"],
+  ["郵資／掛號","辦公費"],["水電／網路","辦公費"],["修繕","辦公費"],
+  ["會議／活動","事業費"],["講師／勞工教育","事業費"],["會員福利","事業費"],
+  ["設備購置","雜項購置"],["捐贈","特別費"],["其他","其他支出"]
+];
+let curPay='cash', photo=null; // photo={dataURL,w,h}
+
+/* ---------- IndexedDB（同站與帳本共用 unionFin / receipts）---------- */
+const IDB={db:null,
+  open(){return new Promise((res,rej)=>{const r=indexedDB.open('unionFin',1);r.onupgradeneeded=e=>{const d=e.target.result;if(!d.objectStoreNames.contains('receipts'))d.createObjectStore('receipts',{keyPath:'id'});};r.onsuccess=e=>{this.db=e.target.result;res(this.db);};r.onerror=e=>rej(e);});},
+  async st(mode){if(!this.db)await this.open();return this.db.transaction('receipts',mode).objectStore('receipts');},
+  async put(o){const s=await this.st('readwrite');return new Promise((res,rej)=>{const r=s.put(o);r.onsuccess=()=>res();r.onerror=()=>rej(r.error);});},
+  async all(){const s=await this.st('readonly');return new Promise(res=>{const r=s.getAll();r.onsuccess=()=>res(r.result||[]);r.onerror=()=>res([]);});},
+  async del(id){const s=await this.st('readwrite');return new Promise(res=>{const r=s.delete(id);r.onsuccess=()=>res();r.onerror=()=>res();});}
+};
+function fmt(n){return "$"+(Math.round(n)||0).toLocaleString('en-US');}
+function esc(s){return (s==null?'':''+s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
+/* 工會名稱：沿用帳本（finance.html）的設定；同裝置沒設過則預設高榮企業工會。 */
+const ORG=(()=>{ try{ const s=JSON.parse(localStorage.getItem('union_fin_db')); return ((s&&s.settings&&s.settings.orgName)||'').trim()||'高榮企業工會'; }catch(e){ return '高榮企業工會'; } })();
+/* SHA-256 數位指紋（瀏覽器內建，純本機）。回傳 64 字 16 進位字串；不支援時回 null。 */
+async function sha256(str){ try{ if(!(crypto&&crypto.subtle))return null; const buf=new TextEncoder().encode(str); const h=await crypto.subtle.digest('SHA-256',buf); return [...new Uint8Array(h)].map(b=>b.toString(16).padStart(2,'0')).join(''); }catch(e){ return null; } }
+
+/* ---------- 影像壓縮＋GPS／時間浮水印（防造假，§10 原始憑證存證）---------- */
+function getGeo(){return new Promise(res=>{ if(!navigator.geolocation)return res(null); navigator.geolocation.getCurrentPosition(p=>res({lat:p.coords.latitude,lng:p.coords.longitude,acc:Math.round(p.coords.accuracy||0)}),()=>res(null),{enableHighAccuracy:false,timeout:7000,maximumAge:60000}); });}
+function pad(n){return (n<10?'0':'')+n;}
+function nowStamp(d){return d.getFullYear()+'/'+pad(d.getMonth()+1)+'/'+pad(d.getDate())+' '+pad(d.getHours())+':'+pad(d.getMinutes());}
+function stampImage(file,maxDim=1400,q=0.74){return new Promise(async res=>{
+  const geo=await getGeo();
+  const ts=new Date();
+  const img=new Image(); const url=URL.createObjectURL(file);
+  img.onload=()=>{
+    let w=img.width,h=img.height;
+    if(Math.max(w,h)>maxDim){const s=maxDim/Math.max(w,h);w=Math.round(w*s);h=Math.round(h*s);}
+    const c=document.createElement('canvas'); c.width=w; c.height=h;
+    const ctx=c.getContext('2d'); ctx.drawImage(img,0,0,w,h); URL.revokeObjectURL(url);
+    // 浮水印列（兩行）
+    const fs=Math.max(13,Math.round(w/42));
+    const lh=Math.round(fs*1.35), barH=lh*2+Math.round(fs*0.8);
+    ctx.fillStyle='rgba(0,0,0,.56)'; ctx.fillRect(0,h-barH,w,barH);
+    ctx.fillStyle='#fff'; ctx.font='600 '+fs+'px "Noto Sans TC",sans-serif'; ctx.textBaseline='top';
+    const padx=Math.round(fs*0.6), top=h-barH+Math.round(fs*0.4);
+    ctx.fillText(ORG+' · 單據存證　'+nowStamp(ts), padx, top);
+    ctx.fillText(geo?('GPS '+geo.lat.toFixed(5)+', '+geo.lng.toFixed(5)+'（±'+geo.acc+'m）'):'GPS：未授權或無訊號', padx, top+lh);
+    res({dataURL:c.toDataURL('image/jpeg',q),w,h,geo,ts:ts.toISOString()});
+  };
+  img.onerror=()=>{URL.revokeObjectURL(url);res(null);};
+  img.src=url;
+});}
+
+document.getElementById('file').addEventListener('change',async e=>{
+  const f=e.target.files[0]; if(!f)return;
+  const box=document.getElementById('shootBox'); const tt=box.querySelector('.t'); tt.textContent='處理照片＋定位中…';
+  const r=await stampImage(f);
+  tt.textContent='拍照 / 選擇單據照片';
+  if(!r){alert('讀取照片失敗，請再試一次');return;}
+  photo=r;
+  document.getElementById('prevImg').src=r.dataURL;
+  document.getElementById('preview').style.display='block';
+  document.getElementById('shootBox').style.display='none';
+  document.getElementById('geoNote').textContent = r.geo? ('✅ 已蓋章：'+nowStamp(new Date(r.ts))+'　GPS '+r.geo.lat.toFixed(4)+','+r.geo.lng.toFixed(4)) : '⚠️ 已蓋時間章；GPS 未授權（可到手機設定開定位權限，更防造假）';
+});
+function clearPhoto(){photo=null;document.getElementById('file').value='';document.getElementById('preview').style.display='none';document.getElementById('shootBox').style.display='flex';document.getElementById('geoNote').textContent='';}
+
+function setPay(p){curPay=p;document.getElementById('payCash').className=p==='cash'?'on':'';document.getElementById('payBank').className=p==='bank'?'on':'';liveCheck();}
+function renderChips(){
+  document.getElementById('chips').innerHTML=CHIPS.map((c,i)=>`<button type="button" class="chip" data-i="${i}" onclick="pickChip(${i})">${c[0]}</button>`).join('');
+  const sel=document.getElementById('fCat'); sel.innerHTML=OUT_CATS.map(c=>`<option>${c}</option>`).join('');
+}
+function pickChip(i){
+  document.querySelectorAll('.chip').forEach(c=>c.classList.remove('on'));
+  document.querySelector(`.chip[data-i="${i}"]`).classList.add('on');
+  const [label,cat]=CHIPS[i];
+  if(!document.getElementById('fSum').value.trim()) document.getElementById('fSum').value=label;
+  document.getElementById('fCat').value=cat;
+}
+['fAmt'].forEach(id=>document.addEventListener('input',e=>{if(e.target.id==='fAmt')liveCheck();}));
+function liveCheck(){
+  const box=document.getElementById('alerts'); box.innerHTML='';
+  const amt=+document.getElementById('fAmt').value||0; const out=[];
+  if(amt&&!Number.isInteger(amt)) out.push(['bad','§5','金額須為整數元。']);
+  if(curPay==='cash'&&amt>10000) out.push(['bad','§19','以現金（零用金）支付，單筆不得超過 1 萬元；本筆 '+fmt(amt)+' 請改「轉帳／刷卡」或由財務以存款支付。']);
+  box.innerHTML=out.map(([lv,ref,t])=>`<div class="alert ${lv}">${lv==='bad'?'⛔':'⚠️'} <div>${esc(t)}<br><span style="opacity:.7;font-size:11px">依工會財務處理準則 ${ref}</span></div></div>`).join('');
+}
+
+async function saveReceipt(){
+  const date=document.getElementById('fDate').value;
+  const amt=+document.getElementById('fAmt').value||0;
+  const sum=document.getElementById('fSum').value.trim();
+  if(!date){alert('請選日期');return;}
+  if(!amt||amt<=0){alert('請輸入金額');return;}
+  if(!Number.isInteger(amt)){alert('金額須為整數元（§5）');return;}
+  if(curPay==='cash'&&amt>10000){alert('§19：現金單筆不得超過1萬元，請改轉帳／刷卡');return;}
+  if(!photo && !confirm('這筆沒有單據照片，確定先記錄嗎？（建議之後補拍，單據是原始憑證 §10）')) return;
+  const rec={
+    id:'r'+Date.now()+Math.floor(Math.random()*1000),
+    date, cat:document.getElementById('fCat').value, sum, amt,
+    handler:document.getElementById('fHandler').value.trim(),
+    cash:curPay==='cash', gov:document.getElementById('fGov').checked,
+    img:photo?photo.dataURL:null, w:photo?photo.w:0, h:photo?photo.h:0,
+    geo:photo?photo.geo:null, shotAt:photo?photo.ts:null,
+    imported:false, created:Date.now(), src:'receipt'
+  };
+  rec.hash = photo? await sha256(rec.img) : null; // 數位指紋存證
+  try{ await IDB.put(rec); }catch(e){ alert('儲存失敗（可能空間不足），請先匯出舊單據再試。'); return; }
+  // reset
+  clearPhoto();
+  ['fSum','fAmt'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('fGov').checked=false;
+  document.querySelectorAll('.chip').forEach(c=>c.classList.remove('on'));
+  document.getElementById('alerts').innerHTML='';
+  await refresh();
+  // 輕量成功提示
+  const b=document.getElementById('shootBox'); const t=b.querySelector('.t'); const o=t.textContent; t.textContent='✅ 已存一筆'; setTimeout(()=>t.textContent=o,1200);
+}
+
+async function refresh(){
+  const all=(await IDB.all()).sort((a,b)=>b.created-a.created);
+  const ym=new Date().toISOString().slice(0,7);
+  const month=all.filter(r=>(r.date||'').slice(0,7)===ym);
+  document.getElementById('kCount').textContent=month.length;
+  document.getElementById('kSum').textContent=fmt(month.reduce((a,r)=>a+r.amt,0));
+  document.getElementById('kPending').textContent=all.filter(r=>!r.imported).length;
+  const box=document.getElementById('rlist');
+  if(!all.length){box.innerHTML='<p class="muted">還沒有單據，拍第一張吧。</p>';return;}
+  box.innerHTML=all.map(r=>`<div class="ritem" onclick="view('${r.id}')">
+     ${r.img?`<img src="${r.img}" alt="">`:'<div class="noimg">🧾</div>'}
+     <div class="b"><div class="s">${esc(r.sum||r.cat)}</div>
+       <div class="m">${esc(r.cat)} · ${r.date} ${r.cash?'· 現金':'· 轉帳'} ${r.gov?'· 政府補助':''} ${r.imported?'· ✅已交帳本':'· 待交'}</div></div>
+     <div class="a">${fmt(r.amt)}</div></div>`).join('');
+}
+
+let cache=[];
+async function view(id){
+  cache=await IDB.all(); const r=cache.find(x=>x.id===id); if(!r)return;
+  document.getElementById('mbox').innerHTML=`
+    ${r.img?`<img src="${r.img}" alt="單據">`:'<p class="muted" style="text-align:center;padding:2rem">（這筆沒有照片）</p>'}
+    <div style="margin-top:10px">
+      <div class="mrow"><span class="k">用途</span><span>${esc(r.sum||'—')}</span></div>
+      <div class="mrow"><span class="k">科目（§7）</span><span>${esc(r.cat)}</span></div>
+      <div class="mrow"><span class="k">金額</span><span>${fmt(r.amt)}</span></div>
+      <div class="mrow"><span class="k">日期</span><span>${r.date}</span></div>
+      <div class="mrow"><span class="k">經辦</span><span>${esc(r.handler||'—')}</span></div>
+      <div class="mrow"><span class="k">付款</span><span>${r.cash?'現金':'轉帳／刷卡'}${r.gov?'（政府補助）':''}</span></div>
+      <div class="mrow"><span class="k">拍攝存證</span><span>${r.shotAt?nowStamp(new Date(r.shotAt)):'—'}${r.geo?'　GPS '+r.geo.lat.toFixed(4)+','+r.geo.lng.toFixed(4):''}</span></div>
+      <div class="mrow"><span class="k">數位指紋</span><span style="word-break:break-all;font-size:11px">${r.hash?esc(r.hash.slice(0,24))+'…':'（無）'}</span></div>
+      <div class="mrow"><span class="k">憑證保存至</span><span>${(+(r.date||'2026').slice(0,4))+5} 年（§27 至少5年）</span></div>
+    </div>
+    ${r.hash?`<button class="btn ghost sm" style="width:100%;margin-top:8px" onclick="verifyRec('${r.id}')">🔒 驗證未竄改</button>`:''}
+    <div style="display:flex;gap:8px;margin-top:12px">
+      ${r.img?`<a class="btn ghost sm" style="flex:1;text-decoration:none" href="${r.img}" download="單據_${r.date}_${r.amt}.jpg">⬇ 下載圖檔</a>`:''}
+      <button class="btn gray sm" style="flex:1" onclick="closeModal()">關閉</button>
+      <button class="btn sm" style="flex:0 0 auto;background:var(--red)" onclick="delRec('${r.id}')">🗑 刪除</button>
+    </div>`;
+  document.getElementById('modal').classList.add('on');
+}
+function closeModal(){document.getElementById('modal').classList.remove('on');}
+async function verifyRec(id){
+  const r=(await IDB.all()).find(x=>x.id===id); if(!r||!r.img||!r.hash){alert('此單據無照片或指紋可驗。');return;}
+  const h=await sha256(r.img);
+  if(h===null){alert('此瀏覽器無法計算指紋（需 https 環境）。');return;}
+  alert(h===r.hash ? '✅ 驗證通過：這張單據自拍攝後未被更動過（指紋一致）。' : '⛔ 警告：指紋不一致，照片可能已被更動！\n\n現在指紋：'+h.slice(0,24)+'…\n原始指紋：'+r.hash.slice(0,24)+'…');
+}
+async function delRec(id){ if(!confirm('刪除這筆單據？電子憑證將消失，無法復原。')) return; await IDB.del(id); closeModal(); refresh(); }
+
+async function exportBundle(){
+  const all=await IDB.all(); if(!all.length){alert('還沒有單據可匯出');return;}
+  const blob=new Blob([JSON.stringify({type:'union-receipts',ver:1,exported:new Date().toISOString(),receipts:all},null,0)],{type:'application/json'});
+  const a=document.createElement('a'); a.href=URL.createObjectURL(blob);
+  a.download=`工會單據_${new Date().toISOString().slice(0,10)}.json`; a.click();
+  if(confirm('已匯出單據檔。\n要把這些單據標記為「已交帳本」嗎？（之後仍可在清單看到）')){
+    for(const r of all){ if(!r.imported){ r.imported=true; await IDB.put(r); } }
+    refresh();
+  }
+}
+function exportCSV(){
+  IDB.all().then(all=>{
+    if(!all.length){alert('無資料');return;}
+    const head=['日期','用途','科目','金額','付款','政府補助','經辦','有照片'];
+    const rows=all.sort((a,b)=>a.date.localeCompare(b.date)).map(r=>[r.date,r.sum,r.cat,r.amt,r.cash?'現金':'轉帳',r.gov?'是':'',r.handler,r.img?'有':'無'].map(x=>`"${(''+(x||'')).replace(/"/g,'""')}"`).join(','));
+    const blob=new Blob(['﻿'+head.join(',')+'\n'+rows.join('\n')],{type:'text/csv'});
+    const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='工會單據清單.csv'; a.click();
+  });
+}
+
+(function init(){
+  document.getElementById('rHdr').textContent=ORG;
+  document.getElementById('rFt').textContent=ORG;
+  document.title='單據快拍 — '+ORG;
+  document.getElementById('fDate').value=new Date().toISOString().slice(0,10);
+  renderChips(); refresh();
+})();
+if('serviceWorker' in navigator){ navigator.serviceWorker.register('sw.js').catch(()=>{}); }
+</script>
+</body>
+</html>

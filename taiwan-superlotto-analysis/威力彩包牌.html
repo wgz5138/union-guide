@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>威力彩包牌選號產生器</title>
+<style>
+  :root{ --bg:#0f1320; --card:#1a2032; --line:#2c3550; --txt:#e7ebf5; --mut:#9aa6c4;
+         --gold:#ffd24a; --accent:#4f8cff; --hot:#ff6b6b; --cold:#5aa9ff; --ok:#34d399; }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--txt);
+       font-family:"PingFang TC","Microsoft JhengHei",system-ui,sans-serif;line-height:1.6}
+  .wrap{max-width:760px;margin:0 auto;padding:18px 14px 60px}
+  h1{font-size:22px;margin:.2em 0}
+  .sub{color:var(--mut);font-size:13px;margin-bottom:14px}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:16px;margin:14px 0}
+  .tabs{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:6px}
+  .tab{flex:1;min-width:90px;padding:10px;border:1px solid var(--line);border-radius:10px;
+       background:#141a29;color:var(--mut);cursor:pointer;text-align:center;font-size:14px}
+  .tab.on{background:var(--accent);color:#fff;border-color:var(--accent);font-weight:700}
+  .grid{display:grid;grid-template-columns:repeat(7,1fr);gap:7px;margin:10px 0}
+  .grid.sec{grid-template-columns:repeat(8,1fr)}
+  .ball{position:relative;aspect-ratio:1;border-radius:50%;border:2px solid var(--line);
+        background:#121829;color:var(--txt);font-weight:700;cursor:pointer;
+        display:flex;align-items:center;justify-content:center;font-size:16px;user-select:none;transition:.1s}
+  .ball small{position:absolute;bottom:3px;font-size:9px;color:var(--mut);font-weight:400}
+  .ball.sel{background:var(--gold);color:#1a1300;border-color:var(--gold);transform:scale(1.05)}
+  .ball.sel small{color:#5a4a00}
+  label.inp{display:block;margin:8px 0}
+  input[type=number]{width:140px;padding:8px;border-radius:8px;border:1px solid var(--line);
+       background:#121829;color:var(--txt);font-size:15px}
+  .btn{padding:11px 18px;border:none;border-radius:10px;background:var(--gold);color:#1a1300;
+       font-weight:800;cursor:pointer;font-size:15px;margin:6px 6px 0 0}
+  .btn.ghost{background:#141a29;color:var(--txt);border:1px solid var(--line)}
+  .out{margin-top:14px;font-size:14px}
+  .stat{display:flex;justify-content:space-between;border-bottom:1px dashed var(--line);padding:6px 0}
+  .stat b{color:var(--gold)}
+  .tickets{max-height:340px;overflow:auto;margin-top:10px;font-family:ui-monospace,monospace;font-size:13px}
+  .tk{padding:5px 8px;border-bottom:1px solid var(--line)}
+  .tk .b1{color:var(--gold)}
+  .tk .b2{color:var(--cold)}
+  table{width:100%;border-collapse:collapse;font-size:13px;margin-top:8px}
+  th,td{border:1px solid var(--line);padding:6px;text-align:right}
+  th{background:#141a29;color:var(--mut)}
+  .yes{color:var(--ok);font-weight:700}
+  .warn{background:#2a1d1d;border:1px solid #5a2d2d;color:#ffb4b4;border-radius:10px;
+        padding:12px;font-size:13px;margin-top:16px}
+  .legend{font-size:12px;color:var(--mut);margin:4px 0 0}
+  .legend i{display:inline-block;width:11px;height:11px;border-radius:50%;vertical-align:middle;margin:0 3px}
+  .hide{display:none}
+  .chk{font-size:14px;color:var(--mut)}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>🎯 威力彩包牌選號產生器</h1>
+  <div class="sub">第一區 1~38 選 6、第二區 1~8 選 1，每注 NT$100｜頭獎機率 1 / 22,085,448<br>
+    冷熱底色依據官方真實開獎 <b id="cov">1,915</b> 期（2008-01-24 ~ 2026-05-28）統計</div>
+
+  <div class="tabs">
+    <div class="tab on" data-t="wheel">① 包牌</div>
+    <div class="tab" data-t="budget">② 預算試算</div>
+    <div class="tab" data-t="random">③ 隨機選號</div>
+  </div>
+
+  <!-- ① 包牌 -->
+  <div class="card" id="p-wheel">
+    <div>點選第一區號碼（至少 6 個，越多注數越多）：</div>
+    <div class="grid" id="g1"></div>
+    <div class="legend">底色＝歷史出現頻率：
+      <i style="background:var(--hot)"></i>較常開　<i style="background:#6b7280"></i>普通　<i style="background:var(--cold)"></i>較少開
+      （僅供參考，<b>不影響中獎機率</b>，每期都是獨立隨機）</div>
+    <div style="margin-top:12px">點選第二區號碼（至少 1 個）：</div>
+    <div class="grid sec" id="g2"></div>
+    <button class="btn" onclick="genWheel()">產生包牌注單</button>
+    <button class="btn ghost" onclick="clearSel()">清除</button>
+    <button class="btn ghost" onclick="downloadCSV()" id="dlBtn" style="display:none">下載注單 CSV</button>
+    <div class="out" id="wheelOut"></div>
+  </div>
+
+  <!-- ② 預算 -->
+  <div class="card hide" id="p-budget">
+    <label class="inp">我的預算（元）：<br><input type="number" id="bud" value="10000" min="50" step="50"></label>
+    <label class="inp">第二區要選幾個（1~8）：<br><input type="number" id="sc" value="1" min="1" max="8"></label>
+    <button class="btn" onclick="genBudget()">試算</button>
+    <div class="out" id="budOut"></div>
+  </div>
+
+  <!-- ③ 隨機 -->
+  <div class="card hide" id="p-random">
+    <label class="inp">要產生幾注：<br><input type="number" id="rc" value="5" min="1" max="100"></label>
+    <label class="chk"><input type="checkbox" id="ab"> 避開生日偏好（每注至少 2 個號碼 &gt; 31，降低中獎後被均分的機率）</label>
+    <div><button class="btn" onclick="genRandom()">隨機選號</button></div>
+    <div class="out" id="randOut"></div>
+  </div>
+
+  <div class="warn">⚠ <b>請務必了解</b>：包牌只是「買越多注、機率越高、花費也越高」，<b>期望值永遠是負的</b>。
+    歷史冷熱號<b>無法</b>預測或提高中獎機率（每期獨立隨機）。沒有任何方法能讓樂透穩賺，請當娛樂、設預算上限、未滿 18 歲請勿購買。</div>
+</div>
+
+<script>
+const PRICE=100, C38_6=2760681, SPACE=22085448;
+// 官方真實開獎出現次數（內建為備援；網頁載入時會嘗試抓最新的 lottery-freq.json 覆蓋）
+let F1={1:311,2:278,3:329,4:320,5:273,6:309,7:316,8:308,9:264,10:307,11:303,12:295,13:293,14:325,15:320,16:314,17:304,18:290,19:313,20:301,21:290,22:315,23:297,24:335,25:306,26:311,27:302,28:287,29:311,30:286,31:300,32:277,33:285,34:281,35:300,36:298,37:305,38:331};
+let F2={1:227,2:270,3:239,4:247,5:259,6:219,7:225,8:229};
+
+let sel1=new Set(), sel2=new Set();
+let lastTickets=null;
+
+function comb(n,k){ if(k<0||k>n)return 0; k=Math.min(k,n-k); let r=1; for(let i=0;i<k;i++){r=r*(n-i)/(i+1);} return Math.round(r);}
+function heat(v,min,max){ const t=(v-min)/(max-min); // 0冷 1熱
+  if(t>0.62) return '#ff6b6b'; if(t<0.38) return '#5aa9ff'; return '#5b6478'; }
+
+function buildGrids(){
+  const v1=Object.values(F1), mn1=Math.min(...v1), mx1=Math.max(...v1);
+  const g1=document.getElementById('g1'); g1.innerHTML='';
+  for(let n=1;n<=38;n++){ const b=document.createElement('div'); b.className='ball';
+    b.style.borderColor=heat(F1[n],mn1,mx1);
+    b.innerHTML=n+'<small>'+F1[n]+'</small>';
+    b.onclick=()=>{ if(sel1.has(n)){sel1.delete(n);b.classList.remove('sel');} else {sel1.add(n);b.classList.add('sel');} };
+    g1.appendChild(b); }
+  const g2=document.getElementById('g2'); g2.innerHTML='';
+  for(let n=1;n<=8;n++){ const b=document.createElement('div'); b.className='ball';
+    b.innerHTML=n+'<small>'+F2[n]+'</small>';
+    b.onclick=()=>{ if(sel2.has(n)){sel2.delete(n);b.classList.remove('sel');} else {sel2.add(n);b.classList.add('sel');} };
+    g2.appendChild(b); }
+}
+function clearSel(){ sel1.clear(); sel2.clear(); document.querySelectorAll('.ball').forEach(b=>b.classList.remove('sel'));
+  document.getElementById('wheelOut').innerHTML=''; document.getElementById('dlBtn').style.display='none'; }
+
+function combinations(arr,k){ const res=[],cur=[];
+  (function go(start){ if(cur.length===k){res.push(cur.slice());return;}
+    for(let i=start;i<arr.length;i++){cur.push(arr[i]);go(i+1);cur.pop();} })(0); return res; }
+
+function probStr(t){ if(t<=0)return '—'; const oneIn=Math.round(SPACE/t);
+  const p=t/SPACE*100; const ps=(p<0.001)?p.toExponential(2)+'%':p.toFixed(4)+'%';
+  return ps+'（約 1/'+oneIn.toLocaleString()+'）'; }
+
+function genWheel(){
+  const out=document.getElementById('wheelOut');
+  const pool=[...sel1].sort((a,b)=>a-b), secs=[...sel2].sort((a,b)=>a-b);
+  if(pool.length<6){ out.innerHTML='<div class="warn">第一區至少要選 6 個號碼。</div>'; return; }
+  if(secs.length<1){ out.innerHTML='<div class="warn">第二區至少要選 1 個號碼。</div>'; return; }
+  const combos=combinations(pool,6); const nF=combos.length; const nT=nF*secs.length;
+  const cost=nT*PRICE;
+  lastTickets={combos,secs};
+  let html=`<div class="stat"><span>第一區包牌（${pool.length}個）</span><b>${pool.map(x=>String(x).padStart(2,'0')).join(' ')}</b></div>`;
+  html+=`<div class="stat"><span>第二區（${secs.length}個）</span><b>${secs.map(x=>String(x).padStart(2,'0')).join(' ')}</b></div>`;
+  html+=`<div class="stat"><span>總注數</span><b>C(${pool.length},6)×${secs.length} = ${nT.toLocaleString()} 注</b></div>`;
+  html+=`<div class="stat"><span>總花費</span><b>NT$${cost.toLocaleString()}</b></div>`;
+  html+=`<div class="stat"><span>中頭獎機率</span><b>${probStr(nT)}</b></div>`;
+  html+=`<div class="stat"><span>命中『第一區6碼』機率</span><b>${(nF/C38_6*100).toPrecision(3)}%</b></div>`;
+  html+=`<div class="legend" style="margin-top:8px">保證：當期開出的 6 個第一區號碼若全在你選的 ${pool.length} 個之中 → 必中一注 6 碼；第二區也命中 → 頭獎。</div>`;
+  if(nT<=200){ let t='<div class="tickets">'; let i=0;
+    combos.forEach(c=>secs.forEach(s=>{i++; t+=`<div class="tk">第${i}注　<span class="b1">${c.map(x=>String(x).padStart(2,'0')).join(' ')}</span>　第二區 <span class="b2">${String(s).padStart(2,'0')}</span></div>`;}));
+    t+='</div>'; html+=t; }
+  else { html+=`<div class="legend" style="margin-top:8px">注數較多，請按「下載注單 CSV」取得全部 ${nT.toLocaleString()} 注。</div>`; }
+  out.innerHTML=html;
+  document.getElementById('dlBtn').style.display='inline-block';
+}
+function downloadCSV(){
+  if(!lastTickets){return;}
+  const {combos,secs}=lastTickets;
+  let rows=['第幾注,獎號1,獎號2,獎號3,獎號4,獎號5,獎號6,第二區']; let i=0;
+  combos.forEach(c=>secs.forEach(s=>{i++; rows.push([i,...c,s].join(','));}));
+  const blob=new Blob(['﻿'+rows.join('\n')],{type:'text/csv;charset=utf-8'});
+  const a=document.createElement('a'); a.href=URL.createObjectURL(blob);
+  a.download='威力彩包牌注單.csv'; a.click();
+}
+
+function genBudget(){
+  const B=+document.getElementById('bud').value, m=Math.max(1,Math.min(8,+document.getElementById('sc').value));
+  let best=null, rows='';
+  for(let k=6;k<=38;k++){ const nF=comb(k,6), nT=nF*m, cost=nT*PRICE, ok=cost<=B;
+    if(ok)best=k;
+    rows+=`<tr><td>${k}</td><td>${nT.toLocaleString()}</td><td>NT$${cost.toLocaleString()}</td><td>${probStr(nT)}</td><td class="${ok?'yes':''}">${ok?'✅':'—'}</td></tr>`;
+    if(cost>B && k>(best||6)+1) break; }
+  let html=`<table><tr><th>第一區挑幾個</th><th>注數</th><th>花費</th><th>中頭獎機率</th><th>預算內</th></tr>${rows}</table>`;
+  if(best){ const nT=comb(best,6)*m;
+    html+=`<div class="stat" style="margin-top:10px"><span>結論</span><b>預算 NT$${B.toLocaleString()} 內最多包 ${best} 個號碼（${nT.toLocaleString()} 注），機率約 1/${Math.round(SPACE/nT).toLocaleString()}</b></div>`;
+  } else { html+='<div class="warn">預算不足以包牌。</div>'; }
+  document.getElementById('budOut').innerHTML=html;
+}
+
+function genRandom(){
+  const n=Math.max(1,Math.min(100,+document.getElementById('rc').value)), ab=document.getElementById('ab').checked;
+  const seen=new Set(), tks=[]; let guard=0;
+  while(tks.length<n && guard<n*2000){ guard++;
+    const pool=[...Array(38)].map((_,i)=>i+1); const f=[];
+    while(f.length<6){ const idx=Math.floor(Math.random()*pool.length); f.push(pool.splice(idx,1)[0]); }
+    f.sort((a,b)=>a-b);
+    if(ab && f.filter(x=>x>31).length<2) continue;
+    const s=Math.floor(Math.random()*8)+1; const key=f.join('-')+'|'+s;
+    if(seen.has(key))continue; seen.add(key); tks.push([f,s]); }
+  let t='<div class="tickets">';
+  tks.forEach((x,i)=>{ t+=`<div class="tk">第${i+1}注　<span class="b1">${x[0].map(v=>String(v).padStart(2,'0')).join(' ')}</span>　第二區 <span class="b2">${String(x[1]).padStart(2,'0')}</span></div>`; });
+  t+='</div>';
+  t+=`<div class="stat" style="margin-top:8px"><span>花費</span><b>${tks.length} 注 × NT$${PRICE} = NT$${(tks.length*PRICE).toLocaleString()}</b></div>`;
+  t+=`<div class="legend">每注中頭獎機率 1/22,085,448（隨機與包牌的單注機率相同）。</div>`;
+  document.getElementById('randOut').innerHTML=t;
+}
+
+document.querySelectorAll('.tab').forEach(tab=>tab.onclick=()=>{
+  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('on')); tab.classList.add('on');
+  ['wheel','budget','random'].forEach(p=>document.getElementById('p-'+p).classList.add('hide'));
+  document.getElementById('p-'+tab.dataset.t).classList.remove('hide');
+});
+
+// 嘗試抓最新資料檔(由 GitHub Actions 自動更新)；抓不到就用內建備援
+async function loadLatest(){
+  try{
+    const r=await fetch('lottery-freq.json',{cache:'no-store'});
+    if(!r.ok) throw 0;
+    const j=await r.json();
+    const nf1={},nf2={};
+    for(let n=1;n<=38;n++) nf1[n]=+j.first_zone_freq[n];
+    for(let n=1;n<=8;n++)  nf2[n]=+j.second_zone_freq[n];
+    F1=nf1; F2=nf2;
+    const cov=document.getElementById('cov'); if(cov&&j.count) cov.textContent=j.count.toLocaleString();
+    const sub=document.querySelector('.sub');
+    if(sub&&j.last_date) sub.innerHTML=sub.innerHTML.replace(/2008-01-24 ~ [0-9-]+/, '2008-01-24 ~ '+j.last_date);
+    buildGrids();
+  }catch(e){ /* 用內建備援，無需處理 */ }
+}
+buildGrids();
+loadLatest();
+</script>
+</body>
+</html>

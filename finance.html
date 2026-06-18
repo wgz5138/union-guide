@@ -1,0 +1,1293 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>工會透明帳本 — 高榮企業工會</title>
+<meta name="theme-color" content="#1A7A4A">
+<link rel="manifest" href="finance.webmanifest">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="透明帳本">
+<link rel="apple-touch-icon" href="assets/union-icon-180.png">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@400;600;700&family=Noto+Sans+TC:wght@300;400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --red:#C0392B; --red-light:#FDECEA; --red-deep:#7B1818;
+    --gold:#B7860B; --gold-light:#FEF9E7;
+    --ink:#1A1A1A; --ink-mid:#444; --ink-soft:#777; --bg:#FAFAF8;
+    --card:#FFFFFF; --border:#E8E4DE;
+    --green:#1A7A4A; --green-light:#EAFAF1; --green-mid:#2D9D6E; --green-deep:#0F5C36;
+    --gray-tag:#8A8A85; --gray-bg:#F0EEEA; --blue:#2E5C8A;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;}
+  body{font-family:'Noto Sans TC',sans-serif;background:var(--bg);color:var(--ink);font-size:15px;line-height:1.7;-webkit-text-size-adjust:100%;}
+  .header{background:var(--green);color:#fff;padding:1.5rem 1.25rem 1.25rem;text-align:center;position:relative;overflow:hidden;}
+  .header::before{content:'';position:absolute;top:-40px;right:-40px;width:180px;height:180px;border-radius:50%;background:rgba(255,255,255,.06);}
+  .header-label{font-size:11px;letter-spacing:.15em;opacity:.8;margin-bottom:6px;}
+  .header h1{font-family:'Noto Serif TC',serif;font-size:21px;font-weight:700;line-height:1.4;}
+  .header-sub{font-size:12.5px;opacity:.85;margin-top:6px;}
+  .lawbar{background:var(--green-deep);color:#D7EFE0;font-size:11.5px;text-align:center;padding:.4rem 1rem;line-height:1.5;}
+  .lawbar b{color:#fff;font-weight:600;}
+
+  /* tab bar */
+  .tabs{position:sticky;top:0;z-index:60;display:flex;background:rgba(255,255,255,.97);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);border-bottom:1px solid var(--border);overflow-x:auto;scrollbar-width:none;}
+  .tabs::-webkit-scrollbar{display:none;}
+  .tab{flex:0 0 auto;padding:.7rem .9rem;font-size:13px;color:var(--ink-soft);border:none;background:none;cursor:pointer;white-space:nowrap;border-bottom:2.5px solid transparent;font-family:inherit;}
+  .tab.active{color:var(--green-deep);font-weight:600;border-bottom-color:var(--green);}
+
+  main{max-width:640px;margin:0 auto;padding:1.1rem 1rem 4rem;}
+  .panel{display:none;}
+  .panel.active{display:block;animation:fade .25s;}
+  @keyframes fade{from{opacity:0;transform:translateY(4px);}to{opacity:1;transform:none;}}
+
+  .card{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:1rem 1.1rem;margin-bottom:12px;}
+  .card-title{font-family:'Noto Serif TC',serif;font-size:16px;font-weight:600;display:flex;align-items:center;gap:8px;margin-bottom:.7rem;}
+  .law-pill{font-size:10.5px;font-weight:500;background:var(--green-light);color:var(--green-deep);border:1px solid #C8E6D5;padding:1px 7px;border-radius:20px;white-space:nowrap;cursor:pointer;}
+  .law-pill:active{background:#D7EFE0;}
+  .muted{color:var(--ink-soft);font-size:12.5px;line-height:1.6;}
+  .row{display:flex;gap:8px;flex-wrap:wrap;}
+  .row>*{flex:1;min-width:0;}
+
+  label{display:block;font-size:12px;color:var(--ink-mid);margin:8px 0 3px;font-weight:500;}
+  input,select,textarea{width:100%;font-family:inherit;font-size:14px;padding:.55rem .6rem;border:1px solid var(--border);border-radius:8px;background:#fff;color:var(--ink);}
+  input:focus,select:focus,textarea:focus{outline:none;border-color:var(--green-mid);}
+  textarea{resize:vertical;min-height:44px;}
+  .seg{display:flex;gap:6px;}
+  .seg button{flex:1;padding:.5rem;border:1px solid var(--border);background:#fff;border-radius:8px;font-family:inherit;font-size:14px;cursor:pointer;color:var(--ink-mid);}
+  .seg button.on-in{background:var(--green);border-color:var(--green);color:#fff;}
+  .seg button.on-out{background:var(--red);border-color:var(--red);color:#fff;}
+  .chk{display:flex;align-items:center;gap:7px;font-size:13px;color:var(--ink-mid);margin-top:8px;cursor:pointer;}
+  .chk input{width:auto;}
+
+  .btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;padding:.6rem 1rem;border:none;border-radius:9px;font-family:inherit;font-size:14px;font-weight:500;cursor:pointer;background:var(--green);color:#fff;}
+  .btn:active{opacity:.85;}
+  .btn.full{width:100%;}
+  .btn.ghost{background:#fff;color:var(--green-deep);border:1px solid var(--green-mid);}
+  .btn.gray{background:var(--gray-bg);color:var(--ink-mid);}
+  .btn.red{background:var(--red);}
+  .btn.sm{padding:.4rem .7rem;font-size:12.5px;}
+
+  .kpi{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:12px;}
+  .kpi .k{background:#fff;border:1px solid var(--border);border-radius:10px;padding:.6rem .5rem;text-align:center;}
+  .kpi .k .lab{font-size:11px;color:var(--ink-soft);}
+  .kpi .k .val{font-family:'Noto Serif TC',serif;font-size:17px;font-weight:700;font-variant-numeric:tabular-nums;margin-top:2px;}
+  .val.in{color:var(--green-deep);} .val.out{color:var(--red);} .val.bal{color:var(--ink);}
+
+  .entry{display:flex;gap:10px;align-items:flex-start;padding:.7rem 0;border-bottom:1px solid #F2EFE9;}
+  .entry:last-child{border-bottom:none;}
+  .e-amt{font-family:'Noto Serif TC',serif;font-weight:700;font-variant-numeric:tabular-nums;white-space:nowrap;font-size:15px;}
+  .e-amt.in{color:var(--green-deep);} .e-amt.out{color:var(--red);}
+  .e-body{flex:1;min-width:0;}
+  .e-sum{font-size:14px;font-weight:500;}
+  .e-meta{font-size:11.5px;color:var(--ink-soft);margin-top:2px;line-height:1.5;word-break:break-all;}
+  .e-tag{display:inline-block;font-size:10px;padding:0 6px;border-radius:10px;background:var(--gray-bg);color:var(--gray-tag);margin-right:4px;}
+  .e-tag.cash{background:var(--gold-light);color:var(--gold);}
+  .e-tag.gov{background:#E7F0F8;color:var(--blue);}
+  .e-del{color:var(--ink-soft);background:none;border:none;font-size:16px;cursor:pointer;padding:2px 4px;flex-shrink:0;}
+
+  .alert{border-radius:10px;padding:.7rem .85rem;font-size:13px;line-height:1.65;margin-bottom:10px;display:flex;gap:8px;align-items:flex-start;}
+  .alert .ico{flex-shrink:0;font-size:15px;line-height:1.4;}
+  .alert.ok{background:var(--green-light);border:1px solid #C8E6D5;color:var(--green-deep);}
+  .alert.warn{background:var(--gold-light);border:1px solid #F0E0A8;color:#8A6D0B;}
+  .alert.bad{background:var(--red-light);border:1px solid #F5C6C2;color:var(--red-deep);}
+  .alert b{font-weight:600;}
+  .alert .ref{font-size:11px;opacity:.8;display:block;margin-top:2px;}
+
+  table{width:100%;border-collapse:collapse;font-size:13.5px;}
+  th,td{text-align:left;padding:.45rem .4rem;border-bottom:1px solid #F2EFE9;vertical-align:top;}
+  th{font-size:11.5px;color:var(--ink-soft);font-weight:500;}
+  td.num,th.num{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap;}
+  tr.sub td{font-weight:600;background:#FBF9F6;}
+  tr.tot td{font-weight:700;border-top:2px solid var(--border);border-bottom:none;}
+
+  .law-art{border:1px solid var(--border);border-radius:10px;margin-bottom:8px;overflow:hidden;}
+  .law-art summary{cursor:pointer;padding:.6rem .8rem;font-weight:600;font-size:14px;list-style:none;display:flex;justify-content:space-between;align-items:center;background:#FBFAF7;}
+  .law-art summary::-webkit-details-marker{display:none;}
+  .law-art summary::after{content:'＋';color:var(--green);font-weight:400;}
+  .law-art[open] summary::after{content:'－';}
+  .law-art .txt{padding:.7rem .8rem;font-size:13.5px;line-height:1.8;white-space:pre-wrap;color:var(--ink-mid);border-top:1px solid var(--border);}
+
+  .help{font-size:12px;color:var(--ink-soft);background:#FBFAF7;border:1px dashed var(--border);border-radius:8px;padding:.6rem .7rem;margin-bottom:10px;line-height:1.7;}
+  .lock{position:fixed;inset:0;background:var(--green-deep);z-index:200;display:flex;align-items:center;justify-content:center;padding:1.5rem;}
+  .lock .box{background:#fff;border-radius:16px;padding:1.6rem 1.4rem;max-width:340px;width:100%;text-align:center;}
+  .lock h2{font-family:'Noto Serif TC',serif;font-size:19px;margin-bottom:6px;color:var(--green-deep);}
+  .footer-note{text-align:center;font-size:11px;color:var(--ink-soft);margin-top:1.5rem;line-height:1.7;}
+  .badge-q{display:inline-block;font-size:11px;background:var(--gray-bg);color:var(--ink-mid);border-radius:6px;padding:1px 7px;margin-left:6px;}
+  @media print{.tabs,.no-print,.lawbar{display:none!important;} .panel{display:block!important;} body{background:#fff;}}
+</style>
+</head>
+<body>
+
+<!-- 進場輕量鎖（後台記帳用；真實數字只存本機） -->
+<div class="lock" id="lock">
+  <div class="box">
+    <h2>工會透明帳本</h2>
+    <p class="muted" style="margin-bottom:12px"><span id="lockOrg">高榮企業工會</span> · 幹部記帳<br>資料只存在本機瀏覽器，不上傳。</p>
+    <input id="pw" type="password" placeholder="請輸入密碼" style="text-align:center" autocomplete="current-password">
+    <button class="btn full" style="margin-top:10px" onclick="tryUnlock()">進入</button>
+    <p class="muted" id="pwErr" style="color:var(--red);margin-top:8px;display:none">密碼不對</p>
+    <p class="muted" style="margin-top:10px;font-size:11px">預設密碼 <b>union2026</b>，請於「設定」更改。</p>
+  </div>
+</div>
+
+<div class="header">
+  <div class="header-label"><span id="hdrOrg">高榮企業工會</span> · 工會財務處理準則</div>
+  <h1>工會透明帳本</h1>
+  <div class="header-sub">財務清晰 · 經得起查 · 一切有法源依據</div>
+</div>
+<div class="lawbar">本工具依 <b>工會財務處理準則</b>（工會法第30條第2項授權）設計，每項功能皆標明條號。資料僅存本機，<b>絕不上傳</b>。</div>
+<div class="lawbar" id="prepBanner" style="background:#8A6D0B;display:none">🏗 <b>籌備中</b>：本會尚未成立（工會法§11）。先把籌備收支記清楚、留單據，成立後辦理結算移交。決算/監事查核/報主管機關等於成立後啟用。</div>
+
+<div class="tabs" id="tabs">
+  <button class="tab active" data-p="home">總覽</button>
+  <button class="tab" data-p="book">記帳</button>
+  <button class="tab" data-p="journal">日記簿</button>
+  <button class="tab" data-p="budget">預算</button>
+  <button class="tab" data-p="asset">財產清冊</button>
+  <button class="tab" data-p="report">法定報表</button>
+  <button class="tab" data-p="public">公開查詢</button>
+  <button class="tab" data-p="audit">查核就緒</button>
+  <button class="tab" data-p="tax">報稅</button>
+  <button class="tab" data-p="law">法規依據</button>
+  <button class="tab" data-p="set">設定</button>
+</div>
+
+<main>
+  <!-- ========== 總覽 / 待辦 ========== -->
+  <section class="panel active" id="p-home">
+    <div class="card" style="background:linear-gradient(135deg,#E8F6EE,#D7EFE0);border-color:#B8DCC4">
+      <div class="card-title" style="color:var(--green-deep)">👋 你不用懂會計</div>
+      <p style="font-size:13.5px;color:#1A5C38;line-height:1.85">這裡會幫你看著「法律要工會做的事」。照下面的提醒做就好；要記一筆就按 <b>記帳</b>，幹部買東西用 <b>單據快拍</b> 拍照即可。專有名詞旁都有白話說明。</p>
+    </div>
+    <div class="card" style="border-left:3px solid var(--gold)">
+      <div class="card-title">📌 怎麼分工（先看這個，很重要）</div>
+      <div style="font-size:13.5px;line-height:1.9;color:var(--ink-mid)">
+        <p style="margin-bottom:6px"><b>① 一個人當「帳房」</b>：由出納/財務一人，在<b>固定一台手機或電腦</b>記帳。<br><span class="muted">⚠ 帳本資料只存在這台裝置、不會自動跟別人同步（這樣才不外洩）。別的幹部打開同網址＝看到他自己空白的一本。</span></p>
+        <p style="margin-bottom:6px"><b>② 其他幹部</b>：在外買東西（文具、刻印章…），用手機開 <b>單據快拍</b> 拍照 → 按「<b>匯出給帳本</b>」→ 用 LINE 傳給帳房。</p>
+        <p style="margin-bottom:6px"><b>③ 帳房收單</b>：在帳本「記帳」頁按「<b>收進帳本</b>」，單據就變成一筆支出、照片自動留底。</p>
+        <p style="margin:0"><b>④ 備份/交接</b>：帳房定期到「設定 → <b>匯出全部資料</b>」存一份檔（換手機、交接、被查都靠它）。</p>
+      </div>
+    </div>
+    <div class="kpi">
+      <div class="k"><div class="lab">今年收到的錢</div><div class="val in" id="hIn">$0</div></div>
+      <div class="k"><div class="lab">今年花掉的錢</div><div class="val out" id="hOut">$0</div></div>
+      <div class="k"><div class="lab">還剩（結餘）</div><div class="val bal" id="hBal">$0</div></div>
+    </div>
+    <div class="card">
+      <div class="card-title">📋 法律要工會做的事（照做就好）</div>
+      <div id="todoList"></div>
+    </div>
+    <div class="card">
+      <div class="card-title">🩺 財務健檢</div>
+      <div id="healthList"></div>
+    </div>
+  </section>
+
+  <!-- ========== 記帳 ========== -->
+  <section class="panel" id="p-book">
+    <div class="kpi">
+      <div class="k"><div class="lab">本年收入</div><div class="val in" id="kIn">$0</div></div>
+      <div class="k"><div class="lab">本年支出</div><div class="val out" id="kOut">$0</div></div>
+      <div class="k"><div class="lab">結餘</div><div class="val bal" id="kBal">$0</div></div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">登記一筆收支 <span class="law-pill" onclick="gotoLaw('第9條')">憑證 §9·§10</span></div>
+      <div class="row">
+        <div style="flex:1.2"><label>日期</label><input type="date" id="fDate"></div>
+        <div><label>收／支</label>
+          <div class="seg">
+            <button type="button" id="segIn" class="on-in" onclick="setType('in')">收入</button>
+            <button type="button" id="segOut" onclick="setType('out')">支出</button>
+          </div>
+        </div>
+      </div>
+      <label>會計科目 <span class="badge-q">附表 · §7</span></label>
+      <select id="fCat"></select>
+      <label>摘要</label>
+      <input id="fSum" placeholder="例：5月會費收入 / 勞工教育講師費">
+      <div class="row">
+        <div><label>金額（新臺幣整數元 §5）</label><input type="number" id="fAmt" inputmode="numeric" min="0" step="1" placeholder="0"></div>
+        <div><label>憑證號 §10</label><input id="fVno" placeholder="收據/發票號"></div>
+      </div>
+      <div class="row">
+        <div><label>經辦人</label><input id="fHandler" placeholder="出納/經辦"></div>
+        <div><label>審核人 §18</label><input id="fReviewer" placeholder="複核/監事"></div>
+      </div>
+      <label class="chk"><input type="checkbox" id="fCash"> 以現金（零用金）支付　<span class="muted">§19：單筆 ≤ 1萬</span></label>
+      <label class="chk"><input type="checkbox" id="fGov"> 屬政府補助款　<span class="muted">§27·§30：另依政府規定</span></label>
+      <label class="chk" id="fSealWrap" style="display:none"><input type="checkbox" id="fSeal"> 已會同用印（理事長＋秘書長＋會計出納共同蓋章 §20）</label>
+      <div id="formAlerts" style="margin-top:10px"></div>
+      <button class="btn full" style="margin-top:10px" onclick="addEntry()">＋ 記一筆</button>
+    </div>
+
+    <div class="card" id="rcptCard" style="display:none">
+      <div class="card-title">📷 單據快拍待收 <span class="law-pill" onclick="gotoLaw('第10條')">§10 原始憑證</span></div>
+      <p class="muted" style="margin-bottom:8px">幹部用「單據快拍」拍的支出單據，收進帳本後會自動建立支出明細，照片即原始憑證留底（§10·§27）。</p>
+      <div id="rcptPending"></div>
+      <div class="row" style="margin-top:8px">
+        <button class="btn ghost sm" style="flex:1" onclick="ingestAll()">全部收進帳本</button>
+        <label class="btn gray sm" style="flex:1;cursor:pointer;text-align:center">匯入單據檔<input type="file" id="rcptFile" accept=".json" onchange="importBundle(event)" style="display:none"></label>
+      </div>
+    </div>
+    <div class="card" id="rcptEmpty">
+      <div class="card-title">📷 單據快拍 <span class="law-pill" onclick="gotoLaw('第10條')">§10</span></div>
+      <p class="muted">目前沒有待收單據。請用「單據快拍」拍照記錄支出，或按下方匯入幹部傳來的單據檔。</p>
+      <label class="btn gray sm" style="margin-top:8px;cursor:pointer;text-align:center;display:inline-flex">匯入單據檔（.json）<input type="file" id="rcptFile2" accept=".json" onchange="importBundle(event)" style="display:none"></label>
+    </div>
+
+    <div class="card">
+      <div class="card-title">本年明細 <span class="law-pill" onclick="gotoLaw('第8條')">日記簿 §8</span></div>
+      <div class="row no-print" style="margin-bottom:8px">
+        <select id="filterQ" onchange="renderEntries()" style="flex:1">
+          <option value="0">全年</option><option value="1">第1季 (1-3月)</option>
+          <option value="2">第2季 (4-6月)</option><option value="3">第3季 (7-9月)</option>
+          <option value="4">第4季 (10-12月)</option>
+        </select>
+        <button class="btn ghost sm" style="flex:0 0 auto" onclick="exportCSV()">匯出 CSV</button>
+      </div>
+      <div id="entryList"></div>
+    </div>
+  </section>
+
+  <!-- ========== 日記簿 ========== -->
+  <section class="panel" id="p-journal">
+    <div class="help"><b>第8條</b>：年度決算收入 ≤ 300萬者得僅置<b>日記簿</b>乙種（本會適用）。下表為依日期排序之流水帳，含逐筆結存，可列印裝訂成冊。有財產購置/處分另見「財產清冊」。</div>
+    <div class="card">
+      <div class="card-title">日記簿 · <span id="jYear"></span> 年度 <span class="law-pill" onclick="gotoLaw('第8條')">§8</span></div>
+      <div id="journalTable"></div>
+    </div>
+    <button class="btn ghost full no-print" onclick="window.print()">🖨 列印日記簿 / 存 PDF</button>
+  </section>
+
+  <!-- ========== 預算 ========== -->
+  <section class="panel" id="p-budget">
+    <div class="help"><b>第12條</b>：年度開始前，由<b>理事會</b>編「年度工作計畫及收支預算表」，提經會員（代表）大會議決後，<b>報主管機關備查</b>。下方填列各科目預算，並自動與本年實際（決算）對照。</div>
+    <div class="card">
+      <div class="card-title">收支預算表 · <span id="bYear"></span> 年度 <span class="law-pill" onclick="gotoLaw('第12條')">§12</span></div>
+      <p class="muted" style="margin-bottom:6px">收入預算（附表收入類 §7）</p>
+      <div id="budgetIn"></div>
+      <p class="muted" style="margin:10px 0 6px">支出預算（附表支出類 §7）</p>
+      <div id="budgetOut"></div>
+      <label>編列說明 / 工作計畫摘要</label>
+      <textarea id="budgetNote" placeholder="例：本年度勞工教育、會員福利、會務運作重點…"></textarea>
+      <button class="btn full no-print" style="margin-top:10px" onclick="saveBudget()">儲存預算</button>
+    </div>
+    <div class="card" id="budgetCompare"></div>
+    <button class="btn ghost full no-print" onclick="window.print()">🖨 列印預算表 / 存 PDF</button>
+  </section>
+
+  <!-- ========== 財產清冊 ========== -->
+  <section class="panel" id="p-asset">
+    <div class="help"><b>第6條⑤</b>財產清冊、<b>第14條</b>財產＝投資＋固定資產＋其他資產。<b>第19條</b>：財物須以<b>工會名義</b>登記，不得登記他人名下、不得挪為私用。<b>第16條</b>：不動產購置/出售/轉讓/負擔須<b>大會議決</b>；<b>第14條</b>：投資種類、比例須大會議決。</div>
+    <div class="card">
+      <div class="card-title">登記一項財產 <span class="law-pill" onclick="gotoLaw('第14條')">§14·§19</span></div>
+      <div class="row">
+        <div><label>取得日期</label><input type="date" id="aDate"></div>
+        <div><label>科目（附表）</label><select id="aCat"></select></div>
+      </div>
+      <label>名稱 / 內容</label>
+      <input id="aName" placeholder="例：會所影印機 / ○○定存 / 辦公桌椅">
+      <div class="row">
+        <div><label>金額（取得成本，元 §5）</label><input type="number" id="aAmt" inputmode="numeric" min="0" step="1" placeholder="0"></div>
+        <div><label>憑證/契約號</label><input id="aVno" placeholder="發票/契約"></div>
+      </div>
+      <label class="chk"><input type="checkbox" id="aOwner" checked> 已以「工會名義」登記（§19 不得登記他人名下）</label>
+      <div id="assetAlerts" style="margin-top:8px"></div>
+      <button class="btn full" style="margin-top:8px" onclick="addAsset()">＋ 登記財產</button>
+    </div>
+    <div class="card">
+      <div class="card-title">財產清冊 <span class="law-pill" onclick="gotoLaw('第6條')">§6⑤</span></div>
+      <div id="assetList"></div>
+    </div>
+    <button class="btn ghost full no-print" onclick="window.print()">🖨 列印財產清冊 / 存 PDF</button>
+  </section>
+
+  <!-- ========== 法定報表 ========== -->
+  <section class="panel" id="p-report">
+    <div class="help">依 <b>第6條</b>，工會會計報告包括：①資產負債表 ②收支餘絀表 ③現金流量表 ④淨值變動表 ⑤財產清冊。下方依本機帳目即時產生（收支餘絀表為主），可列印給監事 / 大會 / 主管機關。</div>
+    <div class="card" id="repIncome"></div>
+    <div class="card" id="repCompliance"></div>
+    <div class="card" id="repBudget"></div>
+    <button class="btn full no-print" onclick="genDecal()">📑 產生決算書（正式格式 §6·§13）</button>
+    <button class="btn ghost full no-print" style="margin-top:8px" onclick="window.print()">🖨 列印 / 存 PDF</button>
+  </section>
+
+  <!-- ========== 公開查詢 ========== -->
+  <section class="panel" id="p-public">
+    <div class="help"><b>第26條</b>：工會財務收支不得匿報或虛報，並應<b>按季公開揭示</b>。本頁為「會員 / 主管機關查詢」用的唯讀彙總，幹部可一鍵匯出後公告。</div>
+    <div class="card" id="pubSummary"></div>
+    <div class="card" id="pubQuarter"></div>
+    <button class="btn ghost full no-print" onclick="window.print()">🖨 產生公開版（列印 / PDF）</button>
+  </section>
+
+  <!-- ========== 查核就緒 ========== -->
+  <section class="panel" id="p-audit">
+    <div class="help"><b>第28-30條</b>：監事（監事會）辦定期及臨時查核、會員依工會法第29條查核、主管機關得委託專業團體查核。<b>第30條</b>查核範圍9項，逐項對照如下。<b>第27條</b>：簿籍/報告至少存10年、憑證至少存5年。</div>
+    <div class="card" id="auditScope"></div>
+    <div class="card" id="auditRetention"></div>
+    <div class="card">
+      <div class="card-title">📚 單據存檔（合併 PDF） <span class="law-pill" onclick="gotoLaw('第27條')">§27</span></div>
+      <p class="muted" style="margin-bottom:8px">把某一季（或全年）拍的單據照片合併成一份 PDF，封面附清單，每張單據各一頁、含拍攝時間/GPS 浮水印，方便存查與交主管機關。</p>
+      <div class="row" style="gap:6px;flex-wrap:wrap">
+        <button class="btn ghost sm" onclick="genReceiptPDF(1)">第1季</button>
+        <button class="btn ghost sm" onclick="genReceiptPDF(2)">第2季</button>
+        <button class="btn ghost sm" onclick="genReceiptPDF(3)">第3季</button>
+        <button class="btn ghost sm" onclick="genReceiptPDF(4)">第4季</button>
+        <button class="btn sm" onclick="genReceiptPDF(0)">全年</button>
+      </div>
+    </div>
+    <button class="btn full no-print" onclick="genAuditOpinion()">📝 產生監事審核意見書（範本 §13·§28·§30）</button>
+  </section>
+
+  <!-- ========== 報稅 ========== -->
+  <section class="panel" id="p-tax">
+    <div class="help">工會屬人民團體。<b>本身的會費、捐贈、基金存款利息</b>等非銷售收入，符合 <b>所得稅法§4①13、§11④</b> 與「免納所得稅適用標準」要件者免納所得稅；<b>符合免稅要件且無銷售/作業收入者，可免辦結算申報</b>（財政部）。但<b>發薪資、講師費等仍要扣繳</b>。以下逐項提醒並附官方條文，個案請洽國稅局／會計師確認。</div>
+    <div class="card"><div class="card-title">📋 報稅要確認的事（白話）</div><div id="taxChecklist"></div></div>
+    <div class="card"><div class="card-title">📖 相關稅法條文（官方）</div><div id="taxLaws"><p class="muted">載入中…</p></div></div>
+    <p class="footer-note" style="margin-top:0">稅務個案複雜，最終以國稅局核定為準。本頁條文取自全國法規資料庫（隨法規更新）。</p>
+  </section>
+
+  <!-- ========== 法規依據 ========== -->
+  <section class="panel" id="p-law">
+    <div class="help" id="lawMeta"></div>
+    <div id="lawList"></div>
+    <details class="law-art"><summary>附表：會計科目及說明表（§7）</summary><div class="txt" id="lawAttach"></div></details>
+  </section>
+
+  <!-- ========== 設定 ========== -->
+  <section class="panel" id="p-set">
+    <div class="card">
+      <div class="card-title">工會基本設定</div>
+      <label>工會名稱（顯示在標題、報表、公文上，可隨時改）</label>
+      <input id="setOrgName" placeholder="例：高榮企業工會">
+      <label>本會狀態（影響用字與待辦）</label>
+      <div class="seg">
+        <button type="button" id="stPrep" onclick="setPrep(true)">🏗 籌備中</button>
+        <button type="button" id="stDone" class="on-in" onclick="setPrep(false)">✅ 已成立</button>
+      </div>
+      <p class="muted" style="margin:4px 0 2px">籌備中＝尚無理事長/監事/會員大會（工會法§11）；改用籌備會召集人、發起人會議。成立後切「已成立」，帳目延續不需重記。</p>
+      <label>會計年度（曆年制 §3）</label>
+      <input type="number" id="setYear" min="2011" step="1">
+      <label class="chk"><input type="checkbox" id="setSecretary"> 本會設有「秘書長」（影響 §20 用印人員）</label>
+      <label class="chk"><input type="checkbox" id="setSupBoard"> 本會設有「監事會」（影響 §13·§28 審核主體）</label>
+      <label class="chk"><input type="checkbox" id="setInvest"> 本會有「投資事業」（影響 §13 會計師簽證門檻）</label>
+      <label>期初現金＋銀行存款餘額（§6 資產起算）</label>
+      <input type="number" id="setOpening" min="0" step="1" placeholder="0">
+      <label>零用金額度上限（§19 不得超過 100000）</label>
+      <input type="number" id="setPettyCap" min="0" max="100000" step="1" placeholder="100000">
+      <button class="btn full" style="margin-top:12px" onclick="saveSettings()">儲存設定</button>
+    </div>
+    <div class="card">
+      <div class="card-title">資產負債表平衡 <span class="law-pill" onclick="gotoLaw('第6條')">§6①·§7</span></div>
+      <p class="muted" style="margin-bottom:6px">決算書「資產負債表」需平衡（資產＝負債＋淨值）。「累計餘絀」屬跨年度科目，請填上年度結轉數；負債（應付款等）請填期末實際數。</p>
+      <label>上年度累計餘絀（期初淨值，可為負）</label>
+      <input type="number" id="setPriorCum" step="1" placeholder="0">
+      <label>期末負債合計（應付款等 §7，無則 0）</label>
+      <input type="number" id="setLiab" min="0" step="1" placeholder="0">
+      <button class="btn full" style="margin-top:10px" onclick="saveSettings()">儲存</button>
+      <button class="btn ghost full sm" style="margin-top:8px" onclick="autoBalance()">⚖ 自動帶入平衡值（依現有帳目反推上年度累計餘絀）</button>
+      <p class="muted" id="balPreview" style="margin-top:8px;font-size:11.5px"></p>
+    </div>
+    <div class="card">
+      <div class="card-title">準備金（§22）</div>
+      <p class="muted" style="margin-bottom:6px">應逐年提列足夠之準備金，金額由理事會訂定經大會議決；決算虧損者得不提列。</p>
+      <label>本年度提列準備金金額</label>
+      <input type="number" id="setReserve" min="0" step="1" placeholder="0">
+      <button class="btn ghost full sm" style="margin-top:8px" onclick="saveSettings()">儲存</button>
+    </div>
+    <div class="card">
+      <div class="card-title">財務處理辦法範本 <span class="law-pill" onclick="gotoLaw('第15條')">§15·§17</span></div>
+      <p class="muted" style="margin-bottom:8px">§15：工會應訂定財務處理辦法，經會員（代表）大會議決後實施（含財產登記、增置、增減值、處分、負擔及保管運用程序）。§17·§18：應訂普通會計、出納會計、財物會計處理程序。下方依本準則產生草稿，供理事會修訂、提大會議決。</p>
+      <button class="btn full" onclick="genRules()">📄 產生「財務處理辦法」草稿（可列印）</button>
+    </div>
+    <div class="card">
+      <div class="card-title">備份 / 交接 / 給會計師</div>
+      <p class="muted" style="margin-bottom:8px">資料只在本機。請定期匯出備份；換手交接、送監事或會計師查核時匯出 JSON。</p>
+      <button class="btn full" onclick="exportJSON()">⬇ 匯出全部資料（JSON 備份）</button>
+      <label style="margin-top:10px">⬆ 匯入備份（會覆蓋現有資料）</label>
+      <input type="file" id="importFile" accept=".json" onchange="importJSON(event)">
+    </div>
+    <div class="card">
+      <div class="card-title">變更密碼</div>
+      <input type="password" id="newPw" placeholder="新密碼">
+      <button class="btn ghost full sm" style="margin-top:8px" onclick="changePw()">更新密碼</button>
+      <p class="muted" style="margin-top:6px;font-size:11px">輕量鎖：防同事誤入，非銀行級。最高保護＝不外流網址、定期匯出備份。</p>
+    </div>
+    <div class="card">
+      <button class="btn red full" onclick="wipe()">⚠ 清空本機所有帳目</button>
+    </div>
+  </section>
+
+  <p class="footer-note"><span id="ftOrg">高榮企業工會</span> · 工會透明帳本<br>法源：工會財務處理準則（pcode N0020014，工會法第30條第2項授權）<br>真實財務數字僅存本機瀏覽器，不上傳、不進公開原始碼庫。</p>
+</main>
+
+<script src="finance-law.js"></script>
+<script>
+/* ===================== 會計科目（附表 §7，5大類）===================== */
+const ACCOUNTS = {
+  in: [ // 收入類
+    "會費收入","捐贈收入","撥入經費","補助款收入","會員代辦收入",
+    "代辦收入","孳息收入","服務收入","銷售收入","其他收入"
+  ],
+  out: [ // 支出類
+    "人事費","辦公費","事業費","雜項購置","特別費","退休撫恤費","預備金","其他支出"
+  ]
+};
+// §21：事業費＋辦公費 須 ≥ 總支出 40%
+const CORE_OUT = ["事業費","辦公費"];
+// 財產科目（附表：固定資產＋基金及投資＋其他資產 §14）
+const ACCOUNTS_ASSET = ["土地","房屋及建築","運輸設備","辦公設備","其他設備","基金","長期投資","存出保證金","遞延費用","其他資產"];
+// §16 不動產相關、§14 投資相關 → 需大會議決
+const REALTY_CATS = ["土地","房屋及建築"];
+const INVEST_CATS = ["基金","長期投資"];
+
+const PW_KEY="union_fin_pw", SES="union_fin_session";
+const DEFAULT_PW="union2026";
+const DB_KEY="union_fin_db";
+let DB = load();
+let curType="out";
+
+function normalize(d){ // 補齊缺漏欄位，避免舊備份/部分資料造成崩潰或資料被丟棄
+  d=d&&typeof d==='object'?d:{};
+  d.entries=Array.isArray(d.entries)?d.entries:[];
+  d.assets=Array.isArray(d.assets)?d.assets:[];
+  d.budget=(d.budget&&typeof d.budget==='object')?d.budget:{income:{},expense:{},note:''};
+  d.budget.income=d.budget.income||{}; d.budget.expense=d.budget.expense||{};
+  d.published=(d.published&&typeof d.published==='object')?d.published:{};
+  d.year=d.year||new Date().getFullYear();
+  const s=d.settings=(d.settings&&typeof d.settings==='object')?d.settings:{};
+  const def={orgName:'高榮企業工會',secretary:false,supBoard:false,invest:false,opening:0,pettyCap:100000,reserve:0,priorCum:0,liab:0,prep:true};
+  for(const k in def) if(s[k]==null) s[k]=def[k];
+  return d;
+}
+function load(){
+  try{ const d=JSON.parse(localStorage.getItem(DB_KEY)); if(d&&d.entries) return normalize(d); }catch(e){}
+  return normalize({});
+}
+function save(){ try{ localStorage.setItem(DB_KEY, JSON.stringify(DB)); }catch(e){ alert('⚠ 儲存失敗：本機儲存空間可能已滿。請到「設定 → 匯出全部資料」備份後再清理舊資料。'); } }
+function fmt(n){ return "$"+(Math.round(n)||0).toLocaleString('en-US'); }
+function esc(s){ return (s==null?'':''+s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+function sid(x){ return String(x==null?'':x).replace(/[^A-Za-z0-9_-]/g,''); }            // 安全 id（防 onclick 注入）
+function safeImg(u){ return (typeof u==='string' && /^data:image\//.test(u))? u : ''; }   // 只允許 data:image 影像
+async function sha256(str){ try{ if(!(crypto&&crypto.subtle))return null; const buf=new TextEncoder().encode(str); const h=await crypto.subtle.digest('SHA-256',buf); return [...new Uint8Array(h)].map(b=>b.toString(16).padStart(2,'0')).join(''); }catch(e){ return null; } }
+
+/* ===================== 單據快拍 IndexedDB（與 receipt.html 共用 unionFin/receipts）===================== */
+const IDB={db:null,
+  open(){return new Promise((res,rej)=>{const r=indexedDB.open('unionFin',1);r.onupgradeneeded=e=>{const d=e.target.result;if(!d.objectStoreNames.contains('receipts'))d.createObjectStore('receipts',{keyPath:'id'});};r.onsuccess=e=>{this.db=e.target.result;res(this.db);};r.onerror=e=>rej(e);});},
+  async st(mode){if(!this.db)await this.open();return this.db.transaction('receipts',mode).objectStore('receipts');},
+  async put(o){const s=await this.st('readwrite');return new Promise((res,rej)=>{const r=s.put(o);r.onsuccess=()=>res();r.onerror=()=>rej(r.error);});},
+  async get(id){const s=await this.st('readonly');return new Promise(res=>{const r=s.get(id);r.onsuccess=()=>res(r.result);r.onerror=()=>res(null);});},
+  async all(){const s=await this.st('readonly');return new Promise(res=>{const r=s.getAll();r.onsuccess=()=>res(r.result||[]);r.onerror=()=>res([]);});}
+};
+async function renderReceipts(){
+  let all=[]; try{ all=await IDB.all(); }catch(e){ all=[]; }
+  const pending=all.filter(r=>!r.imported);
+  const card=document.getElementById('rcptCard'), empty=document.getElementById('rcptEmpty');
+  if(!pending.length){ card.style.display='none'; empty.style.display='block'; return; }
+  card.style.display='block'; empty.style.display='none';
+  document.getElementById('rcptPending').innerHTML=pending.sort((a,b)=>b.created-a.created).map(r=>
+    `<div class="entry"><div class="e-amt out">−${fmt(r.amt).slice(1)}</div><div class="e-body"><div class="e-sum">${esc(r.sum||r.cat)} ${r.img?'📎':''}</div><div class="e-meta"><span class="e-tag">${esc(r.cat)}</span>${r.cash?'<span class="e-tag cash">現金</span>':''}${r.gov?'<span class="e-tag gov">政府補助</span>':''}${esc(r.date)}　${esc(r.handler||'')}</div></div><button class="e-del no-print" onclick="ingestOne('${sid(r.id)}')" style="color:var(--green);font-size:13px">收進↓</button></div>`
+  ).join('');
+}
+async function ingestOne(id){
+  const r=await IDB.get(id); if(!r)return;
+  DB.entries.push({id:Date.now()+''+Math.floor(Math.random()*1000),date:r.date,type:'out',cat:r.cat,amt:r.amt,sum:r.sum||r.cat,vno:r.vno||'',handler:r.handler||'',reviewer:'',cash:!!r.cash,gov:!!r.gov,seal:false,rcptId:r.id});
+  save(); r.imported=true; await IDB.put(r);
+  renderEntries(); refreshKPI(); renderReceipts();
+}
+async function ingestAll(){
+  let all=[]; try{ all=await IDB.all(); }catch(e){}
+  const pending=all.filter(r=>!r.imported);
+  if(!pending.length){alert('沒有待收單據');return;}
+  if(!confirm('將把 '+pending.length+' 筆單據收進帳本（建立支出明細）？')) return;
+  for(const r of pending){
+    DB.entries.push({id:Date.now()+''+Math.floor(Math.random()*1000)+r.id,date:r.date,type:'out',cat:r.cat,amt:r.amt,sum:r.sum||r.cat,vno:r.vno||'',handler:r.handler||'',reviewer:'',cash:!!r.cash,gov:!!r.gov,seal:false,rcptId:r.id});
+    r.imported=true; await IDB.put(r);
+  }
+  save(); renderEntries(); refreshKPI(); renderReceipts();
+  alert('已收進 '+pending.length+' 筆。照片留存為原始憑證（§10·§27）。');
+}
+function importBundle(ev){
+  const f=ev.target.files[0]; if(!f)return;
+  const rd=new FileReader();
+  rd.onload=async()=>{ try{
+    const d=JSON.parse(rd.result);
+    const list=d.receipts||d; if(!Array.isArray(list))throw 0;
+    let n=0,skip=0;
+    for(const r of list){
+      if(!r||r.id==null){skip++;continue;}
+      r.id=sid(r.id);
+      const amt=Math.round(+r.amt);
+      if(!isFinite(amt)||amt<=0){skip++;continue;}              // §5：金額須為正整數，過濾異常
+      r.amt=amt;
+      if(r.img&&!/^data:image\//.test(r.img)) r.img=null;        // 丟棄非影像（防注入）
+      const ex=await IDB.get(r.id);
+      r.imported=(ex&&ex.imported)?true:false;                  // 已收過者保持，避免重複收進雙計
+      await IDB.put(r); n++;
+    }
+    renderReceipts(); alert('已匯入 '+n+' 筆單據'+(skip?('（略過 '+skip+' 筆異常）'):'')+'，請於上方「收進帳本」。');
+  }catch(e){ alert('單據檔格式不正確'); } finally{ ev.target.value=''; } };
+  rd.readAsText(f);
+}
+async function viewReceipt(rcptId){
+  const r=await IDB.get(rcptId);
+  if(!r){alert('找不到此單據影像（可能在另一台裝置）。');return;}
+  const w=window.open('','_blank');
+  const im=safeImg(r.img);
+  const html=`<!DOCTYPE html><meta charset=utf-8><title>單據 ${esc(r.date)}</title><body style="margin:0;background:#222;text-align:center;font-family:sans-serif"><div style="color:#ccc;padding:8px;font-size:13px">${esc(r.sum||r.cat)} · ${fmt(r.amt)} · ${esc(r.date)} · 憑證保存至 ${(+(''+(r.date||'2026')).slice(0,4))+5} 年（§27）${r.hash?'<br>數位指紋 '+esc((''+r.hash).slice(0,32))+'…':''}</div>${im?`<img src="${im}" style="max-width:100%">`:'<p style="color:#ccc">（此單據無照片）</p>'}</body>`;
+  if(w){w.document.write(html);w.document.close();}
+}
+async function verifyReceipt(rcptId){
+  const r=await IDB.get(rcptId);
+  if(!r||!r.img||!r.hash){alert('此單據無照片或指紋可驗。');return;}
+  const h=await sha256(r.img);
+  if(h===null){alert('此瀏覽器無法計算指紋（需 https 環境）。');return;}
+  alert(h===r.hash ? '✅ 驗證通過：此單據自拍攝後未被更動（指紋一致）。' : '⛔ 警告：指紋不一致，照片可能已被更動！\n\n現在：'+h.slice(0,24)+'…\n原始：'+r.hash.slice(0,24)+'…');
+}
+/* ② 季度單據合併 PDF（§27 存檔） */
+async function genReceiptPDF(q){
+  let all=[]; try{ all=await IDB.all(); }catch(e){}
+  const Y=DB.year;
+  const list=all.filter(r=>(r.date||'').slice(0,4)==''+Y && (!q || Math.ceil((+((r.date||'').slice(5,7))||1)/3)===q))
+                .sort((a,b)=>(a.date||'').localeCompare(b.date||''));
+  if(!list.length){ alert(q?('第'+q+'季沒有單據'):'本年度沒有單據'); return; }
+  const tot=list.reduce((a,r)=>a+r.amt,0);
+  const title=`${roc(Y)}年度${q?'第 '+q+' 季':'全年'}單據存檔`;
+  let cover=`<tr class="t"><td>日期</td><td>用途</td><td>科目</td><td class="n">金額</td><td>付款</td></tr>`;
+  list.forEach((r,i)=>{ cover+=`<tr><td>${r.date}</td><td>${esc(r.sum||'')}</td><td>${esc(r.cat)}</td><td class="n">${fmt(r.amt)}</td><td>${r.cash?'現金':'轉帳'}${r.gov?'/補助':''}</td></tr>`; });
+  cover+=`<tr class="t"><td colspan="3">合計（${list.length} 筆）</td><td class="n">${fmt(tot)}</td><td></td></tr>`;
+  // 數位指紋清單（供核對/簽名；SHA-256，純本機計算）
+  let fp=`<tr class="t"><td>#</td><td>日期</td><td>用途</td><td>數位指紋（SHA-256）</td></tr>`;
+  list.forEach((r,i)=>{ fp+=`<tr><td>${i+1}</td><td>${r.date}</td><td>${esc(r.sum||r.cat)}</td><td style="font-family:monospace;font-size:10px;word-break:break-all">${r.hash?esc(r.hash):'（無照片，無指紋）'}</td></tr>`; });
+  const pages=list.map((r,i)=>`<div class="r"><div class="cap"><b>單據 ${i+1} / ${list.length}</b>　${r.date}　${esc(r.sum||r.cat)}　${fmt(r.amt)}　${r.cat}　${r.cash?'現金':'轉帳'}${r.gov?'（政府補助）':''}${r.shotAt?'　｜拍攝 '+esc(r.shotAt.slice(0,16).replace('T',' ')):''}${r.geo?'　GPS '+r.geo.lat.toFixed(4)+','+r.geo.lng.toFixed(4):''}　｜保存至 ${(+(''+(r.date||'2026')).slice(0,4))+5} 年（§27）${r.hash?'<br>數位指紋 '+esc(r.hash):''}</div>${safeImg(r.img)?`<img src="${safeImg(r.img)}">`:'<p style="color:#999">（此單據無照片，僅有帳載資料）</p>'}</div>`).join('');
+  const html=`<!DOCTYPE html><html lang="zh-TW"><head><meta charset="utf-8"><title>${esc(org()+' '+title)}</title>
+<style>@page{size:A4;margin:1.4cm}*{box-sizing:border-box}body{font-family:'Noto Sans TC',sans-serif;color:#1a1a1a;margin:0}
+h1{text-align:center;font-size:18px;font-family:'Noto Serif TC',serif;margin:.2rem 0}.sub{text-align:center;color:#555;font-size:12px;margin-bottom:12px}
+table{width:100%;border-collapse:collapse;font-size:12.5px}th,td{border:1px solid #bbb;padding:.35rem .5rem;text-align:left}td.n{text-align:right;font-variant-numeric:tabular-nums}tr.t td{font-weight:700;background:#f3f8f5}
+.r{page-break-before:always;text-align:center}.r img{max-width:100%;max-height:23cm;border:1px solid #ccc;margin-top:6px}
+.cap{font-size:12px;text-align:left;background:#f3f8f5;border:1px solid #cfe3d6;border-radius:6px;padding:.4rem .6rem;line-height:1.6}
+.hint{background:#FEF9E7;border:1px solid #EAD67A;color:#5C4000;border-radius:8px;padding:.5rem .7rem;font-size:12px;margin-bottom:10px}
+@media print{.hint{display:none}}
+.note{color:#777;font-size:11px;margin-top:10px}</style></head><body>
+<div class="hint">🖨 請選「另存為 PDF / 儲存成 PDF」，紙張 A4。這份檔案把本季每張單據各放一頁，封面是清單，方便存查與交主管機關。<button onclick="window.print()" style="margin-left:6px;background:#1A7A4A;color:#fff;border:none;border-radius:6px;padding:.3rem .7rem">立即存 PDF</button></div>
+<h1>${esc(org())} ${esc(title)}</h1>
+<div class="sub">依工會財務處理準則 §27（憑證至少保存5年）彙整 · 共 ${list.length} 筆 · 合計 ${fmt(tot)}</div>
+<table>${cover}</table>
+<h2 style="font-size:14px;margin:14px 0 4px;border-left:4px solid #1A7A4A;padding-left:8px">數位指紋清單（防竄改存證）</h2>
+<p class="note" style="margin-top:0">每張照片以 SHA-256 算出唯一指紋；日後重算比對即可證明照片未被更動。建議本頁由理事長、監事簽名／用印（§20·§28），使指紋之存在時間有所佐證。</p>
+<table>${fp}</table>
+<div style="display:flex;gap:2rem;margin-top:1.5rem;font-size:12px"><div style="flex:1;border-top:1px solid #999;padding-top:6px;text-align:center">理事長（簽章）</div><div style="flex:1;border-top:1px solid #999;padding-top:6px;text-align:center">${DB.settings.supBoard?'監事會':'監事'}（簽章）</div><div style="flex:1;border-top:1px solid #999;padding-top:6px;text-align:center">日期</div></div>
+<p class="note">※ 每張單據照片含拍攝時間／GPS 浮水印存證。本檔為單據影像彙編，正式決算另見決算書。pcode N0020014。</p>
+${pages}
+</body></html>`;
+  openDoc(html,`${org()}_${Y}_${q?('Q'+q):'全年'}_單據存檔.html`);
+}
+
+/* ===================== 進場鎖 ===================== */
+function pwHash(s){ let h=0; for(let i=0;i<s.length;i++){h=(h*31+s.charCodeAt(i))>>>0;} return ''+h; }
+function curPwHash(){ return localStorage.getItem(PW_KEY) || pwHash(DEFAULT_PW); }
+function tryUnlock(){
+  const v=document.getElementById('pw').value;
+  if(pwHash(v)===curPwHash()){ sessionStorage.setItem(SES,'1'); document.getElementById('lock').style.display='none'; }
+  else document.getElementById('pwErr').style.display='block';
+}
+function changePw(){ const v=document.getElementById('newPw').value.trim(); if(v.length<4){alert('密碼至少4字');return;} localStorage.setItem(PW_KEY,pwHash(v)); document.getElementById('newPw').value=''; alert('已更新密碼'); }
+if(sessionStorage.getItem(SES)) document.getElementById('lock').style.display='none';
+document.getElementById('pw').addEventListener('keydown',e=>{if(e.key==='Enter')tryUnlock();});
+
+/* ===================== Tabs ===================== */
+document.getElementById('tabs').addEventListener('click',e=>{
+  const b=e.target.closest('.tab'); if(!b) return;
+  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+  document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
+  b.classList.add('active');
+  document.getElementById('p-'+b.dataset.p).classList.add('active');
+  if(b.dataset.p==='report') renderReports();
+  if(b.dataset.p==='public') renderPublic();
+  if(b.dataset.p==='audit') renderAudit();
+  if(b.dataset.p==='journal') renderJournal();
+  if(b.dataset.p==='budget') renderBudget();
+  if(b.dataset.p==='asset') renderAssets();
+  if(b.dataset.p==='book') renderReceipts();
+  if(b.dataset.p==='home') renderHome();
+  if(b.dataset.p==='tax') renderTax();
+  window.scrollTo(0,0);
+});
+function gotoLaw(art){ document.querySelector('.tab[data-p="law"]').click(); const el=document.getElementById('law-'+art); if(el){el.open=true; el.scrollIntoView({behavior:'smooth',block:'center'});} }
+
+/* ===================== 工會名稱（可自行設定）===================== */
+function org(){ return (DB.settings.orgName||'').trim() || '本工會'; }
+function applyOrg(){
+  const n=org();
+  document.title = '工會透明帳本 — '+n;
+  ['hdrOrg','ftOrg','lockOrg'].forEach(id=>{ const el=document.getElementById(id); if(el) el.textContent=n; });
+}
+
+/* ===================== 籌備中模式 ===================== */
+function chair(){ return DB.settings.prep?'籌備會召集人':'理事長'; }
+function assembly(){ return DB.settings.prep?'發起人會議（成立大會）':'會員（代表）大會'; }
+function setPrep(p){ DB.settings.prep=p; save(); applyPrep(); renderHome(); }
+function applyPrep(){
+  const prep=!!DB.settings.prep;
+  const bn=document.getElementById('prepBanner'); if(bn) bn.style.display=prep?'block':'none';
+  const sp=document.getElementById('stPrep'), sd=document.getElementById('stDone');
+  if(sp&&sd){ sp.className=prep?'on-out':''; sd.className=prep?'':'on-in'; }
+}
+
+/* ===================== 總覽 / 待辦 ===================== */
+function goTab(p){ document.querySelector(`.tab[data-p="${p}"]`).click(); }
+function markPublished(qKey){ DB.published[qKey]=true; save(); renderHome(); }
+function renderHome(){
+  const Y=DB.year, now=new Date();
+  let i=0,o=0; yearEntries().forEach(e=>{ if(e.type==='in')i+=e.amt; else o+=e.amt; });
+  document.getElementById('hIn').textContent=fmt(i);
+  document.getElementById('hOut').textContent=fmt(o);
+  document.getElementById('hBal').textContent=fmt(i-o);
+  const todos=[];
+  if(DB.settings.prep){
+    // —— 籌備中（工會法§11、施行細則§9）——
+    todos.push(['todo','工會法§11','<b>連署發起</b>：勞工 30 人以上連署，組成<b>籌備會</b>。','白話：先湊滿30位同單位勞工連署當發起人。',null,null]);
+    todos.push(['todo','工會法§11','辦理<b>公開徵求會員、擬定章程、召開成立大會</b>。','',null,null]);
+    todos.push(['todo','工會法§13','章程須經成立大會出席會員過半出席、出席2/3以上同意通過。','',null,null]);
+    todos.push(['todo','工會法§11·細則§9','成立大會後 <b>30 日內</b>，檢具章程、會員名冊、理事/監事名冊，向主管機關<b>請領登記證書</b>。','逾期或缺件不予登記（細則§9）。',null,null]);
+    todos.push(['warn','移交','<b>財務</b>：把籌備收支（發起人款、成立大會開銷、刻印章、文具）記清楚、留單據；成立後辦理結算移交給正式工會。','現在就用「記帳＋單據快拍」做起來。','去記帳','book']);
+    todos.push(['ok','成立後','正式成立後，到「設定」把狀態切「已成立」，預算/決算/公開/查核/報稅就會自動啟用，帳目延續。','',null,null]);
+  } else {
+  // 預算 §12
+  const hasBudget=Object.keys(DB.budget.income||{}).length||Object.keys(DB.budget.expense||{}).length;
+  todos.push(hasBudget
+    ? ['ok','§12',`${Y} 年度<b>預算</b>已編。`,'記得經會員（代表）大會通過、報主管機關備查。','去看預算','budget']
+    : ['todo','§12',`還沒編 ${Y} 年度<b>預算</b>（每年開始前要編好）。`,'白話：先估今年大概會收多少、花多少，送大會通過。','去編預算','budget']);
+  // 按季公開 §26（已結束且未公開的季）
+  const qEnd=[null,[2,31],[5,30],[8,30],[11,31]];
+  for(let q=1;q<=4;q++){
+    const ended = now > new Date(Y,qEnd[q][0],qEnd[q][1],23,59);
+    if(!ended) continue;
+    const key=Y+'Q'+q;
+    if(DB.published[key]) todos.push(['ok','§26',`第 ${q} 季財務<b>已公開</b>。`,'',null,null]);
+    else todos.push(['warn','§26',`第 ${q} 季已結束，要<b>公開揭示</b>財務給會員。`,'白話：把這季收支貼公布欄/群組讓大家看得到。','去公開→標記','pubq:'+key]);
+  }
+  // 決算 §13
+  todos.push(['todo','§13',`年底結帳：${Y} 年度<b>決算</b>要在 ${Y+1}/3/31 前編好。`,`白話：年度結束算總帳，送${DB.settings.supBoard?'監事會':'監事'}審核、大會通過後30日內報主管機關。`,'產生決算書','decal']);
+  // 報稅（所得稅法）
+  todos.push(['todo','所得稅法','<b>報稅</b>：確認免稅資格、要不要辦結算申報，發薪資/講師費記得<b>扣繳</b>。','白話：工會多半免稅，但有發錢給人就要扣稅、申報憑單；個案問國稅局。','看報稅提醒','tax']);
+  }
+  document.getElementById('todoList').innerHTML=todos.map(t=>{
+    const [lv,ref,txt,plain,btn,act]=t;
+    const ico=lv==='ok'?'✅':lv==='warn'?'🟡':'🟠';
+    const button = btn? `<button class="btn ghost sm no-print" style="margin-top:6px" onclick="homeAct('${act}')">${btn}</button>`:'';
+    return `<div class="alert ${lv==='ok'?'ok':lv==='warn'?'warn':'warn'}" style="flex-direction:column;align-items:stretch"><div style="display:flex;gap:8px"><span class="ico">${ico}</span><div>${txt}<span class="ref">依 ${ref}${plain?'　·　'+plain:''}</span></div></div>${button}</div>`;
+  }).join('');
+  // 健檢
+  if(DB.settings.prep){
+    document.getElementById('healthList').innerHTML='<div class="alert ok"><span class="ico">🏗</span><div>籌備期：財務健檢（§21 事業費比例、§22 準備金、§23 結餘）於工會<b>成立後</b>啟用。現階段重點＝收支記清楚、單據留底。</div></div>';
+    return;
+  }
+  const outM=sumByCat('out'); const totOut=o;
+  const core=(outM['事業費']||0)+(outM['辦公費']||0); const ratio=totOut?core/totOut*100:0;
+  const h=[];
+  h.push(totOut===0?['ok','還沒有支出。','§21']
+    : [ratio>=40?'ok':'bad',`事業費＋辦公費佔總支出 ${ratio.toFixed(0)}%（法律要求至少40%）。${ratio>=40?'OK！':'偏低，錢要多用在會務/活動上。'}`,'§21']);
+  h.push((i-o)>0 ? [DB.settings.reserve>0?'ok':'warn', DB.settings.reserve>0?`今年有提存準備金 ${fmt(DB.settings.reserve)}。`:'今年有結餘，建議提一點「準備金」存著（到設定填）。','§22'] : ['ok','今年沒有結餘，準備金可不提。','§22']);
+  h.push(['ok','歷年結餘只能留作以後年度用，<b>不可以分給個人</b>。','§23']);
+  document.getElementById('healthList').innerHTML=h.map(([lv,txt,ref])=>`<div class="alert ${lv==='bad'?'bad':lv==='warn'?'warn':'ok'}"><span class="ico">${lv==='bad'?'⛔':lv==='warn'?'🟡':'✅'}</span><div>${txt}<span class="ref">依 ${ref}</span></div></div>`).join('');
+}
+function homeAct(act){
+  if(act==='budget') goTab('budget');
+  else if(act==='tax') goTab('tax');
+  else if(act==='decal'){ goTab('report'); setTimeout(()=>genDecal(),300); }
+  else if(act&&act.startsWith('pubq:')){ const key=act.slice(5); goTab('public'); if(confirm('要把這一季標記為「已公開」嗎？（請先確認真的已公告給會員）')) markPublished(key); }
+}
+
+/* ===================== 記帳 ===================== */
+function setType(t){
+  curType=t;
+  document.getElementById('segIn').className = t==='in'?'on-in':'';
+  document.getElementById('segOut').className = t==='out'?'on-out':'';
+  const sel=document.getElementById('fCat'); sel.innerHTML='';
+  ACCOUNTS[t].forEach(a=>{ const o=document.createElement('option'); o.value=a; o.textContent=a; sel.appendChild(o); });
+  document.getElementById('fSealWrap').style.display = t==='out'?'flex':'none';
+  liveCheck();
+}
+document.addEventListener('input',e=>{ if(['fAmt','fCash','fCat','fSeal'].includes(e.target.id)) liveCheck(); });
+
+function pettyBalance(){ // 現存零用金 = 現金收入 - 現金支出（粗估，提醒用）
+  let bal=0; DB.entries.forEach(e=>{ if(e.cash){ bal += e.type==='in'? e.amt : -e.amt; } });
+  return bal;
+}
+function liveCheck(){
+  const box=document.getElementById('formAlerts'); box.innerHTML='';
+  const amt=+document.getElementById('fAmt').value||0;
+  const cash=document.getElementById('fCash').checked;
+  const out=[];
+  if(amt && !Number.isInteger(amt)) out.push(['bad','§5','金額須為新臺幣整數元。']);
+  if(curType==='out' && cash && amt>10000) out.push(['bad','§19','以現金（零用金）支付者，單筆不得超過 1 萬元；本筆 '+fmt(amt)+' 請改用存款支付。']);
+  if(curType==='out' && cash){
+    const cap=DB.settings.pettyCap||100000;
+    if(pettyBalance()-amt < -cap) out.push(['warn','§19','零用金額度上限 '+fmt(cap)+'（不得超過 10 萬）。']);
+  }
+  if(curType==='out' && !cash && amt>0) out.push(['warn','§20','提用存款支出：須由'+chair()+'、'+(DB.settings.secretary?'秘書長':'相關職務人員')+'及會計出納人員於領款憑證上共同蓋章，並承擔用印法律責任。']);
+  if(curType==='out' && document.getElementById('fCat').value==='其他支出' && amt>0) out.push(['warn','§7','「其他支出」僅限不屬前七項者；可歸入事業費/辦公費請改選，以利 §21 比例。']);
+  renderAlerts(box,out);
+}
+function renderAlerts(box,arr){
+  box.innerHTML = arr.map(([lv,ref,txt])=>`<div class="alert ${lv}"><span class="ico">${lv==='bad'?'⛔':lv==='warn'?'⚠️':'✅'}</span><div>${esc(txt)}<span class="ref">依 工會財務處理準則 ${ref}</span></div></div>`).join('');
+}
+function addEntry(){
+  const date=document.getElementById('fDate').value;
+  const amt=+document.getElementById('fAmt').value||0;
+  const sum=document.getElementById('fSum').value.trim();
+  if(!date){alert('請選日期');return;}
+  if(!amt||amt<=0){alert('請輸入金額');return;}
+  if(!Number.isInteger(amt)){alert('金額須為整數元（§5）');return;}
+  const cash=document.getElementById('fCash').checked;
+  if(curType==='out'&&cash&&amt>10000){alert('§19：現金（零用金）單筆不得超過1萬元');return;}
+  DB.entries.push({
+    id:Date.now()+''+Math.floor(Math.random()*1000),
+    date, type:curType, cat:document.getElementById('fCat').value,
+    amt, sum, vno:document.getElementById('fVno').value.trim(),
+    handler:document.getElementById('fHandler').value.trim(),
+    reviewer:document.getElementById('fReviewer').value.trim(),
+    cash, gov:document.getElementById('fGov').checked,
+    seal:document.getElementById('fSeal')?.checked||false
+  });
+  save();
+  ['fSum','fAmt','fVno'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('fCash').checked=false; document.getElementById('fGov').checked=false;
+  if(document.getElementById('fSeal')) document.getElementById('fSeal').checked=false;
+  document.getElementById('formAlerts').innerHTML='';
+  renderEntries(); refreshKPI();
+}
+function delEntry(id){ if(!confirm('刪除這筆？（留痕原則建議改用沖正分錄；確需刪除請自負查核責任）')) return; DB.entries=DB.entries.filter(e=>e.id!==id); save(); renderEntries(); refreshKPI(); }
+function quarterOf(dateStr){ const m=+dateStr.slice(5,7); return Math.ceil(m/3); }
+function yearEntries(){ return DB.entries.filter(e=>e.date.slice(0,4)==''+DB.year); }
+function renderEntries(){
+  const q=+document.getElementById('filterQ').value;
+  let list=yearEntries().sort((a,b)=>b.date.localeCompare(a.date)||b.id.localeCompare(a.id));
+  if(q) list=list.filter(e=>quarterOf(e.date)===q);
+  const box=document.getElementById('entryList');
+  if(!list.length){ box.innerHTML='<p class="muted">尚無紀錄。</p>'; return; }
+  box.innerHTML=list.map(e=>{
+    const retY=(+e.date.slice(0,4))+5; // 憑證至少保存5年（§27）
+    return `<div class="entry">
+      <div class="e-amt ${e.type}">${e.type==='in'?'+':'−'}${fmt(e.amt).slice(1)}</div>
+      <div class="e-body">
+        <div class="e-sum">${esc(e.sum||e.cat)}${e.rcptId?` <span class="e-tag cash" style="cursor:pointer" onclick="viewReceipt('${sid(e.rcptId)}')">📎 單據</span> <span class="e-tag" style="cursor:pointer" onclick="verifyReceipt('${sid(e.rcptId)}')">🔒 驗證</span>`:''}</div>
+        <div class="e-meta">
+          <span class="e-tag">${esc(e.cat)}</span>
+          ${e.cash?'<span class="e-tag cash">零用金</span>':''}
+          ${e.gov?'<span class="e-tag gov">政府補助</span>':''}
+          ${e.date}　${e.vno?'憑證'+esc(e.vno)+'　':''}${e.handler?'經辦'+esc(e.handler)+'　':''}${e.reviewer?'審核'+esc(e.reviewer):''}
+          <br>憑證保存至 ${retY} 年（§27 至少5年）
+        </div>
+      </div>
+      <button class="e-del no-print" onclick="delEntry('${sid(e.id)}')">✕</button>
+    </div>`;
+  }).join('');
+}
+function refreshKPI(){
+  let i=0,o=0; yearEntries().forEach(e=>{ if(e.type==='in')i+=e.amt; else o+=e.amt; });
+  document.getElementById('kIn').textContent=fmt(i);
+  document.getElementById('kOut').textContent=fmt(o);
+  document.getElementById('kBal').textContent=fmt(i-o);
+}
+
+/* ===================== 報表 ===================== */
+function sumByCat(type){ const m={}; yearEntries().filter(e=>e.type===type).forEach(e=>{m[e.cat]=(m[e.cat]||0)+e.amt;}); return m; }
+function renderReports(){
+  const inM=sumByCat('in'), outM=sumByCat('out');
+  const totIn=Object.values(inM).reduce((a,b)=>a+b,0);
+  const totOut=Object.values(outM).reduce((a,b)=>a+b,0);
+  // 收支餘絀表
+  let rows='';
+  rows+=`<tr class="sub"><td>收入</td><td class="num">金額</td></tr>`;
+  ACCOUNTS.in.forEach(c=>{ if(inM[c]) rows+=`<tr><td>　${c}</td><td class="num">${fmt(inM[c])}</td></tr>`; });
+  rows+=`<tr class="tot"><td>收入合計</td><td class="num">${fmt(totIn)}</td></tr>`;
+  rows+=`<tr class="sub"><td>支出</td><td class="num"></td></tr>`;
+  ACCOUNTS.out.forEach(c=>{ if(outM[c]) rows+=`<tr><td>　${c}</td><td class="num">${fmt(outM[c])}</td></tr>`; });
+  rows+=`<tr class="tot"><td>支出合計</td><td class="num">${fmt(totOut)}</td></tr>`;
+  rows+=`<tr class="tot"><td>本期餘絀</td><td class="num" style="color:${totIn-totOut>=0?'var(--green-deep)':'var(--red)'}">${fmt(totIn-totOut)}</td></tr>`;
+  document.getElementById('repIncome').innerHTML=
+    `<div class="card-title">收支餘絀表 <span class="law-pill" onclick="gotoLaw('第6條')">§6</span></div>
+     <p class="muted">${DB.year} 年度（曆年制 §3）·新臺幣元 §5</p>
+     <table>${rows}</table>
+     <p class="muted" style="margin-top:8px">期初現金＋存款 ${fmt(DB.settings.opening)} ＋本期餘絀 ${fmt(totIn-totOut)} ＝ 期末約 ${fmt((DB.settings.opening||0)+totIn-totOut)}（簡式現金基礎 §4）。</p>`;
+  renderCompliance(totIn,totOut,outM);
+  // 預算/決算框架
+  const dueDecal = DB.year+1;
+  document.getElementById('repBudget').innerHTML=
+    `<div class="card-title">預算與決算時程 <span class="law-pill" onclick="gotoLaw('第12條')">§12·§13</span></div>
+     <div class="alert ok"><span class="ico">📅</span><div><b>預算（§12）</b>：年度開始前由理事會編「年度工作計畫及收支預算表」，經會員（代表）大會議決後報主管機關備查。</div></div>
+     <div class="alert ok"><span class="ico">📅</span><div><b>決算（§13）</b>：${DB.year} 年度結束後 <b>3個月內</b>（即 ${dueDecal} 年 3/31 前）理事會編業務報告書、決算書(表)→ ${DB.settings.supBoard?'監事會決議造具審核意見書送理事會':'監事審核'} → 大會議決後 <b>30日內</b>報主管機關備查。</div></div>`;
+}
+function renderCompliance(totIn,totOut,outM){
+  const arr=[];
+  // §21 事業費+辦公費 ≥ 40%
+  const core=CORE_OUT.reduce((a,c)=>a+(outM[c]||0),0);
+  const ratio=totOut? core/totOut*100 : 0;
+  if(totOut>0) arr.push([ratio>=40?'ok':'bad','§21',`事業費＋辦公費 ＝ ${fmt(core)}，占總支出 ${ratio.toFixed(1)}%（規定：不得少於 40%）。${ratio>=40?'符合。':'未達標，請檢視支出結構。'}`]);
+  // §8 簿籍
+  arr.push([totIn<=3000000?'ok':'warn','§8', totIn<=3000000?`年度收入 ${fmt(totIn)} ≤ 300萬，得僅置日記簿乙種（有財產購置/處分另置財產登記簿）。`:`年度收入 ${fmt(totIn)} > 300萬，應置日記簿、總分類帳、明細分類帳、財產登記簿等。`]);
+  // §13 簽證
+  if(totIn>=30000000 && DB.settings.invest) arr.push(['warn','§13','決算金額 ≥ 3000萬且有投資事業，<b>應委請會計師簽證</b>。']);
+  // §23 結餘
+  arr.push(['ok','§23','歷年決算結餘應作以後年度支出財源，<b>不得做結餘之分配</b>。']);
+  // §22 準備金
+  if(totIn-totOut>0) arr.push([DB.settings.reserve>0?'ok':'warn','§22', DB.settings.reserve>0?`本年度已提列準備金 ${fmt(DB.settings.reserve)}。`:`本年度有結餘，宜逐年提列足夠準備金（金額由理事會訂定經大會議決）；於「設定」填寫。`]);
+  document.getElementById('repCompliance').innerHTML=`<div class="card-title">法遵檢核 <span class="law-pill" onclick="gotoLaw('第21條')">即時</span></div>`+
+    arr.map(([lv,ref,txt])=>`<div class="alert ${lv}"><span class="ico">${lv==='bad'?'⛔':lv==='warn'?'⚠️':'✅'}</span><div>${txt}<span class="ref">依 ${ref}</span></div></div>`).join('');
+}
+
+/* ===================== 公開查詢（會員/政府）§26 ===================== */
+function renderPublic(){
+  const inM=sumByCat('in'),outM=sumByCat('out');
+  const totIn=Object.values(inM).reduce((a,b)=>a+b,0), totOut=Object.values(outM).reduce((a,b)=>a+b,0);
+  const gov=yearEntries().filter(e=>e.gov);
+  const govIn=gov.filter(e=>e.type==='in').reduce((a,e)=>a+e.amt,0);
+  document.getElementById('pubSummary').innerHTML=
+    `<div class="card-title">${DB.year} 年度財務公開 <span class="law-pill" onclick="gotoLaw('第26條')">§26 按季公開</span></div>
+     <table>
+       <tr><td>收入合計</td><td class="num">${fmt(totIn)}</td></tr>
+       <tr><td>支出合計</td><td class="num">${fmt(totOut)}</td></tr>
+       <tr class="tot"><td>本期餘絀</td><td class="num">${fmt(totIn-totOut)}</td></tr>
+       <tr><td>其中政府補助收入 §30⑧</td><td class="num">${fmt(govIn)}</td></tr>
+       <tr><td>累計準備金 §22</td><td class="num">${fmt(DB.settings.reserve)}</td></tr>
+     </table>
+     <p class="muted" style="margin-top:8px">本表不含個人敏感資料，供會員及主管機關查詢。完整憑證與帳簿依 §27 留存備查。</p>`;
+  // 按季
+  let qr='<tr class="sub"><td>季別</td><td class="num">收入</td><td class="num">支出</td><td class="num">餘絀</td></tr>';
+  for(let q=1;q<=4;q++){
+    const es=yearEntries().filter(e=>quarterOf(e.date)===q);
+    const qi=es.filter(e=>e.type==='in').reduce((a,e)=>a+e.amt,0);
+    const qo=es.filter(e=>e.type==='out').reduce((a,e)=>a+e.amt,0);
+    qr+=`<tr><td>第${q}季</td><td class="num">${fmt(qi)}</td><td class="num">${fmt(qo)}</td><td class="num">${fmt(qi-qo)}</td></tr>`;
+  }
+  document.getElementById('pubQuarter').innerHTML=`<div class="card-title">按季揭示 <span class="law-pill" onclick="gotoLaw('第26條')">§26</span></div><table>${qr}</table>`;
+}
+
+/* ===================== 查核就緒 §28-30 ===================== */
+function renderAudit(){
+  const scope=[
+    ['會計憑證','收入/支出/轉帳憑證＋原始憑證（§9·§10·§11）','本機明細含憑證號、經辦/審核人。'],
+    ['會計帳簿','日記簿（§8）','「記帳」分頁即日記簿；可匯出 CSV。'],
+    ['會計報告','§6 五表','「法定報表」分頁產生收支餘絀表等。'],
+    ['預算、決算','§12·§13','時程與審核流程於報表分頁列示。'],
+    ['財產保管','§14·§19','財物以工會名義登記、不得挪私用。'],
+    ['資產負債及淨值評核','§6·§7','依附表科目分類。'],
+    ['會員申訴財務事項','§28·工會法§29','會員/會員代表得查核。'],
+    ['政府補助經費','§27·§30⑧','標記「政府補助」者另依政府規定。'],
+    ['其他財務事項','§30⑨','—']
+  ];
+  document.getElementById('auditScope').innerHTML=
+    `<div class="card-title">查核範圍 9 項 <span class="law-pill" onclick="gotoLaw('第30條')">§30</span></div>`+
+    `<table><tr class="sub"><td>項目</td><td>依據 / 對照</td></tr>`+
+    scope.map(s=>`<tr><td>${s[0]}</td><td><b>${s[1]}</b><br><span class="muted">${s[2]}</span></td></tr>`).join('')+`</table>`+
+    `<div class="alert ok" style="margin-top:10px"><span class="ico">🔍</span><div>查核主體：${DB.settings.supBoard?'監事會':'監事'}辦定期及臨時查核（§28）；主管機關得委託專業團體（§29）。</div></div>`;
+  // 保存年限
+  const years={};
+  yearEntries(); DB.entries.forEach(e=>{ const y=+e.date.slice(0,4); years[y]=(years[y]||0)+1; });
+  const now=new Date().getFullYear();
+  let rt='<tr class="sub"><td>年度</td><td class="num">筆數</td><td>憑證存至(§27 ≥5年)</td><td>簿籍報告存至(≥10年)</td></tr>';
+  Object.keys(years).sort().forEach(y=>{ rt+=`<tr><td>${y}</td><td class="num">${years[y]}</td><td>${(+y)+5}${(+y)+5<now?' ⚠已可清理':''}</td><td>${(+y)+10}</td></tr>`; });
+  document.getElementById('auditRetention').innerHTML=
+    `<div class="card-title">檔案保存年限 <span class="law-pill" onclick="gotoLaw('第27條')">§27</span></div>`+
+    (Object.keys(years).length?`<table>${rt}</table>`:'<p class="muted">尚無紀錄。</p>')+
+    `<p class="muted" style="margin-top:8px">受政府補助者，應依政府相關規定辦理（§27）。留痕原則：避免直接刪除已了結紀錄。</p>`;
+}
+
+/* ===================== 日記簿（§8）===================== */
+function renderJournal(){
+  document.getElementById('jYear').textContent=DB.year;
+  const list=yearEntries().sort((a,b)=>a.date.localeCompare(b.date)||a.id.localeCompare(b.id));
+  let bal=DB.settings.opening||0;
+  let rows=`<tr class="sub"><td>日期</td><td>摘要</td><td>科目</td><td class="num">收入</td><td class="num">支出</td><td class="num">結存</td></tr>`;
+  rows+=`<tr><td>—</td><td>期初結存</td><td>§6</td><td class="num"></td><td class="num"></td><td class="num">${fmt(bal)}</td></tr>`;
+  let ti=0,to=0;
+  list.forEach(e=>{ bal+= e.type==='in'?e.amt:-e.amt; if(e.type==='in')ti+=e.amt; else to+=e.amt;
+    rows+=`<tr><td>${e.date.slice(5)}</td><td>${esc(e.sum||e.cat)}${e.vno?'<br><span class="muted">憑'+esc(e.vno)+'</span>':''}</td><td>${esc(e.cat)}</td><td class="num">${e.type==='in'?fmt(e.amt):''}</td><td class="num">${e.type==='out'?fmt(e.amt):''}</td><td class="num">${fmt(bal)}</td></tr>`; });
+  rows+=`<tr class="tot"><td colspan="3">合計</td><td class="num">${fmt(ti)}</td><td class="num">${fmt(to)}</td><td class="num">${fmt(bal)}</td></tr>`;
+  document.getElementById('journalTable').innerHTML = list.length? `<table>${rows}</table>` : '<p class="muted">尚無紀錄，請至「記帳」登記。</p>';
+}
+
+/* ===================== 預算（§12）===================== */
+function renderBudget(){
+  document.getElementById('bYear').textContent=DB.year;
+  const mk=(type)=>ACCOUNTS[type].map(c=>{
+    const v=(DB.budget[type==='in'?'income':'expense'][c])||'';
+    return `<div class="row" style="align-items:center;gap:6px;margin-bottom:4px"><div style="flex:1.2;font-size:13px">${c}</div><div style="flex:1"><input type="number" min="0" step="1" data-bt="${type}" data-bc="${c}" value="${v}" placeholder="0" style="padding:.35rem .5rem"></div></div>`;
+  }).join('');
+  document.getElementById('budgetIn').innerHTML=mk('in');
+  document.getElementById('budgetOut').innerHTML=mk('out');
+  document.getElementById('budgetNote').value=DB.budget.note||'';
+  renderBudgetCompare();
+}
+function saveBudget(){
+  const inc={},exp={};
+  document.querySelectorAll('[data-bt]').forEach(el=>{ const v=+el.value||0; if(v>0){ (el.dataset.bt==='in'?inc:exp)[el.dataset.bc]=v; } });
+  DB.budget={income:inc,expense:exp,note:document.getElementById('budgetNote').value.trim()};
+  save(); renderBudgetCompare(); alert('已儲存預算（提理事會編製→大會議決→報主管機關備查 §12）');
+}
+function renderBudgetCompare(){
+  const inAct=sumByCat('in'), outAct=sumByCat('out');
+  const bi=DB.budget.income||{}, be=DB.budget.expense||{};
+  const totBI=Object.values(bi).reduce((a,b)=>a+b,0), totBE=Object.values(be).reduce((a,b)=>a+b,0);
+  const totAI=Object.values(inAct).reduce((a,b)=>a+b,0), totAO=Object.values(outAct).reduce((a,b)=>a+b,0);
+  let r=`<tr class="sub"><td>項目</td><td class="num">預算 §12</td><td class="num">實際 §13</td><td class="num">執行率</td></tr>`;
+  const line=(label,bud,act)=>`<tr><td>${label}</td><td class="num">${fmt(bud)}</td><td class="num">${fmt(act)}</td><td class="num">${bud?(act/bud*100).toFixed(0)+'%':'—'}</td></tr>`;
+  r+=line('收入合計',totBI,totAI);
+  r+=line('支出合計',totBE,totAO);
+  r+=`<tr class="tot"><td>賸餘（預算 vs 實際）</td><td class="num">${fmt(totBI-totBE)}</td><td class="num">${fmt(totAI-totAO)}</td><td class="num"></td></tr>`;
+  document.getElementById('budgetCompare').innerHTML=`<div class="card-title">預算 vs 決算對照 <span class="law-pill" onclick="gotoLaw('第13條')">§13</span></div><table>${r}</table><p class="muted" style="margin-top:8px">決算於年度結束後3個月內由理事會編製，經監事審核、大會議決後30日內報主管機關備查（§13）。</p>`;
+}
+
+/* ===================== 財產清冊（§6⑤·§14·§16·§19）===================== */
+function fillAssetCat(){ const s=document.getElementById('aCat'); s.innerHTML=''; ACCOUNTS_ASSET.forEach(c=>{const o=document.createElement('option');o.value=c;o.textContent=c;s.appendChild(o);}); }
+document.addEventListener('change',e=>{ if(e.target.id==='aCat'||e.target.id==='aOwner') assetLiveCheck(); });
+function assetLiveCheck(){
+  const cat=document.getElementById('aCat').value, owner=document.getElementById('aOwner').checked;
+  const out=[];
+  if(!owner) out.push(['bad','§19','財物須以「工會名義」登記，不得登記於他人名下，並不得挪為私用。']);
+  if(REALTY_CATS.includes(cat)) out.push(['warn','§16','不動產之購置/出售/轉讓/負擔或其他權利設定，應經會員（代表）大會議決。']);
+  if(INVEST_CATS.includes(cat)) out.push(['warn','§14','投資之種類、比例，應經會員（代表）大會議決。']);
+  renderAlerts(document.getElementById('assetAlerts'),out);
+}
+function addAsset(){
+  const date=document.getElementById('aDate').value, name=document.getElementById('aName').value.trim();
+  const amt=+document.getElementById('aAmt').value||0, cat=document.getElementById('aCat').value;
+  if(!date){alert('請選取得日期');return;}
+  if(!name){alert('請填名稱');return;}
+  if(!amt||amt<=0){alert('請填金額');return;}
+  DB.assets.push({id:Date.now()+''+Math.floor(Math.random()*1000),date,cat,name,amt,
+    vno:document.getElementById('aVno').value.trim(), owner:document.getElementById('aOwner').checked});
+  save();
+  ['aName','aAmt','aVno'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('aOwner').checked=true; document.getElementById('assetAlerts').innerHTML='';
+  renderAssets();
+}
+function delAsset(id){ if(!confirm('刪除這項財產？')) return; DB.assets=DB.assets.filter(a=>a.id!==id); save(); renderAssets(); }
+function renderAssets(){
+  fillAssetCat();
+  const list=(DB.assets||[]).slice().sort((a,b)=>a.cat.localeCompare(b.cat)||a.date.localeCompare(b.date));
+  const box=document.getElementById('assetList');
+  if(!list.length){ box.innerHTML='<p class="muted">尚無財產登記。固定資產、投資、其他資產於此造冊（§6⑤）。</p>'; return; }
+  const tot=list.reduce((a,x)=>a+x.amt,0);
+  let r=`<tr class="sub"><td>科目</td><td>名稱</td><td>取得日</td><td class="num">金額</td><td class="no-print"></td></tr>`;
+  list.forEach(a=>{ r+=`<tr><td>${esc(a.cat)}${a.owner?'':' <span style="color:var(--red)">⛔非工會名義</span>'}</td><td>${esc(a.name)}${a.vno?'<br><span class="muted">'+esc(a.vno)+'</span>':''}</td><td>${a.date}</td><td class="num">${fmt(a.amt)}</td><td class="no-print"><button class="e-del" onclick="delAsset('${a.id}')">✕</button></td></tr>`; });
+  r+=`<tr class="tot"><td colspan="3">財產總額</td><td class="num">${fmt(tot)}</td><td class="no-print"></td></tr>`;
+  box.innerHTML=`<table>${r}</table>`;
+}
+
+/* ===================== 財務處理辦法範本（§15·§17·§18）===================== */
+function genRules(){
+  const sup=DB.settings.supBoard?'監事會':'監事';
+  const sealPpl=DB.settings.secretary?'理事長、秘書長及會計出納人員':'理事長、（未設秘書長者由其他相關職務人員）及會計出納人員';
+  const inner=`<p class="note" style="margin-top:0;border:none;padding-top:0">依《工會財務處理準則》（工會法第30條第2項授權）第15、17、18條訂定。本草稿由工具自動產生，須提理事會修訂、經會員（代表）大會議決後實施。</p>
+<h2>第一條（依據）</h2><p>本辦法依工會法及工會財務處理準則第十五條規定訂定之。</p>
+<h2>第二條（會計年度與基礎）</h2><p>本會會計年度採曆年制，自每年一月一日起至十二月三十一日止（準則§3）。會計基礎採權責發生制，平時得採現金收付制，年終結算時調整為權責發生制（準則§4）。財務以新臺幣元為單位（準則§5）。</p>
+<h2>第三條（會計科目與報告）</h2><p>會計科目依準則§7及附表分資產、負債、淨值、收入、支出五類。會計報告包括資產負債表、收支餘絀表、現金流量表、淨值變動表、財產清冊（準則§6）。</p>
+<h2>第四條（簿籍與憑證）</h2><p>本會年度決算收入在新臺幣三百萬元以下，得僅置日記簿乙種，有財產購置或處分者另置財產登記簿（準則§8）。會計憑證分原始憑證與記帳憑證，並列明製作、審核人員之責任（準則§9～§11、§18）。</p>
+<h2>第五條（出納與用印）</h2><p>提用存款時，應由${sealPpl}於領款憑證上共同蓋章，並承擔用印之法律責任（準則§20）。零用金不得超過新臺幣十萬元，其額度及運用規則經理事會決議並交財務人員保管；日常開支每筆在一萬元以下者，得在零用金項下以現金支付（準則§19）。</p>
+<h2>第六條（財產之登記、增置、處分、保管運用）</h2><ol><li>財物應以本會名義登記，不得登記於他人名下，不得挪為私用（準則§19）。</li><li>不動產之購置、出售、轉讓、負擔或其他權利之設定，應經會員（代表）大會議決（準則§16）。</li><li>投資之種類、比例，應經會員（代表）大會議決（準則§14）。</li><li>固定資產按耐用年數計提折舊（附表累積折舊）。</li></ol>
+<h2>第七條（預算與決算）</h2><p>年度開始前由理事會編年度工作計畫及收支預算表，提大會議決後報主管機關備查（準則§12）。年度結束後三個月內由理事會編業務報告書、決算書（表），經${sup}審核後，提大會議決後三十日內報主管機關備查；決算金額在三千萬元以上且有投資事業者，應委請會計師簽證（準則§13）。</p>
+<h2>第八條（支出限制）</h2><p>年度事業費及辦公費支出不得少於總支出百分之四十（準則§21）。歷年決算結餘應作以後年度支出之財源，不得做結餘之分配（準則§23）。應逐年提列足夠之準備金，決算虧損者得不提列（準則§22）。</p>
+<h2>第九條（財務公開）</h2><p>本會財務收支不得匿報或虛報，並按季公開揭示（準則§26）。</p>
+<h2>第十條（查核）</h2><p>本會辦理定期及臨時財務查核，由${sup}為之；會員或會員代表查核財務狀況，依工會法第二十九條辦理（準則§28）。</p>
+<h2>第十一條（檔案保存）</h2><p>各種會計簿籍及會計報告，自決算程序終了之日起至少保存十年；各種憑證（未了結之債權債務除外）至少保存五年；受政府補助者依政府相關規定辦理（準則§27）。</p>
+<h2>第十二條（施行）</h2><p>本辦法經會員（代表）大會議決後施行，修正時亦同。</p>
+<p class="note" style="margin-top:2rem">※ 本草稿僅供參考，實際條文與金額、職稱請依本會章程與理事會、大會決議調整。</p>`;
+  docShell('財務處理辦法（草稿）','依工會財務處理準則第15·17·18條訂定 · pcode N0020014', inner, '工會財務處理辦法_草稿.html');
+}
+const A4CSS=`
+@page{size:A4;margin:2.2cm 2cm 2cm 2.4cm;@bottom-right{content:"第 " counter(page) " 頁，共 " counter(pages) " 頁";font-size:10px;color:#555;font-family:'Noto Serif TC',serif;}}
+*{box-sizing:border-box}
+body{font-family:'Noto Serif TC',serif;color:#1a1a1a;line-height:1.85;margin:0;counter-reset:page;}
+.doc{max-width:760px;margin:0 auto;}
+.dochead{text-align:center;border-bottom:2.5px solid #1A7A4A;padding-bottom:10px;margin-bottom:18px}
+.org{font-size:15px;letter-spacing:.35em;color:#0F5C36;font-weight:600}
+.dtype{font-size:22px;font-weight:700;margin-top:4px}
+.dochead .sub{font-size:12px;color:#555;margin-top:7px;letter-spacing:.02em;line-height:1.6}
+h2{font-size:15px;border-left:4px solid #1A7A4A;padding-left:8px;margin-top:1.3rem;page-break-after:avoid}
+p,li,td,th{font-size:13.5px}
+table{width:100%;border-collapse:collapse;margin:.5rem 0;page-break-inside:auto}
+tr{page-break-inside:avoid}
+th,td{border:1px solid #bbb;padding:.42rem .55rem;text-align:left}
+td.n,th.n{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+tr.t td{font-weight:700;background:#f3f8f5}
+.fill{color:#999}
+.bad{color:#C0392B;font-weight:600}
+.sign{margin-top:2.2rem;display:flex;flex-wrap:wrap;gap:1.4rem;font-size:13px;page-break-inside:avoid}
+.sign div{flex:1;min-width:150px;border-top:1px solid #999;padding-top:6px;text-align:center}
+.note{color:#777;font-size:11.5px;line-height:1.7;margin-top:1.4rem;border-top:1px dashed #ccc;padding-top:8px}
+.qf{position:fixed;top:0;bottom:0;left:.35cm;width:1.15cm;display:none;align-items:center;justify-content:center;border-right:1px dashed #aaa;color:#bbb;font-size:11px;letter-spacing:.45em;writing-mode:vertical-rl;}
+.pf{position:fixed;bottom:.55cm;left:0;right:0;text-align:center;font-size:10px;color:#999;display:none}
+.hint{background:#FEF9E7;border:1px solid #EAD67A;color:#5C4000;border-radius:8px;padding:.6rem .8rem;font-size:12.5px;line-height:1.7;margin:0 auto 1.2rem;max-width:760px}
+.hint button{margin-left:6px;background:#1A7A4A;color:#fff;border:none;border-radius:6px;padding:.3rem .7rem;font-family:inherit;font-size:12px;cursor:pointer}
+@media screen{body{background:#e9e9e9;padding:1.2rem .8rem}.doc{background:#fff;padding:2.6rem 2.4rem;box-shadow:0 2px 14px rgba(0,0,0,.18);border-radius:2px}}
+@media print{.hint{display:none}.qf,.pf{display:flex}}
+`;
+function docShell(docType, subtitle, inner, fname){
+  const html=`<!DOCTYPE html><html lang="zh-TW"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${esc(org()+' '+docType)}</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@400;600;700&display=swap" rel="stylesheet">
+<style>${A4CSS}</style></head><body>
+<div class="qf">${esc(org())}　騎　縫　章</div>
+<div class="pf">${esc(org())}　${esc(docType)}</div>
+<div class="hint">🖨 列印請選 <b>A4 直式</b>。頁碼／騎縫章僅於列印或存 PDF 時顯示；若頁碼未出現，請在列印對話框勾選「<b>頁首及頁尾</b>」。<button onclick="window.print()">立即列印 / 存 PDF</button></div>
+<div class="doc">
+  <div class="dochead"><div class="org">${esc(org())}</div><div class="dtype">${esc(docType)}</div><div class="sub">${subtitle}</div></div>
+  ${inner}
+</div></body></html>`;
+  openDoc(html,fname);
+}
+function openDoc(html,fname){ const w=window.open('','_blank'); if(w){ w.document.write(html); w.document.close(); } else { const b=new Blob([html],{type:'text/html'}); const a=document.createElement('a'); a.href=URL.createObjectURL(b); a.download=fname; a.click(); } }
+function roc(y){ return '中華民國 '+(y-1911)+' 年'; }
+
+/* ===================== 決算書（正式格式 §6·§13）===================== */
+function genDecal(){
+  const Y=DB.year, inM=sumByCat('in'), outM=sumByCat('out');
+  const totIn=Object.values(inM).reduce((a,b)=>a+b,0), totOut=Object.values(outM).reduce((a,b)=>a+b,0);
+  const surplus=totIn-totOut, open=DB.settings.opening||0, endCash=open+surplus;
+  const assets=(DB.assets||[]), assetTot=assets.reduce((a,x)=>a+x.amt,0), reserve=DB.settings.reserve||0;
+  const priorCum=DB.settings.priorCum||0, liab=DB.settings.liab||0;
+  const assetTotal=endCash+assetTot, endCum=priorCum+surplus, liabNet=liab+endCum, diff=assetTotal-liabNet;
+  const sup=DB.settings.supBoard?'監事會':'監事';
+  const f=fmt;
+  let incRows=ACCOUNTS.in.filter(c=>inM[c]).map(c=>`<tr><td>${c}</td><td class="n">${f(inM[c])}</td></tr>`).join('')||'<tr><td class="fill">（無）</td><td class="n">$0</td></tr>';
+  let outRows=ACCOUNTS.out.filter(c=>outM[c]).map(c=>`<tr><td>${c}</td><td class="n">${f(outM[c])}</td></tr>`).join('')||'<tr><td class="fill">（無）</td><td class="n">$0</td></tr>';
+  let assetRows=assets.length?assets.map(a=>`<tr><td>${esc(a.cat)}</td><td>${esc(a.name)}</td><td>${a.date}</td><td class="n">${f(a.amt)}</td></tr>`).join(''):'<tr><td colspan="3" class="fill">（尚無財產登記）</td><td class="n">$0</td></tr>';
+  const balRow = diff===0 ? `<tr class="t"><td>平衡檢查（資產＝負債＋淨值）</td><td class="n">✓ 平衡</td></tr>` : `<tr class="t"><td>平衡差額（待調整）</td><td class="n bad">${f(diff)}</td></tr>`;
+  const balNote = diff===0 ? '※ 資產＝負債＋淨值，本表已平衡。' : `※ 尚有差額 ${f(diff)}。請至「設定」核對「上年度累計餘絀」與「期末負債合計」，或按〔自動帶入平衡值〕，使資產＝負債＋淨值（§6①）。`;
+  const inner=`
+<h2>一、業務報告書（§13）</h2>
+<p class="fill">（請由理事會填列本年度會務、財務及業務執行概況。）</p>
+
+<h2>二、收支餘絀表（§6②）</h2>
+<table>
+<tr class="t"><td>收入科目</td><td class="n">金額</td></tr>${incRows}
+<tr class="t"><td>收入合計</td><td class="n">${f(totIn)}</td></tr>
+<tr class="t"><td>支出科目</td><td class="n">金額</td></tr>${outRows}
+<tr class="t"><td>支出合計</td><td class="n">${f(totOut)}</td></tr>
+<tr class="t"><td>本期餘絀</td><td class="n">${f(surplus)}</td></tr>
+</table>
+
+<h2>三、資產負債表（§6①）</h2>
+<table>
+<tr class="t"><td>資產</td><td class="n">金額</td></tr>
+<tr><td>現金及銀行存款（期末）</td><td class="n">${f(endCash)}</td></tr>
+<tr><td>財產（投資＋固定資產＋其他資產 §14）</td><td class="n">${f(assetTot)}</td></tr>
+<tr class="t"><td>資產合計</td><td class="n">${f(assetTotal)}</td></tr>
+<tr class="t"><td>負債及淨值</td><td class="n">金額</td></tr>
+<tr><td>負債合計（應付款等 §7）</td><td class="n">${f(liab)}</td></tr>
+<tr><td>淨值—累計餘絀（期末）</td><td class="n">${f(endCum)}</td></tr>
+<tr><td style="padding-left:1.6rem">　其中：上年度累計餘絀</td><td class="n">${f(priorCum)}</td></tr>
+<tr><td style="padding-left:1.6rem">　其中：本期餘絀</td><td class="n">${f(surplus)}</td></tr>
+<tr><td style="padding-left:1.6rem">　其中：已依§22提列準備金</td><td class="n">${f(reserve)}</td></tr>
+<tr class="t"><td>負債及淨值合計</td><td class="n">${f(liabNet)}</td></tr>
+${balRow}
+</table>
+<p class="note">${balNote}</p>
+
+<h2>四、現金流量表（§6③，現金基礎）</h2>
+<table>
+<tr><td>期初現金及約當現金</td><td class="n">${f(open)}</td></tr>
+<tr><td>本期現金流入（收入）</td><td class="n">${f(totIn)}</td></tr>
+<tr><td>本期現金流出（支出）</td><td class="n">${f(totOut)}</td></tr>
+<tr class="t"><td>期末現金及約當現金</td><td class="n">${f(endCash)}</td></tr>
+</table>
+
+<h2>五、淨值變動表（§6④）</h2>
+<table>
+<tr><td>期初淨值（上年度累計餘絀）</td><td class="n">${f(priorCum)}</td></tr>
+<tr><td>加：本期餘絀</td><td class="n">${f(surplus)}</td></tr>
+<tr class="t"><td>期末淨值（累計餘絀）</td><td class="n">${f(endCum)}</td></tr>
+<tr><td style="padding-left:1.6rem">　其中：本年度提列準備金（§22）</td><td class="n">${f(reserve)}</td></tr>
+</table>
+<p class="note">※ 歷年決算結餘應作以後年度支出之財源，不得做結餘之分配（§23）。</p>
+
+<h2>六、財產清冊（§6⑤）</h2>
+<table>
+<tr class="t"><td>科目</td><td>名稱／內容</td><td>取得日</td><td class="n">金額</td></tr>${assetRows}
+<tr class="t"><td colspan="3">財產總額</td><td class="n">${f(assetTot)}</td></tr>
+</table>
+
+<h2>七、${DB.settings.prep?'籌備期收支結算（供移交）':'決算審查與報備（§13）'}</h2>
+${DB.settings.prep
+  ? `<p>本表為<b>籌備期</b>收支結算，供工會成立後辦理結算、移交之用；正式決算於工會成立後依工會財務處理準則第13條辦理。</p><div class="sign"><div>${chair()}（蓋章）</div><div>出納（蓋章）</div><div>會計（蓋章）</div></div>`
+  : `<p>本決算書於 ${roc(Y+1)} ____ 月 ____ 日（年度結束後三個月內）由理事會編製，經 ${sup} 審核，並提 ${roc(Y+1)} ____ 月 ____ 日${assembly()}議決，於議決後三十日內報請主管機關備查。${DB.settings.invest&&totIn>=30000000?'<b>本年度決算金額達三千萬元以上且有投資事業，業依規定委請會計師簽證。</b>':''}</p><div class="sign"><div>理事長（蓋章）</div><div>會計（蓋章）</div><div>出納（蓋章）</div><div>${sup}（蓋章）</div></div>`}
+<p class="note">本表由「工會透明帳本」依工會財務處理準則自動產生草稿，金額以本機帳載為準${DB.settings.prep?'；籌備期供結算移交參考':'，須經理事會、'+sup+'及大會程序確認'}。pcode N0020014。</p>`;
+  docShell(`${roc(Y)}年度${DB.settings.prep?'籌備期收支結算表':'決算書'}`, `依工會財務處理準則第6條${DB.settings.prep?'（籌備期供移交參考）':'、第13條'}編製 · 會計年度 ${Y}/1/1～${Y}/12/31（§3）· 新臺幣元（§5）`, inner, `${org()}_${Y}年度${DB.settings.prep?'籌備期收支結算':'決算書'}.html`);
+}
+
+/* ===================== 監事審核意見書（範本 §13·§28·§30）===================== */
+function genAuditOpinion(){
+  if(DB.settings.prep){ alert('籌備期尚無監事（工會法§11：監事於成立大會選出）。監事審核意見書於工會成立、選出監事後再產生。'); return; }
+  const Y=DB.year, sup=DB.settings.supBoard?'監事會':'監事';
+  const inM=sumByCat('in'),outM=sumByCat('out');
+  const totIn=Object.values(inM).reduce((a,b)=>a+b,0),totOut=Object.values(outM).reduce((a,b)=>a+b,0);
+  const items=['會計憑證','會計帳簿','會計報告','預算、決算','財產保管','各項資產、負債及淨值之評核','會員申訴有關財務事項','有關政府補助經費事項','其他有關財務事項'];
+  const rows=items.map((t,i)=>`<tr><td>${i+1}</td><td>${t}</td><td style="text-align:center">□ 符合　□ 建議改善</td><td class="fill"></td></tr>`).join('');
+  const inner=`
+<p>本${sup}依工會財務處理準則第二十八條規定，就本會 ${roc(Y)}年度財務辦理${DB.settings.supBoard?'定期':'定期及臨時'}查核，查核範圍依同準則第三十條所列事項，結果如下：</p>
+<h2>一、查核範圍與結果（§30）</h2>
+<table><tr class="t"><td>項次</td><td>查核項目</td><td style="text-align:center">查核結果</td><td>說明</td></tr>${rows}</table>
+<h2>二、財務概要（依決算 §6·§13）</h2>
+<table>
+<tr><td>本年度收入合計</td><td class="n">${fmt(totIn)}</td></tr>
+<tr><td>本年度支出合計</td><td class="n">${fmt(totOut)}</td></tr>
+<tr class="t"><td>本期餘絀</td><td class="n">${fmt(totIn-totOut)}</td></tr>
+</table>
+<h2>三、審核意見</h2>
+<p>經查本會 ${roc(Y)}年度各項收支均檢附憑證、帳簿記載與決算書（表）相符，財務收支無匿報或虛報情事（§26），事業費及辦公費支出${(()=>{const c=(outM['事業費']||0)+(outM['辦公費']||0);const r=totOut?c/totOut*100:0;return r>=40?'已達總支出百分之四十以上（符合§21）':'<b class="fill">（占 '+(totOut?(c/totOut*100).toFixed(1):0)+'%，未達§21之40%，建議檢討）</b>';})()}。</p>
+<p class="fill">（如有應改善或建議事項，請於此處敘明。）</p>
+<p>上開決算書（表）經本${sup}審核${DB.settings.supBoard?'並決議':''}，造具本審核意見書，送請理事會提報會員（代表）大會議決。</p>
+<div class="sign">${DB.settings.supBoard?'<div>常務監事（蓋章）</div><div>監事（蓋章）</div><div>監事（蓋章）</div>':'<div>監事（蓋章）</div>'}</div>
+<p style="margin-top:1.5rem">中華民國 ______ 年 ______ 月 ______ 日</p>
+<p class="note">本意見書由「工會透明帳本」依工會財務處理準則產生範本，實際審核結果與意見應由${sup}本於查核事實填載。pcode N0020014。</p>`;
+  docShell(`${roc(Y)}年度 ${sup}財務審核意見書`, '依工會財務處理準則第13條、第28條、第30條辦理', inner, `${org()}_${Y}年度監事審核意見書.html`);
+}
+
+/* ===================== 報稅（資料驅動，條文取自 laws.json）===================== */
+let TAXLAWS=null;
+const TAX_NAMES=["所得稅法","加值型及非加值型營業稅法","教育文化公益慈善機關或團體免納所得稅適用標準"];
+function renderTaxChecklist(){
+  const items=[
+    ['免稅資格','所得稅法§4①13·§11④',`工會（人民團體）符合免稅要件者，其<b>會費、捐贈、基金存款利息</b>等非銷售收入免納所得稅。要件含：依法登記、章程載明任務、不分配盈餘、剩餘財產歸屬地方政府或其他公益團體等（見下方「免納所得稅適用標準」）。<b>請向轄區國稅局確認本會是否符合。</b>`],
+    ['要不要辦結算申報','所得稅法§71',`財政部：符合免稅要件、<b>且無銷售貨物或勞務收入</b>，只有會費／捐贈／利息者，<b>可免辦所得稅結算申報</b>；若有銷售或作業組織收入，仍須依§71辦理（一般為每年 5/1～5/31，以條文為準）。`],
+    ['扣繳（最常碰到）','所得稅法§88·§89·§92',`本會<b>給付薪資、講師鐘點費、執行業務報酬</b>時是「扣繳義務人」，應依§88、§89辦理扣繳，並依§92期限申報扣繳憑單。發講師費、會務人員薪水都算。`],
+    ['營業稅','營業稅法§1·§3·§8·§28·§35',`若有<b>銷售貨物或勞務</b>（附表的「銷售收入／進項稅額／銷項稅額」），涉及營業稅（登記§28、申報§35）。純收會費／補助通常不涉及。`],
+    ['政府補助款','工會財務處理準則§27·§30⑧',`受政府補助者，核銷與留存依政府規定（與免稅無關，但憑證要留）。已在「單據快拍／記帳」標記政府補助。`]
+  ];
+  document.getElementById('taxChecklist').innerHTML = items.map(([t,ref,txt])=>
+    `<div class="alert ok" style="flex-direction:column;align-items:stretch"><div><b>${t}</b>　<span class="law-pill" onclick="goTax('${esc(ref)}')">${esc(ref)}</span></div><div style="font-size:13px;margin-top:4px;color:var(--ink-mid)">${txt}</div></div>`
+  ).join('') + `<div class="alert warn"><span class="ico">⚠️</span><div>稅務個案複雜，<b>最終以國稅局核定為準</b>。金額大或不確定，請洽轄區國稅局或會計師。</div></div>`;
+}
+function goTax(){ document.getElementById('taxLaws').scrollIntoView({behavior:'smooth'}); }
+async function renderTax(){
+  renderTaxChecklist();
+  const box=document.getElementById('taxLaws');
+  if(TAXLAWS===null){
+    try{ const r=await fetch('./laws.json',{cache:'no-store'}); const d=await r.json(); TAXLAWS=(d.laws||[]).filter(L=>TAX_NAMES.indexOf(L.law)>=0); }
+    catch(e){ TAXLAWS=[]; }
+  }
+  if(!TAXLAWS.length){ box.innerHTML='<div class="alert warn"><span class="ico">⏳</span><div>稅法條文尚未匯入（需連網，或待法規自動更新後顯示官方全文）。上方提醒仍可參考；條文請暫至全國法規資料庫查 所得稅法、營業稅法、免納所得稅適用標準。</div></div>'; return; }
+  let html='';
+  TAX_NAMES.forEach(nm=>{
+    const arts=TAXLAWS.filter(a=>a.law===nm); if(!arts.length) return;
+    html+=`<div style="font-weight:600;margin:10px 0 4px;color:var(--green-deep)">${esc(nm)}</div>`;
+    arts.forEach(a=>{ html+=`<details class="law-art"><summary>${esc(a.art)}</summary><div class="txt">${esc(a.text)}</div></details>`; });
+  });
+  box.innerHTML=html;
+}
+
+/* ===================== 法規依據 ===================== */
+function renderLaw(){
+  const L=window.UNION_LAW;
+  document.getElementById('lawMeta').innerHTML=`<b>${L.law}</b>（pcode N0020014）· 全 ${L.articles.length} 條＋附表<br>來源：${esc(L.source)} · 條文更新：${esc(L.updated)}<br>母法：工會法第30條第2項授權訂定。`;
+  document.getElementById('lawList').innerHTML=L.articles.map(a=>
+    `<details class="law-art" id="law-${a.art}"><summary>${a.art}</summary><div class="txt">${esc(a.text)}</div></details>`).join('');
+  document.getElementById('lawAttach').textContent = (L.attachment[0]&&L.attachment[0].text)||'（見 laws.json）';
+}
+
+/* ===================== 設定 / 匯出入 ===================== */
+function fillSettings(){
+  document.getElementById('setYear').value=DB.year;
+  document.getElementById('setSecretary').checked=DB.settings.secretary;
+  document.getElementById('setSupBoard').checked=DB.settings.supBoard;
+  document.getElementById('setInvest').checked=DB.settings.invest;
+  document.getElementById('setOpening').value=DB.settings.opening||0;
+  document.getElementById('setPettyCap').value=DB.settings.pettyCap||100000;
+  document.getElementById('setReserve').value=DB.settings.reserve||0;
+  document.getElementById('setPriorCum').value=DB.settings.priorCum||0;
+  document.getElementById('setLiab').value=DB.settings.liab||0;
+  document.getElementById('setOrgName').value=DB.settings.orgName||'';
+  applyPrep(); applyOrg();
+  updateBalPreview();
+}
+function balanceFigures(){
+  let i=0,o=0; yearEntries().forEach(e=>{ if(e.type==='in')i+=e.amt; else o+=e.amt; });
+  const surplus=i-o, endCash=(DB.settings.opening||0)+surplus;
+  const assetTot=(DB.assets||[]).reduce((a,x)=>a+x.amt,0);
+  const assetTotal=endCash+assetTot;
+  const priorCum=DB.settings.priorCum||0, liab=DB.settings.liab||0;
+  const netValue=priorCum+surplus, diff=assetTotal-(liab+netValue);
+  return {surplus,assetTotal,priorCum,liab,netValue,diff,endCash,assetTot};
+}
+function updateBalPreview(){
+  const b=balanceFigures();
+  document.getElementById('balPreview').innerHTML = b.diff===0
+    ? `✅ 目前資產 ${fmt(b.assetTotal)} ＝ 負債 ${fmt(b.liab)} ＋ 淨值 ${fmt(b.netValue)}，已平衡。`
+    : `⚠ 目前資產 ${fmt(b.assetTotal)} 與 負債＋淨值 ${fmt(b.liab+b.netValue)} 差 ${fmt(b.diff)}。可按下方「自動帶入平衡值」。`;
+}
+function autoBalance(){
+  // 期初累計餘絀 = 期初現金 + 財產 − 負債（使資產＝負債＋淨值）
+  const b=balanceFigures();
+  const newPrior=(DB.settings.opening||0)+b.assetTot-b.liab;
+  document.getElementById('setPriorCum').value=newPrior;
+  DB.settings.priorCum=newPrior; save(); updateBalPreview();
+  alert('已將「上年度累計餘絀」設為 '+fmt(newPrior)+'，資產負債表即可平衡。\n（此即期初淨資產＝期初現金＋財產−負債，請與上年度決算核對。）');
+}
+function saveSettings(){
+  DB.year=+document.getElementById('setYear').value||DB.year;
+  DB.settings.secretary=document.getElementById('setSecretary').checked;
+  DB.settings.supBoard=document.getElementById('setSupBoard').checked;
+  DB.settings.invest=document.getElementById('setInvest').checked;
+  DB.settings.opening=+document.getElementById('setOpening').value||0;
+  let cap=+document.getElementById('setPettyCap').value||100000;
+  if(cap>100000){cap=100000; alert('§19：零用金不得超過 10 萬，已自動設為上限。');}
+  DB.settings.pettyCap=cap;
+  DB.settings.reserve=+document.getElementById('setReserve').value||0;
+  DB.settings.priorCum=+document.getElementById('setPriorCum').value||0;
+  DB.settings.liab=+document.getElementById('setLiab').value||0;
+  DB.settings.orgName=document.getElementById('setOrgName').value.trim()||'本工會';
+  save(); fillSettings(); applyOrg(); refreshKPI(); renderEntries(); alert('已儲存');
+}
+async function exportJSON(){
+  let receipts=[]; try{ receipts=await IDB.all(); }catch(e){}
+  const payload=Object.assign({_backupVer:1,_exported:new Date().toISOString(),_receipts:receipts}, DB);
+  const blob=new Blob([JSON.stringify(payload)],{type:'application/json'});
+  const a=document.createElement('a'); a.href=URL.createObjectURL(blob);
+  a.download=`工會帳本備份_${DB.year}_${new Date().toISOString().slice(0,10)}.json`; a.click();
+  alert('已匯出完整備份（含 '+receipts.length+' 張單據照片）。請妥善保存此檔，這是換手機/清資料後唯一的還原來源。');
+}
+function importJSON(ev){
+  const f=ev.target.files[0]; if(!f) return;
+  const r=new FileReader();
+  r.onload=async()=>{ try{
+    const d=JSON.parse(r.result); if(!d.entries) throw 0;
+    if(!confirm('將覆蓋現有帳目資料，確定匯入？')) { ev.target.value=''; return; }
+    const receipts=Array.isArray(d._receipts)?d._receipts:null;
+    delete d._receipts; delete d._backupVer; delete d._exported;
+    DB=normalize(d); save();
+    if(receipts){ let n=0; for(const rc of receipts){ if(rc&&rc.id!=null){ rc.id=sid(rc.id); try{ await IDB.put(rc); n++; }catch(e){} } } }
+    fillSettings(); renderEntries(); refreshKPI(); renderReceipts(); renderHome();
+    alert('匯入完成'+(receipts?('（含 '+receipts.length+' 張單據照片）'):''));
+  }catch(e){ alert('檔案格式不正確'); } finally{ ev.target.value=''; } };
+  r.readAsText(f);
+}
+function exportCSV(){
+  const head=['日期','收支','科目','摘要','金額','憑證號','經辦','審核','現金','政府補助','用印'];
+  const rows=yearEntries().sort((a,b)=>a.date.localeCompare(b.date)).map(e=>[
+    e.date, e.type==='in'?'收入':'支出', e.cat, e.sum, e.amt, e.vno, e.handler, e.reviewer,
+    e.cash?'是':'', e.gov?'是':'', e.seal?'已用印':''
+  ].map(x=>`"${(''+(x||'')).replace(/"/g,'""')}"`).join(','));
+  const csv='﻿'+head.join(',')+'\n'+rows.join('\n');
+  const blob=new Blob([csv],{type:'text/csv'});
+  const a=document.createElement('a'); a.href=URL.createObjectURL(blob);
+  a.download=`工會帳本_${DB.year}.csv`; a.click();
+}
+function wipe(){ if(prompt('將清空本機所有帳目（明細、財產、預算、公開紀錄），無法復原。單據照片不受影響。請輸入「清空」確認')==='清空'){ DB.entries=[]; DB.assets=[]; DB.budget={income:{},expense:{},note:''}; DB.published={}; save(); renderEntries(); refreshKPI(); renderHome(); alert('已清空帳目（單據照片仍在；如需刪除請至單據快拍）'); } }
+
+/* ===================== init ===================== */
+(function init(){
+  const today=new Date().toISOString().slice(0,10);
+  document.getElementById('fDate').value=today;
+  document.getElementById('aDate').value=today;
+  fillAssetCat();
+  setType('out'); fillSettings(); renderEntries(); refreshKPI(); renderLaw(); renderReceipts(); renderHome();
+})();
+if('serviceWorker' in navigator){ navigator.serviceWorker.register('sw.js').catch(()=>{}); }
+</script>
+</body>
+</html>

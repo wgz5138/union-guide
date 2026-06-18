@@ -1,0 +1,809 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>證件影本 加註記 · A4整理列印</title>
+<link rel="manifest" href="idmark.webmanifest">
+<meta name="theme-color" content="#C0392B">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="證件工具">
+<link rel="apple-touch-icon" href="assets/idmark-icon-180.png">
+<style>
+  :root{ --red:#C0392B; --red-deep:#7B1818; --gold:#B7860B; --bg:#F6F3EF; --ink:#222; --soft:#777; --border:#E2DED7; }
+  *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;}
+  body{font-family:-apple-system,"PingFang TC","Noto Sans TC",sans-serif;background:var(--bg);color:var(--ink);line-height:1.6;}
+  .bar{background:var(--red);color:#fff;padding:13px 16px;text-align:center;}
+  .bar h1{font-size:17px;font-weight:700;}
+  .bar p{font-size:11.5px;opacity:.85;margin-top:2px;}
+  main{max-width:600px;margin:0 auto;padding:14px;}
+  .card{background:#fff;border:1px solid var(--border);border-radius:14px;padding:14px;margin-bottom:12px;}
+  label{display:block;font-size:13px;font-weight:600;color:var(--red-deep);margin-bottom:6px;}
+  textarea,select,input[type=text]{width:100%;border:1.5px solid var(--border);border-radius:10px;padding:9px;font-size:15px;font-family:inherit;}
+  textarea{height:64px;resize:vertical;}
+  .row{display:flex;gap:10px;align-items:center;margin-top:10px;}
+  .row label{margin:0;font-weight:500;color:var(--ink);white-space:nowrap;}
+  .row select{flex:1;}
+  .row .val{font-size:13px;color:var(--soft);min-width:34px;text-align:right;}
+  input[type=range]{flex:1;}
+  .btn{display:block;width:100%;border:none;border-radius:12px;padding:13px;font-size:16px;font-weight:700;cursor:pointer;}
+  .btn-make{background:#2E7D32;color:#fff;margin-top:6px;}
+  .btn-print{background:var(--red);color:#fff;margin-top:6px;}
+  .btn:disabled{opacity:.4;}
+  .pick{display:flex;gap:10px;}
+  .pick .btn{margin:0;}
+  .btn-cam{background:var(--gold);color:#fff;}
+  .btn-alb{background:#5B6770;color:#fff;}
+  .hint{font-size:12px;color:var(--soft);margin-top:8px;}
+  .safe{background:#EAFAF1;border:1px solid #B8DCC4;color:#1A5C38;font-size:12.5px;padding:10px 12px;border-radius:10px;margin-bottom:12px;}
+  .warn{background:#FDECEA;border:1.5px solid #E8A29A;color:#7B1818;font-size:13px;padding:11px 13px;border-radius:10px;margin-bottom:12px;line-height:1.65;}
+  .warn b{color:#C0392B;}
+  input[type=file]{display:none;}
+
+  /* 每張證件編輯卡 */
+  .item{border:1px solid var(--border);border-radius:12px;padding:10px;margin-top:10px;background:#fff;}
+  .ihead{display:flex;gap:8px;align-items:center;margin-bottom:8px;}
+  .ihead select{flex:1;}
+  .pv{position:relative;width:100%;text-align:center;background:#faf8f5;border:1px solid var(--border);border-radius:8px;overflow:hidden;}
+  .pv canvas{display:block;max-width:100%;height:auto;margin:0 auto;touch-action:none;}
+  .tools{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px;}
+  .tools button{flex:1;min-width:58px;background:#f1eeea;border:1px solid var(--border);border-radius:9px;padding:9px 5px;cursor:pointer;font-size:13px;font-weight:600;color:#444;}
+  .tools button.on{background:#FCEFB4;border-color:#E0C44A;color:#7A5600;}
+  .tools button.danger{color:#B0392B;}
+  .tools button.go{background:#2E7D32;color:#fff;border-color:#2E7D32;}
+  .tools button.cancel{background:#fff;}
+  .croprow{display:flex;align-items:center;gap:7px;margin-top:8px;font-size:13px;color:#5C4000;background:#FEF9E7;border:1px solid #EAD67A;border-radius:8px;padding:8px 10px;}
+  .croprow input{width:auto;flex:0 0 auto;}
+  .dragtip{font-size:12px;color:#7A5600;background:#FEF9E7;border:1px solid #EAD67A;border-radius:8px;padding:7px 9px;margin-top:7px;}
+  .posrow{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-top:7px;font-size:12.5px;color:#555;}
+  .posrow .lbl{flex:0 0 auto;color:#888;}
+  .posrow button{flex:0 0 auto;padding:8px 11px;font-size:13.5px;border:1px solid var(--border);background:#fff;border-radius:9px;cursor:pointer;}
+  .posrow button:active{background:#FDECEA;border-color:#E8A29A;}
+
+  /* 傳送 / 信箱自動補全 */
+  .btn-share{background:#1565C0;color:#fff;margin-top:6px;}
+  .btn-dl{background:#5B6770;color:#fff;margin-top:6px;}
+  .btn-mail{background:#2E7D32;color:#fff;margin-top:6px;}
+  .destwrap{position:relative;margin-top:10px;}
+  .sugbox{position:absolute;left:0;right:0;top:100%;z-index:5;background:#fff;border:1px solid var(--border);
+    border-radius:10px;box-shadow:0 6px 16px rgba(0,0,0,.14);overflow:hidden;display:none;margin-top:4px;}
+  .sugbox .sug{padding:11px 13px;font-size:14.5px;cursor:pointer;border-bottom:1px solid #f0ece6;}
+  .sugbox .sug:last-child{border-bottom:none;}
+  .sugbox .sug:active{background:#f3efe9;}
+  .sugbox .sug small{color:var(--soft);}
+
+  /* 內建掃描相機（全螢幕，僅螢幕顯示，絕不列印）*/
+  .cam{position:fixed;inset:0;z-index:999;background:#000;display:none;flex-direction:column;align-items:center;justify-content:center;}
+  .cam video{width:100%;height:100%;object-fit:cover;}
+  .camframe{position:absolute;left:50%;top:46%;transform:translate(-50%,-50%);
+    width:88vw;max-width:520px;aspect-ratio:8.56/5.4;border:2.5px dashed #fff;border-radius:10px;
+    box-shadow:0 0 0 9999px rgba(0,0,0,.45);pointer-events:none;}
+  .camtip{position:absolute;top:max(14px,env(safe-area-inset-top));left:0;right:0;text-align:center;color:#fff;font-size:13px;text-shadow:0 1px 3px #000;padding:0 16px;line-height:1.6;}
+  .glarewarn{position:absolute;top:max(70px,calc(env(safe-area-inset-top) + 56px));left:50%;transform:translateX(-50%);display:none;background:rgba(192,57,43,.95);color:#fff;font-size:14px;font-weight:700;text-align:center;padding:8px 16px;border-radius:10px;box-shadow:0 4px 14px rgba(0,0,0,.4);line-height:1.5;z-index:5;}
+  .glarewarn.show{display:block;}
+  .glarewarn span{font-size:12px;font-weight:400;}
+  .cambtns{position:absolute;bottom:max(24px,env(safe-area-inset-bottom));left:0;right:0;display:flex;align-items:center;justify-content:space-around;}
+  .cambtns button{background:rgba(255,255,255,.18);color:#fff;border:none;border-radius:24px;padding:11px 16px;font-size:15px;font-weight:700;}
+  .cambtns .shoot{width:72px;height:72px;border-radius:50%;background:#fff;border:5px solid rgba(255,255,255,.45);}
+  .cambtns button.on{background:var(--gold);}
+  .cambtns button.go{background:#1A7A4A;}
+  /* B：拍完先預覽 */
+  .camconfirm{position:absolute;inset:0;background:#000;display:none;flex-direction:column;align-items:center;justify-content:center;z-index:10;}
+  .camconfirm.show{display:flex;}
+  .camconfirm img{max-width:94%;max-height:74%;object-fit:contain;border-radius:8px;box-shadow:0 4px 20px rgba(0,0,0,.5);}
+  .camconfirm .ctip{color:#fff;font-size:13px;margin-top:12px;opacity:.85;}
+  /* C：點一下對焦的圈圈 */
+  .focusring{position:fixed;width:62px;height:62px;border:2.5px solid #FFD400;border-radius:50%;margin:-31px 0 0 -31px;pointer-events:none;opacity:0;z-index:20;box-shadow:0 0 6px rgba(0,0,0,.4);}
+  .focusring.show{animation:fpulse .55s ease;}
+  @keyframes fpulse{0%{opacity:1;transform:scale(1.5)}80%{opacity:1}100%{opacity:0;transform:scale(1)}}
+
+  #print{margin-top:14px;}
+  .page{width:210mm;min-height:297mm;padding:10mm;background:#fff;margin:0 auto 12px;box-shadow:0 0 8px rgba(0,0,0,.18);}
+  .page.grid{display:flex;flex-wrap:wrap;align-content:flex-start;}
+  .page:not(.grid) .slot{height:133mm;}
+  .page.grid .slot{width:50%;height:128mm;padding:0 3mm 4mm;}
+  .cap{font-weight:700;font-size:12pt;margin-bottom:2mm;color:#000;}
+  .slot .imgwrap{text-align:center;}
+  .slot img{max-width:100%;max-height:116mm;object-fit:contain;border:1px solid #bbb;}
+  .page.grid .slot img{max-height:104mm;}
+
+  @media screen{ .page{transform:scale(.46);transform-origin:top center;margin-bottom:-150mm;} }
+  @media print{
+    @page{ size:A4; margin:0; }
+    body{background:#fff;}
+    .noprint{display:none !important;}
+    .bar{display:none !important;}            /* ① 不印紅色標題列，省墨水 */
+    .cam{display:none !important;}             /* 掃描相機/框線 絕不列印 */
+    main{max-width:none;padding:0;margin:0;}   /* ⑤ 避免被 600px 擠出空白頁 */
+    #print{margin:0;}
+    .page{box-shadow:none;margin:0;transform:none;}
+    .page + .page{page-break-before:always;}   /* ⑤ 只在頁與頁之間分頁，最後不留空白頁 */
+  }
+</style>
+</head>
+<body>
+  <div class="bar">
+    <h1>🪪 證件影本 加註記 · A4整理列印</h1>
+    <p>掃描對齊框 · 補光 · 旋轉/裁切 · 多張整理成 A4 · 全程本機處理不上傳</p>
+  </div>
+
+  <main>
+    <div class="safe noprint">🔒 你的證件照片<strong>只在本機處理，不會上傳</strong>任何伺服器。</div>
+
+    <div class="warn noprint">⚠️ <b>重要：註記千萬不要蓋到「姓名・身分證字號・出生年月日・照片」</b>！<br>
+      勞工局送件要核對身分，這四項只要被蓋住看不清，<b>整份會被退件</b>。請把紅色註記拖到<b>空白邊角</b>，並在「整理成 A4」後再檢查一次都看得清楚。</div>
+
+    <div class="card noprint">
+      <label>1. 註記文字（可多行，會自動跳行）</label>
+      <textarea id="anno">僅供高榮企業工會發起連署用
+它用無效</textarea>
+      <div class="row"><label>字級</label><input type="range" id="fsize" min="30" max="90" value="50"><span class="val" id="fsizeV">50</span></div>
+      <div class="row"><label>濃淡</label><input type="range" id="alpha" min="40" max="100" value="80"><span class="val" id="alphaV">80</span></div>
+      <div class="row"><label>上下線</label>
+        <select id="rule">
+          <option value="thin" selected>細</option>
+          <option value="thick">粗</option>
+          <option value="none">無</option>
+        </select>
+      </div>
+      <div class="hint">調好後，照片加進來會出現紅色註記，<strong>用手指把它拖到空白處</strong>，避開姓名／號碼／照片。</div>
+    </div>
+
+    <div class="card noprint">
+      <label>2. 加入證件照片</label>
+      <div class="pick">
+        <button class="btn btn-cam" onclick="openCam()">📷 拍照</button>
+        <button class="btn btn-alb" onclick="document.getElementById('file').click()">🖼 相簿</button>
+      </div>
+      <input type="file" id="file" accept="image/*" multiple>
+      <input type="file" id="camfile" accept="image/*" capture="environment">
+      <div class="hint">「拍照」會開啟<strong>掃描對齊框</strong>幫你框住證件；不支援時自動改用系統相機。<br>📄 <strong>護貝/反光/有陰影</strong>的證件：照片加進來後按每張下面的「<strong>📄 去反光/陰影</strong>」，會自動把光線拉平、字更清楚。</div>
+      <div id="list"></div>
+    </div>
+
+    <button class="btn btn-make noprint" id="make" disabled onclick="build()">② 整理成 A4（預覽）</button>
+    <div class="row noprint" style="margin-top:8px">
+      <label>每頁張數</label>
+      <select id="perPage" onchange="if(window._built)build()">
+        <option value="2">2 張／頁（證件較大，推薦）</option>
+        <option value="4">4 張／頁（省紙）</option>
+      </select>
+    </div>
+    <button class="btn btn-print noprint" id="prn" disabled onclick="window.print()">🖨 列印 / 存成 PDF（A4）</button>
+    <div class="safe noprint" id="printTip" style="background:#FEF9E7;border-color:#EAD67A;color:#5C4000;margin-top:8px;">
+      📡 <strong>已用藍牙／Wi-Fi 連好印表機？</strong>按「列印」後手機會跳出系統列印視窗，在「印表機」選你那台直接印；沒連則可「儲存為 PDF」。
+    </div>
+    <p class="hint noprint" id="status">尚未加入照片。</p>
+
+    <div class="card noprint" id="shareCard" style="display:none">
+      <label>③ 傳送 / 存雲端 / 寄信（整理成 A4 後使用）</label>
+      <button class="btn btn-share" id="shareBtn" onclick="shareFiles()">📤 傳送…（寄信／Google雲端／檔案／AirDrop／LINE）</button>
+      <button class="btn btn-dl" onclick="downloadFiles()">⬇️ 下載到手機（相簿／檔案）</button>
+      <div class="destwrap">
+        <label style="margin-top:0">常用信箱（選填，填過會記住）</label>
+        <input type="text" id="dest" inputmode="email" autocomplete="off" placeholder="例如 yourname@gmail.com"
+               oninput="suggest()" onfocus="suggest()" onblur="setTimeout(hideSug,200)">
+        <div class="sugbox" id="destSug"></div>
+      </div>
+      <button class="btn btn-mail" onclick="emailTo()">✉️ 寄到我的信箱</button>
+      <div class="hint">按「傳送…」會跳出手機的系統選單，<strong>自己選要送去哪</strong>（郵件／雲端硬碟／檔案／AirDrop…）。<br>
+        ℹ️ 因瀏覽器安全限制，網頁無法自動把檔案塞進信件；選「郵件」時系統會<strong>自動幫你夾帶附件</strong>，你填收件人即可（信箱已幫你複製）。</div>
+    </div>
+
+    <div id="print"></div>
+  </main>
+
+  <!-- 內建掃描相機 -->
+  <div class="cam noprint" id="cam">
+    <video id="camv" playsinline autoplay muted></video>
+    <div class="camframe"></div>
+    <div class="camtip">把證件對進虛線框內，盡量填滿、平整清晰<br>護貝證件<b>別開🔦補光</b>、斜一點、用窗邊光，避免反光</div>
+    <div class="glarewarn" id="glareWarn">⚠️ 偵測到反光<br><span>把證件或手機斜一點、避開頭頂燈光</span></div>
+    <div class="cambtns" id="camLiveBtns">
+      <button onclick="closeCam()">✕ 取消</button>
+      <button class="shoot" aria-label="拍照" onclick="shoot()"></button>
+      <button id="torchBtn" style="visibility:hidden" onclick="toggleTorch()">🔦 補光</button>
+    </div>
+    <div class="focusring" id="focusRing"></div>
+    <div class="camconfirm" id="camConfirm">
+      <img id="camShot" alt="剛拍好的證件預覽">
+      <div class="ctip">看清楚了嗎?模糊或反光就「重拍」</div>
+      <div class="cambtns">
+        <button onclick="retake()">↩ 重拍</button>
+        <button class="go" onclick="acceptShot()">✓ 採用這張</button>
+      </div>
+    </div>
+  </div>
+
+<script>
+  var items = [];   // {bitmap,label,rot,crop,pos,enhance,_canvas,_base,_box,_cropping,_cropRect,_lockRatio}
+  var $ = function(id){ return document.getElementById(id); };
+  var TYPES = ['身分證正面','身分證反面','職員證正面','職員證反面','勞保投保證明','薪資證明','其他'];
+  var ID_RATIO = 8.56/5.4;            // 證件長寬比（裁切/對齊框）
+  var fontK   = function(){ return $('fsize').value/1000; };
+  var alphaVal= function(){ return $('alpha').value/100; };
+  var ruleFactor = function(){ var v=$('rule').value; return v==='none'?0:(v==='thick'?0.085:0.03); };
+  var ENHANCE_FILTER = 'brightness(1.42) contrast(1.18) saturate(1.05)';
+
+  // ---- 檔案載入（相簿可多張；系統相機備援單張）----
+  function newItem(bmp, crop){
+    items.push({ bitmap:bmp, label:TYPES[Math.min(items.length,TYPES.length-1)],
+                 rot:0, crop:crop||null, pos:{x:0.035,y:0.04}, scale:1, enhance:false, docmode:false, _editing:true });
+  }
+  async function addFiles(files){
+    for (var i=0;i<files.length;i++){
+      var f=files[i], bmp;
+      try { bmp = await createImageBitmap(f, { imageOrientation:'from-image' }); }
+      catch(_){ bmp = await loadFallback(f); }
+      newItem(bmp);
+    }
+    renderList();
+  }
+  $('file').addEventListener('change', function(e){ var fs=Array.from(e.target.files||[]); e.target.value=''; if(fs.length) addFiles(fs); });
+  $('camfile').addEventListener('change', function(e){ var fs=Array.from(e.target.files||[]); e.target.value=''; if(fs.length) addFiles(fs); });
+  function loadFallback(file){
+    return new Promise(function(res){ var u=URL.createObjectURL(file); var img=new Image(); img.onload=function(){ URL.revokeObjectURL(u); res(img); }; img.src=u; });
+  }
+
+  function annoLines(){ return ($('anno').value||'').split('\n').map(function(s){return s.trim();}).filter(Boolean); }
+  function defaultIdCrop(w,h){
+    var rW=0.92, rH=rW*(w/h)/ID_RATIO;
+    if(rH>0.92){ rH=0.92; rW=rH*ID_RATIO*(h/w); }
+    return {x:(1-rW)/2, y:(1-rH)/2, w:rW, h:rH};
+  }
+
+  // ---- 內建掃描相機 ----
+  async function openCam(){
+    if(!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia){ $('camfile').click(); return; }
+    try{
+      var stream=await navigator.mediaDevices.getUserMedia({
+        video:{ facingMode:{ideal:'environment'}, width:{ideal:3840}, height:{ideal:2160} }, audio:false });   // 盡量抓最高解析度（裝置不支援會自動降）
+      window._camStream=stream;
+      var v=$('camv'); v.srcObject=stream; try{ await v.play(); }catch(_){}
+      var track=stream.getVideoTracks()[0]; window._camTrack=track; window._torchOn=false;
+      try{ track.applyConstraints({advanced:[{focusMode:'continuous'}]}); }catch(_){}   // C：連續自動對焦
+      var caps=(track.getCapabilities&&track.getCapabilities())||{};
+      var tb=$('torchBtn'); tb.classList.remove('on'); tb.style.visibility = caps.torch ? 'visible':'hidden';
+      $('camConfirm').classList.remove('show'); $('camLiveBtns').style.display='flex'; window._pendingShot=null;
+      $('cam').style.display='flex';
+      startGlareWatch();
+    }catch(err){ $('camfile').click(); }   // 不支援或拒絕授權 → 退回系統相機
+  }
+  // ---- 反光偵測：抓畫面中央(對齊框)有沒有大片死白 ----
+  function startGlareWatch(){
+    stopGlareWatch();
+    var probe=document.createElement('canvas'); probe.width=80; probe.height=50;
+    window._glareTimer=setInterval(function(){
+      var v=$('camv'); if(!v||!v.videoWidth) return;
+      var pc=probe.getContext('2d');
+      // 只取畫面中央約 88%×對齊框比例的區域
+      var vw=v.videoWidth, vh=v.videoHeight, cw=vw*0.82, ch=cw*5.4/8.56;
+      if(ch>vh*0.9){ ch=vh*0.9; cw=ch*8.56/5.4; }
+      pc.drawImage(v, (vw-cw)/2,(vh-ch)/2,cw,ch, 0,0,80,50);
+      var d=pc.getImageData(0,0,80,50).data, blown=0, n=80*50;
+      for(var i=0;i<d.length;i+=4){ if(d[i]>249&&d[i+1]>249&&d[i+2]>249) blown++; }
+      $('glareWarn').classList.toggle('show', blown/n > 0.02);   // 死白超過 2% 就警示
+    },450);
+  }
+  function stopGlareWatch(){ if(window._glareTimer){ clearInterval(window._glareTimer); window._glareTimer=null; } $('glareWarn').classList.remove('show'); }
+  function closeCam(){
+    stopGlareWatch();
+    var s=window._camStream; if(s){ s.getTracks().forEach(function(t){t.stop();}); }
+    window._camStream=null; window._camTrack=null;
+    $('camv').srcObject=null; $('cam').style.display='none';
+  }
+  function toggleTorch(){
+    var t=window._camTrack; if(!t) return;
+    window._torchOn=!window._torchOn;
+    t.applyConstraints({advanced:[{torch:window._torchOn}]}).then(function(){
+      $('torchBtn').classList.toggle('on', window._torchOn);
+    }).catch(function(){ alert('此裝置/瀏覽器不支援手電筒補光，可改用環境光或相簿。'); });
+  }
+  // A：把螢幕上的對齊框換算成「影片畫面中的裁切範圍」（考慮 object-fit:cover 的縮放/裁邊）
+  function frameRectInVideo(v){
+    var vw=v.videoWidth, vh=v.videoHeight, ew=v.clientWidth||vw, eh=v.clientHeight||vh;
+    var s=Math.max(ew/vw, eh/vh), ox=(ew-vw*s)/2, oy=(eh-vh*s)/2;
+    var fw=Math.min(0.88*ew,520), fh=fw*5.4/8.56, fx=(ew-fw)/2, fy=0.46*eh-fh/2;
+    var sx=(fx-ox)/s, sy=(fy-oy)/s, sw=fw/s, sh=fh/s;
+    sx=Math.max(0,Math.min(sx,vw)); sy=Math.max(0,Math.min(sy,vh));
+    sw=Math.min(sw,vw-sx); sh=Math.min(sh,vh-sy);
+    return {sx:sx,sy:sy,sw:sw,sh:sh};
+  }
+  // D：盡量用全解析度靜態拍照（Android Chrome 支援；不支援或比例不符就退回即時影格，確保對齊正確）
+  async function grabSource(v){
+    if(window.ImageCapture && window._camTrack){
+      try{
+        var bmp=await createImageBitmap(await new ImageCapture(window._camTrack).takePhoto());
+        if(Math.abs(bmp.width/bmp.height - v.videoWidth/v.videoHeight) < 0.06) return { img:bmp, scale:bmp.width/v.videoWidth };
+      }catch(_){}
+    }
+    return { img:v, scale:1 };
+  }
+  async function shoot(){
+    var v=$('camv'); if(!v.videoWidth){ alert('相機尚未就緒，請稍候再按'); return; }
+    var r=frameRectInVideo(v), src=await grabSource(v), k=src.scale;
+    var c=document.createElement('canvas');
+    c.width=Math.max(1,Math.round(r.sw*k)); c.height=Math.max(1,Math.round(r.sh*k));
+    c.getContext('2d').drawImage(src.img, r.sx*k, r.sy*k, r.sw*k, r.sh*k, 0,0,c.width,c.height);
+    showConfirm(c);
+  }
+  // B：拍完先預覽，讓使用者「重拍」或「採用」
+  function showConfirm(canvas){
+    window._pendingShot=canvas; stopGlareWatch();
+    $('camShot').src=canvas.toDataURL('image/jpeg',0.9);
+    $('camLiveBtns').style.display='none'; $('camConfirm').classList.add('show');
+  }
+  function retake(){
+    window._pendingShot=null;
+    $('camConfirm').classList.remove('show'); $('camLiveBtns').style.display='flex'; startGlareWatch();
+  }
+  function acceptShot(){
+    var c=window._pendingShot; if(!c) return; window._pendingShot=null;
+    newItem(c, null);   // 已裁成對齊框範圍，直接採用
+    closeCam(); renderList();
+    $('status').textContent='已拍 1 張（已依對齊框裁好），可按 ✂️ 微調或加更多張。';
+  }
+  // C：點畫面對焦（支援的裝置）+ 對焦圈回饋
+  function tapFocus(ev){
+    showFocusRing(ev.clientX, ev.clientY);
+    var t=window._camTrack; if(!t||!t.applyConstraints) return;
+    var caps=(t.getCapabilities&&t.getCapabilities())||{}, v=$('camv'), rc=v.getBoundingClientRect(), adv=[];
+    if(caps.pointsOfInterest) adv.push({pointsOfInterest:[{x:(ev.clientX-rc.left)/rc.width, y:(ev.clientY-rc.top)/rc.height}]});
+    if(caps.focusMode && caps.focusMode.indexOf('single-shot')>=0) adv.push({focusMode:'single-shot'});
+    if(adv.length) t.applyConstraints({advanced:adv}).catch(function(){});
+  }
+  function showFocusRing(x,y){
+    var r=$('focusRing'); r.style.left=x+'px'; r.style.top=y+'px';
+    r.classList.remove('show'); void r.offsetWidth; r.classList.add('show');
+  }
+  $('camv').addEventListener('click', tapFocus);
+
+  // ---- 影像處理：旋轉 + 裁切 ----
+  function orientedCanvas(it){
+    var b=it.bitmap, sw=b.width, sh=b.height, r=((it.rot%360)+360)%360;
+    var c=document.createElement('canvas'), x=c.getContext('2d');
+    if(r===90||r===270){ c.width=sh; c.height=sw; } else { c.width=sw; c.height=sh; }
+    x.save();
+    if(r===90){ x.translate(sh,0); x.rotate(Math.PI/2); }
+    else if(r===180){ x.translate(sw,sh); x.rotate(Math.PI); }
+    else if(r===270){ x.translate(0,sw); x.rotate(3*Math.PI/2); }
+    x.drawImage(b,0,0,sw,sh); x.restore();
+    return c;
+  }
+  function workingCanvas(it){
+    var o=orientedCanvas(it), cr=it.crop||{x:0,y:0,w:1,h:1};
+    var sx=cr.x*o.width, sy=cr.y*o.height, sw=cr.w*o.width, sh=cr.h*o.height;
+    var c=document.createElement('canvas');
+    c.width=Math.max(1,Math.round(sw)); c.height=Math.max(1,Math.round(sh));
+    c.getContext('2d').drawImage(o, sx,sy,sw,sh, 0,0,c.width,c.height);
+    return c;
+  }
+  // ---- 文件增強：勻光去陰影（估計每區亮度後拉平，順便壓反光、提清晰）----
+  function docEnhance(src){
+    var w=src.width, h=src.height;
+    // 1) 用「大幅縮小再放大」得到一張模糊的「光照圖」（每塊區域的亮度）
+    var dw=Math.max(1,Math.round(w/14)), dh=Math.max(1,Math.round(h/14));
+    var small=document.createElement('canvas'); small.width=dw; small.height=dh;
+    small.getContext('2d').drawImage(src,0,0,dw,dh);
+    var illum=document.createElement('canvas'); illum.width=w; illum.height=h;
+    var ic=illum.getContext('2d'); ic.imageSmoothingEnabled=true; ic.drawImage(small,0,0,w,h);
+    // 2) 每個像素除以「該區亮度」→ 把不均勻的光拉平
+    var sctx=src.getContext('2d'), sd=sctx.getImageData(0,0,w,h), s=sd.data;
+    var im=ic.getImageData(0,0,w,h).data, TARGET=212;
+    for(var p=0;p<s.length;p+=4){
+      var lum=im[p]*0.299+im[p+1]*0.587+im[p+2]*0.114; if(lum<1) lum=1;
+      var gain=TARGET/lum; if(gain<0.55) gain=0.55; if(gain>2.6) gain=2.6;
+      // 輕度提對比，讓字更黑
+      var r=s[p]*gain, g=s[p+1]*gain, b=s[p+2]*gain;
+      r=(r-128)*1.12+128; g=(g-128)*1.12+128; b=(b-128)*1.12+128;
+      s[p]=r<0?0:r>255?255:r; s[p+1]=g<0?0:g>255?255:g; s[p+2]=b<0?0:b>255?255:b;
+    }
+    sctx.putImageData(sd,0,0);
+    return src;
+  }
+  // 把 working 影像（含勻光/補光）畫進 ctx（目標 w×h）
+  function drawWorking(ctx, it, w, h){
+    var work=workingCanvas(it);
+    var tmp=document.createElement('canvas'); tmp.width=w; tmp.height=h;
+    tmp.getContext('2d').drawImage(work,0,0,w,h);
+    if(it.docmode) tmp=docEnhance(tmp);              // 勻光去陰影/反光
+    var useF = it.enhance && ('filter' in ctx);
+    if(useF) ctx.filter=ENHANCE_FILTER;              // 額外補光（暗的時候）
+    ctx.drawImage(tmp,0,0,w,h);
+    if(useF) ctx.filter='none';
+  }
+
+  // ---- 註記（預覽與輸出共用，所見即所得）----
+  function wrapLine(ctx,text,maxW){
+    if(ctx.measureText(text).width<=maxW) return [text];
+    var out=[],cur='';
+    for(var i=0;i<text.length;i++){ var t=cur+text[i];
+      if(ctx.measureText(t).width>maxW && cur){ out.push(cur); cur=text[i]; } else cur=t; }
+    if(cur) out.push(cur); return out;
+  }
+  function roundRect(ctx,x,y,w,h,r){
+    ctx.beginPath(); ctx.moveTo(x+r,y);
+    ctx.arcTo(x+w,y,x+w,y+h,r); ctx.arcTo(x+w,y+h,x,y+h,r);
+    ctx.arcTo(x,y+h,x,y,r); ctx.arcTo(x,y,x+w,y,r); ctx.closePath();
+  }
+  function drawAnno(ctx, cw, ch, it, editable){
+    var lines=annoLines(); if(!lines.length) return null;
+    var fs=Math.max(11, Math.round(cw*fontK()*(it.scale||1)));   // it.scale：拖把手縮放
+    ctx.font='bold '+fs+'px sans-serif'; ctx.textAlign='left'; ctx.textBaseline='top';
+    var bx0=it.pos.x*cw, by0=it.pos.y*ch;
+    var maxTextW=Math.max(cw*0.25, cw*0.97-bx0);
+    var wrapped=[]; lines.forEach(function(l){ wrapLine(ctx,l,maxTextW).forEach(function(w){wrapped.push(w);}); });
+    var tw=0; wrapped.forEach(function(l){ tw=Math.max(tw, ctx.measureText(l).width); });
+    var pad=fs*0.45, lh=fs*1.3, rule=Math.round(ruleFactor()*fs);
+    var bw=tw+pad*2, bh=lh*wrapped.length+pad*2+rule*2;
+    var bx=Math.max(0,Math.min(bx0, cw-bw)), by=Math.max(0,Math.min(by0, ch-bh));
+    var a=alphaVal();
+    ctx.globalAlpha=Math.min(0.85, a*0.95); ctx.fillStyle='#fff'; ctx.fillRect(bx,by,bw,bh);
+    ctx.globalAlpha=Math.max(a,0.6); ctx.fillStyle='#C0392B';
+    if(rule) ctx.fillRect(bx,by,bw,rule);
+    wrapped.forEach(function(l,i){ ctx.fillText(l, bx+pad, by+rule+pad+i*lh); });
+    if(rule) ctx.fillRect(bx,by+bh-rule,bw,rule);
+    ctx.globalAlpha=1;
+    var box={x:bx,y:by,w:bw,h:bh,hs:0};
+    if(editable && it._editing){                    // 外框/把手只在「編輯中」顯示；列印與預覽乾淨效果時都不畫
+      ctx.save();
+      ctx.strokeStyle='#1A3A6B'; ctx.lineWidth=Math.max(1.5,fs*0.05); ctx.setLineDash([6,4]);
+      ctx.strokeRect(bx,by,bw,bh); ctx.setLineDash([]);
+      var hs=Math.max(22, Math.round(fs*1.0)); box.hs=hs;
+      var hx=bx+bw-hs, hy=by+bh-hs;
+      ctx.fillStyle='#1A3A6B'; roundRect(ctx,hx,hy,hs,hs,Math.round(hs*0.22)); ctx.fill();
+      ctx.strokeStyle='#fff'; ctx.lineWidth=Math.max(2,hs*0.09); ctx.lineCap='round';
+      var m=hs*0.30, d=hs*0.20;
+      ctx.beginPath(); ctx.moveTo(hx+m,hy+hs-m); ctx.lineTo(hx+hs-m,hy+m); ctx.stroke();
+      ctx.beginPath();
+      ctx.moveTo(hx+hs-m,hy+m); ctx.lineTo(hx+hs-m-d,hy+m);
+      ctx.moveTo(hx+hs-m,hy+m); ctx.lineTo(hx+hs-m,hy+m+d);
+      ctx.moveTo(hx+m,hy+hs-m); ctx.lineTo(hx+m+d,hy+hs-m);
+      ctx.moveTo(hx+m,hy+hs-m); ctx.lineTo(hx+m,hy+hs-m-d);
+      ctx.stroke(); ctx.restore();
+    }
+    return box;
+  }
+
+  // ---- 列表 ----
+  function toolsHTML(idx){
+    var on=items[idx].enhance?'on':'', dm=items[idx].docmode?'on':'';
+    return '<button onclick="rotate('+idx+',-90)">↺ 左轉</button>'+
+           '<button onclick="rotate('+idx+',90)">↻ 右轉</button>'+
+           '<button onclick="enterCrop('+idx+')">✂️ 裁切</button>'+
+           '<button class="'+dm+'" onclick="toggleDoc('+idx+')">📄 去反光/陰影</button>'+
+           '<button class="'+on+'" onclick="toggleEnhance('+idx+')">✨ 補光</button>'+
+           '<button onclick="saveOne('+idx+')">💾 存圖</button>'+
+           '<button class="danger" onclick="removeItem('+idx+')">🗑 刪除</button>';
+  }
+  function renderList(){
+    var wrap=$('list'); wrap.innerHTML='';
+    items.forEach(function(it, idx){
+      var div=document.createElement('div'); div.className='item';
+      var opts=TYPES.map(function(t){ return '<option '+(t===it.label?'selected':'')+'>'+t+'</option>'; }).join('');
+      div.innerHTML=
+        '<div class="ihead"><select onchange="items['+idx+'].label=this.value">'+opts+'</select></div>'+
+        '<div class="pv"><canvas></canvas></div>'+
+        '<div class="dragtip">👆 <b>拖紅框</b>＝移動、<b>拖右下角藍把手</b>＝縮放；調好後<b>點照片別處</b>，外框會消失、看到貼好的乾淨效果（要再調就點一下註記）</div>'+
+        '<div class="tools">'+toolsHTML(idx)+'</div>';
+      wrap.appendChild(div);
+      it._canvas=div.querySelector('canvas'); it._base=null;
+      paintItem(idx); attachDrag(idx);
+    });
+    var has=items.length>0;
+    $('make').disabled=!has;
+    if(!/已拍|已輸出/.test($('status').textContent))
+      $('status').textContent = has ? ('已加入 '+items.length+' 張，調整好後按「整理成 A4」。') : '尚未加入照片。';
+  }
+  function dispWidth(){ return Math.min((window.innerWidth||520)-64, 520); }
+
+  // 快取顯示底圖（旋轉/裁切/補光/寬度改變才重建）→ 拖曳超順
+  function ensureBase(it){
+    var work=workingCanvas(it), W=dispWidth(), H=Math.round(W*work.height/work.width);
+    if(it._base && it._base.width===W && it._base.height===H && it._baseTag===baseTag(it)) return;
+    var b=document.createElement('canvas'); b.width=W; b.height=H;
+    drawWorking(b.getContext('2d'), it, W, H);
+    it._base=b; it._baseTag=baseTag(it);
+  }
+  function baseTag(it){ return it.rot+'|'+JSON.stringify(it.crop)+'|'+(it.enhance?1:0)+'|'+(it.docmode?1:0); }
+
+  function paintItem(idx){
+    var it=items[idx], cv=it._canvas; if(!cv) return;
+    if(it._cropping){ paintCrop(idx); return; }
+    ensureBase(it);
+    var W=it._base.width, H=it._base.height;
+    cv.width=W; cv.height=H; cv.style.width=W+'px';
+    var ctx=cv.getContext('2d');
+    ctx.clearRect(0,0,W,H); ctx.drawImage(it._base,0,0);
+    it._box=drawAnno(ctx,W,H,it,true);
+  }
+
+  // ---- 拖曳註記：拖框內＝移動；拖右下角藍把手＝放大縮小 ----
+  function attachDrag(idx){
+    var it=items[idx], cv=it._canvas;
+    cv.addEventListener('pointerdown', function(ev){
+      if(it._cropping) return cropPointerDown(idx,ev);
+      var p=canvasPoint(cv,ev), b=it._box; if(!b) return;
+      var insideBox = p.x>=b.x && p.x<=b.x+b.w && p.y>=b.y && p.y<=b.y+b.h;
+
+      // 點在註記外面 → 收起外框與把手，顯示貼好後的乾淨效果
+      if(!insideBox){ if(it._editing){ it._editing=false; paintItem(idx); } return; }
+
+      // 點到註記 → 進入編輯（顯示外框/把手）
+      if(!it._editing){ it._editing=true; paintItem(idx); b=it._box; }
+
+      // 抓到右下角的縮放把手?（觸控給寬一點的命中範圍）
+      var hs=Math.max(b.hs||0, 30);
+      if(b.hs && p.x>=b.x+b.w-hs && p.y>=b.y+b.h-hs){
+        ev.preventDefault();
+        var ax=b.x, ay=b.y;                                  // 以左上角為錨點
+        var startD=Math.max(8, Math.hypot(p.x-ax,p.y-ay)), startScale=it.scale||1;
+        var rmove=function(e){
+          var q=canvasPoint(cv,e), d=Math.hypot(q.x-ax,q.y-ay);
+          it.scale=Math.max(0.4, Math.min(3.2, startScale*d/startD));
+          paintItem(idx);
+        };
+        var rup=function(){ document.removeEventListener('pointermove',rmove); document.removeEventListener('pointerup',rup); resetBuilt(); };
+        document.addEventListener('pointermove',rmove); document.addEventListener('pointerup',rup);
+        return;
+      }
+
+      // 否則：移動
+      ev.preventDefault();
+      var offX=p.x-b.x, offY=p.y-b.y;
+      function move(e){
+        var q=canvasPoint(cv,e);
+        var nx=Math.max(0,Math.min(q.x-offX, cv.width-b.w));
+        var ny=Math.max(0,Math.min(q.y-offY, cv.height-b.h));
+        it.pos={x:nx/cv.width, y:ny/cv.height};
+        var ctx=cv.getContext('2d'); ctx.clearRect(0,0,cv.width,cv.height);
+        ctx.drawImage(it._base,0,0); it._box=drawAnno(ctx,cv.width,cv.height,it,true);
+      }
+      function up(){ document.removeEventListener('pointermove',move); document.removeEventListener('pointerup',up); resetBuilt(); }
+      document.addEventListener('pointermove',move); document.addEventListener('pointerup',up);
+    });
+  }
+  function canvasPoint(cv,ev){
+    var r=cv.getBoundingClientRect();
+    return { x:(ev.clientX-r.left)*cv.width/r.width, y:(ev.clientY-r.top)*cv.height/r.height };
+  }
+
+  // ---- 旋轉 / 補光 ----
+  function rotate(idx,deg){ var it=items[idx]; it.rot=(it.rot+deg+360)%360; it.crop=null; it._base=null; paintItem(idx); resetBuilt(); }
+  function toggleEnhance(idx){
+    var it=items[idx]; it.enhance=!it.enhance; it._base=null; paintItem(idx); resetBuilt();
+    var b=it._canvas.closest('.item').querySelector('.tools'); if(b) b.innerHTML=toolsHTML(idx);
+  }
+  function toggleDoc(idx){
+    var it=items[idx]; it.docmode=!it.docmode; it._base=null; paintItem(idx); resetBuilt();
+    var b=it._canvas.closest('.item').querySelector('.tools'); if(b) b.innerHTML=toolsHTML(idx);
+  }
+
+  // ---- 裁切 ----
+  function enterCrop(idx){
+    var it=items[idx], o=orientedCanvas(it);
+    it._cropRect = it.crop ? Object.assign({},it.crop) : defaultIdCrop(o.width,o.height);
+    it._cropping=true; it._lockRatio=true;
+    var div=it._canvas.closest('.item');
+    div.querySelector('.dragtip').style.display='none';
+    var bar=div.querySelector('.tools');
+    bar.innerHTML='<button class="go" onclick="applyCrop('+idx+')">✓ 套用裁切</button>'+
+                  '<button class="cancel" onclick="cancelCrop('+idx+')">取消</button>';
+    var cr=document.createElement('div'); cr.className='croprow';
+    cr.innerHTML='<input type="checkbox" id="lk'+idx+'" checked onchange="items['+idx+']._lockRatio=this.checked;"> 對齊證件比例（8.56×5.4）｜拖框移動、拖四角縮放';
+    bar.parentNode.insertBefore(cr,bar.nextSibling);
+    paintCrop(idx);
+  }
+  function paintCrop(idx){
+    var it=items[idx], cv=it._canvas, o=orientedCanvas(it);
+    var W=dispWidth(), H=Math.round(W*o.height/o.width);
+    cv.width=W; cv.height=H; cv.style.width=W+'px';
+    var ctx=cv.getContext('2d'); ctx.clearRect(0,0,W,H); ctx.drawImage(o,0,0,W,H);
+    var r=it._cropRect, x=r.x*W, y=r.y*H, w=r.w*W, h=r.h*H;
+    ctx.fillStyle='rgba(0,0,0,.5)';
+    ctx.fillRect(0,0,W,y); ctx.fillRect(0,y+h,W,H-y-h); ctx.fillRect(0,y,x,h); ctx.fillRect(x+w,y,W-x-w,h);
+    ctx.strokeStyle='#C0392B'; ctx.lineWidth=2; ctx.strokeRect(x,y,w,h);
+    ctx.fillStyle='#C0392B'; var hs=9;
+    [[x,y],[x+w,y],[x,y+h],[x+w,y+h]].forEach(function(p){ ctx.fillRect(p[0]-hs,p[1]-hs,hs*2,hs*2); });
+  }
+  function cropPointerDown(idx,ev){
+    ev.preventDefault();
+    var it=items[idx], cv=it._canvas, r=it._cropRect, W=cv.width, H=cv.height, hs=16;
+    var px=r.x*W, py=r.y*H, pw=r.w*W, ph=r.h*H;
+    var pts=[[px,py],[px+pw,py],[px,py+ph],[px+pw,py+ph]];
+    var p=canvasPoint(cv,ev), grab=-1;
+    for(var i=0;i<4;i++){ if(Math.abs(p.x-pts[i][0])<hs && Math.abs(p.y-pts[i][1])<hs){ grab=i; break; } }
+    var moveAll = grab<0 && p.x>px && p.x<px+pw && p.y>py && p.y<py+ph;
+    if(grab<0 && !moveAll) return;
+    var start={x:p.x,y:p.y,rx:r.x,ry:r.y,rw:r.w,rh:r.h};
+    function move(e){
+      var q=canvasPoint(cv,e), dx=(q.x-start.x)/W, dy=(q.y-start.y)/H;
+      if(moveAll){
+        r.x=Math.max(0,Math.min(start.rx+dx, 1-start.rw));
+        r.y=Math.max(0,Math.min(start.ry+dy, 1-start.rh));
+      } else {
+        var ax=(grab===1||grab===3)? start.rx : start.rx+start.rw;
+        var ay=(grab===2||grab===3)? start.ry : start.ry+start.rh;
+        var cx=q.x/W, cy=q.y/H;
+        var nx=Math.min(ax,cx), nw=Math.abs(cx-ax);
+        var ny=Math.min(ay,cy), nh=Math.abs(cy-ay);
+        if(it._lockRatio){
+          var fr=ID_RATIO*(H/W);            // 顯示畫布即 oriented 比例
+          nh=nw/fr; ny=(grab===0||grab===1)? ay-nh : ay;
+        }
+        nw=Math.max(0.05,Math.min(nw,1)); nh=Math.max(0.05,Math.min(nh,1));
+        if(nx<0)nx=0; if(ny<0)ny=0; if(nx+nw>1)nw=1-nx; if(ny+nh>1)nh=1-ny;
+        r.x=nx; r.y=ny; r.w=nw; r.h=nh;
+      }
+      paintCrop(idx);
+    }
+    function up(){ document.removeEventListener('pointermove',move); document.removeEventListener('pointerup',up); }
+    document.addEventListener('pointermove',move); document.addEventListener('pointerup',up);
+  }
+  function applyCrop(idx){ var it=items[idx]; it.crop=Object.assign({},it._cropRect); it._cropping=false; it.pos={x:0.035,y:0.04}; it._base=null; cleanCropUI(idx); paintItem(idx); resetBuilt(); }
+  function cancelCrop(idx){ items[idx]._cropping=false; cleanCropUI(idx); paintItem(idx); }
+  function cleanCropUI(idx){
+    var div=items[idx]._canvas.closest('.item');
+    var cr=div.querySelector('.croprow'); if(cr) cr.remove();
+    div.querySelector('.dragtip').style.display='';
+    div.querySelector('.tools').innerHTML=toolsHTML(idx);
+  }
+
+  // ---- 即時刷新（文字/字級/濃淡/線條）----
+  ['anno','fsize','alpha','rule'].forEach(function(id){
+    $(id).addEventListener('input', function(){
+      if(id==='fsize') $('fsizeV').textContent=$('fsize').value;
+      if(id==='alpha') $('alphaV').textContent=$('alpha').value;
+      items.forEach(function(it,idx){ if(!it._cropping) paintItem(idx); });
+    });
+  });
+  window.addEventListener('resize', function(){ items.forEach(function(it,idx){ it._base=null; if(!it._cropping) paintItem(idx); }); });
+
+  function removeItem(i){ items.splice(i,1); renderList(); resetBuilt(); }
+  function resetBuilt(){ $('print').innerHTML=''; $('prn').disabled=true; window._built=false;
+    window._shareFiles=null; var sc=$('shareCard'); if(sc) sc.style.display='none'; }
+
+  // ---- 輸出 ----
+  function bake(it){
+    var work=workingCanvas(it), c=document.createElement('canvas');
+    c.width=work.width; c.height=work.height;
+    drawWorking(c.getContext('2d'), it, c.width, c.height);
+    drawAnno(c.getContext('2d'), c.width, c.height, it);
+    return c.toDataURL('image/jpeg',0.95);
+  }
+  function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+  function saveOne(idx){
+    var it=items[idx], a=document.createElement('a');
+    a.href=bake(it); a.download=(it.label||'證件')+'_加註記.jpg';
+    document.body.appendChild(a); a.click(); a.remove();
+    $('status').textContent='已輸出「'+it.label+'」圖檔。手機若直接開啟，請長按圖片→儲存到相簿。';
+  }
+
+  function build(){
+    if(!items.length){ alert('請先加入證件照片'); return; }
+    if(items.some(function(it){return it._cropping;})){ alert('請先「套用裁切」或「取消」再整理'); return; }
+    $('status').textContent='整理中…';
+    var per=parseInt($('perPage').value,10), grid=per===4;
+    var baked=items.map(function(it){ return { src: bake(it), label: it.label }; });
+    var html='';
+    for(var i=0;i<baked.length;i+=per){
+      var group=baked.slice(i,i+per);
+      html+='<div class="page'+(grid?' grid':'')+'">';
+      group.forEach(function(b){ html+='<div class="slot"><div class="cap">'+esc(b.label)+'</div><div class="imgwrap"><img src="'+b.src+'"></div></div>'; });
+      html+='</div>';
+    }
+    $('print').innerHTML=html; window._built=true; $('prn').disabled=false;
+    $('status').textContent='已整理成 A4，下方可預覽。確認資料清楚後按「列印/存PDF」或「傳送」。';
+
+    // 同步產生可分享/下載/寄信的 A4 圖檔（每頁一張）
+    $('shareCard').style.display=''; window._shareFiles=null;
+    composePages(baked).then(function(pages){
+      return Promise.all(pages.map(function(c,i){
+        return new Promise(function(r){ c.toBlob(function(b){ r(new File([b],'證件A4_'+(i+1)+'.jpg',{type:'image/jpeg'})); },'image/jpeg',0.95); });
+      }));
+    }).then(function(files){ window._shareFiles=files; }).catch(function(){});
+
+    $('print').scrollIntoView({behavior:'smooth'});
+  }
+
+  // ---- 把每頁排版烤成一張 A4 圖（給分享/下載/寄信用）----
+  function loadImg(src){ return new Promise(function(res){ var i=new Image(); i.onload=function(){res(i);}; i.src=src; }); }
+  function drawSlot(x, label, img, sx, sy, sw, sh){
+    var capH=88;
+    x.fillStyle='#000'; x.font='bold 56px sans-serif'; x.textAlign='left'; x.textBaseline='top';
+    x.fillText(label, sx, sy);
+    var iy=sy+capH, ih=sh-capH-16, iw=sw;
+    var s=Math.min(iw/img.width, ih/img.height), dw=img.width*s, dh=img.height*s;
+    x.drawImage(img, sx+(iw-dw)/2, iy+(ih-dh)/2, dw, dh);
+  }
+  async function composePages(baked){
+    var per=parseInt($('perPage').value,10), grid=per===4;
+    var imgs=await Promise.all(baked.map(function(b){ return loadImg(b.src); }));
+    var PW=2480, PH=3508, M=116, pages=[];   // ≈300dpi A4（高解析，列印/縮放都清楚）
+    for(var i=0;i<baked.length;i+=per){
+      var c=document.createElement('canvas'); c.width=PW; c.height=PH;
+      var x=c.getContext('2d'); x.fillStyle='#fff'; x.fillRect(0,0,PW,PH);
+      var gi=imgs.slice(i,i+per), gb=baked.slice(i,i+per);
+      if(!grid){
+        var sh=(PH-2*M)/2;
+        gb.forEach(function(b,k){ drawSlot(x,b.label,gi[k], M, M+k*sh, PW-2*M, sh); });
+      } else {
+        var sw=(PW-2*M)/2, sh4=(PH-2*M)/2;
+        gb.forEach(function(b,k){ drawSlot(x,b.label,gi[k], M+(k%2)*sw, M+((k/2)|0)*sh4, sw, sh4); });
+      }
+      pages.push(c);
+    }
+    return pages;
+  }
+
+  // ---- 傳送 / 下載 / 寄信 ----
+  function notReady(){ if(!window._shareFiles||!window._shareFiles.length){ alert('檔案產生中，請等 1～2 秒再按一次。'); return true; } return false; }
+  function shareFiles(){
+    if(notReady()) return;
+    if(navigator.canShare && navigator.canShare({files:window._shareFiles})){
+      navigator.share({ files:window._shareFiles, title:'證件影本（高榮企業工會連署）' }).catch(function(){});
+    } else { downloadFiles(); alert('此瀏覽器不支援直接分享，已改為下載到裝置，可再自行夾帶寄出或上傳雲端。'); }
+  }
+  function downloadFiles(){
+    if(notReady()) return;
+    window._shareFiles.forEach(function(f){
+      var u=URL.createObjectURL(f), a=document.createElement('a');
+      a.href=u; a.download=f.name; document.body.appendChild(a); a.click(); a.remove();
+      setTimeout(function(){ URL.revokeObjectURL(u); }, 4000);
+    });
+  }
+  function emailTo(){
+    if(notReady()) return;
+    var em=getEmail();
+    if(!em || !validEmail(em)){ alert('請先在上面填一個正確的信箱（例如 yourname@gmail.com）'); $('dest').focus(); return; }
+    remember(em); try{ navigator.clipboard && navigator.clipboard.writeText(em); }catch(_){}
+    // 先把 A4 檔下載到裝置（瀏覽器無法自動把檔案塞進信件），再開啟郵件、收件人帶入你填的信箱
+    downloadFiles();
+    location.href='mailto:'+encodeURIComponent(em)+'?subject='+encodeURIComponent('證件影本（高榮企業工會連署）')+
+      '&body='+encodeURIComponent('附件為證件影本，請把剛剛下載到裝置的「證件A4_…jpg」夾帶後寄出。');
+  }
+
+  // ---- 信箱 @ 自動補全 + 記住常用 ----
+  var DOMAINS=['gmail.com','yahoo.com.tw','yahoo.com','hotmail.com','outlook.com','icloud.com','msn.com','me.com','livemail.tw','vghks.gov.tw'];
+  function getEmail(){ return ($('dest').value||'').trim(); }
+  function validEmail(s){ return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(s); }
+  function getSaved(){ try{ return JSON.parse(localStorage.getItem('idmark_emails')||'[]'); }catch(_){ return []; } }
+  function remember(em){
+    var a=getSaved().filter(function(x){ return x!==em; }); a.unshift(em);
+    try{ localStorage.setItem('idmark_emails', JSON.stringify(a.slice(0,8))); }catch(_){}
+  }
+  function hideSug(){ $('destSug').style.display='none'; }
+  function suggest(){
+    var v=getEmail(), box=$('destSug'), saved=getSaved(), list=[];
+    if(!v){ list=saved.slice(0,6); }
+    else if(v.indexOf('@')>=0){
+      var at=v.indexOf('@'), local=v.slice(0,at), dom=v.slice(at+1);
+      saved.forEach(function(s){ if(s.indexOf(v)===0) list.push(s); });
+      DOMAINS.filter(function(d){ return d.indexOf(dom)===0; }).forEach(function(d){ var e=local+'@'+d; if(list.indexOf(e)<0) list.push(e); });
+    } else {
+      saved.forEach(function(s){ if(s.indexOf(v)===0) list.push(s); });
+      DOMAINS.forEach(function(d){ list.push(v+'@'+d); });
+    }
+    list=list.slice(0,6);
+    if(!list.length){ hideSug(); return; }
+    box.innerHTML='';
+    list.forEach(function(s){
+      var d=document.createElement('div'); d.className='sug'; d.textContent=s;
+      d.addEventListener('mousedown', function(ev){ ev.preventDefault(); $('dest').value=s; hideSug(); });
+      box.appendChild(d);
+    });
+    box.style.display='block';
+  }
+
+  (function(){
+    var ua=navigator.userAgent, tip=$('printTip'); if(!tip) return;
+    if(/iPhone|iPad|iPod/.test(ua))
+      tip.innerHTML='📡 <strong>iPhone 列印：</strong>按「列印」後 →「<strong>印表機</strong>」選已連線的 AirPrint／藍牙印表機直接印；或右上「分享」<strong>存成 PDF</strong>。';
+    else if(/Android/.test(ua))
+      tip.innerHTML='📡 <strong>Android 列印：</strong>按「列印」後上方下拉選你的<strong>無線／藍牙印表機</strong>或「儲存成 PDF」。';
+  })();
+</script>
+</body>
+</html>

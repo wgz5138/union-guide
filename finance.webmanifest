@@ -1,0 +1,13 @@
+{
+  "name": "工會透明帳本",
+  "short_name": "透明帳本",
+  "start_url": "./finance.html",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#0F5C36",
+  "theme_color": "#1A7A4A",
+  "icons": [
+    { "src": "icon-evidence.png", "sizes": "512x512", "type": "image/png", "purpose": "any" }
+  ]
+}
