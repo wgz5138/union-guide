@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>高榮企業工會 · 財務工具</title>
+<meta name="theme-color" content="#1A7A4A">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@400;600;700&family=Noto+Sans+TC:wght@300;400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --red:#C0392B; --gold:#B7860B; --gold-light:#FEF9E7;
+    --ink:#1A1A1A; --ink-mid:#444; --ink-soft:#777; --bg:#FAFAF8;
+    --card:#FFFFFF; --border:#E8E4DE;
+    --green:#1A7A4A; --green-light:#EAFAF1; --green-mid:#2D9D6E; --green-deep:#0F5C36;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;}
+  body{font-family:'Noto Sans TC',sans-serif;background:var(--bg);color:var(--ink);font-size:15px;line-height:1.7;-webkit-text-size-adjust:100%;}
+  .header{background:var(--green);color:#fff;padding:1.8rem 1.25rem 1.5rem;text-align:center;position:relative;overflow:hidden;}
+  .header::before{content:'';position:absolute;top:-40px;right:-40px;width:180px;height:180px;border-radius:50%;background:rgba(255,255,255,.06);}
+  .header-label{font-size:11px;letter-spacing:.15em;opacity:.85;margin-bottom:6px;}
+  .header h1{font-family:'Noto Serif TC',serif;font-size:23px;font-weight:700;}
+  .header-sub{font-size:13px;opacity:.9;margin-top:7px;}
+  .prep{display:inline-block;margin-top:10px;background:rgba(255,255,255,.18);border:1px solid rgba(255,255,255,.3);border-radius:20px;padding:3px 12px;font-size:12px;}
+  main{max-width:560px;margin:0 auto;padding:1.4rem 1.1rem 3rem;}
+  .tile{display:block;text-decoration:none;color:inherit;background:var(--card);border:1px solid var(--border);border-radius:16px;padding:1.3rem 1.3rem;margin-bottom:14px;transition:transform .12s, box-shadow .2s;border-left:5px solid var(--green);}
+  .tile:active{transform:scale(.99);}
+  .tile .row{display:flex;align-items:center;gap:14px;}
+  .tile .ico{font-size:38px;line-height:1;flex-shrink:0;}
+  .tile .t{font-family:'Noto Serif TC',serif;font-size:19px;font-weight:700;color:var(--green-deep);}
+  .tile .d{font-size:13.5px;color:var(--ink-mid);margin-top:5px;line-height:1.7;}
+  .tile .go{margin-left:auto;color:var(--green-mid);font-size:22px;flex-shrink:0;}
+  .tile.book{border-left-color:var(--green);}
+  .tile.shot{border-left-color:var(--gold);}
+  .tile.shot .t{color:#8A6D0B;}
+  .who{background:var(--gold-light);border:1px solid #EAD67A;border-radius:14px;padding:1rem 1.15rem;font-size:13px;color:#5C4000;line-height:1.95;margin-top:6px;}
+  .who b{font-weight:700;}
+  .who .h{font-family:'Noto Serif TC',serif;font-weight:700;font-size:15px;margin-bottom:6px;display:block;}
+  .foot{text-align:center;font-size:11px;color:var(--ink-soft);margin-top:1.5rem;line-height:1.8;}
+  .law{display:inline-block;background:var(--green-light);color:var(--green-deep);border:1px solid #C8E6D5;border-radius:20px;padding:2px 10px;font-size:11px;margin-top:8px;}
+</style>
+</head>
+<body>
+<div class="header">
+  <div class="header-label">高榮企業工會</div>
+  <h1>工會財務工具</h1>
+  <div class="header-sub">財務清晰 · 經得起查 · 一切有法源依據</div>
+  <div class="prep">🏗 籌備中</div>
+</div>
+
+<main>
+  <a class="tile book" href="finance.html">
+    <div class="row">
+      <span class="ico">🧾</span>
+      <div>
+        <div class="t">工會透明帳本</div>
+        <div class="d">給<b>帳房（出納／財務）</b>用：記每一筆收支、看報表、做決算、報稅提醒。資料只存這台裝置。</div>
+      </div>
+      <span class="go">→</span>
+    </div>
+  </a>
+
+  <a class="tile shot" href="receipt.html">
+    <div class="row">
+      <span class="ico">📷</span>
+      <div>
+        <div class="t">單據快拍</div>
+        <div class="d">給<b>每位幹部</b>用：在外買文具、刻印章…<b>拍張收據</b>就記好，再傳給帳房收進帳本。</div>
+      </div>
+      <span class="go">→</span>
+    </div>
+  </a>
+
+  <div class="who">
+    <span class="h">📌 怎麼分工（30 秒看懂）</span>
+    <b>① 帳房一個人</b>：在固定一台手機/電腦用「工會透明帳本」記帳。<br>
+    <b>② 其他幹部</b>：花錢就用「單據快拍」拍照 → 按「匯出給帳本」用 LINE 傳給帳房。<br>
+    <b>③ 帳房</b>：在帳本按「收進帳本」，單據變成一筆支出、照片自動留底。<br>
+    <b>④ 備份</b>：帳房定期到「設定 → 匯出全部資料」存檔。<br>
+    <span style="display:block;margin-top:6px;color:#7a5c00">※ 資料只在各自的裝置、不上傳；不會自動共用同一本帳。</span>
+  </div>
+
+  <div class="foot">
+    高榮企業工會 · 工會財務工具<br>
+    依《工會財務處理準則》（工會法第30條第2項授權）設計
+    <br><span class="law">pcode N0020014</span>
+  </div>
+</main>
+</body>
+</html>
