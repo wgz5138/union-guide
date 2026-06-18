@@ -443,7 +443,7 @@ function normalize(d){ // 補齊缺漏欄位，避免舊備份/部分資料造�
   d.published=(d.published&&typeof d.published==='object')?d.published:{};
   d.year=d.year||new Date().getFullYear();
   const s=d.settings=(d.settings&&typeof d.settings==='object')?d.settings:{};
-  const def={secretary:false,supBoard:false,invest:false,opening:0,pettyCap:100000,reserve:0,priorCum:0,liab:0,prep:false};
+  const def={secretary:false,supBoard:false,invest:false,opening:0,pettyCap:100000,reserve:0,priorCum:0,liab:0,prep:true};
   for(const k in def) if(s[k]==null) s[k]=def[k];
   return d;
 }
