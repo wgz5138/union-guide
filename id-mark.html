@@ -202,12 +202,12 @@
   var fontK   = function(){ return $('fsize').value/1000; };
   var alphaVal= function(){ return $('alpha').value/100; };
   var ruleFactor = function(){ var v=$('rule').value; return v==='none'?0:(v==='thick'?0.085:0.03); };
-  var ENHANCE_FILTER = 'brightness(1.16) contrast(1.12) saturate(1.04)';
+  var ENHANCE_FILTER = 'brightness(1.42) contrast(1.18) saturate(1.05)';
 
   // ---- 檔案載入（相簿可多張；系統相機備援單張）----
   function newItem(bmp, crop){
     items.push({ bitmap:bmp, label:TYPES[Math.min(items.length,TYPES.length-1)],
-                 rot:0, crop:crop||null, pos:{x:0.035,y:0.04}, scale:1, enhance:false });
+                 rot:0, crop:crop||null, pos:{x:0.035,y:0.04}, scale:1, enhance:false, _editing:true });
   }
   async function addFiles(files){
     for (var i=0;i<files.length;i++){
@@ -327,7 +327,7 @@
     if(rule) ctx.fillRect(bx,by+bh-rule,bw,rule);
     ctx.globalAlpha=1;
     var box={x:bx,y:by,w:bw,h:bh,hs:0};
-    if(editable){                                   // 把手與虛線框只在預覽畫，列印不會出現
+    if(editable && it._editing){                    // 外框/把手只在「編輯中」顯示；列印與預覽乾淨效果時都不畫
       ctx.save();
       ctx.strokeStyle='#1A3A6B'; ctx.lineWidth=Math.max(1.5,fs*0.05); ctx.setLineDash([6,4]);
       ctx.strokeRect(bx,by,bw,bh); ctx.setLineDash([]);
@@ -365,7 +365,7 @@
       div.innerHTML=
         '<div class="ihead"><select onchange="items['+idx+'].label=this.value">'+opts+'</select></div>'+
         '<div class="pv"><canvas></canvas></div>'+
-        '<div class="dragtip">👆 <b>拖紅框</b>＝移動位置；<b>拖右下角藍色把手</b>＝放大／縮小；改上面的文字會<b>即時更新</b>（請避開姓名／號碼／照片）</div>'+
+        '<div class="dragtip">👆 <b>拖紅框</b>＝移動、<b>拖右下角藍把手</b>＝縮放；調好後<b>點照片別處</b>，外框會消失、看到貼好的乾淨效果（要再調就點一下註記）</div>'+
         '<div class="tools">'+toolsHTML(idx)+'</div>';
       wrap.appendChild(div);
       it._canvas=div.querySelector('canvas'); it._base=null;
@@ -405,8 +405,15 @@
     cv.addEventListener('pointerdown', function(ev){
       if(it._cropping) return cropPointerDown(idx,ev);
       var p=canvasPoint(cv,ev), b=it._box; if(!b) return;
+      var insideBox = p.x>=b.x && p.x<=b.x+b.w && p.y>=b.y && p.y<=b.y+b.h;
 
-      // 先判斷有沒有抓到右下角的縮放把手（觸控給寬一點的命中範圍）
+      // 點在註記外面 → 收起外框與把手，顯示貼好後的乾淨效果
+      if(!insideBox){ if(it._editing){ it._editing=false; paintItem(idx); } return; }
+
+      // 點到註記 → 進入編輯（顯示外框/把手）
+      if(!it._editing){ it._editing=true; paintItem(idx); b=it._box; }
+
+      // 抓到右下角的縮放把手?（觸控給寬一點的命中範圍）
       var hs=Math.max(b.hs||0, 30);
       if(b.hs && p.x>=b.x+b.w-hs && p.y>=b.y+b.h-hs){
         ev.preventDefault();
@@ -422,8 +429,7 @@
         return;
       }
 
-      // 否則：點在框內 → 移動
-      if(p.x<b.x||p.x>b.x+b.w||p.y<b.y||p.y>b.y+b.h) return;
+      // 否則：移動
       ev.preventDefault();
       var offX=p.x-b.x, offY=p.y-b.y;
       function move(e){
