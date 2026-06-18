@@ -207,7 +207,7 @@
   // ---- 檔案載入（相簿可多張；系統相機備援單張）----
   function newItem(bmp, crop){
     items.push({ bitmap:bmp, label:TYPES[Math.min(items.length,TYPES.length-1)],
-                 rot:0, crop:crop||null, pos:{x:0.035,y:0.04}, enhance:false });
+                 rot:0, crop:crop||null, pos:{x:0.035,y:0.04}, scale:1, enhance:false });
   }
   async function addFiles(files){
     for (var i=0;i<files.length;i++){
@@ -303,12 +303,17 @@
       if(ctx.measureText(t).width>maxW && cur){ out.push(cur); cur=text[i]; } else cur=t; }
     if(cur) out.push(cur); return out;
   }
-  function drawAnno(ctx, cw, ch, it){
+  function roundRect(ctx,x,y,w,h,r){
+    ctx.beginPath(); ctx.moveTo(x+r,y);
+    ctx.arcTo(x+w,y,x+w,y+h,r); ctx.arcTo(x+w,y+h,x,y+h,r);
+    ctx.arcTo(x,y+h,x,y,r); ctx.arcTo(x,y,x+w,y,r); ctx.closePath();
+  }
+  function drawAnno(ctx, cw, ch, it, editable){
     var lines=annoLines(); if(!lines.length) return null;
-    var fs=Math.max(11, Math.round(cw*fontK()));
+    var fs=Math.max(11, Math.round(cw*fontK()*(it.scale||1)));   // it.scale：拖把手縮放
     ctx.font='bold '+fs+'px sans-serif'; ctx.textAlign='left'; ctx.textBaseline='top';
     var bx0=it.pos.x*cw, by0=it.pos.y*ch;
-    var maxTextW=Math.max(cw*0.25, cw*0.95-bx0);
+    var maxTextW=Math.max(cw*0.25, cw*0.97-bx0);
     var wrapped=[]; lines.forEach(function(l){ wrapLine(ctx,l,maxTextW).forEach(function(w){wrapped.push(w);}); });
     var tw=0; wrapped.forEach(function(l){ tw=Math.max(tw, ctx.measureText(l).width); });
     var pad=fs*0.45, lh=fs*1.3, rule=Math.round(ruleFactor()*fs);
@@ -321,7 +326,25 @@
     wrapped.forEach(function(l,i){ ctx.fillText(l, bx+pad, by+rule+pad+i*lh); });
     if(rule) ctx.fillRect(bx,by+bh-rule,bw,rule);
     ctx.globalAlpha=1;
-    return {x:bx,y:by,w:bw,h:bh};
+    var box={x:bx,y:by,w:bw,h:bh,hs:0};
+    if(editable){                                   // 把手與虛線框只在預覽畫，列印不會出現
+      ctx.save();
+      ctx.strokeStyle='#1A3A6B'; ctx.lineWidth=Math.max(1.5,fs*0.05); ctx.setLineDash([6,4]);
+      ctx.strokeRect(bx,by,bw,bh); ctx.setLineDash([]);
+      var hs=Math.max(22, Math.round(fs*1.0)); box.hs=hs;
+      var hx=bx+bw-hs, hy=by+bh-hs;
+      ctx.fillStyle='#1A3A6B'; roundRect(ctx,hx,hy,hs,hs,Math.round(hs*0.22)); ctx.fill();
+      ctx.strokeStyle='#fff'; ctx.lineWidth=Math.max(2,hs*0.09); ctx.lineCap='round';
+      var m=hs*0.30, d=hs*0.20;
+      ctx.beginPath(); ctx.moveTo(hx+m,hy+hs-m); ctx.lineTo(hx+hs-m,hy+m); ctx.stroke();
+      ctx.beginPath();
+      ctx.moveTo(hx+hs-m,hy+m); ctx.lineTo(hx+hs-m-d,hy+m);
+      ctx.moveTo(hx+hs-m,hy+m); ctx.lineTo(hx+hs-m,hy+m+d);
+      ctx.moveTo(hx+m,hy+hs-m); ctx.lineTo(hx+m+d,hy+hs-m);
+      ctx.moveTo(hx+m,hy+hs-m); ctx.lineTo(hx+m,hy+hs-m-d);
+      ctx.stroke(); ctx.restore();
+    }
+    return box;
   }
 
   // ---- 列表 ----
@@ -342,14 +365,7 @@
       div.innerHTML=
         '<div class="ihead"><select onchange="items['+idx+'].label=this.value">'+opts+'</select></div>'+
         '<div class="pv"><canvas></canvas></div>'+
-        '<div class="dragtip">👆 用下面按鈕把紅色註記丟到空白角落，或直接用手指拖（避開姓名／號碼／照片）</div>'+
-        '<div class="posrow"><span class="lbl">註記放：</span>'+
-          '<button onclick="moveAnno('+idx+',\'tl\')">↖ 左上</button>'+
-          '<button onclick="moveAnno('+idx+',\'tr\')">↗ 右上</button>'+
-          '<button onclick="moveAnno('+idx+',\'bl\')">↙ 左下</button>'+
-          '<button onclick="moveAnno('+idx+',\'br\')">↘ 右下</button>'+
-          '<button onclick="moveAnno('+idx+',\'bc\')">⬇ 正下方</button>'+
-        '</div>'+
+        '<div class="dragtip">👆 <b>拖紅框</b>＝移動位置；<b>拖右下角藍色把手</b>＝放大／縮小；改上面的文字會<b>即時更新</b>（請避開姓名／號碼／照片）</div>'+
         '<div class="tools">'+toolsHTML(idx)+'</div>';
       wrap.appendChild(div);
       it._canvas=div.querySelector('canvas'); it._base=null;
@@ -380,15 +396,33 @@
     cv.width=W; cv.height=H; cv.style.width=W+'px';
     var ctx=cv.getContext('2d');
     ctx.clearRect(0,0,W,H); ctx.drawImage(it._base,0,0);
-    it._box=drawAnno(ctx,W,H,it);
+    it._box=drawAnno(ctx,W,H,it,true);
   }
 
-  // ---- 拖曳註記（只重畫文字，不重算原圖）----
+  // ---- 拖曳註記：拖框內＝移動；拖右下角藍把手＝放大縮小 ----
   function attachDrag(idx){
     var it=items[idx], cv=it._canvas;
     cv.addEventListener('pointerdown', function(ev){
       if(it._cropping) return cropPointerDown(idx,ev);
       var p=canvasPoint(cv,ev), b=it._box; if(!b) return;
+
+      // 先判斷有沒有抓到右下角的縮放把手（觸控給寬一點的命中範圍）
+      var hs=Math.max(b.hs||0, 30);
+      if(b.hs && p.x>=b.x+b.w-hs && p.y>=b.y+b.h-hs){
+        ev.preventDefault();
+        var ax=b.x, ay=b.y;                                  // 以左上角為錨點
+        var startD=Math.max(8, Math.hypot(p.x-ax,p.y-ay)), startScale=it.scale||1;
+        var rmove=function(e){
+          var q=canvasPoint(cv,e), d=Math.hypot(q.x-ax,q.y-ay);
+          it.scale=Math.max(0.4, Math.min(3.2, startScale*d/startD));
+          paintItem(idx);
+        };
+        var rup=function(){ document.removeEventListener('pointermove',rmove); document.removeEventListener('pointerup',rup); resetBuilt(); };
+        document.addEventListener('pointermove',rmove); document.addEventListener('pointerup',rup);
+        return;
+      }
+
+      // 否則：點在框內 → 移動
       if(p.x<b.x||p.x>b.x+b.w||p.y<b.y||p.y>b.y+b.h) return;
       ev.preventDefault();
       var offX=p.x-b.x, offY=p.y-b.y;
@@ -398,22 +432,15 @@
         var ny=Math.max(0,Math.min(q.y-offY, cv.height-b.h));
         it.pos={x:nx/cv.width, y:ny/cv.height};
         var ctx=cv.getContext('2d'); ctx.clearRect(0,0,cv.width,cv.height);
-        ctx.drawImage(it._base,0,0); it._box=drawAnno(ctx,cv.width,cv.height,it);
+        ctx.drawImage(it._base,0,0); it._box=drawAnno(ctx,cv.width,cv.height,it,true);
       }
-      function up(){ document.removeEventListener('pointermove',move); document.removeEventListener('pointerup',up); }
+      function up(){ document.removeEventListener('pointermove',move); document.removeEventListener('pointerup',up); resetBuilt(); }
       document.addEventListener('pointermove',move); document.addEventListener('pointerup',up);
     });
   }
   function canvasPoint(cv,ev){
     var r=cv.getBoundingClientRect();
     return { x:(ev.clientX-r.left)*cv.width/r.width, y:(ev.clientY-r.top)*cv.height/r.height };
-  }
-
-  // ---- 一鍵把註記放到角落（比手指拖好按）----
-  function moveAnno(idx, where){
-    var map={ tl:{x:0.02,y:0.03}, tr:{x:0.99,y:0.03}, bl:{x:0.02,y:0.99}, br:{x:0.99,y:0.99}, bc:{x:0.5,y:0.99} };
-    var it=items[idx]; if(!map[where]) return;
-    it.pos=map[where]; paintItem(idx); resetBuilt();
   }
 
   // ---- 旋轉 / 補光 ----
