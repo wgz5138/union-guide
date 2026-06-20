@@ -738,7 +738,7 @@ function wordCount(){ return val("f-words")||"180~300"; }
 (function(){ const w=document.getElementById("f-words"); if(!w)return; const sv=localStorage.getItem("ebn_words"); if(sv)w.value=sv; w.addEventListener("input",()=>localStorage.setItem("ebn_words",w.value)); })();
 // 後台評判標準：題目後面附給 AI 的指引。成本效益權衡題套用「感染 vs 成本」準則。
 function qNote(q){
-  if(q.costben) return " 【成本效益權衡題：請把帳『攤開算給使用者看』再下結論，rationale 要寫出這筆權衡：(1) 本篇顯示的好處（效果量）；(2) 本篇顯示的壞處／副作用；(3) 權衡時務必同時算『病人傷害』與『金錢成本』兩筆——介入本身多半是低價耗材（例：一瓶 2% 消毒劑），而它所預防的併發症（例：一次感染＝病人受的苦＋抗生素療程＋延長住院＋併發症/死亡風險），無論在傷害或金錢上都高出好幾個量級；這個落差就是判斷依據。據此給明確的「是/否/無法判斷」：感染預防／控制類介入，只要本篇顯示有效、又無明確的嚴重傷害，權衡後通常是「是（值得）」；但若本篇顯示介入有顯著傷害、或根本沒效、或完全缺乏可比資料，則據實給「否」或「無法判斷」，不可硬說值得（結論要從本篇推出來、不是盲目蓋章）。】";
+  if(q.costben) return " 【成本效益權衡題：請把帳『攤開算給使用者看』再下結論，rationale 要寫出這筆權衡：(1) 本篇顯示的好處（效果量）；(2) 本篇顯示的壞處／副作用；(3) 權衡時務必同時算『病人傷害』與『金錢成本』兩筆——介入本身多半是低價耗材（例：一瓶 2% 消毒劑），而它所預防的併發症（例：一次感染＝病人受的苦＋抗生素療程＋延長住院＋併發症/死亡風險），無論在傷害或金錢上都高出好幾個量級；這個落差就是判斷依據。據此給明確的「是/否/無法判斷」：感染預防／控制類介入，只要本篇顯示有效、又無明確的嚴重傷害，那麼無論從金錢或病人傷害任一角度看都是壓倒性的，請直接給斬釘截鐵的「是（值得）」，把那個輾壓式的落差講清楚，**不要無謂地模稜兩可、不要堆「但仍須考量」之類的保留語**。唯一會改變答案的是「本篇有沒有證明它有效、安全」這個前提：若本篇顯示介入有顯著傷害、或根本沒效、或完全缺乏可比資料，才據實給「否」或「無法判斷」。（即：該斟酌的是前提有沒有成立，不是值不值得；前提一旦成立，結論不必擺盪。）】";
   if(q.apply) return " 【適用性題：請依研究的族群／場域與一般臨床情境，直接給明確的「是 / 否 / 無法判斷」＋理由（不要留白），rationale 最後補一句提醒：請對照你自己的單位／病人再確認。】";
   if(q.results) return " 【結果題：rationale 必須把每一個結果指標／outcome 用中文一項一項列出（含森林圖裡的每個結果），每項都附數據——效果量（OR／RR／HR／MD 等）、95% CI、p 值，Meta 再加異質性 I²，並逐項明確標示是否統計顯著（p<0.05＝顯著、p≥0.05＝不顯著；效果量 95% CI 未跨過無效值＝顯著）；不要只寫一句籠統結論。answer 給一句最重要的整體結果（若本題是是非題，answer 給「是/否/無法判斷」、把逐項數據放 rationale）。】";
   return " 【是非題：answer 必須是明確的「是 / 否 / 無法判斷」三選一，並在 rationale 說清楚為什麼，不要模稜兩可、不要籠統。】";
@@ -1202,7 +1202,7 @@ function showAppBanner(){ if(sessionStorage.getItem("hideAppBanner"))return; con
 (function(){ const x=document.getElementById("appbanner-x"); if(x)x.addEventListener("click",()=>{ document.getElementById("appbanner").classList.remove("show"); sessionStorage.setItem("hideAppBanner","1"); });
   if(/FBAN|FBAV|FBIOS|Instagram|Line\/|MicroMessenger|Twitter|TikTok|GSA\//i.test(navigator.userAgent||"")) showAppBanner(); })();
 // 🔄 自動偵測新版本：跟伺服器上的 ver.txt 比對，有新版就跳橫幅（使用者完全不用管 ?數字、不用刪圖示）
-const BUILD="2026061806";
+const BUILD="2026061807";
 const CASP_VERSION="CASP 2024";
 const CHANGELOG=[
   "成本效益題改成『攤開算帳』：把好處/病人傷害/金錢成本算給你看再下結論（推理透明）",
