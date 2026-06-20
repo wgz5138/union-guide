@@ -1,0 +1,21 @@
+name: 印藥水 LINE 提醒
+
+on:
+  schedule:
+    # 每天 UTC 02:00 = 台灣 10:00 執行（提醒「明天」要印的人）
+    - cron: "0 2 * * *"
+  workflow_dispatch: {}   # 也可在 Actions 頁面手動按一次測試
+
+jobs:
+  remind:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.x"
+      - name: 發送印藥水提醒
+        env:
+          LINE_CHANNEL_TOKEN: ${{ secrets.LINE_CHANNEL_TOKEN }}
+          SHEET_CSV_URL: ${{ secrets.SHEET_CSV_URL }}
+        run: python "透析排班/cloud/line_reminder.py" --target prev
