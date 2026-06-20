@@ -131,7 +131,7 @@ def main():
         uid = usermap.get(nm)
         zone = "、".join(areas)
         zpart = f"「{zone}」" if zone else ""
-        text = f"🔔 {nm}，{when}({mmdd})輪到你印{zpart}藥水，記得印喔！🙏"
+        text = f"🔔 {nm}，記得{when}({mmdd})要印{zpart}藥水喔！🙏"
         if not uid:
             print(f"   ⚠ 找不到「{nm}」的 userId（還沒加好友？）→ 略過")
             miss += 1
