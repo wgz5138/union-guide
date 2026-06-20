@@ -168,6 +168,9 @@
       <a class="link" href="evidence.html">→ 評讀工具</a>
     </div>
   </div>
+  <div style="text-align:right;font-size:11.5px;color:var(--muted);margin:-2px 2px 6px">
+    <span id="ver-line"></span><span id="ver-status" style="color:var(--cyan)"></span> · <a href="#" id="checkupd-btn" style="color:var(--cyan)">🔄 檢查更新</a> · <a href="#" id="verinfo-btn" style="color:var(--cyan)">ℹ️ 版本說明</a>
+  </div>
 
   <main>
     <!-- 📲 換裝置接力 -->
@@ -272,7 +275,7 @@
     </div>
   </main>
 
-  <footer><span id="ver-line"></span><span id="ver-status" style="color:var(--cyan)"></span> · <a href="#" id="checkupd-btn" style="color:var(--cyan)">🔄 檢查更新</a> · <a href="#" id="verinfo-btn" style="color:var(--cyan)">ℹ️ 版本說明</a><br>臨床快查 · 私人研究用 · 只抓標題與摘要，全文請依各資料庫授權於醫院網路取得。</footer>
+  <footer>臨床快查 · 私人研究用 · 只抓標題與摘要，全文請依各資料庫授權於醫院網路取得。</footer>
 <div id="verinfo">
   <div class="man-box" style="max-width:600px">
     <button class="man-close" id="verinfo-close">✕ 關閉</button>
@@ -406,7 +409,7 @@ function showAppBanner(){ if(sessionStorage.getItem("hideAppBanner"))return; con
 (function(){ const x=document.getElementById("appbanner-x"); if(x)x.addEventListener("click",()=>{ document.getElementById("appbanner").classList.remove("show"); sessionStorage.setItem("hideAppBanner","1"); });
   if(/FBAN|FBAV|FBIOS|Instagram|Line\/|MicroMessenger|Twitter|TikTok|GSA\//i.test(navigator.userAgent||"")) showAppBanner(); })();
 // 🔄 自動偵測新版本：跟伺服器上的 ver.txt 比對，有新版就跳橫幅（使用者完全不用管 ?數字、不用刪圖示）
-const BUILD="2026061807";
+const BUILD="2026061808";
 const CHANGELOG=[
   "新增「⚖️ AI 律師」工具（勞動法主場，引法條／判斷對方說法／列證據；法規用全國法規資料庫官方真資料；上方可進）",
   "新增「🗑 一鍵清除」，換下一題免逐格手刪",

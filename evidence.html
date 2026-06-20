@@ -297,6 +297,9 @@
       <div class="user" id="lock-btn">● 鎖定</div>
     </div>
   </div>
+  <div style="text-align:right;font-size:11.5px;color:var(--muted);margin:-2px 2px 6px">
+    <span id="ver-line"></span><span id="ver-status" style="color:var(--cyan)"></span> · <a href="#" id="checkupd-btn" style="color:var(--cyan)">🔄 檢查更新</a> · <a href="#" id="verinfo-btn" style="color:var(--cyan)">ℹ️ 版本說明</a>
+  </div>
 
   <main>
     <div class="tabs">
@@ -459,7 +462,6 @@
   </main>
 
   <footer>
-    <span id="ver-line"></span><span id="ver-status" style="color:var(--cyan)"></span> · <a href="#" id="checkupd-btn" style="color:var(--cyan)">🔄 檢查更新</a> · <a href="#" id="verinfo-btn" style="color:var(--cyan)">ℹ️ 版本說明</a><br>
     評判標準：CASP 2024 ·
     本工具僅協助評讀與排版（CASP 檢核表依 CASP 2024 版整理），最終內容請自行確認。<br>
     <span id="foot-group"></span>
@@ -1173,7 +1175,7 @@ function copyCaspUpdate(){
   if(navigator.clipboard&&navigator.clipboard.writeText){ navigator.clipboard.writeText(s).then(()=>toast("已複製更新指令，貼給任何 AI 即可")).catch(()=>toast("複製失敗，請長按上面文字選取")); }
   else toast("此瀏覽器不支援自動複製，請長按選取");
 }
-(function(){
+window.addEventListener("load",function(){
   const vl=document.getElementById("ver-line"); if(vl) vl.textContent="工具版本 "+verLabel();
   const vb=document.getElementById("verinfo-btn");
   if(vb) vb.addEventListener("click",function(e){ e.preventDefault();
@@ -1187,7 +1189,7 @@ function copyCaspUpdate(){
     document.getElementById("verinfo").classList.add("show");
   });
   const vc=document.getElementById("verinfo-close"); if(vc) vc.addEventListener("click",function(){ document.getElementById("verinfo").classList.remove("show"); });
-})();
+});
 
 /* ===================== 小工具 ===================== */
 function toast(m){ const t=document.getElementById("toast"); t.textContent=m; t.classList.add("show"); clearTimeout(t._t); t._t=setTimeout(()=>t.classList.remove("show"),2200); }
@@ -1202,9 +1204,10 @@ function showAppBanner(){ if(sessionStorage.getItem("hideAppBanner"))return; con
 (function(){ const x=document.getElementById("appbanner-x"); if(x)x.addEventListener("click",()=>{ document.getElementById("appbanner").classList.remove("show"); sessionStorage.setItem("hideAppBanner","1"); });
   if(/FBAN|FBAV|FBIOS|Instagram|Line\/|MicroMessenger|Twitter|TikTok|GSA\//i.test(navigator.userAgent||"")) showAppBanner(); })();
 // 🔄 自動偵測新版本：跟伺服器上的 ver.txt 比對，有新版就跳橫幅（使用者完全不用管 ?數字、不用刪圖示）
-const BUILD="2026061807";
+const BUILD="2026061808";
 const CASP_VERSION="CASP 2024";
 const CHANGELOG=[
+  "版本號移到工具最上面（不用捲到底）；修好版本號空白/自動更新沒跑的順序bug",
   "成本效益題改成『攤開算帳』：把好處/病人傷害/金錢成本算給你看再下結論（推理透明）",
   "成本效益題改回『依本篇證據判』(忠於 CASP 金標準)，感染觀點降為參考提醒",
   "每題答案附白話逐句解釋＋95% CI／I²／p 等數字的意義，看懂「為什麼是/否」能一起判",
