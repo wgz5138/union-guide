@@ -764,7 +764,7 @@ function buildPromptUnknown(){
     ? `,\n  "anticipatedQA":[{"q":"老師/長官可能問的問題","a":"建議怎麼答"}],\n  "speech":{"opening":"開場白逐字稿","perQuestion":{"1":"第1題上台要講的話"},"closing":"結尾逐字稿"}${mins?`（演講稿總長請抓約 ${mins}）`:""}`
     : "";
   const L=[];
-  L.push("你是一位資深的實證護理（EBN）專家，擅長用 CASP 檢核表評讀文獻。請協助我完成實證報告。");
+  L.push("你是一位資深的實證護理（EBN）專家。請『嚴格依 CASP 官方檢核表每一題的判讀重點，以及標準實證醫學評讀方法學（Cochrane Handbook、GRADE、JAMA Users′ Guides）』來評讀文獻、完成實證報告——這些是國際公認的金標準，每題該看什麼、該判讀哪些統計量，一律以標準為準，不要自行增減或憑喜好取捨。");
   L.push("");
   L.push("⚠️ 我不確定這篇是哪一種研究，請你『先判斷』：它是 RCT（隨機對照試驗），還是 系統性回顧／Meta-analysis？");
   L.push("－ 若是 RCT → 用 CASP RCT 檢核表（11 題）。");
@@ -824,7 +824,7 @@ function buildPrompt(){
 
   // 用陣列 join 避免反引號衝突
   const L=[];
-  L.push("你是一位資深的實證護理（EBN）專家，擅長用 CASP 檢核表評讀文獻。請協助我完成實證報告。");
+  L.push("你是一位資深的實證護理（EBN）專家。請『嚴格依 CASP 官方檢核表每一題的判讀重點，以及標準實證醫學評讀方法學（Cochrane Handbook、GRADE、JAMA Users′ Guides）』來評讀文獻、完成實證報告——這些是國際公認的金標準，每題該看什麼、該判讀哪些統計量，一律以標準為準，不要自行增減或憑喜好取捨。");
   L.push("");
   L.push("文獻類型："+typeLabel+"。"+scope);
   L.push("（若你判斷類型選錯，最後用「⚠️提醒」告訴我，但仍依我指定的表評讀。）");
@@ -1206,9 +1206,10 @@ function showAppBanner(){ if(sessionStorage.getItem("hideAppBanner"))return; con
 (function(){ const x=document.getElementById("appbanner-x"); if(x)x.addEventListener("click",()=>{ document.getElementById("appbanner").classList.remove("show"); sessionStorage.setItem("hideAppBanner","1"); });
   if(/FBAN|FBAV|FBIOS|Instagram|Line\/|MicroMessenger|Twitter|TikTok|GSA\//i.test(navigator.userAgent||"")) showAppBanner(); })();
 // 🔄 自動偵測新版本：跟伺服器上的 ver.txt 比對，有新版就跳橫幅（使用者完全不用管 ?數字、不用刪圖示）
-const BUILD="2026061809";
+const BUILD="2026061810";
 const CASP_VERSION="CASP 2024";
 const CHANGELOG=[
+  "評讀一律錨定 CASP 官方＋標準 EBM 方法學（每題看什麼以金標準為準，不憑喜好取捨）",
   "統計判讀擴充：除 p/CI/I²，還會讀 ARR/RRR/NNT、異質性整套、發表偏差、ITT、GRADE、MCID 等並白話解釋",
   "版本號移到工具最上面（不用捲到底）；修好版本號空白/自動更新沒跑的順序bug",
   "成本效益題改成『攤開算帳』：把好處/病人傷害/金錢成本算給你看再下結論（推理透明）",
