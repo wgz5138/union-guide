@@ -68,10 +68,14 @@ def fetch_list(args):
         with open(args.list, encoding="utf-8-sig") as f:
             return f.read()
     url = os.environ.get("SHEET_CSV_URL")
-    if not url:
-        sys.exit("❌ 沒有名單來源：請設環境變數 SHEET_CSV_URL，或用 --list <檔>")
-    with urllib.request.urlopen(url, timeout=30) as resp:
-        return resp.read().decode("utf-8-sig")
+    if url:
+        with urllib.request.urlopen(url, timeout=30) as resp:
+            return resp.read().decode("utf-8-sig")
+    local = os.path.join(BASE, "本週名單.csv")     # 備援：repo 內名單
+    if os.path.exists(local):
+        with open(local, encoding="utf-8-sig") as f:
+            return f.read()
+    sys.exit("❌ 沒有名單來源：設 SHEET_CSV_URL、放 本週名單.csv、或用 --list <檔>")
 
 
 def push(token, uid, text, dry):
