@@ -108,6 +108,13 @@ def make_patched(src_path, ascii_name):
     s = s.replace('if isc: tag+="跨"', 'if isc: tag+="🔺"')
     s = s.replace('if isc: t+="跨區"', 'if isc: t+="🔺"')
     s = s.replace('"跨區" in v or "雙印" in v', '"🔺" in v or "雙印" in v')
+    # 顯示名以 組員名單.csv 為準(蓋過班表可能的錯字)
+    s = s.replace('name_of.get(card,name) or name', 'name or name_of.get(card,name)')
+    s = s.replace('nm=lambda c: name_of.get(c,c)',
+                  'nm=lambda c: ({m["card"]:m["name"] for m in members}).get(c) or name_of.get(c,c)')
+    s = s.replace('members=match_members(roster, status, name_of, by_name)',
+                  'members=match_members(roster, status, name_of, by_name)\n'
+                  '    name_of_g={**name_of, **{mm["card"]:mm["name"] for mm in members}}')
     if CLOUD_ANCHOR in s and "雲端貼上" not in s:        # 印藥水:加雲端貼上版輸出
         s = s.replace(CLOUD_ANCHOR, CLOUD_BLOCK + CLOUD_ANCHOR)
     out = os.path.join(HERE, "_%s_build.py" % ascii_name)   # 純英文暫存檔名

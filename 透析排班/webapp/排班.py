@@ -229,7 +229,7 @@ def match_members(roster, status, name_of, by_name):
     for m in roster:
         card,name=m["card"],m["name"]
         if card and card in status:
-            members.append({"card":card,"name":name_of.get(card,name) or name})
+            members.append({"card":card,"name":name or name_of.get(card,name)})
         elif name and name in by_name:
             nc=by_name[name]
             warn(f"⚠ 「{name}」卡號變了:名單 {card or '(空)'} → 班表 {nc};已自動更新名單檔")
@@ -390,9 +390,10 @@ def run():
 
     roster=load_roster()
     members=match_members(roster, status, name_of, by_name)
+    name_of_g={**name_of, **{mm["card"]:mm["name"] for mm in members}}
     hist_cnt, hist_rest = load_history(skip_week=sheet)
     slots, assign_slot, slot_info, member_days, able = assign(members, status, window, hist_cnt)
-    nm=lambda c: name_of.get(c,c)
+    nm=lambda c: ({m["card"]:m["name"] for m in members}).get(c) or name_of.get(c,c)
 
     allcards=[m["card"] for m in members]
     printed=set(member_days.keys())

@@ -195,7 +195,7 @@ def match_members(roster, month_status, name_of, by_name):
     for m in roster:
         card,name=m["card"],m["name"]
         if card and card in month_status:
-            members.append({"card":card,"name":name_of.get(card,name) or name})
+            members.append({"card":card,"name":name or name_of.get(card,name)})
         elif name and name in by_name and by_name[name] in month_status:
             nc=by_name[name]
             warn(f"⚠ 「{name}」卡號 {card or '(空)'} → 班表 {nc}(姓名補抓)")
@@ -358,7 +358,7 @@ def run():
     tag=f"{yy}-{mm:02d}"
     hist_cnt,hist_rest=load_history(skip_month=tag)
     slots,assigned,used,crossed=assign(members, info, hist_cnt)
-    nm=lambda c: name_of.get(c,c)
+    nm=lambda c: ({m["card"]:m["name"] for m in members}).get(c) or name_of.get(c,c)
     def disp(a,g,s):
         c=assigned.get((a,g,s))
         if not c: return "❌排不出"
