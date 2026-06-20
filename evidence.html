@@ -1212,9 +1212,10 @@ function showAppBanner(){ if(sessionStorage.getItem("hideAppBanner"))return; con
 (function(){ const x=document.getElementById("appbanner-x"); if(x)x.addEventListener("click",()=>{ document.getElementById("appbanner").classList.remove("show"); sessionStorage.setItem("hideAppBanner","1"); });
   if(/FBAN|FBAV|FBIOS|Instagram|Line\/|MicroMessenger|Twitter|TikTok|GSA\//i.test(navigator.userAgent||"")) showAppBanner(); })();
 // 🔄 自動偵測新版本：跟伺服器上的 ver.txt 比對，有新版就跳橫幅（使用者完全不用管 ?數字、不用刪圖示）
-const BUILD="2026061812";
+const BUILD="2026062013";
 const CASP_VERSION="CASP 2024";
 const CHANGELOG=[
+  "修正版本日期顯示（之前日期標籤卡在 06-18 沒跟上；版號是累計更新次數，內容一直是最新）",
   "防呆：選錯檢核表類型(如 Meta 卻選 RCT)時，報告頂端跳紅色警告提醒換表重產",
   "收緊『無法判斷』：只用於資訊不足，正反證據要權衡給是/否；別把研究間異質性當成組內同等對待",
   "評讀一律錨定 CASP 官方＋標準 EBM 方法學（每題看什麼以金標準為準，不憑喜好取捨）",
