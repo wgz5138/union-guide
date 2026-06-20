@@ -71,6 +71,26 @@ SHIM = (
     "# === 修正結束 ==="
 )
 
+# 印藥水:多輸出一個「雲端貼上版」CSV(印日期,區,姓名)→ 玉繡貼進 Google 表
+CLOUD_ANCHOR = "    # ---------- 寫回歷史(同一週覆蓋,不重複累計) ----------"
+CLOUD_BLOCK = (
+    "    # ---------- 雲端貼上版(印日期,區,姓名)→ 給 Google 表 / LINE 提醒 ----------\n"
+    "    out_c=os.path.join(OUT_DIR,f\"雲端貼上_{sheet}.csv\")\n"
+    "    try:\n"
+    "        with open(out_c,\"w\",newline=\"\",encoding=\"utf-8-sig\") as f:\n"
+    "            w=csv.writer(f); w.writerow([\"印日期\",\"區\",\"姓名\"])\n"
+    "            for T in window:\n"
+    "                for A in PRINT_AREAS:\n"
+    "                    c=assign_slot.get((T,A))\n"
+    "                    if not c: continue\n"
+    "                    src=slot_info[(T,A)][1]\n"
+    "                    w.writerow([f\"{src.year}-{src.month:02d}-{src.day:02d}\", A, nm(c)])\n"
+    "        print(f\"\\u2714 雲端貼上版：{out_c}\")\n"
+    "    except Exception as e:\n"
+    "        warn(f\"⚠ 寫雲端貼上版失敗：{e}\")\n\n"
+)
+
+
 def make_patched(src_path, ascii_name):
     s = open(src_path, encoding="utf-8").read()
     if OLD_BASE in s:
@@ -88,6 +108,8 @@ def make_patched(src_path, ascii_name):
     s = s.replace('if isc: tag+="跨"', 'if isc: tag+="🔺"')
     s = s.replace('if isc: t+="跨區"', 'if isc: t+="🔺"')
     s = s.replace('"跨區" in v or "雙印" in v', '"🔺" in v or "雙印" in v')
+    if CLOUD_ANCHOR in s and "雲端貼上" not in s:        # 印藥水:加雲端貼上版輸出
+        s = s.replace(CLOUD_ANCHOR, CLOUD_BLOCK + CLOUD_ANCHOR)
     out = os.path.join(HERE, "_%s_build.py" % ascii_name)   # 純英文暫存檔名
     open(out, "w", encoding="utf-8").write(s)
     return out
