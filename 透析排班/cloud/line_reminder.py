@@ -125,12 +125,13 @@ def main():
         sys.exit("❌ 沒有 LINE_CHANNEL_TOKEN（請在 GitHub Secrets 設定）")
 
     mmdd = f"{target.month}/{target.day}"
+    when = "今天" if args.target == "same" else "明天"
     ok = miss = 0
     for nm, areas in todo.items():
         uid = usermap.get(nm)
         zone = "、".join(areas)
         zpart = f"「{zone}」" if zone else ""
-        text = f"🔔 {nm}，明天({mmdd})輪到你印{zpart}藥水，記得印喔！🙏"
+        text = f"🔔 {nm}，{when}({mmdd})輪到你印{zpart}藥水，記得印喔！🙏"
         if not uid:
             print(f"   ⚠ 找不到「{nm}」的 userId（還沒加好友？）→ 略過")
             miss += 1
