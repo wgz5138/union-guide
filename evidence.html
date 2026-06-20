@@ -320,10 +320,10 @@
     <!-- 文獻類型（共用） -->
     <div class="label"><span class="n">1</span>文獻類型</div>
     <div class="type-grid">
-      <div class="type-opt on" data-type="RCT"><div class="ic">🧪</div><div class="nm">RCT</div><div class="en">隨機對照試驗</div><div class="cs">CASP RCT · 11 題</div></div>
+      <div class="type-opt" data-type="RCT"><div class="ic">🧪</div><div class="nm">RCT</div><div class="en">隨機對照試驗</div><div class="cs">CASP RCT · 11 題</div></div>
       <div class="type-opt" data-type="SR"><div class="ic">📚</div><div class="nm">Meta / 系統回顧</div><div class="en">Systematic Review</div><div class="cs">CASP SR · 10 題</div></div>
     </div>
-    <div class="type-opt unk" data-type="UNK" style="margin-top:10px;text-align:left"><div class="nm">🤖 我不確定 → 讓 AI 幫我判斷</div><div class="en" style="margin-top:2px">看不懂是哪一種？選這個最省事，AI 會先判斷再用對的表</div></div>
+    <div class="type-opt unk on" data-type="UNK" style="margin-top:10px;text-align:left"><div class="nm">🤖 我不確定 → 讓 AI 幫我判斷（預設・最保險）</div><div class="en" style="margin-top:2px">看不懂是哪一種？就用這個，AI 會先判斷再用對的表（不確定就別動它）</div></div>
     <div class="help" id="help-t">❓ 想自己分辨 RCT / Meta？</div>
     <div class="help-body" id="help-b">
       <strong>自己做實驗</strong> → 找病人、<em>隨機分兩組</em>比較 → <strong>RCT</strong>（摘要常見 randomized controlled trial）。<br>
@@ -612,7 +612,7 @@ const CASP = {
   ]}
 };
 
-let TYPE="RCT", MODE="member";
+let TYPE="UNK", MODE="member";
 const allQs = t => CASP[t].sections.flatMap(s=>s.qs);
 const qById = (t,n) => allQs(t).find(q=>q.n===n);
 
@@ -1212,9 +1212,10 @@ function showAppBanner(){ if(sessionStorage.getItem("hideAppBanner"))return; con
 (function(){ const x=document.getElementById("appbanner-x"); if(x)x.addEventListener("click",()=>{ document.getElementById("appbanner").classList.remove("show"); sessionStorage.setItem("hideAppBanner","1"); });
   if(/FBAN|FBAV|FBIOS|Instagram|Line\/|MicroMessenger|Twitter|TikTok|GSA\//i.test(navigator.userAgent||"")) showAppBanner(); })();
 // 🔄 自動偵測新版本：跟伺服器上的 ver.txt 比對，有新版就跳橫幅（使用者完全不用管 ?數字、不用刪圖示）
-const BUILD="2026062013";
+const BUILD="2026062014";
 const CASP_VERSION="CASP 2024";
 const CHANGELOG=[
+  "類型預設改為「🤖 我不確定→AI 判斷」，避免忘記改、套錯檢核表",
   "修正版本日期顯示（之前日期標籤卡在 06-18 沒跟上；版號是累計更新次數，內容一直是最新）",
   "防呆：選錯檢核表類型(如 Meta 卻選 RCT)時，報告頂端跳紅色警告提醒換表重產",
   "收緊『無法判斷』：只用於資訊不足，正反證據要權衡給是/否；別把研究間異質性當成組內同等對待",
