@@ -84,6 +84,10 @@ def make_patched(src_path, ascii_name):
         s = s.replace("import pandas as pd", SHIM, 1)   # 注入 Excel 引擎相容修正
     if OLD_SHEET in s:                                   # 印藥水:自動跳過空白分頁
         s = s.replace(OLD_SHEET, NEW_SHEET)
+    # 印藥水:跨區標記「跨/跨區」改成 🔺(玉繡習慣的紅三角)
+    s = s.replace('if isc: tag+="跨"', 'if isc: tag+="🔺"')
+    s = s.replace('if isc: t+="跨區"', 'if isc: t+="🔺"')
+    s = s.replace('"跨區" in v or "雙印" in v', '"🔺" in v or "雙印" in v')
     out = os.path.join(HERE, "_%s_build.py" % ascii_name)   # 純英文暫存檔名
     open(out, "w", encoding="utf-8").write(s)
     return out
