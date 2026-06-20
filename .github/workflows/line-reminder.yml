@@ -4,7 +4,12 @@ on:
   schedule:
     # 每天 UTC 02:00 = 台灣 10:00 執行（提醒「明天」要印的人）
     - cron: "0 2 * * *"
-  workflow_dispatch: {}   # 也可在 Actions 頁面手動按一次測試
+  workflow_dispatch:
+    inputs:
+      date:
+        description: "測試用：指定『今天』日期 YYYY-MM-DD（留空＝真正今天）"
+        required: false
+        default: ""
 
 jobs:
   remind:
@@ -18,4 +23,9 @@ jobs:
         env:
           LINE_CHANNEL_TOKEN: ${{ secrets.LINE_CHANNEL_TOKEN }}
           SHEET_CSV_URL: ${{ secrets.SHEET_CSV_URL }}
-        run: python "透析排班/cloud/line_reminder.py" --target prev
+        run: |
+          if [ -n "${{ github.event.inputs.date }}" ]; then
+            python "透析排班/cloud/line_reminder.py" --target prev --date "${{ github.event.inputs.date }}"
+          else
+            python "透析排班/cloud/line_reminder.py" --target prev
+          fi
