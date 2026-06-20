@@ -156,6 +156,7 @@
   .zoombtn{font-size:11px;background:#0F1622;border:1px solid var(--line);color:var(--txt2);border-radius:14px;padding:4px 10px;cursor:pointer;font-family:inherit;text-transform:none;letter-spacing:0}
   .zoombtn.on{background:rgba(63,214,208,.14);color:var(--cyan);border-color:rgba(63,214,208,.4)}
   .rp-disclaimer{font-size:12px;color:#d8b06a;background:rgba(255,177,61,.08);border:1px solid rgba(255,177,61,.3);border-radius:8px;padding:8px 11px;margin:4px 0 16px;line-height:1.6}.rp-disclaimer b{color:#ffce80}
+  .rp-typewarn{font-size:13.5px;color:#ff9a9a;background:rgba(255,90,90,.14);border:1px solid rgba(255,90,90,.5);border-radius:8px;padding:10px 12px;margin:0 0 14px;line-height:1.6;font-weight:600}
   .vflag{font-size:10.5px;color:#1a1a1a;background:#ffce80;border-radius:10px;padding:2px 8px;margin-left:6px;font-weight:700;white-space:nowrap}
   .appr-verify{margin-top:7px;font-size:12.5px;color:#ffd89a;background:rgba(255,177,61,.12);border:1px solid rgba(255,177,61,.4);border-radius:8px;padding:7px 10px;line-height:1.6}.appr-verify b{color:#ffce80}
   .appr-flag{margin-top:7px;font-size:12px;color:var(--amber);font-weight:600}
@@ -246,7 +247,7 @@
     .report .appr-plain{color:#555;background:#f4f4f4}
     .report .appr-quote{background:#f6f6f6;border-left-color:#bbb;color:#666}
     .report .appr-quote .hl{background:transparent;color:#444;padding:0}
-    .report .rp-disclaimer,.report .appr-verify,.report .vflag{display:none}
+    .report .rp-disclaimer,.report .appr-verify,.report .vflag,.report .rp-typewarn{display:none}
     .report .pico .pk{background:#f0f0f0;color:#333}.report .pico .pv{color:#333}
     .report .conc{background:#f4f4f4;color:#222}
     .report .ans.yes{color:#1a7a4a}.report .ans.no{color:#c0392b}
@@ -828,7 +829,7 @@ function buildPrompt(){
   L.push("你是一位資深的實證護理（EBN）專家。請『嚴格依 CASP 官方檢核表每一題的判讀重點，以及標準實證醫學評讀方法學（Cochrane Handbook、GRADE、JAMA Users′ Guides）』來評讀文獻、完成實證報告——這些是國際公認的金標準，每題該看什麼、該判讀哪些統計量，一律以標準為準，不要自行增減或憑喜好取捨。");
   L.push("");
   L.push("文獻類型："+typeLabel+"。"+scope);
-  L.push("（若你判斷類型選錯，最後用「⚠️提醒」告訴我，但仍依我指定的表評讀。）");
+  L.push("（若你發現我選的檢核表類型與本篇實際研究設計不符，務必在 JSON 的 typeWarning 欄填一句明確警告＋建議改用哪張表重產；但本次仍依我指定的表評讀。）");
   L.push("");
   if(meta) L.push(meta);
   L.push(src);
@@ -838,7 +839,7 @@ function buildPrompt(){
   L.push("== 輸出要求（重要）==");
   L.push("只輸出一個 JSON 物件，前後不要任何說明文字，不要用 ``` 包起來。結構：");
   L.push("{");
-  L.push('  "studyType":"'+TYPE+'",');
+  L.push('  "studyType":"'+TYPE+'", "typeWarning":"若本篇實際研究設計與我選的檢核表（'+(TYPE==="RCT"?"RCT 隨機對照試驗":"系統回顧/Meta")+'）不符，填一句警告＋建議改用哪張表重產（例：本篇其實是 Meta，建議改用系統回顧檢核表）；相符就填空字串",');
   L.push('  "title":"文獻標題", "citation":"APA 引用", "group":"'+(group||"")+'",');
   if(MODE==="leader"){
     L.push('  "clinicalQuestion":"一句臨床問題（PICO 句型）",');
@@ -893,6 +894,7 @@ function renderReport(d, masterMap){
   if(d.evidenceLevel)h+=`<span class="badge lvl">證據等級：${esc(d.evidenceLevel)}</span>`;
   if(d.qualityGrade)h+=`<span class="badge grade">品質：${esc(d.qualityGrade)}</span>`;
   h+=`</div>`;
+  if(d.typeWarning)h+=`<div class="rp-typewarn">⚠️ 類型可能選錯：${esc(d.typeWarning)}　→ 請回上方改選正確的檢核表類型後「重產」一次。</div>`;
   if(d.typeNote)h+=`<div style="font-size:12px;color:var(--muted);margin:-8px 0 14px">🤖 AI 判斷類型：${esc(d.typeNote)}</div>`;
   h+=`<div class="rp-disclaimer">⚠️ AI 評讀可能有誤或遺漏。標有 <b>⚠ 待查</b> 的項目＝AI 自己沒把握、最該你核對的地方；其餘也請用下方<b>原文螢光筆</b>對照查證。最終以原文與你的專業判斷為準。</div>`;
   if(d.clinicalQuestion)h+=`<div class="rp-block"><div class="rp-h">臨床問題</div><div class="rp-text">${esc(d.clinicalQuestion)}</div></div>`;
@@ -1050,6 +1052,7 @@ function buildPreview(){
   if(!LAST){ toast("請先產生報告"); return false; }
   const d=LAST; let h="";
   h+='<div style="font-size:18px;font-weight:800">'+pvEsc(d.title||"實證文獻評讀報告")+'</div>';
+  if(d.typeWarning)h+='<div style="font-size:13px;color:#9a0000;background:#ffe0e0;border:1px solid #e79a9a;border-radius:6px;padding:8px 10px;margin:6px 0">⚠️ 類型可能選錯：'+pvEsc(d.typeWarning)+'　→ 回上方改選正確類型後重產。</div>';
   const meta=[ d.studyType==="SR"?"系統回顧/Meta":"RCT" ];
   if(d.evidenceLevel)meta.push(pvEsc(d.evidenceLevel));
   if(d.qualityGrade)meta.push("品質："+pvEsc(d.qualityGrade));
@@ -1094,6 +1097,7 @@ function exportWord(){
   if(!LAST){ toast("請先產生報告"); return; }
   const d=LAST, e=pvEsc; let b="";
   b+='<h1>'+e(d.title||"實證文獻評讀報告")+'</h1>';
+  if(d.typeWarning)b+='<p class="verify">⚠️ 類型可能選錯：'+e(d.typeWarning)+'（回上方改選正確類型後重產；確認後刪除此行）</p>';
   const meta=[ d.studyType==="SR"?"系統性回顧 / Meta-analysis":"隨機對照試驗（RCT）" ];
   if(d.evidenceLevel)meta.push("證據等級："+e(d.evidenceLevel));
   if(d.qualityGrade)meta.push("品質："+e(d.qualityGrade));
@@ -1208,9 +1212,10 @@ function showAppBanner(){ if(sessionStorage.getItem("hideAppBanner"))return; con
 (function(){ const x=document.getElementById("appbanner-x"); if(x)x.addEventListener("click",()=>{ document.getElementById("appbanner").classList.remove("show"); sessionStorage.setItem("hideAppBanner","1"); });
   if(/FBAN|FBAV|FBIOS|Instagram|Line\/|MicroMessenger|Twitter|TikTok|GSA\//i.test(navigator.userAgent||"")) showAppBanner(); })();
 // 🔄 自動偵測新版本：跟伺服器上的 ver.txt 比對，有新版就跳橫幅（使用者完全不用管 ?數字、不用刪圖示）
-const BUILD="2026061811";
+const BUILD="2026061812";
 const CASP_VERSION="CASP 2024";
 const CHANGELOG=[
+  "防呆：選錯檢核表類型(如 Meta 卻選 RCT)時，報告頂端跳紅色警告提醒換表重產",
   "收緊『無法判斷』：只用於資訊不足，正反證據要權衡給是/否；別把研究間異質性當成組內同等對待",
   "評讀一律錨定 CASP 官方＋標準 EBM 方法學（每題看什麼以金標準為準，不憑喜好取捨）",
   "統計判讀擴充：除 p/CI/I²，還會讀 ARR/RRR/NNT、異質性整套、發表偏差、ITT、GRADE、MCID 等並白話解釋",
