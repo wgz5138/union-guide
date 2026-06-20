@@ -354,7 +354,7 @@
       <div class="label"><span class="n">3</span>我被分配到的題目</div>
       <div class="card">
         <div class="chips" id="assign-chips"></div>
-        <div class="chip-legend">點選你負責的題號（可多選）。<b>紫色＝判斷題</b>（應用題），AI 只白話解釋、答案留給你自己填；其中「好處 vs 成本」題，遇感染類介入 AI 會先傾向「是」再交給你定奪。</div>
+        <div class="chip-legend">點選你負責的題號（可多選）。<b>紫色＝適用題</b>：AI 一樣依 CASP 給「是/否/無法判斷」＋理由，只是會多提醒你「對照自己單位確認」。所有題都會給明確答案，不再留白。</div>
       </div>
     </div>
 
@@ -587,10 +587,10 @@ const CASP = {
     {sec:"C · 結果是什麼？", qs:[
       {n:7,zh:"介入的效果是否完整呈現？",hint:"檢力、主次要結果、數據、p值/CI",en:"Effects reported comprehensively?",plain:"該報的數據有沒有都報出來。",results:true},
       {n:8,zh:"是否報告了效果估計值的精確度？",hint:"信賴區間 CI",en:"Precision reported (CI)?",plain:"有沒有給信賴區間（CI）。",results:true},
-      {n:9,zh:"好處是否大於壞處與成本？",hint:"效益 vs 副作用、成本",en:"Benefits outweigh harms/costs?",plain:"值不值得——感染類介入通常算值得，AI 會先給判斷你再定。",judge:true,costben:true}]},
+      {n:9,zh:"好處是否大於壞處與成本？",hint:"效益 vs 副作用、成本",en:"Benefits outweigh harms/costs?",plain:"值不值得——感染類介入通常算值得，AI 會依準則給答案。",costben:true}]},
     {sec:"D · 結果對你的臨床有幫助嗎？", qs:[
-      {n:10,zh:"結果能否套用到你的臨床對象/情境？",hint:"你的病人是否夠相似",en:"Applicable locally?",plain:"你的病人跟研究對象像不像——你判斷。",judge:true},
-      {n:11,zh:"與現有做法相比，是否帶來更大價值？",hint:"和常規比較",en:"Greater value than existing?",plain:"比現在的做法好不好——你判斷。",judge:true}]}
+      {n:10,zh:"結果能否套用到你的臨床對象/情境？",hint:"你的病人是否夠相似",en:"Applicable locally?",plain:"你的病人跟研究對象像不像——AI 會先給判斷，你再對照單位確認。",apply:true},
+      {n:11,zh:"與現有做法相比，是否帶來更大價值？",hint:"和常規比較",en:"Greater value than existing?",plain:"比現在的做法好不好——AI 依實證給判斷，你再確認。",apply:true}]}
   ]},
   SR:{ name:"CASP 系統性回顧 / Meta 檢核表（10 題）", sections:[
     {sec:"A · 回顧的結果是否可信？", qs:[
@@ -603,9 +603,9 @@ const CASP = {
       {n:6,zh:"這篇回顧的整體結果是什麼？",hint:"數值、OR/RR/效果量",en:"Overall results?",plain:"合起來的結論數字是多少。",results:true},
       {n:7,zh:"結果有多精確？",hint:"信賴區間 CI",en:"How precise (CI)?",plain:"有沒有給信賴區間（CI）。",results:true}]},
     {sec:"C · 結果對你的臨床有幫助嗎？", qs:[
-      {n:8,zh:"結果能否套用到你的臨床對象？",hint:"病人是否夠相似",en:"Applicable locally?",plain:"你的病人跟研究對象像不像——你判斷。",judge:true},
-      {n:9,zh:"是否考量了所有重要的結果指標？",hint:"有沒有漏掉重要好處/壞處",en:"All important outcomes considered?",plain:"重要的好處壞處有沒有都看——你判斷。",judge:true},
-      {n:10,zh:"好處是否值得壞處與成本？",hint:"效益 vs 風險、成本",en:"Benefits worth harms/costs?",plain:"值不值得——感染類介入通常算值得，AI 會先給判斷你再定。",judge:true,costben:true}]}
+      {n:8,zh:"結果能否套用到你的臨床對象？",hint:"病人是否夠相似",en:"Applicable locally?",plain:"你的病人跟研究對象像不像——AI 會先給判斷，你再對照單位確認。",apply:true},
+      {n:9,zh:"是否考量了所有重要的結果指標？",hint:"有沒有漏掉重要好處/壞處",en:"All important outcomes considered?",plain:"重要的好處壞處有沒有都看——看論文就能答。"},
+      {n:10,zh:"好處是否值得壞處與成本？",hint:"效益 vs 風險、成本",en:"Benefits worth harms/costs?",plain:"值不值得——感染類介入通常算值得，AI 會依準則給答案。",costben:true}]}
   ]}
 };
 
@@ -682,13 +682,13 @@ function renderType(){
   document.getElementById("casp-name").textContent=d.name;
   let h="";
   d.sections.forEach(s=>{ h+=`<div class="casp-sec">${s.sec}</div>`;
-    s.qs.forEach(q=>{ h+=`<div class="cq"><span class="qn">${q.n}</span><span class="qt">${q.zh}<span class="en">${q.en}</span></span>${q.judge?'<span class="jb">判斷題</span>':''}</div>`; }); });
+    s.qs.forEach(q=>{ h+=`<div class="cq"><span class="qn">${q.n}</span><span class="qt">${q.zh}<span class="en">${q.en}</span></span>${q.apply?'<span class="jb">適用題</span>':''}</div>`; }); });
   document.getElementById("casp-list").innerHTML=h;
   // 選題 chips
   const cc=document.getElementById("assign-chips"); cc.innerHTML="";
   allQs(TYPE).forEach(q=>{
     const el=document.createElement("div");
-    el.className="chip"+(q.judge?" judge":""); el.textContent=q.n; el.dataset.n=q.n;
+    el.className="chip"+(q.apply?" judge":""); el.textContent=q.n; el.dataset.n=q.n;
     el.addEventListener("click",()=>el.classList.toggle("on"));
     cc.appendChild(el);
   });
@@ -739,8 +739,8 @@ function wordCount(){ return val("f-words")||"180~300"; }
 // 後台評判標準：題目後面附給 AI 的指引。成本效益權衡題套用「感染 vs 成本」準則。
 function qNote(q){
   if(q.costben) return " 【成本效益權衡題：請直接給「是/否」並說明理由，不要只留白。判斷準則：當介入屬於『感染預防／控制』（如皮膚消毒、手部衛生、導管／管路照護等），原則上傾向「是」（好處值得），因為一旦發生醫療照護相關感染，其臨床代價與後續處置成本，遠高於該預防措施（耗材／藥劑）本身的成本；除非研究明確顯示有顯著傷害、或單位資源確實極度受限，才考慮「否」。若非感染類介入，則依實證的效益 vs 風險／成本權衡給「是/否」，並提醒仍須評估單位資源。】";
-  if(q.judge) return " 【判斷題：只白話解釋，answer 填「請依病人情況判斷」，不要替我下是/否】";
-  if(q.results) return " 【結果題：rationale 必須把每一個結果指標／outcome 用中文一項一項列出（含森林圖裡的每個結果），每項都附數據——效果量（OR／RR／HR／MD 等）、95% CI、p 值，Meta 再加異質性 I²；不要只寫一句籠統結論。answer 給一句最重要的整體結果（若本題是是非題，answer 給「是/否/無法判斷」、把逐項數據放 rationale）。】";
+  if(q.apply) return " 【適用性題：請依研究的族群／場域與一般臨床情境，直接給明確的「是 / 否 / 無法判斷」＋理由（不要留白），rationale 最後補一句提醒：請對照你自己的單位／病人再確認。】";
+  if(q.results) return " 【結果題：rationale 必須把每一個結果指標／outcome 用中文一項一項列出（含森林圖裡的每個結果），每項都附數據——效果量（OR／RR／HR／MD 等）、95% CI、p 值，Meta 再加異質性 I²，並逐項明確標示是否統計顯著（p<0.05＝顯著、p≥0.05＝不顯著；效果量 95% CI 未跨過無效值＝顯著）；不要只寫一句籠統結論。answer 給一句最重要的整體結果（若本題是是非題，answer 給「是/否/無法判斷」、把逐項數據放 rationale）。】";
   return " 【是非題：answer 必須是明確的「是 / 否 / 無法判斷」三選一，並在 rationale 說清楚為什麼，不要模稜兩可、不要籠統。】";
 }
 function bothChecklists(){
@@ -782,14 +782,14 @@ function buildPromptUnknown(){
   L.push('  "clinicalQuestion":"一句臨床問題（PICO 句型）",');
   L.push('  "pico":{"P":"對象","I":"介入","C":"對照","O":"結果指標"},');
   L.push('  "summary":"150~250字中文重點摘要", "evidenceLevel":"證據等級（Melnyk 七級，例 Level II）", "qualityGrade":"高/中/低＋半句說明",');
-  L.push('  "appraisal":[{"no":題號,"section":"A/B/C/D","question":"中文題目","answer":"是非題給明確的『是/否/無法判斷』三選一；結果題給一句最重要的整體結果；一般判斷題填『請依病人情況判斷』；成本效益權衡題依準則給是/否","rationale":"'+wordCount()+'字的完整書面理由：具體說明判斷依據、研究方法/族群、主要結果（數據）與限制，要能直接放進書面報告，不可只寫一兩句","quote":"原文英文佐證句：要涵蓋本題判斷與 rationale 中每一個主要論點及數據的依據；請照抄原文（可多句、用 ; 分隔），找不到就留空，絕不可杜撰","plain":"投影片用的精簡重點，一句話、25字以內","verify":"若你對本題判斷或數據沒有十足把握、或原文未明確支持，填一句『待查原因』（例：原文只提到整體成本、未分項）；很有把握且原文明確支持就填空字串"}]'+speechReq+',');
+  L.push('  "appraisal":[{"no":題號,"section":"A/B/C/D","question":"中文題目","answer":"每題都要依 CASP 給明確的『是/否/無法判斷』三選一（結果題改給一句最重要的整體結果）；不可留白叫我自己填；適用性題也要先給判斷、再於 rationale 提醒我對照單位；成本效益權衡題依準則給是/否","rationale":"'+wordCount()+'字的完整書面理由：具體說明判斷依據、研究方法/族群、主要結果（數據）與限制，要能直接放進書面報告，不可只寫一兩句","quote":"原文英文佐證句：要涵蓋本題判斷與 rationale 中每一個主要論點及數據的依據；請照抄原文（可多句、用 ; 分隔），找不到就留空，絕不可杜撰","plain":"投影片用的精簡重點，一句話、25字以內","verify":"若你對本題判斷或數據沒有十足把握、或原文未明確支持，填一句『待查原因』（例：原文只提到整體成本、未分項）；很有把握且原文明確支持就填空字串"}]'+speechReq+',');
   L.push('  "clinicalApplication":"臨床應用建議'+(context?"，請扣緊我的臨床情境":"")+'", "conclusion":"3~5句整體結論"');
   L.push("}");
   L.push("");
-  L.push("規則：appraisal 要包含『你選的那張表』的全部題目（RCT 11 題或 SR 10 題），題號完整；判斷題不要替我下是/否（但『成本效益權衡題』例外，請依題目後標註的準則直接給是/否並說明）；每題 rationale 要寫 "+wordCount()+" 字（給 Word/PDF 書面報告，內容要充實具體）、plain 一句話精簡（25字內，給 PPT 投影片）；全部繁體中文（quote 可留英文）；只輸出 JSON。");
+  L.push("規則：appraisal 要包含『你選的那張表』的全部題目（RCT 11 題或 SR 10 題），題號完整；每一題都要依 CASP 標準給明確答案、不可留白（適用性題先給判斷再提醒對照單位；成本效益權衡題依標註準則給是/否）；每題 rationale 要寫 "+wordCount()+" 字（給 Word/PDF 書面報告，內容要充實具體）、plain 一句話精簡（25字內，給 PPT 投影片）；全部繁體中文（quote 可留英文）；只輸出 JSON。");
   L.push("引用規範（重要）：整份評讀的每一個論點與數據都必須有文獻原文依據——rationale 與 summary 只能寫文獻真正支持的內容，並把支持這些論點與數據的原文英文句放進該題的 quote 欄（可多句、用 ; 分隔）。凡文獻沒有提到的，一律不要寫，更不可推測、估算或杜撰；無法從原文找到依據時，寧可不寫該點。數字（百分比、p 值、OR／RR／HR、95% CI、樣本數、追蹤時間等）尤其要逐一對應原文。");
   L.push("自我標記（重要）：對任何你沒有十足把握、或原文未明確支持的判斷與數據，請在該題 verify 欄寫一句待查原因（寧可標記、也不要假裝確定）；完全確定且原文明確支持的才留空。");
-  L.push("作答原則：是非題的 answer 一律明確給『是 / 否 / 無法判斷』，並在 rationale 說清楚為什麼，不要模稜兩可、不要籠統；標為『結果題』的，rationale 要把每個結果指標與數據（效果量、95% CI、p 值、I²）逐項用中文列出，不可只給一句總結。");
+  L.push("作答原則：是非題的 answer 一律明確給『是 / 否 / 無法判斷』，並在 rationale 說清楚為什麼，不要模稜兩可、不要籠統；標為『結果題』的，rationale 要把每個結果指標與數據（效果量、95% CI、p 值、I²）逐項用中文列出，不可只給一句總結。統計顯著性一律用金標準判定：p<0.05＝顯著、p≥0.05＝不顯著；效果量 95% CI 未跨過無效值（比值類為 1、差值類為 0）＝顯著，跨過＝不顯著。凡提到結果都要明確標示顯著或不顯著，不要模糊。");
   return L.join("\n");
 }
 function buildPrompt(){
@@ -841,14 +841,14 @@ function buildPrompt(){
     L.push('  "pico":{"P":"對象","I":"介入","C":"對照","O":"結果指標"},');
     L.push('  "summary":"150~250字中文重點摘要", "evidenceLevel":"證據等級（Melnyk 七級，例 Level II）", "qualityGrade":"高/中/低＋半句說明",');
   }
-  L.push('  "appraisal":[{"no":題號,"section":"A/B/C/D","question":"中文題目","answer":"是非題給明確的『是/否/無法判斷』三選一；結果題給一句最重要的整體結果；一般判斷題填『請依病人情況判斷』；成本效益權衡題依準則給是/否","rationale":"'+wordCount()+'字的完整書面理由：具體說明判斷依據、研究方法/族群、主要結果（數據）與限制，要能直接放進書面報告，不可只寫一兩句","quote":"原文英文佐證句：要涵蓋本題判斷與 rationale 中每一個主要論點及數據的依據；請照抄原文（可多句、用 ; 分隔），找不到就留空，絕不可杜撰","plain":"投影片用的精簡重點，一句話、25字以內","verify":"若你對本題判斷或數據沒有十足把握、或原文未明確支持，填一句『待查原因』（例：原文只提到整體成本、未分項）；很有把握且原文明確支持就填空字串"}]'+speechReq);
+  L.push('  "appraisal":[{"no":題號,"section":"A/B/C/D","question":"中文題目","answer":"每題都要依 CASP 給明確的『是/否/無法判斷』三選一（結果題改給一句最重要的整體結果）；不可留白叫我自己填；適用性題也要先給判斷、再於 rationale 提醒我對照單位；成本效益權衡題依準則給是/否","rationale":"'+wordCount()+'字的完整書面理由：具體說明判斷依據、研究方法/族群、主要結果（數據）與限制，要能直接放進書面報告，不可只寫一兩句","quote":"原文英文佐證句：要涵蓋本題判斷與 rationale 中每一個主要論點及數據的依據；請照抄原文（可多句、用 ; 分隔），找不到就留空，絕不可杜撰","plain":"投影片用的精簡重點，一句話、25字以內","verify":"若你對本題判斷或數據沒有十足把握、或原文未明確支持，填一句『待查原因』（例：原文只提到整體成本、未分項）；很有把握且原文明確支持就填空字串"}]'+speechReq);
   if(MODE==="leader") L.push(',\n  "clinicalApplication":"臨床應用建議'+(context?"，請扣緊我的臨床情境":"")+'", "conclusion":"3~5句整體結論"');
   L.push("}");
   L.push("");
-  L.push("規則：appraisal 只能包含第 "+nums.join("、")+" 題，題號完整對應；判斷題不要替我下是/否（但『成本效益權衡題』例外，請依題目後標註的準則直接給是/否並說明），只白話解釋；每題 rationale 要寫 "+wordCount()+" 字（給 Word/PDF 書面報告，內容要充實具體）、plain 一句話精簡（25字內，給 PPT 投影片）；全部繁體中文（quote 可留英文）；再次強調只輸出 JSON。");
+  L.push("規則：appraisal 只能包含第 "+nums.join("、")+" 題，題號完整對應；每一題都要依 CASP 標準給明確答案、不可留白（適用性題先給判斷再提醒對照單位；成本效益權衡題依標註準則給是/否）；每題 rationale 要寫 "+wordCount()+" 字（給 Word/PDF 書面報告，內容要充實具體）、plain 一句話精簡（25字內，給 PPT 投影片）；全部繁體中文（quote 可留英文）；再次強調只輸出 JSON。");
   L.push("引用規範（重要）：整份評讀的每一個論點與數據都必須有文獻原文依據——rationale 與 summary 只能寫文獻真正支持的內容，並把支持這些論點與數據的原文英文句放進該題的 quote 欄（可多句、用 ; 分隔）。凡文獻沒有提到的，一律不要寫，更不可推測、估算或杜撰；無法從原文找到依據時，寧可不寫該點。數字（百分比、p 值、OR／RR／HR、95% CI、樣本數、追蹤時間等）尤其要逐一對應原文。");
   L.push("自我標記（重要）：對任何你沒有十足把握、或原文未明確支持的判斷與數據，請在該題 verify 欄寫一句待查原因（寧可標記、也不要假裝確定）；完全確定且原文明確支持的才留空。");
-  L.push("作答原則：是非題的 answer 一律明確給『是 / 否 / 無法判斷』，並在 rationale 說清楚為什麼，不要模稜兩可、不要籠統；標為『結果題』的，rationale 要把每個結果指標與數據（效果量、95% CI、p 值、I²）逐項用中文列出，不可只給一句總結。");
+  L.push("作答原則：是非題的 answer 一律明確給『是 / 否 / 無法判斷』，並在 rationale 說清楚為什麼，不要模稜兩可、不要籠統；標為『結果題』的，rationale 要把每個結果指標與數據（效果量、95% CI、p 值、I²）逐項用中文列出，不可只給一句總結。統計顯著性一律用金標準判定：p<0.05＝顯著、p≥0.05＝不顯著；效果量 95% CI 未跨過無效值（比值類為 1、差值類為 0）＝顯著，跨過＝不顯著。凡提到結果都要明確標示顯著或不顯著，不要模糊。");
   return L.join("\n");
 }
 document.getElementById("gen-btn").addEventListener("click",()=>{
@@ -1202,9 +1202,10 @@ function showAppBanner(){ if(sessionStorage.getItem("hideAppBanner"))return; con
 (function(){ const x=document.getElementById("appbanner-x"); if(x)x.addEventListener("click",()=>{ document.getElementById("appbanner").classList.remove("show"); sessionStorage.setItem("hideAppBanner","1"); });
   if(/FBAN|FBAV|FBIOS|Instagram|Line\/|MicroMessenger|Twitter|TikTok|GSA\//i.test(navigator.userAgent||"")) showAppBanner(); })();
 // 🔄 自動偵測新版本：跟伺服器上的 ver.txt 比對，有新版就跳橫幅（使用者完全不用管 ?數字、不用刪圖示）
-const BUILD="2026061801";
+const BUILD="2026061802";
 const CASP_VERSION="CASP 2024";
 const CHANGELOG=[
+  "每題都依 CASP 給明確答案、不再留白；適用題仍會提醒你對照單位；統計顯著性用金標準判定（p<0.05 顯著）",
   "答案更明確（是/否/無法判斷＋理由）；「結果」題會逐項列出每個數據不再籠統",
   "新增「⚖️ AI 律師」工具（勞動法主場，引法條／判斷對方說法／列證據；法規用全國法規資料庫官方真資料；右上可進）",
   "AI 沒把握的地方會自我標「⚠ 待查」提醒你核對；導覽加入重產流程說明",
