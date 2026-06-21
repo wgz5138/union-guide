@@ -1,0 +1,341 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>會員名冊 · 高榮企業工會</title>
+<meta name="robots" content="noindex, nofollow">
+<meta name="theme-color" content="#1A3A6B">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="會員名冊">
+<meta name="description" content="工會會員名冊、入會申請審查、會費狀態管理。">
+<link rel="apple-touch-icon" href="assets/union-icon-180.png">
+<link rel="manifest" href="roster.webmanifest">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@400;600;700&family=Noto+Sans+TC:wght@300;400;500;700&display=swap" rel="stylesheet">
+<style>
+  /* ============================================================
+     會員名冊（離線、純前端、免金鑰）— 組織理事用。
+     含：入會申請審查、會費狀態、搜尋/統計、匯出 Excel(CSV)/備份。
+     資料只存本機 localStorage（含個資，請勿外傳整份檔案）。
+     名冊鍵 roster_members_v1，會議文件頁簽到表會讀取在會會員。
+     ============================================================ */
+  :root{
+    --red:#C0392B; --red-deep:#7B1818; --red-light:#FDECEA;
+    --gold:#B7860B; --gold-light:#FEF9E7; --amber:#B7791F; --amber-light:#FEF5E7;
+    --ink:#1A1A1A; --ink-mid:#444; --ink-soft:#777; --bg:#F4F6F9;
+    --card:#FFFFFF; --border:#E2E6EC;
+    --green:#1A7A4A; --green-mid:#2D9D6E; --green-deep:#0F5C36; --green-light:#EAFAF1;
+    --navy:#1A3A6B; --navy-mid:#2E5C8A; --navy-deep:#122A4F; --navy-light:#EAF0F8;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;}
+  body{font-family:'Noto Sans TC',sans-serif;background:var(--bg);color:var(--ink);font-size:15px;line-height:1.7;-webkit-text-size-adjust:100%;}
+  button{font-family:inherit;}
+
+  #gate{position:fixed;inset:0;z-index:200;background:linear-gradient(160deg,#1A3A6B 0%,#122A4F 100%);display:none;align-items:center;justify-content:center;padding:1.5rem;}
+  #gate.show{display:flex;}
+  .gate-box{background:#fff;border-radius:16px;max-width:380px;width:100%;padding:2rem 1.5rem;text-align:center;box-shadow:0 20px 60px rgba(0,0,0,.4);}
+  .gate-box h2{font-family:'Noto Serif TC',serif;color:var(--navy-deep);font-size:20px;margin-bottom:6px;}
+  .gate-box p{font-size:13px;color:var(--ink-soft);margin-bottom:1.25rem;}
+  .gate-box input{width:100%;padding:.8rem 1rem;font-size:16px;border:1.5px solid var(--border);border-radius:10px;margin-bottom:10px;text-align:center;}
+  .gate-box input:focus{outline:none;border-color:var(--navy);}
+  .gate-box button{width:100%;padding:.8rem;font-size:15px;color:#fff;background:var(--navy);border:none;border-radius:10px;cursor:pointer;}
+  .gate-err{color:var(--red);font-size:13px;min-height:18px;margin-top:8px;}
+
+  .header{background:var(--navy);color:#fff;padding:1.5rem 1.25rem 1.2rem;text-align:center;position:relative;overflow:hidden;}
+  .header::before{content:'';position:absolute;top:-40px;right:-40px;width:180px;height:180px;border-radius:50%;background:rgba(255,255,255,.06);}
+  .header-label{font-size:11px;letter-spacing:.18em;opacity:.85;margin-bottom:4px;}
+  .header h1{font-family:'Noto Serif TC',serif;font-size:22px;font-weight:700;}
+  .header-sub{font-size:12.5px;opacity:.9;margin-top:6px;}
+  .back{position:absolute;left:12px;top:14px;color:#fff;text-decoration:none;font-size:13px;opacity:.9;background:rgba(255,255,255,.14);padding:4px 10px;border-radius:20px;}
+
+  main{max-width:640px;margin:0 auto;padding:1rem 1rem 4rem;}
+
+  .stats{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin:.8rem 0 1rem;}
+  .stat{background:var(--card);border:1px solid var(--border);border-radius:13px;padding:.7rem .3rem;text-align:center;}
+  .stat .n{font-family:'Noto Serif TC',serif;font-size:22px;font-weight:700;color:var(--navy);line-height:1.1;}
+  .stat.apply .n{color:var(--amber);} .stat.owe .n{color:var(--red);}
+  .stat .l{font-size:11px;color:var(--ink-soft);margin-top:3px;}
+
+  .toolbar{display:flex;gap:8px;margin-bottom:.7rem;}
+  .toolbar input{flex:1;padding:.6rem .8rem;font-size:15px;border:1.4px solid var(--border);border-radius:10px;background:#fff;}
+  .toolbar input:focus{outline:none;border-color:var(--navy-mid);}
+
+  .chips{display:flex;flex-wrap:wrap;gap:7px;margin-bottom:.9rem;}
+  .chip{font-size:12.5px;padding:.32rem .7rem;border-radius:20px;border:1.3px solid var(--border);background:#fff;color:var(--ink-mid);cursor:pointer;white-space:nowrap;}
+  .chip.on{background:var(--navy-light);border-color:var(--navy-mid);color:var(--navy-deep);font-weight:700;}
+
+  .btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;width:100%;padding:.78rem;font-size:15px;font-weight:600;color:#fff;background:var(--navy);border:none;border-radius:11px;cursor:pointer;}
+  .btn:active{background:var(--navy-deep);}
+  .btn.ghost{background:#fff;color:var(--navy-deep);border:1.5px solid var(--navy-mid);}
+  .btn.sm{width:auto;padding:.55rem .9rem;font-size:13px;border-radius:9px;}
+  .btn-row{display:flex;gap:8px;flex-wrap:wrap;}
+
+  .m{background:var(--card);border:1px solid var(--border);border-radius:13px;padding:.75rem .85rem;margin-bottom:9px;border-left:5px solid var(--navy-mid);}
+  .m.s-applicant{border-left-color:var(--amber);}
+  .m.s-suspended{border-left-color:var(--red);}
+  .m.s-left{border-left-color:#aaa;opacity:.7;}
+  .m-top{display:flex;align-items:center;gap:9px;}
+  .m-name{font-size:16px;font-weight:700;color:var(--ink);}
+  .m-sub{font-size:12.5px;color:var(--ink-soft);}
+  .m-pills{display:flex;flex-wrap:wrap;gap:6px;margin-top:7px;align-items:center;}
+  .pill{font-size:11px;padding:.13rem .5rem;border-radius:20px;font-weight:600;white-space:nowrap;}
+  .pill.type{background:var(--navy-light);color:var(--navy-deep);}
+  .pill.type.sponsor{background:#F0F2F5;color:var(--ink-mid);}
+  .pill.st{background:var(--green-light);color:var(--green-deep);}
+  .pill.st.s-applicant{background:var(--amber-light);color:var(--amber);}
+  .pill.st.s-suspended{background:var(--red-light);color:var(--red-deep);}
+  .pill.st.s-left{background:#F0F2F5;color:var(--ink-soft);}
+  .pill.fee{background:var(--green-light);color:var(--green-deep);}
+  .pill.fee.owe{background:var(--red-light);color:var(--red-deep);}
+  .m-act{display:flex;gap:14px;margin-top:8px;flex-wrap:wrap;}
+  .m-act button{background:none;border:none;color:var(--navy-mid);font-size:12.5px;cursor:pointer;padding:0;}
+  .m-act button.ok{color:var(--green-deep);font-weight:700;}
+  .m-act button.del{color:var(--red);}
+
+  .form{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:1rem;margin-bottom:1rem;display:none;}
+  .form.show{display:block;}
+  .form label{display:block;font-size:12.5px;color:var(--ink-soft);font-weight:600;margin:.55rem 0 .25rem;}
+  .form input,.form select,.form textarea{width:100%;padding:.6rem .7rem;font-size:15px;border:1.4px solid var(--border);border-radius:9px;font-family:inherit;background:#fff;}
+  .form input:focus,.form select:focus,.form textarea:focus{outline:none;border-color:var(--navy-mid);}
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
+
+  .empty{text-align:center;color:var(--ink-soft);font-size:13.5px;padding:2rem 1rem;background:var(--card);border:1px dashed var(--border);border-radius:14px;}
+  .law{font-size:12px;color:var(--ink-soft);border-left:3px solid var(--border);padding-left:9px;margin:.5rem 0 .9rem;line-height:1.7;}
+  .note{font-size:12.5px;color:var(--ink-soft);background:var(--amber-light);border:1px solid #F0DBA8;border-radius:10px;padding:.7rem .8rem;margin:.6rem 0;line-height:1.7;}
+  .toast{position:fixed;left:50%;bottom:26px;transform:translateX(-50%) translateY(20px);background:var(--ink);color:#fff;font-size:13.5px;padding:.6rem 1.1rem;border-radius:30px;opacity:0;pointer-events:none;transition:.25s;z-index:300;}
+  .toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
+
+  @media print{
+    .toolbar,.chips,.stats,.btn,.btn-row,.form,.back,.note,.m-act{display:none!important;}
+    .header{background:#fff;color:#000;border-bottom:2px solid #000;}
+    .m{break-inside:avoid;border:1px solid #999;}
+    body{background:#fff;}
+  }
+</style>
+</head>
+<body>
+
+<div id="gate">
+  <div class="gate-box">
+    <h2>會員名冊</h2>
+    <p>本頁含會員個人資料，限組織理事等幹部使用。</p>
+    <input id="gate-pw" type="password" inputmode="text" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" placeholder="幹部通行碼" enterkeyhint="go">
+    <button id="gate-go">進入</button>
+    <div class="gate-err" id="gate-err"></div>
+  </div>
+</div>
+
+<div id="app" style="display:none">
+  <header class="header">
+    <a class="back" href="union.html">‹ 功能表</a>
+    <div class="header-label">高榮企業工會 · 組織理事</div>
+    <h1>👥 會員名冊</h1>
+    <div class="header-sub">入會審查 · 會費狀態 · 名冊管理</div>
+  </header>
+
+  <main>
+    <div class="stats" id="stats"></div>
+
+    <div class="btn-row" style="margin-bottom:.8rem">
+      <button class="btn" id="add-btn">＋ 新增會員／申請</button>
+    </div>
+
+    <div class="form" id="form">
+      <input type="hidden" id="f-id">
+      <div class="grid2">
+        <div><label>姓名 *</label><input id="f-name" placeholder="王小明"></div>
+        <div><label>工號／員編</label><input id="f-no" placeholder="選填"></div>
+      </div>
+      <div class="grid2">
+        <div><label>單位／科別</label><input id="f-dept" placeholder="例：護理部 5A"></div>
+        <div><label>職稱</label><input id="f-title" placeholder="例：護理師"></div>
+      </div>
+      <div class="grid2">
+        <div><label>會員身分</label>
+          <select id="f-type"><option value="full">正式會員</option><option value="sponsor">贊助會員</option></select></div>
+        <div><label>狀態</label>
+          <select id="f-status">
+            <option value="applicant">入會申請中（待審）</option>
+            <option value="active">在會</option>
+            <option value="suspended">停權</option>
+            <option value="left">出會</option>
+          </select></div>
+      </div>
+      <div class="grid2">
+        <div><label>入會日期</label><input id="f-join" type="date"></div>
+        <div><label>會費已繳至</label><input id="f-fee" type="month"></div>
+      </div>
+      <div class="grid2">
+        <div><label>手機</label><input id="f-phone" inputmode="tel" placeholder="09xx-xxx-xxx"></div>
+        <div><label>Line / Email</label><input id="f-contact" placeholder="選填"></div>
+      </div>
+      <label>備註</label>
+      <textarea id="f-note" style="min-height:48px" placeholder="選填"></textarea>
+      <div class="btn-row" style="margin-top:.7rem">
+        <button class="btn" id="f-save">儲存</button>
+        <button class="btn ghost sm" id="f-cancel">取消</button>
+      </div>
+    </div>
+
+    <div class="toolbar"><input id="search" placeholder="🔍 搜尋姓名／單位／工號"></div>
+    <div class="chips" id="chips">
+      <button class="chip on" data-f="all">全部</button>
+      <button class="chip" data-f="applicant">待審</button>
+      <button class="chip" data-f="active">在會</button>
+      <button class="chip" data-f="owe">欠費</button>
+      <button class="chip" data-f="suspended">停權</button>
+      <button class="chip" data-f="left">出會</button>
+    </div>
+
+    <div id="list"></div>
+
+    <div class="btn-row" style="margin-top:1.2rem">
+      <button class="btn ghost sm" id="csv-btn">⬇ 匯出 Excel(CSV)</button>
+      <button class="btn ghost sm" id="export-btn">⬇ 備份(JSON)</button>
+      <button class="btn ghost sm" id="import-btn">⬆ 匯入</button>
+      <button class="btn ghost sm" id="print-btn">🖨 列印</button>
+    </div>
+    <input type="file" id="import-file" accept="application/json" style="display:none">
+    <div class="note">🔐 名冊含<b>個人資料</b>。資料只存這台裝置、不上傳；請勿將整份匯出檔隨意外傳，並依個資法妥善保管。換裝置才用「備份→匯入」。</div>
+    <p class="law">章程：會員入會須填申請書、經理事會審查通過。新增時可先設「入會申請中（待審）」，理事會審過後按「✓ 核准入會」轉為在會。贊助會員不具表決、選舉、被選舉、罷免權。</p>
+  </main>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+/* 密碼鎖（共用通行碼 gaorong2026） */
+const LOCK=false, PW_HASH="1621267407177439", UNLOCK_KEY="union_panel_unlocked";
+function cyrb53(s,seed=0){ s=s||""; let h1=0xdeadbeef^seed,h2=0x41c6ce57^seed; for(let i=0,c;i<s.length;i++){c=s.charCodeAt(i);h1=Math.imul(h1^c,2654435761);h2=Math.imul(h2^c,1597334677);} h1=Math.imul(h1^(h1>>>16),2246822507);h1^=Math.imul(h2^(h2>>>13),3266489909);h2=Math.imul(h2^(h2>>>16),2246822507);h2^=Math.imul(h1^(h1>>>13),3266489909); return ""+(4294967296*(2097151&h2)+(h1>>>0)); }
+const gate=document.getElementById('gate'),app=document.getElementById('app');
+function showApp(){ gate.classList.remove('show'); app.style.display='block'; init(); }
+function showGate(){ gate.classList.add('show'); app.style.display='none'; setTimeout(()=>document.getElementById('gate-pw').focus(),100); }
+function tryUnlock(){ const v=document.getElementById('gate-pw').value.trim(); if(cyrb53(v)===PW_HASH){ try{sessionStorage.setItem(UNLOCK_KEY,'1');}catch(_){} showApp(); } else { document.getElementById('gate-err').textContent='通行碼不對，請再試一次或詢問負責幹部'; } }
+document.getElementById('gate-go').addEventListener('click',tryUnlock);
+document.getElementById('gate-pw').addEventListener('keydown',e=>{ if(e.key==='Enter') tryUnlock(); });
+
+/* 資料層（與會議文件頁共用此鍵） */
+const KEY="roster_members_v1";
+const STATUS={applicant:'入會申請中',active:'在會',suspended:'停權',left:'出會'};
+let members=[], filter='all', q='';
+function load(){ try{members=JSON.parse(localStorage.getItem(KEY))||[];}catch(_){members=[];} }
+function save(){ try{localStorage.setItem(KEY,JSON.stringify(members));}catch(_){} }
+function uid(){ return Date.now().toString(36)+Math.random().toString(36).slice(2,6); }
+function esc(s){ return (s||'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
+function curMonth(){ return new Date().toISOString().slice(0,7); }
+function isOwe(m){ if(m.status!=='active') return false; if(!m.feeTo) return true; return m.feeTo < curMonth(); }
+const $=id=>document.getElementById(id);
+
+function renderStats(){
+  const act=members.filter(m=>m.status==='active');
+  const app2=members.filter(m=>m.status==='applicant');
+  const owe=members.filter(isOwe);
+  $('stats').innerHTML=`
+    <div class="stat"><div class="n">${act.length}</div><div class="l">在會會員</div></div>
+    <div class="stat apply"><div class="n">${app2.length}</div><div class="l">待審申請</div></div>
+    <div class="stat owe"><div class="n">${owe.length}</div><div class="l">欠費</div></div>
+    <div class="stat"><div class="n">${members.length}</div><div class="l">名冊總數</div></div>`;
+}
+
+function visible(){
+  let list=members.slice();
+  if(filter==='owe') list=list.filter(isOwe);
+  else if(filter!=='all') list=list.filter(m=>m.status===filter);
+  if(q){ const k=q.toLowerCase(); list=list.filter(m=>((m.name||'')+(m.dept||'')+(m.no||'')+(m.title||'')).toLowerCase().includes(k)); }
+  const order={applicant:0,active:1,suspended:2,left:3};
+  list.sort((a,b)=>(order[a.status]-order[b.status])||(a.name||'').localeCompare(b.name||'','zh-Hant'));
+  return list;
+}
+
+function render(){
+  renderStats();
+  const list=visible(), box=$('list');
+  if(!list.length){ box.innerHTML='<div class="empty">沒有符合的會員。<br>按「＋ 新增會員／申請」開始建立名冊。</div>'; return; }
+  box.innerHTML=list.map(m=>{
+    const owe=isOwe(m);
+    const sub=[m.dept,m.title,m.no].filter(Boolean).map(esc).join('　');
+    const feeTxt=m.status==='active'?`<span class="pill fee ${owe?'owe':''}">${owe?'欠費':'會費'+(m.feeTo?' 至 '+m.feeTo:'正常')}</span>`:'';
+    const approve=m.status==='applicant'?`<button class="ok" data-act="approve" data-id="${m.id}">✓ 核准入會</button>`:'';
+    return `<div class="m s-${m.status}">
+      <div class="m-top"><span class="m-name">${esc(m.name||'(未命名)')}</span></div>
+      ${sub?`<div class="m-sub">${sub}</div>`:''}
+      <div class="m-pills">
+        <span class="pill type ${m.type==='sponsor'?'sponsor':''}">${m.type==='sponsor'?'贊助會員':'正式會員'}</span>
+        <span class="pill st s-${m.status}">${STATUS[m.status]}</span>
+        ${feeTxt}
+        ${m.phone?`<span class="pill" style="background:#EEF1F4;color:#444">📞 ${esc(m.phone)}</span>`:''}
+      </div>
+      <div class="m-act">${approve}<button data-act="edit" data-id="${m.id}">✏️ 編輯</button><button class="del" data-act="del" data-id="${m.id}">🗑 刪除</button></div>
+    </div>`;
+  }).join('');
+}
+
+$('list').addEventListener('click',e=>{
+  const el=e.target.closest('[data-act]'); if(!el) return;
+  const m=members.find(x=>x.id===el.dataset.id); if(!m) return;
+  const a=el.dataset.act;
+  if(a==='approve'){ m.status='active'; if(!m.join) m.join=new Date().toISOString().slice(0,10); save(); render(); toast('已核准入會'); }
+  else if(a==='edit') openForm(m);
+  else if(a==='del'){ if(confirm(`刪除會員「${m.name}」？`)){ members=members.filter(x=>x.id!==m.id); save(); render(); } }
+});
+
+function openForm(m){
+  $('form').classList.add('show');
+  $('f-id').value=m?m.id:''; $('f-name').value=m?m.name:''; $('f-no').value=m?(m.no||''):'';
+  $('f-dept').value=m?(m.dept||''):''; $('f-title').value=m?(m.title||''):'';
+  $('f-type').value=m?(m.type||'full'):'full'; $('f-status').value=m?m.status:'applicant';
+  $('f-join').value=m?(m.join||''):''; $('f-fee').value=m?(m.feeTo||''):'';
+  $('f-phone').value=m?(m.phone||''):''; $('f-contact').value=m?(m.contact||''):''; $('f-note').value=m?(m.note||''):'';
+  $('form').scrollIntoView({behavior:'smooth',block:'center'}); $('f-name').focus();
+}
+$('add-btn').addEventListener('click',()=>openForm(null));
+$('f-cancel').addEventListener('click',()=>$('form').classList.remove('show'));
+$('f-save').addEventListener('click',()=>{
+  const name=$('f-name').value.trim(); if(!name){ toast('請輸入姓名'); return; }
+  const data={name,no:$('f-no').value.trim(),dept:$('f-dept').value.trim(),title:$('f-title').value.trim(),
+    type:$('f-type').value,status:$('f-status').value,join:$('f-join').value,feeTo:$('f-fee').value,
+    phone:$('f-phone').value.trim(),contact:$('f-contact').value.trim(),note:$('f-note').value.trim()};
+  const id=$('f-id').value;
+  if(id){ Object.assign(members.find(x=>x.id===id),data); } else { members.push(Object.assign({id:uid()},data)); }
+  save(); $('form').classList.remove('show'); render(); toast('已儲存');
+});
+
+document.querySelectorAll('#chips .chip').forEach(c=>c.addEventListener('click',()=>{
+  document.querySelectorAll('#chips .chip').forEach(x=>x.classList.remove('on')); c.classList.add('on'); filter=c.dataset.f; render();
+}));
+$('search').addEventListener('input',e=>{ q=e.target.value.trim(); render(); });
+
+/* 匯出 CSV（Excel） */
+$('csv-btn').addEventListener('click',()=>{
+  const head=['姓名','工號','單位','職稱','身分','狀態','入會日期','會費已繳至','是否欠費','手機','Line/Email','備註'];
+  const rows=members.map(m=>[m.name,m.no,m.dept,m.title,m.type==='sponsor'?'贊助會員':'正式會員',STATUS[m.status],m.join,m.feeTo,isOwe(m)?'欠費':'',m.phone,m.contact,m.note]);
+  const csv=[head,...rows].map(r=>r.map(v=>`"${String(v||'').replace(/"/g,'""')}"`).join(',')).join('\r\n');
+  const blob=new Blob(['﻿'+csv],{type:'text/csv;charset=utf-8'});
+  const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='會員名冊_'+curMonth()+'.csv'; a.click(); toast('已匯出 CSV，可用 Excel 開');
+});
+$('export-btn').addEventListener('click',()=>{
+  const blob=new Blob([JSON.stringify(members,null,2)],{type:'application/json'});
+  const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='會員名冊備份_'+curMonth()+'.json'; a.click(); toast('已匯出備份');
+});
+$('import-btn').addEventListener('click',()=>$('import-file').click());
+$('import-file').addEventListener('change',e=>{
+  const f=e.target.files[0]; if(!f) return; const r=new FileReader();
+  r.onload=()=>{ try{ const arr=JSON.parse(r.result); if(!Array.isArray(arr)) throw 0;
+    if(confirm('匯入將「取代」目前名冊，確定？')){ members=arr; save(); render(); toast('已匯入'); }
+  }catch(_){ toast('檔案格式不正確'); } e.target.value=''; };
+  r.readAsText(f);
+});
+$('print-btn').addEventListener('click',()=>window.print());
+
+let toastT; function toast(m){ const e=$('toast'); e.textContent=m; e.classList.add('show'); clearTimeout(toastT); toastT=setTimeout(()=>e.classList.remove('show'),1900); }
+function init(){ load(); render(); }
+
+if(!LOCK){ showApp(); }
+else if(sessionStorage.getItem(UNLOCK_KEY)==='1'){ showApp(); }
+else { showGate(); }
+if('serviceWorker' in navigator){ navigator.serviceWorker.register('sw.js').catch(()=>{}); }
+</script>
+</body>
+</html>
