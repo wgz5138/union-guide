@@ -1,0 +1,673 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>監事秘書 · 高榮企業工會</title>
+<meta name="robots" content="noindex, nofollow">
+<meta name="theme-color" content="#1A3A6B">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="監事秘書">
+<meta name="description" content="監事會 AI 秘書：進度表、年度監察行事曆、監察意見書與稽核查核表範本。">
+<link rel="apple-touch-icon" href="assets/union-icon-180.png">
+<link rel="manifest" href="jianshi.webmanifest">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@400;600;700&family=Noto+Sans+TC:wght@300;400;500;700&display=swap" rel="stylesheet">
+<style>
+  /* ============================================================
+     監事秘書（離線智慧秘書）— 單頁、手機優先、純前端、免金鑰。
+     依《章程》第24條監事會職權設計：
+       1 監察理事會執行會員(代表)大會之決議
+       2 稽核本會經費之收支及其他有關財務事項
+       3 監察會員履行義務
+       4 其他有關監察事項（得會同相關專業人士辦理）
+     全部資料只存在「本機瀏覽器 localStorage」，不外流、不需後端。
+     ============================================================ */
+  :root{
+    --red:#C0392B; --red-deep:#7B1818; --red-light:#FDECEA;
+    --gold:#B7860B; --gold-light:#FEF9E7;
+    --ink:#1A1A1A; --ink-mid:#444; --ink-soft:#777; --bg:#F4F6F9;
+    --card:#FFFFFF; --border:#E2E6EC;
+    --green:#1A7A4A; --green-mid:#2D9D6E; --green-deep:#0F5C36; --green-light:#EAFAF1;
+    --navy:#1A3A6B; --navy-mid:#2E5C8A; --navy-deep:#122A4F; --navy-light:#EAF0F8;
+    --amber:#B7791F; --amber-light:#FEF5E7;
+    --c1:#2E5C8A; --c2:#1A7A4A; --c3:#8A6D0B; --c4:#7A4F9D;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;}
+  body{font-family:'Noto Sans TC',sans-serif;background:var(--bg);color:var(--ink);font-size:15px;line-height:1.7;-webkit-text-size-adjust:100%;}
+  img{max-width:100%;}
+  button{font-family:inherit;}
+
+  /* ===== 幹部密碼鎖 ===== */
+  #gate{position:fixed;inset:0;z-index:200;background:linear-gradient(160deg,#1A3A6B 0%,#122A4F 100%);display:none;align-items:center;justify-content:center;padding:1.5rem;}
+  #gate.show{display:flex;}
+  .gate-box{background:#fff;border-radius:16px;max-width:380px;width:100%;padding:2rem 1.5rem;text-align:center;box-shadow:0 20px 60px rgba(0,0,0,.4);}
+  .gate-box h2{font-family:'Noto Serif TC',serif;color:var(--navy-deep);font-size:20px;margin-bottom:6px;}
+  .gate-box p{font-size:13px;color:var(--ink-soft);margin-bottom:1.25rem;line-height:1.7;}
+  .gate-box input{width:100%;padding:.8rem 1rem;font-size:16px;border:1.5px solid var(--border);border-radius:10px;margin-bottom:10px;text-align:center;}
+  .gate-box input:focus{outline:none;border-color:var(--navy);}
+  .gate-box button{width:100%;padding:.8rem;font-size:15px;font-weight:500;color:#fff;background:var(--navy);border:none;border-radius:10px;cursor:pointer;}
+  .gate-box button:active{background:var(--navy-deep);}
+  .gate-err{color:var(--red);font-size:13px;min-height:18px;margin-top:8px;}
+
+  /* ===== 頁首 ===== */
+  .header{background:var(--navy);color:#fff;padding:1.6rem 1.25rem 1.3rem;text-align:center;position:relative;overflow:hidden;}
+  .header::before{content:'';position:absolute;top:-40px;right:-40px;width:180px;height:180px;border-radius:50%;background:rgba(255,255,255,.06);}
+  .header-label{font-size:11px;letter-spacing:.18em;opacity:.85;margin-bottom:4px;}
+  .header h1{font-family:'Noto Serif TC',serif;font-size:23px;font-weight:700;}
+  .header-sub{font-size:12.5px;opacity:.9;margin-top:7px;line-height:1.6;}
+  .back{position:absolute;left:12px;top:14px;color:#fff;text-decoration:none;font-size:13px;opacity:.9;background:rgba(255,255,255,.14);padding:4px 10px;border-radius:20px;}
+
+  main{max-width:620px;margin:0 auto;padding:1rem 1rem 4rem;}
+
+  /* ===== 概況統計 ===== */
+  .stats{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin:.8rem 0 1rem;}
+  .stat{background:var(--card);border:1px solid var(--border);border-radius:13px;padding:.7rem .3rem;text-align:center;}
+  .stat .n{font-family:'Noto Serif TC',serif;font-size:22px;font-weight:700;color:var(--navy);line-height:1.1;}
+  .stat.over .n{color:var(--red);}
+  .stat.done .n{color:var(--green-deep);}
+  .stat .l{font-size:11px;color:var(--ink-soft);margin-top:3px;}
+
+  /* ===== 分頁籤 ===== */
+  .tabs{display:flex;gap:6px;background:var(--card);border:1px solid var(--border);border-radius:12px;padding:5px;margin-bottom:1rem;position:sticky;top:0;z-index:30;box-shadow:0 2px 8px rgba(0,0,0,.04);}
+  .tab{flex:1;text-align:center;padding:.55rem .2rem;font-size:13.5px;font-weight:500;color:var(--ink-mid);border-radius:9px;cursor:pointer;border:none;background:none;}
+  .tab.on{background:var(--navy);color:#fff;font-weight:700;}
+
+  .sec-label{font-size:12px;letter-spacing:.06em;color:var(--ink-soft);font-weight:700;margin:1.1rem 2px .6rem;display:flex;align-items:center;gap:6px;}
+
+  /* ===== 篩選 chips ===== */
+  .chips{display:flex;flex-wrap:wrap;gap:7px;margin-bottom:.9rem;}
+  .chip{font-size:12.5px;padding:.32rem .7rem;border-radius:20px;border:1.3px solid var(--border);background:#fff;color:var(--ink-mid);cursor:pointer;white-space:nowrap;}
+  .chip.on{background:var(--navy-light);border-color:var(--navy-mid);color:var(--navy-deep);font-weight:700;}
+
+  /* ===== 任務卡 ===== */
+  .task{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:.85rem .9rem;margin-bottom:10px;border-left:5px solid var(--navy);position:relative;}
+  .task.c1{border-left-color:var(--c1);} .task.c2{border-left-color:var(--c2);}
+  .task.c3{border-left-color:var(--c3);} .task.c4{border-left-color:var(--c4);}
+  .task.is-done{opacity:.62;}
+  .task.is-done .t-title{text-decoration:line-through;}
+  .t-top{display:flex;align-items:flex-start;gap:10px;}
+  .t-check{flex-shrink:0;width:24px;height:24px;border-radius:7px;border:2px solid var(--border);background:#fff;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:15px;color:#fff;margin-top:2px;}
+  .t-check.on{background:var(--green-mid);border-color:var(--green-mid);}
+  .t-body{flex:1;min-width:0;}
+  .t-title{font-size:15px;font-weight:600;color:var(--ink);word-break:break-word;line-height:1.5;}
+  .t-meta{display:flex;flex-wrap:wrap;gap:6px;margin-top:7px;align-items:center;}
+  .pill{font-size:11px;padding:.13rem .5rem;border-radius:20px;font-weight:600;white-space:nowrap;}
+  .pill.cat{color:#fff;}
+  .pill.cat.c1{background:var(--c1);} .pill.cat.c2{background:var(--c2);}
+  .pill.cat.c3{background:var(--c3);} .pill.cat.c4{background:var(--c4);}
+  .pill.st{background:var(--navy-light);color:var(--navy-deep);}
+  .pill.st.s-doing{background:#FFF3D6;color:#8A6D0B;}
+  .pill.st.s-review{background:#E7E0F5;color:#5A3E8A;}
+  .pill.st.s-stuck{background:var(--red-light);color:var(--red-deep);}
+  .pill.st.s-done{background:var(--green-light);color:var(--green-deep);}
+  .pill.due{background:#F0F2F5;color:var(--ink-mid);}
+  .pill.due.over{background:var(--red-light);color:var(--red-deep);font-weight:700;}
+  .pill.due.soon{background:var(--amber-light);color:var(--amber);font-weight:700;}
+  .pill.owner{background:#EEF1F4;color:var(--ink-mid);}
+  .t-note{font-size:13px;color:var(--ink-mid);margin-top:7px;background:var(--bg);border-radius:8px;padding:.4rem .55rem;white-space:pre-wrap;word-break:break-word;}
+  .t-act{display:flex;gap:14px;margin-top:9px;}
+  .t-act button{background:none;border:none;color:var(--navy-mid);font-size:12.5px;cursor:pointer;padding:0;}
+  .t-act button.del{color:var(--red);}
+  .t-st-row{display:flex;gap:6px;flex-wrap:wrap;margin-top:9px;}
+  .t-st-row button{font-size:11.5px;padding:.2rem .55rem;border-radius:7px;border:1.2px solid var(--border);background:#fff;color:var(--ink-soft);cursor:pointer;}
+  .t-st-row button.on{background:var(--navy);color:#fff;border-color:var(--navy);}
+
+  .empty{text-align:center;color:var(--ink-soft);font-size:13.5px;padding:2rem 1rem;background:var(--card);border:1px dashed var(--border);border-radius:14px;}
+
+  /* ===== 按鈕 ===== */
+  .btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;width:100%;padding:.8rem;font-size:15px;font-weight:600;color:#fff;background:var(--navy);border:none;border-radius:11px;cursor:pointer;}
+  .btn:active{background:var(--navy-deep);}
+  .btn.ghost{background:#fff;color:var(--navy);border:1.5px solid var(--navy-mid);}
+  .btn.sm{width:auto;padding:.55rem .9rem;font-size:13px;border-radius:9px;}
+  .btn.gold{background:var(--amber);} .btn.gold:active{background:#8A5E16;}
+  .btn-row{display:flex;gap:8px;margin-top:.7rem;}
+
+  /* ===== 新增/編輯表單 ===== */
+  .form{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:1rem;margin-bottom:1rem;display:none;}
+  .form.show{display:block;}
+  .form label{display:block;font-size:12.5px;color:var(--ink-soft);font-weight:600;margin:.6rem 0 .25rem;}
+  .form input,.form select,.form textarea{width:100%;padding:.6rem .7rem;font-size:15px;border:1.4px solid var(--border);border-radius:9px;font-family:inherit;background:#fff;}
+  .form input:focus,.form select:focus,.form textarea:focus{outline:none;border-color:var(--navy-mid);}
+  .form textarea{min-height:62px;resize:vertical;}
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
+
+  /* ===== 行事曆／範本 卡 ===== */
+  .card{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:.95rem 1rem;margin-bottom:11px;border-top:4px solid var(--navy);}
+  .card h3{font-family:'Noto Serif TC',serif;font-size:16px;color:var(--navy-deep);margin-bottom:3px;display:flex;align-items:center;gap:8px;flex-wrap:wrap;}
+  .card .freq{font-size:11px;background:var(--navy-light);color:var(--navy-deep);padding:.12rem .5rem;border-radius:20px;font-weight:600;}
+  .card p{font-size:13.5px;color:var(--ink-mid);margin:.35rem 0 .6rem;}
+  .card ul{margin:.2rem 0 .6rem 1.1rem;font-size:13.5px;color:var(--ink-mid);}
+  .card ul li{margin-bottom:3px;}
+
+  .out{width:100%;min-height:260px;font-family:'Noto Sans TC',monospace;font-size:13px;line-height:1.85;border:1.4px solid var(--border);border-radius:10px;padding:.8rem;white-space:pre-wrap;background:#fff;}
+  .tpl-pick{display:flex;flex-wrap:wrap;gap:7px;margin-bottom:.8rem;}
+  .tpl-pick button{font-size:13px;padding:.45rem .75rem;border-radius:9px;border:1.3px solid var(--border);background:#fff;color:var(--navy);cursor:pointer;}
+  .tpl-pick button.on{background:var(--navy);color:#fff;border-color:var(--navy);}
+
+  .note{font-size:12.5px;color:var(--ink-soft);background:var(--amber-light);border:1px solid #F0DBA8;border-radius:10px;padding:.7rem .8rem;margin:.6rem 0;line-height:1.7;}
+  .note b{color:var(--amber);}
+  .law{font-size:12px;color:var(--ink-soft);border-left:3px solid var(--border);padding-left:9px;margin:.3rem 0 .9rem;line-height:1.7;}
+
+  .toast{position:fixed;left:50%;bottom:26px;transform:translateX(-50%) translateY(20px);background:var(--ink);color:#fff;font-size:13.5px;padding:.6rem 1.1rem;border-radius:30px;opacity:0;pointer-events:none;transition:.25s;z-index:300;}
+  .toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
+
+  .pane{display:none;} .pane.on{display:block;}
+
+  @media print{
+    .tabs,.stats,.chips,.t-act,.t-st-row,.btn,.btn-row,.form,.tpl-pick,.back,.note,.t-check{display:none!important;}
+    .header{background:#fff;color:#000;border-bottom:2px solid #000;}
+    .task,.card{break-inside:avoid;border:1px solid #999;}
+    body{background:#fff;}
+  }
+</style>
+</head>
+<body>
+
+<!-- ============ 幹部密碼鎖 ============ -->
+<div id="gate">
+  <div class="gate-box">
+    <h2>監事秘書</h2>
+    <p>本頁含監察進度與財務稽核資料，限監事會幹部使用。</p>
+    <input id="gate-pw" type="password" inputmode="text" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" placeholder="幹部通行碼" enterkeyhint="go">
+    <button id="gate-go">進入</button>
+    <div class="gate-err" id="gate-err"></div>
+  </div>
+</div>
+
+<div id="app" style="display:none">
+  <header class="header">
+    <a class="back" href="union.html">‹ 功能表</a>
+    <div class="header-label">高榮企業工會 · 監事會</div>
+    <h1>🛡️ AI 監事秘書</h1>
+    <div class="header-sub">依章程第24條監事會職權，協助打理進度表與交辦事項</div>
+  </header>
+
+  <main>
+    <!-- 概況 -->
+    <div class="stats" id="stats"></div>
+
+    <!-- 分頁 -->
+    <div class="tabs">
+      <button class="tab on" data-pane="todo">📋 進度表</button>
+      <button class="tab" data-pane="cal">🗓 監察行事曆</button>
+      <button class="tab" data-pane="tpl">📝 公文範本</button>
+    </div>
+
+    <!-- ===== 進度表 ===== -->
+    <section class="pane on" id="pane-todo">
+      <div class="btn-row">
+        <button class="btn" id="add-btn">＋ 新增交辦事項</button>
+        <button class="btn ghost sm" id="seed-btn" title="一鍵帶入依四大職權設計的起手式清單">範例清單</button>
+      </div>
+
+      <!-- 新增/編輯表單 -->
+      <div class="form" id="form">
+        <input type="hidden" id="f-id">
+        <label>事項標題</label>
+        <input id="f-title" placeholder="例：審閱5月份會計月報表並核對單據">
+        <div class="grid2">
+          <div>
+            <label>所屬職權</label>
+            <select id="f-cat">
+              <option value="1">① 監察決議執行</option>
+              <option value="2">② 財務稽核</option>
+              <option value="3">③ 監察會員義務</option>
+              <option value="4">④ 其他監察事項</option>
+            </select>
+          </div>
+          <div>
+            <label>狀態</label>
+            <select id="f-status">
+              <option value="todo">待辦</option>
+              <option value="doing">進行中</option>
+              <option value="review">待覆核</option>
+              <option value="stuck">卡關</option>
+              <option value="done">已完成</option>
+            </select>
+          </div>
+        </div>
+        <div class="grid2">
+          <div>
+            <label>負責人</label>
+            <input id="f-owner" placeholder="例：常務監事">
+          </div>
+          <div>
+            <label>到期日</label>
+            <input id="f-due" type="date">
+          </div>
+        </div>
+        <label>備註／查核重點</label>
+        <textarea id="f-note" placeholder="例：核對傳票與發票金額是否一致、是否經理事長核章"></textarea>
+        <div class="btn-row">
+          <button class="btn" id="f-save">儲存</button>
+          <button class="btn ghost sm" id="f-cancel">取消</button>
+        </div>
+      </div>
+
+      <!-- 篩選 -->
+      <div class="chips" id="chips-cat">
+        <button class="chip on" data-cat="all">全部</button>
+        <button class="chip" data-cat="1">① 決議執行</button>
+        <button class="chip" data-cat="2">② 財務稽核</button>
+        <button class="chip" data-cat="3">③ 會員義務</button>
+        <button class="chip" data-cat="4">④ 其他</button>
+      </div>
+      <div class="chips" id="chips-st">
+        <button class="chip on" data-st="open">未結案</button>
+        <button class="chip" data-st="all">含已完成</button>
+        <button class="chip" data-st="over">只看逾期</button>
+      </div>
+
+      <div id="task-list"></div>
+
+      <div class="btn-row" style="margin-top:1.2rem">
+        <button class="btn ghost sm" id="export-btn">⬇ 匯出備份</button>
+        <button class="btn ghost sm" id="import-btn">⬆ 匯入</button>
+        <button class="btn ghost sm" id="print-btn">🖨 列印</button>
+      </div>
+      <input type="file" id="import-file" accept="application/json" style="display:none">
+      <p class="law" style="margin-top:.9rem">📌 所有資料只存在這支裝置的瀏覽器，不會上傳。換手機請先「匯出備份」再到新機「匯入」。</p>
+    </section>
+
+    <!-- ===== 監察行事曆 ===== -->
+    <section class="pane" id="pane-cal">
+      <p class="law">下列為依監事會職權整理的「年度固定監察時程」。點各項的「＋ 帶入進度表」即會建立一筆待辦（自動帶入建議到期日）。</p>
+      <div id="cal-list"></div>
+    </section>
+
+    <!-- ===== 公文範本 ===== -->
+    <section class="pane" id="pane-tpl">
+      <div class="tpl-pick" id="tpl-pick">
+        <button class="on" data-tpl="agenda">監事會議程</button>
+        <button data-tpl="opinion">監察意見書</button>
+        <button data-tpl="audit">財務稽核查核表</button>
+        <button data-tpl="books">調閱帳冊清單</button>
+      </div>
+      <div class="form show" style="margin-bottom:.8rem">
+        <div class="grid2">
+          <div><label>屆次／會次</label><input id="m-no" placeholder="第一屆第一次"></div>
+          <div><label>會議／製作日期</label><input id="m-date" type="date"></div>
+        </div>
+        <div class="grid2">
+          <div><label>稽核期間</label><input id="m-period" placeholder="115年1月～6月"></div>
+          <div><label>監事召集人</label><input id="m-chair" placeholder="○○○"></div>
+        </div>
+      </div>
+      <div class="btn-row">
+        <button class="btn sm" id="tpl-gen">產生內容</button>
+        <button class="btn ghost sm" id="tpl-copy">📋 複製</button>
+        <button class="btn ghost sm" id="tpl-print">🖨 列印</button>
+      </div>
+      <textarea class="out" id="tpl-out" style="margin-top:.8rem" readonly></textarea>
+      <div class="note">💡 章程明定「監察會得會同相關專業人士辦理前項事務」——必要時可在範本中載明委請<b>會計師／律師</b>協同稽核或出具意見。</div>
+    </section>
+
+  </main>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+/* ============================================================
+   幹部密碼鎖（與「幹部功能表」共用同一組通行碼：gaorong2026）
+   • 想關閉密碼：LOCK 改 false（目前 false，先不鎖）。
+   • 想換密碼：用 cyrb53('新密碼') 算出數字貼到 PW_HASH。
+   ============================================================ */
+const LOCK = false;
+const PW_HASH = "1621267407177439";   // 通行碼：gaorong2026
+const UNLOCK_KEY = "union_panel_unlocked";
+function cyrb53(s,seed=0){ s=s||""; let h1=0xdeadbeef^seed,h2=0x41c6ce57^seed; for(let i=0,c;i<s.length;i++){c=s.charCodeAt(i);h1=Math.imul(h1^c,2654435761);h2=Math.imul(h2^c,1597334677);} h1=Math.imul(h1^(h1>>>16),2246822507);h1^=Math.imul(h2^(h2>>>13),3266489909);h2=Math.imul(h2^(h2>>>16),2246822507);h2^=Math.imul(h1^(h1>>>13),3266489909); return ""+(4294967296*(2097151&h2)+(h1>>>0)); }
+const gate=document.getElementById('gate'), app=document.getElementById('app');
+function showApp(){ gate.classList.remove('show'); app.style.display='block'; init(); }
+function showGate(){ gate.classList.add('show'); app.style.display='none'; setTimeout(()=>document.getElementById('gate-pw').focus(),100); }
+function tryUnlock(){ const v=document.getElementById('gate-pw').value.trim(); if(cyrb53(v)===PW_HASH){ try{sessionStorage.setItem(UNLOCK_KEY,'1');}catch(_){} showApp(); } else { document.getElementById('gate-err').textContent='通行碼不對，請再試一次或詢問負責幹部'; } }
+document.getElementById('gate-go').addEventListener('click',tryUnlock);
+document.getElementById('gate-pw').addEventListener('keydown',e=>{ if(e.key==='Enter') tryUnlock(); });
+
+/* ============================================================
+   資料層
+   ============================================================ */
+const KEY="jianshi_tasks_v1";
+const CATS={1:{n:'監察決議執行',full:'監察理事會執行會員(代表)大會之決議'},2:{n:'財務稽核',full:'稽核本會經費之收支及其他有關財務事項'},3:{n:'監察會員義務',full:'監察會員履行義務'},4:{n:'其他監察事項',full:'其他有關監察事項'}};
+const STATUS={todo:'待辦',doing:'進行中',review:'待覆核',stuck:'卡關',done:'已完成'};
+let tasks=[];
+function load(){ try{tasks=JSON.parse(localStorage.getItem(KEY))||[];}catch(_){tasks=[];} }
+function save(){ try{localStorage.setItem(KEY,JSON.stringify(tasks));}catch(_){} }
+function uid(){ return Date.now().toString(36)+Math.random().toString(36).slice(2,6); }
+function esc(s){ return (s||'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
+function today(){ const d=new Date(); return d.toISOString().slice(0,10); }
+function addDays(n){ const d=new Date(); d.setDate(d.getDate()+n); return d.toISOString().slice(0,10); }
+function fmtDate(s){ if(!s) return ''; const p=s.split('-'); return `${+p[1]}/${+p[2]}`; }
+function dueState(t){ if(!t.due||t.status==='done') return ''; const diff=Math.ceil((new Date(t.due)-new Date(today()))/86400000); if(diff<0) return 'over'; if(diff<=3) return 'soon'; return ''; }
+
+/* 範例起手式清單（依四大職權） */
+const SEED=[
+ {cat:1,title:'追蹤上次會員(代表)大會決議事項執行進度',note:'逐項列出大會決議，向理事會確認執行情形與時程',due:addDays(14)},
+ {cat:1,title:'列席理事會並紀錄重大決議',note:'確認理事會決議是否符合大會授權與章程',due:addDays(7)},
+ {cat:2,title:'審閱當月會計月報表並核對收支單據',note:'核對傳票、發票、入會費／會費入帳是否相符且經核章',due:addDays(10)},
+ {cat:2,title:'查核銀行存摺與帳冊餘額是否一致',note:'月底對帳，確認現金與存款帳實相符',due:addDays(20)},
+ {cat:3,title:'清查會員會費繳納情形',note:'比對名冊，列出連續未繳會費者，函請理事會催繳',due:addDays(30)},
+ {cat:4,title:'規劃年度監察計畫並排定稽核時程',note:'必要時得會同會計師／律師協同辦理',due:addDays(21)},
+];
+
+/* 年度固定監察時程（行事曆） */
+const CAL=[
+ {cat:2,freq:'每月',title:'審閱會計月報表、核對收支傳票與單據',pts:['理事會應每月編製會計月報表送監事稽核','核對傳票與發票金額、品名、核章是否齊備'],days:10},
+ {cat:2,freq:'每月',title:'核對存摺、現金與帳冊餘額（對帳）',pts:['確認帳載餘額與銀行對帳單一致','留存對帳紀錄'],days:20},
+ {cat:3,freq:'每季',title:'清查會員會費繳納與會員義務履行情形',pts:['列出欠費名單','對連續未繳達門檻者，提請理事會處理'],days:45},
+ {cat:2,freq:'每半年',title:'辦理帳務稽核並提出稽核報告',pts:['章程：監事(會)至少每半年稽核帳務並報告一次','必要時會同會計師查核財產狀況'],days:170},
+ {cat:1,freq:'大會前',title:'審查理事會工作報告與年度決算',pts:['審查預決算、事業報告','確認大會決議事項均已執行'],days:25},
+ {cat:1,freq:'大會前',title:'撰寫並提出監察意見書（向會員大會報告）',pts:['彙整全年稽核結果','於會員(代表)大會宣讀'],days:20},
+ {cat:4,freq:'年度',title:'排定年度監察計畫、留存監察紀錄',pts:['年初訂定稽核時程','逐次留存監事會會議紀錄與簽到'],days:30},
+ {cat:1,freq:'不定期',title:'追蹤會員(代表)大會決議事項執行進度',pts:['逐項追蹤理事會執行情形與時程'],days:14},
+];
+
+/* ============================================================
+   進度表渲染
+   ============================================================ */
+let filterCat='all', filterSt='open';
+const $=id=>document.getElementById(id);
+
+function renderStats(){
+  const open=tasks.filter(t=>t.status!=='done');
+  const doing=tasks.filter(t=>t.status==='doing'||t.status==='review');
+  const over=tasks.filter(t=>dueState(t)==='over');
+  const m=today().slice(0,7);
+  const doneM=tasks.filter(t=>t.status==='done'&&(t.doneAt||'').slice(0,7)===m);
+  $('stats').innerHTML=`
+    <div class="stat"><div class="n">${open.length}</div><div class="l">未結案</div></div>
+    <div class="stat"><div class="n">${doing.length}</div><div class="l">進行中</div></div>
+    <div class="stat over"><div class="n">${over.length}</div><div class="l">已逾期</div></div>
+    <div class="stat done"><div class="n">${doneM.length}</div><div class="l">本月完成</div></div>`;
+}
+
+function visible(){
+  let list=tasks.slice();
+  if(filterCat!=='all') list=list.filter(t=>String(t.cat)===filterCat);
+  if(filterSt==='open') list=list.filter(t=>t.status!=='done');
+  else if(filterSt==='over') list=list.filter(t=>dueState(t)==='over');
+  // 排序：未完成在前，再依到期日，無到期排後
+  list.sort((a,b)=>{
+    const ad=a.status==='done', bd=b.status==='done'; if(ad!==bd) return ad?1:-1;
+    const av=a.due||'9999', bv=b.due||'9999'; return av<bv?-1:av>bv?1:0;
+  });
+  return list;
+}
+
+function renderTasks(){
+  const list=visible(), box=$('task-list');
+  if(!list.length){ box.innerHTML='<div class="empty">這個分類目前沒有事項。<br>按上方「＋ 新增交辦事項」或「範例清單」開始。</div>'; return; }
+  box.innerHTML=list.map(t=>{
+    const ds=dueState(t);
+    const dueTxt=t.due?`<span class="pill due ${ds}">📅 ${fmtDate(t.due)}${ds==='over'?' 逾期':ds==='soon'?' 將到期':''}</span>`:'';
+    const ownerTxt=t.owner?`<span class="pill owner">👤 ${esc(t.owner)}</span>`:'';
+    const stKeys=['todo','doing','review','stuck','done'];
+    const stBtns=stKeys.map(k=>`<button class="${t.status===k?'on':''}" data-act="st" data-id="${t.id}" data-v="${k}">${STATUS[k]}</button>`).join('');
+    return `<div class="task c${t.cat} ${t.status==='done'?'is-done':''}">
+      <div class="t-top">
+        <div class="t-check ${t.status==='done'?'on':''}" data-act="toggle" data-id="${t.id}">${t.status==='done'?'✓':''}</div>
+        <div class="t-body">
+          <div class="t-title">${esc(t.title)}</div>
+          <div class="t-meta">
+            <span class="pill cat c${t.cat}">${CATS[t.cat].n}</span>
+            <span class="pill st s-${t.status}">${STATUS[t.status]}</span>
+            ${dueTxt}${ownerTxt}
+          </div>
+          ${t.note?`<div class="t-note">${esc(t.note)}</div>`:''}
+          <div class="t-st-row">${stBtns}</div>
+          <div class="t-act">
+            <button data-act="edit" data-id="${t.id}">✏️ 編輯</button>
+            <button class="del" data-act="del" data-id="${t.id}">🗑 刪除</button>
+          </div>
+        </div>
+      </div></div>`;
+  }).join('');
+}
+
+function renderAll(){ renderStats(); renderTasks(); }
+
+/* 任務事件（委派） */
+$('task-list').addEventListener('click',e=>{
+  const el=e.target.closest('[data-act]'); if(!el) return;
+  const id=el.dataset.id, t=tasks.find(x=>x.id===id); if(!t) return;
+  const act=el.dataset.act;
+  if(act==='toggle'){ t.status=t.status==='done'?'todo':'done'; t.doneAt=t.status==='done'?today():''; }
+  else if(act==='st'){ t.status=el.dataset.v; t.doneAt=t.status==='done'?today():''; }
+  else if(act==='edit'){ openForm(t); return; }
+  else if(act==='del'){ if(confirm('確定刪除這筆事項？')){ tasks=tasks.filter(x=>x.id!==id);} }
+  save(); renderAll();
+});
+
+/* 表單 */
+function openForm(t){
+  $('form').classList.add('show');
+  $('f-id').value=t?t.id:'';
+  $('f-title').value=t?t.title:'';
+  $('f-cat').value=t?t.cat:'2';
+  $('f-status').value=t?t.status:'todo';
+  $('f-owner').value=t?(t.owner||''):'';
+  $('f-due').value=t?(t.due||''):'';
+  $('f-note').value=t?(t.note||''):'';
+  $('form').scrollIntoView({behavior:'smooth',block:'center'});
+  $('f-title').focus();
+}
+$('add-btn').addEventListener('click',()=>openForm(null));
+$('f-cancel').addEventListener('click',()=>$('form').classList.remove('show'));
+$('f-save').addEventListener('click',()=>{
+  const title=$('f-title').value.trim();
+  if(!title){ toast('請輸入事項標題'); return; }
+  const id=$('f-id').value;
+  const data={title,cat:+$('f-cat').value,status:$('f-status').value,owner:$('f-owner').value.trim(),due:$('f-due').value,note:$('f-note').value.trim()};
+  if(id){ const t=tasks.find(x=>x.id===id); Object.assign(t,data); if(t.status==='done'&&!t.doneAt)t.doneAt=today(); }
+  else { tasks.unshift(Object.assign({id:uid(),created:today(),doneAt:data.status==='done'?today():''},data)); }
+  save(); $('form').classList.remove('show'); renderAll(); toast('已儲存');
+});
+
+$('seed-btn').addEventListener('click',()=>{
+  if(tasks.length && !confirm('將把「範例起手式清單」加入現有進度表，確定？')) return;
+  SEED.forEach(s=>tasks.push(Object.assign({id:uid(),created:today(),status:'todo',owner:'',doneAt:''},s)));
+  save(); renderAll(); toast('已帶入範例清單');
+});
+
+/* 篩選 */
+document.querySelectorAll('#chips-cat .chip').forEach(c=>c.addEventListener('click',()=>{
+  document.querySelectorAll('#chips-cat .chip').forEach(x=>x.classList.remove('on')); c.classList.add('on'); filterCat=c.dataset.cat; renderTasks();
+}));
+document.querySelectorAll('#chips-st .chip').forEach(c=>c.addEventListener('click',()=>{
+  document.querySelectorAll('#chips-st .chip').forEach(x=>x.classList.remove('on')); c.classList.add('on'); filterSt=c.dataset.st; renderTasks();
+}));
+
+/* 匯出／匯入／列印 */
+$('export-btn').addEventListener('click',()=>{
+  const blob=new Blob([JSON.stringify(tasks,null,2)],{type:'application/json'});
+  const a=document.createElement('a'); a.href=URL.createObjectURL(blob);
+  a.download='監事進度表備份_'+today()+'.json'; a.click(); toast('已匯出備份檔');
+});
+$('import-btn').addEventListener('click',()=>$('import-file').click());
+$('import-file').addEventListener('change',e=>{
+  const f=e.target.files[0]; if(!f) return; const r=new FileReader();
+  r.onload=()=>{ try{ const arr=JSON.parse(r.result); if(!Array.isArray(arr)) throw 0;
+    if(confirm('匯入將「取代」目前進度表，確定？')){ tasks=arr; save(); renderAll(); toast('已匯入'); }
+  }catch(_){ toast('檔案格式不正確'); } e.target.value=''; };
+  r.readAsText(f);
+});
+$('print-btn').addEventListener('click',()=>window.print());
+
+/* ============================================================
+   行事曆
+   ============================================================ */
+function renderCal(){
+  $('cal-list').innerHTML=CAL.map((c,i)=>`
+    <div class="card">
+      <h3>${CATS[c.cat].n.replace('監察','').replace('稽核','')||CATS[c.cat].n}<span class="freq">${c.freq}</span></h3>
+      <p style="font-weight:600;color:var(--ink)">${c.title}</p>
+      <ul>${c.pts.map(p=>`<li>${p}</li>`).join('')}</ul>
+      <button class="btn ghost sm" data-cal="${i}">＋ 帶入進度表（到期約 ${c.days} 天後）</button>
+    </div>`).join('');
+}
+$('cal-list').addEventListener('click',e=>{
+  const b=e.target.closest('[data-cal]'); if(!b) return;
+  const c=CAL[+b.dataset.cal];
+  tasks.unshift({id:uid(),created:today(),status:'todo',owner:'',doneAt:'',cat:c.cat,title:`【${c.freq}】${c.title}`,note:c.pts.join('；'),due:addDays(c.days)});
+  save(); renderAll(); toast('已加入進度表');
+});
+
+/* ============================================================
+   公文範本
+   ============================================================ */
+let curTpl='agenda';
+function L(s){ return s; }
+function tpl_agenda(d){ return [
+  `高雄榮民總醫院企業工會  監事會 會議通知（議程）`,
+  ``,
+  `屆　次：${d.no||'第○屆第○次監事會'}`,
+  `時　間：${d.dateCh||'中華民國○年○月○日（○）○時○分'}`,
+  `地　點：________________________`,
+  `召集人：${d.chair||'監事召集人 ○○○'}`,
+  ``,
+  `一、報告事項`,
+  `　（一）上次會議決議執行情形報告。`,
+  `　（二）理事會執行會員（代表）大會決議之監察情形。`,
+  ``,
+  `二、討論事項`,
+  `　（一）${d.period||'本期'}經費收支及帳冊稽核結果之審議。`,
+  `　（二）會員會費繳納與義務履行情形之查核。`,
+  `　（三）監察意見書（草案）之審議。`,
+  ``,
+  `三、臨時動議`,
+  ``,
+  `四、散會`,
+  ``,
+  `※ 依章程，監事會得會同相關專業人士（會計師／律師）列席協助。`
+].join('\n'); }
+
+function tpl_opinion(d){ return [
+  `高雄榮民總醫院企業工會  監察意見書`,
+  ``,
+  `（提報 ${d.no||'第○屆第○次會員（代表）大會'}）`,
+  `稽核期間：${d.period||'○年○月○日至○年○月○日'}`,
+  `製作日期：${d.dateCh||'中華民國○年○月○日'}`,
+  ``,
+  `一、依《工會法》及本會章程第24條規定，本（監事）會就下列事項執行監察：`,
+  `　1. 監察理事會執行會員（代表）大會之決議。`,
+  `　2. 稽核本會經費之收支及其他有關財務事項。`,
+  `　3. 監察會員履行義務。`,
+  `　4. 其他有關監察事項。`,
+  ``,
+  `二、財務稽核結果：`,
+  `　本期收入合計新臺幣＿＿＿＿＿元，支出合計新臺幣＿＿＿＿＿元，`,
+  `　結餘新臺幣＿＿＿＿＿元。經核對傳票、單據、帳冊與存款餘額，`,
+  `　帳實＿＿（相符／不符，說明：＿＿＿＿）。`,
+  ``,
+  `三、決議執行情形：`,
+  `　大會決議事項計＿＿項，已執行＿＿項，執行中＿＿項，`,
+  `　尚未執行＿＿項（說明：＿＿＿＿）。`,
+  ``,
+  `四、會員義務履行情形：`,
+  `　會員總數＿＿人，會費正常繳納＿＿人，欠費＿＿人，已函催繳。`,
+  ``,
+  `五、綜合意見與建議：`,
+  `　＿＿＿＿＿＿＿＿＿＿＿＿＿＿＿＿＿＿＿＿＿＿＿＿`,
+  ``,
+  `此致`,
+  `本會 ${d.no||'第○屆第○次'} 會員（代表）大會`,
+  ``,
+  `監事召集人：${d.chair||'○○○'}　（簽章）`,
+  `監　　　事：　　　　　　　（簽章）`
+].join('\n'); }
+
+function tpl_audit(d){ const ck=s=>`　☐ ${s}`; return [
+  `財務稽核查核表`,
+  `稽核期間：${d.period||'＿＿＿＿'}　稽核日期：${d.dateCh||'＿＿＿＿'}`,
+  ``,
+  `一、帳簿憑證`,
+  ck('會計月報表是否按月編製並送監事'),
+  ck('收入傳票是否附原始憑證（收據／繳款證明）'),
+  ck('支出傳票是否附發票／收據，並經理事長核章'),
+  ck('入會費、經常會費入帳是否與名冊一致'),
+  ``,
+  `二、現金與存款`,
+  ck('存摺餘額與帳載餘額是否相符（附對帳）'),
+  ck('大額支出是否經理事會決議'),
+  ck('是否有公私款混用情形'),
+  ``,
+  `三、預決算`,
+  ck('支出是否在預算範圍內'),
+  ck('決算數與帳載是否一致'),
+  ``,
+  `四、財產`,
+  ck('基金及孳息是否專戶存管'),
+  ck('財產目錄是否齊全'),
+  ``,
+  `稽核結果：☐ 無異常　☐ 有缺失（說明）：＿＿＿＿＿＿＿＿`,
+  `※ 必要時得會同會計師查核。`,
+  ``,
+  `稽核人（監事）：＿＿＿＿＿　${d.chair?'召集人：'+d.chair:''}`
+].join('\n'); }
+
+function tpl_books(d){ return [
+  `監事查核 — 調閱帳冊／文件清單`,
+  `稽核期間：${d.period||'＿＿＿＿'}　提出日期：${d.dateCh||'＿＿＿＿'}`,
+  ``,
+  `茲依章程第24條行使監察職權，請理事會於＿日內提供下列資料：`,
+  ``,
+  `（一）財務類`,
+  `　1. 現金出納帳、總分類帳、明細帳`,
+  `　2. 收入／支出傳票及原始憑證`,
+  `　3. 銀行存摺、對帳單`,
+  `　4. 年度預算書、決算書、會計月報表`,
+  `　5. 財產目錄、基金存管證明`,
+  ``,
+  `（二）會務類`,
+  `　6. 會員（代表）大會、理事會會議紀錄`,
+  `　7. 大會決議事項執行情形彙整表`,
+  `　8. 會員名冊及會費繳納紀錄`,
+  `　9. 對外締結之契約／團體協約（如有）`,
+  ``,
+  `（三）其他：＿＿＿＿＿＿＿＿＿＿`,
+  ``,
+  `監事召集人：${d.chair||'○○○'}　（簽章）`
+].join('\n'); }
+
+const TPL={agenda:tpl_agenda,opinion:tpl_opinion,audit:tpl_audit,books:tpl_books};
+function tplData(){
+  const ds=$('m-date').value; let dateCh='';
+  if(ds){ const p=ds.split('-'); dateCh=`中華民國${p[0]-1911}年${+p[1]}月${+p[2]}日`; }
+  return {no:$('m-no').value.trim(),date:ds,dateCh,period:$('m-period').value.trim(),chair:$('m-chair').value.trim()};
+}
+function genTpl(){ $('tpl-out').value=TPL[curTpl](tplData()); }
+document.querySelectorAll('#tpl-pick button').forEach(b=>b.addEventListener('click',()=>{
+  document.querySelectorAll('#tpl-pick button').forEach(x=>x.classList.remove('on')); b.classList.add('on'); curTpl=b.dataset.tpl; genTpl();
+}));
+$('tpl-gen').addEventListener('click',genTpl);
+$('tpl-copy').addEventListener('click',()=>{ const t=$('tpl-out'); t.select(); try{document.execCommand('copy');}catch(_){} if(navigator.clipboard)navigator.clipboard.writeText(t.value); toast('已複製，可貼到 Word/Line'); });
+$('tpl-print').addEventListener('click',()=>{ const w=window.open('','_blank'); w.document.write('<pre style="font-family:\'Noto Sans TC\',sans-serif;font-size:14px;line-height:1.9;white-space:pre-wrap;padding:24px">'+esc($('tpl-out').value)+'</pre>'); w.document.close(); w.print(); });
+
+/* ============================================================
+   分頁切換 / toast / init
+   ============================================================ */
+document.querySelectorAll('.tab').forEach(t=>t.addEventListener('click',()=>{
+  document.querySelectorAll('.tab').forEach(x=>x.classList.remove('on')); t.classList.add('on');
+  document.querySelectorAll('.pane').forEach(p=>p.classList.remove('on'));
+  $('pane-'+t.dataset.pane).classList.add('on'); window.scrollTo({top:0,behavior:'smooth'});
+}));
+let toastT;
+function toast(msg){ const el=$('toast'); el.textContent=msg; el.classList.add('show'); clearTimeout(toastT); toastT=setTimeout(()=>el.classList.remove('show'),1900); }
+
+function init(){
+  load(); renderAll(); renderCal();
+  $('m-date').value=today(); genTpl();
+}
+
+/* 進入 */
+if(!LOCK){ showApp(); }
+else if(sessionStorage.getItem(UNLOCK_KEY)==='1'){ showApp(); }
+else { showGate(); }
+
+/* Service worker（離線） */
+if('serviceWorker' in navigator){ navigator.serviceWorker.register('sw.js').catch(()=>{}); }
+</script>
+</body>
+</html>

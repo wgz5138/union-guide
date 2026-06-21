@@ -2,12 +2,12 @@
    策略：HTML 走「網路優先」——有網路永遠拿最新（自動更新偵測照常運作），沒網路才退回快取。
         圖示/設定/CDN 走「快取優先」。ver.txt 完全不攔，保持每次連線即時比對版本。
    ⚠️ 每次部署若想讓離線快取也更新，把下面 CACHE 後面的版本號改成跟 ver.txt 一樣。 */
-const CACHE = "ebn-2026062014";
+const CACHE = "ebn-2026062101";
 const SHELL = [
   "./evidence.html", "./search.html", "./lawyer.html", "./share.html",
-  "./finance.html", "./finance-law.js", "./receipt.html", "./union.html",
+  "./finance.html", "./finance-law.js", "./receipt.html", "./union.html", "./jianshi.html",
   "./icon-evidence.png", "./icon-search.png", "./icon-lawyer.png",
-  "./evidence.webmanifest", "./search.webmanifest", "./lawyer.webmanifest", "./finance.webmanifest", "./receipt.webmanifest",
+  "./evidence.webmanifest", "./search.webmanifest", "./lawyer.webmanifest", "./finance.webmanifest", "./receipt.webmanifest", "./jianshi.webmanifest",
   "https://cdn.jsdelivr.net/npm/pptxgenjs@3.12.0/dist/pptxgen.bundle.js",
   "https://cdn.jsdelivr.net/gh/davidshimjs/qrcodejs@master/qrcode.min.js"
 ];
