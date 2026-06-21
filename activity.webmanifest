@@ -1,0 +1,13 @@
+{
+  "name": "活動報名 · 高榮企業工會",
+  "short_name": "活動報名",
+  "start_url": "activity.html",
+  "scope": ".",
+  "display": "standalone",
+  "background_color": "#F7F4FB",
+  "theme_color": "#7A4F9D",
+  "icons": [
+    { "src": "assets/union-icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "assets/union-icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" }
+  ]
+}

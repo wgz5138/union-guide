@@ -1,0 +1,290 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>對外公文／函稿 · 高榮企業工會</title>
+<meta name="robots" content="noindex, nofollow">
+<meta name="theme-color" content="#C0392B">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="公文函稿">
+<meta name="description" content="工會對外公文（函）產生器：主旨、說明、正副本，一鍵列印。">
+<link rel="apple-touch-icon" href="assets/union-icon-180.png">
+<link rel="manifest" href="gongwen.webmanifest">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@400;600;700&family=Noto+Sans+TC:wght@300;400;500;700&display=swap" rel="stylesheet">
+<style>
+  /* ============================================================
+     對外公文／函稿產生器（離線、純前端、免金鑰）— 理事長用。
+     依公文「函」格式：主旨、說明（分項）、正本、副本、具名。
+     內建常用函稿範本；可存草稿、列印或存 PDF。資料只存本機。
+     ============================================================ */
+  :root{
+    --red:#C0392B; --red-deep:#7B1818; --red-light:#FDECEA;
+    --gold:#B7860B; --gold-light:#FEF9E7; --amber:#B7791F; --amber-light:#FEF5E7;
+    --ink:#1A1A1A; --ink-mid:#444; --ink-soft:#777; --bg:#FAF5F4;
+    --card:#FFFFFF; --border:#EBDCDA;
+    --green:#1A7A4A; --green-deep:#0F5C36; --navy:#1A3A6B;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;}
+  body{font-family:'Noto Sans TC',sans-serif;background:var(--bg);color:var(--ink);font-size:15px;line-height:1.7;-webkit-text-size-adjust:100%;}
+  button{font-family:inherit;}
+
+  #gate{position:fixed;inset:0;z-index:200;background:linear-gradient(160deg,#7B1818 0%,#4A0E0E 100%);display:none;align-items:center;justify-content:center;padding:1.5rem;}
+  #gate.show{display:flex;}
+  .gate-box{background:#fff;border-radius:16px;max-width:380px;width:100%;padding:2rem 1.5rem;text-align:center;box-shadow:0 20px 60px rgba(0,0,0,.4);}
+  .gate-box h2{font-family:'Noto Serif TC',serif;color:var(--red-deep);font-size:20px;margin-bottom:6px;}
+  .gate-box p{font-size:13px;color:var(--ink-soft);margin-bottom:1.25rem;}
+  .gate-box input{width:100%;padding:.8rem 1rem;font-size:16px;border:1.5px solid var(--border);border-radius:10px;margin-bottom:10px;text-align:center;}
+  .gate-box input:focus{outline:none;border-color:var(--red);}
+  .gate-box button{width:100%;padding:.8rem;font-size:15px;color:#fff;background:var(--red);border:none;border-radius:10px;cursor:pointer;}
+  .gate-err{color:var(--red);font-size:13px;min-height:18px;margin-top:8px;}
+
+  .header{background:var(--red);color:#fff;padding:1.5rem 1.25rem 1.2rem;text-align:center;position:relative;overflow:hidden;}
+  .header::before{content:'';position:absolute;top:-40px;right:-40px;width:180px;height:180px;border-radius:50%;background:rgba(255,255,255,.07);}
+  .header-label{font-size:11px;letter-spacing:.18em;opacity:.9;margin-bottom:4px;}
+  .header h1{font-family:'Noto Serif TC',serif;font-size:22px;font-weight:700;}
+  .header-sub{font-size:12.5px;opacity:.95;margin-top:6px;}
+  .back{position:absolute;left:12px;top:14px;color:#fff;text-decoration:none;font-size:13px;opacity:.95;background:rgba(255,255,255,.18);padding:4px 10px;border-radius:20px;}
+
+  main{max-width:640px;margin:0 auto;padding:1rem 1rem 4rem;}
+
+  .tpl-pick{display:flex;flex-wrap:wrap;gap:7px;margin-bottom:1rem;}
+  .tpl-pick button{font-size:12.5px;padding:.45rem .7rem;border-radius:9px;border:1.3px solid var(--border);background:#fff;color:var(--red-deep);cursor:pointer;}
+  .tpl-pick button.on{background:var(--red);color:#fff;border-color:var(--red);}
+
+  .card{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:1rem;margin-bottom:1rem;}
+  .card h3{font-family:'Noto Serif TC',serif;font-size:15px;color:var(--red-deep);margin-bottom:.5rem;}
+  label{display:block;font-size:12.5px;color:var(--ink-soft);font-weight:600;margin:.55rem 0 .25rem;}
+  input,select,textarea{width:100%;padding:.6rem .7rem;font-size:15px;border:1.4px solid var(--border);border-radius:9px;font-family:inherit;background:#fff;}
+  input:focus,select:focus,textarea:focus{outline:none;border-color:var(--red);}
+  textarea{min-height:60px;resize:vertical;}
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
+  .grid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;}
+  .hint{font-size:11.5px;color:var(--ink-soft);margin-top:3px;}
+
+  .btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;width:100%;padding:.78rem;font-size:15px;font-weight:600;color:#fff;background:var(--red);border:none;border-radius:11px;cursor:pointer;}
+  .btn:active{background:var(--red-deep);}
+  .btn.ghost{background:#fff;color:var(--red-deep);border:1.5px solid var(--red);}
+  .btn.sm{width:auto;padding:.55rem .9rem;font-size:13px;border-radius:9px;}
+  .btn-row{display:flex;gap:8px;flex-wrap:wrap;}
+
+  .draft{display:flex;align-items:center;gap:8px;background:var(--card);border:1px solid var(--border);border-radius:11px;padding:.5rem .7rem;margin-bottom:7px;}
+  .draft .dt{flex:1;font-size:13.5px;font-weight:600;}
+  .draft .dd{font-size:11.5px;color:var(--ink-soft);}
+  .draft button{background:none;border:none;cursor:pointer;font-size:12.5px;color:var(--red-deep);}
+  .draft button.del{color:var(--red);}
+
+  .law{font-size:12px;color:var(--ink-soft);border-left:3px solid var(--border);padding-left:9px;margin:.5rem 0 .9rem;line-height:1.7;}
+  .toast{position:fixed;left:50%;bottom:26px;transform:translateX(-50%) translateY(20px);background:var(--ink);color:#fff;font-size:13.5px;padding:.6rem 1.1rem;border-radius:30px;opacity:0;pointer-events:none;transition:.25s;z-index:300;}
+  .toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
+</style>
+</head>
+<body>
+
+<div id="gate">
+  <div class="gate-box">
+    <h2>對外公文／函稿</h2>
+    <p>供理事長製作對外公文，限幹部使用。</p>
+    <input id="gate-pw" type="password" inputmode="text" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" placeholder="幹部通行碼" enterkeyhint="go">
+    <button id="gate-go">進入</button>
+    <div class="gate-err" id="gate-err"></div>
+  </div>
+</div>
+
+<div id="app" style="display:none">
+  <header class="header">
+    <a class="back" href="union.html">‹ 功能表</a>
+    <div class="header-label">高榮企業工會 · 理事長</div>
+    <h1>📄 對外公文／函稿</h1>
+    <div class="header-sub">主旨 · 說明 · 正副本，一鍵列印</div>
+  </header>
+
+  <main>
+    <div class="card">
+      <h3>① 選範本（會帶入主旨與說明，可再改）</h3>
+      <div class="tpl-pick" id="tpl-pick">
+        <button class="on" data-tpl="blank">空白函</button>
+        <button data-tpl="meeting">開會通知函</button>
+        <button data-tpl="invite">邀請函</button>
+        <button data-tpl="petition">陳情／請求函</button>
+        <button data-tpl="bargain">協商請求函</button>
+        <button data-tpl="record">函報主管機關備查</button>
+      </div>
+    </div>
+
+    <div class="card">
+      <h3>② 填內容</h3>
+      <div class="grid2">
+        <div><label>受文者</label><input id="f-to" placeholder="例：高雄榮民總醫院"></div>
+        <div><label>發文日期</label><input id="f-date" type="date"></div>
+      </div>
+      <div class="grid2">
+        <div><label>發文字號</label><input id="f-no" placeholder="高榮工字第　號"></div>
+        <div><label>速別</label>
+          <select id="f-speed"><option>普通件</option><option>速件</option><option>最速件</option></select></div>
+      </div>
+      <div class="grid2">
+        <div><label>密等</label>
+          <select id="f-secret"><option>普通</option><option>密</option><option>機密</option></select></div>
+        <div><label>附件</label><input id="f-attach" placeholder="無／如文"></div>
+      </div>
+      <label>主旨</label>
+      <textarea id="f-subject" style="min-height:48px" placeholder="一句話講清楚目的，句末加「。」"></textarea>
+      <label>說明（每行一點，會自動編「一、二、三」；留空則不顯示）</label>
+      <textarea id="f-explain" style="min-height:110px" placeholder="第一點…&#10;第二點…&#10;第三點…"></textarea>
+      <div class="grid2">
+        <div><label>正本</label><input id="f-main" placeholder="受文者"></div>
+        <div><label>副本</label><input id="f-copy" placeholder="無"></div>
+      </div>
+      <div class="grid2">
+        <div><label>具名（職稱）</label><input id="f-signer" value="理事長"></div>
+        <div><label>姓名</label><input id="f-signer-name" placeholder="○○○"></div>
+      </div>
+    </div>
+
+    <div class="btn-row">
+      <button class="btn" id="gen-btn">📄 產生公文（列印／存 PDF）</button>
+    </div>
+    <div class="btn-row" style="margin-top:.6rem">
+      <button class="btn ghost sm" id="save-btn">💾 存草稿</button>
+      <button class="btn ghost sm" id="clear-btn">🧹 清空</button>
+    </div>
+
+    <h3 style="font-family:'Noto Serif TC',serif;color:var(--red-deep);margin:1.3rem 2px .5rem;font-size:15px">已存草稿</h3>
+    <div id="draft-list"></div>
+
+    <p class="law">📌 公文格式採「函」：機關全銜＋文別、受文者、發文日期字號、速別密等、主旨、說明、正副本、具名。對外正式發文前，字號與用印請依貴會程序確認。資料只存本機。</p>
+  </main>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+/* 密碼鎖（共用通行碼 gaorong2026） */
+const LOCK=false, PW_HASH="1621267407177439", UNLOCK_KEY="union_panel_unlocked";
+function cyrb53(s,seed=0){ s=s||""; let h1=0xdeadbeef^seed,h2=0x41c6ce57^seed; for(let i=0,c;i<s.length;i++){c=s.charCodeAt(i);h1=Math.imul(h1^c,2654435761);h2=Math.imul(h2^c,1597334677);} h1=Math.imul(h1^(h1>>>16),2246822507);h1^=Math.imul(h2^(h2>>>13),3266489909);h2=Math.imul(h2^(h2>>>16),2246822507);h2^=Math.imul(h1^(h1>>>13),3266489909); return ""+(4294967296*(2097151&h2)+(h1>>>0)); }
+const gate=document.getElementById('gate'),app=document.getElementById('app');
+function showApp(){ gate.classList.remove('show'); app.style.display='block'; init(); }
+function showGate(){ gate.classList.add('show'); app.style.display='none'; setTimeout(()=>document.getElementById('gate-pw').focus(),100); }
+function tryUnlock(){ const v=document.getElementById('gate-pw').value.trim(); if(cyrb53(v)===PW_HASH){ try{sessionStorage.setItem(UNLOCK_KEY,'1');}catch(_){} showApp(); } else { document.getElementById('gate-err').textContent='通行碼不對，請再試一次或詢問負責幹部'; } }
+document.getElementById('gate-go').addEventListener('click',tryUnlock);
+document.getElementById('gate-pw').addEventListener('keydown',e=>{ if(e.key==='Enter') tryUnlock(); });
+
+const KEY="gongwen_drafts_v1";
+const $=id=>document.getElementById(id);
+function esc(s){ return (s||'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
+function today(){ return new Date().toISOString().slice(0,10); }
+function rocDate(ds){ if(!ds) return '中華民國　年　月　日'; const p=ds.split('-'); return `中華民國${p[0]-1911}年${+p[1]}月${+p[2]}日`; }
+
+/* 範本 */
+const TPL={
+ blank:{to:'',subject:'',explain:'',copy:'無'},
+ meeting:{to:'本會全體會員',subject:'本會謹訂於下列時間召開○○會議，敬請　準時出席。',
+   explain:'開會時間：中華民國○年○月○日（○）○時○分。\n開會地點：○○○。\n如不克出席，請事先向本會請假。',copy:'無'},
+ invite:{to:'○○○',subject:'敬邀　台端蒞臨本會○○活動，惠予指導。',
+   explain:'活動名稱：○○○。\n時間地點：○年○月○日於○○○。\n敬請撥冗出席，無任歡迎。',copy:'無'},
+ petition:{to:'高雄榮民總醫院',subject:'為維護本會會員勞動權益，就○○事項提出陳情，請　惠予處理見復。',
+   explain:'查○○○（敘明事實與依據）。\n本會主張：○○○。\n請貴院於文到○日內惠予回復，俾利後續處理。',copy:'高雄市政府勞工局'},
+ bargain:{to:'高雄榮民總醫院',subject:'本會依團體協約法規定，請求與貴院進行團體協約之協商，請　查照辦理。',
+   explain:'依團體協約法第6條規定，勞資雙方應本誠實信用原則進行團體協約之協商。\n協商事項：○○○（如工資、工時、安全衛生等）。\n請貴院於文到○日內指派代表，並就協商時間、地點與本會聯繫。',copy:'高雄市政府勞工局'},
+ record:{to:'高雄市政府勞工局',subject:'檢陳本會○○○（章程／理監事名冊／會議紀錄），請　查照備查。',
+   explain:'本會業於○年○月○日召開○○會議完成○○事項。\n隨文檢附相關文件如附件。\n請　惠予備查。',copy:'無'},
+};
+let curTpl='blank';
+function applyTpl(t){
+  const d=TPL[t]; if(!d) return;
+  $('f-to').value=d.to; $('f-subject').value=d.subject; $('f-explain').value=d.explain;
+  $('f-main').value=d.to; $('f-copy').value=d.copy;
+}
+document.querySelectorAll('#tpl-pick button').forEach(b=>b.addEventListener('click',()=>{
+  document.querySelectorAll('#tpl-pick button').forEach(x=>x.classList.remove('on')); b.classList.add('on');
+  curTpl=b.dataset.tpl; applyTpl(curTpl);
+}));
+
+/* 產生公文 */
+function explainHTML(){
+  const lines=$('f-explain').value.split('\n').map(s=>s.trim()).filter(Boolean);
+  if(!lines.length) return '';
+  const cn=['一','二','三','四','五','六','七','八','九','十','十一','十二','十三','十四','十五'];
+  const body=lines.length===1?`<div style="margin-left:4em;text-indent:-4em">說明：${esc(lines[0])}</div>`
+    :`<div style="margin-left:4em;text-indent:-4em">說明：</div>`+lines.map((l,i)=>`<div style="margin-left:5em;text-indent:-2em">${cn[i]||(i+1)}、${esc(l)}</div>`).join('');
+  return `<div class="blk">${body}</div>`;
+}
+function buildDoc(){
+  return `<h1>高雄榮民總醫院企業工會　函</h1>
+   <div class="meta-row"><div>地址：高雄市○○區○○路○號</div><div>聯絡：○○○　電話：○○○</div></div>
+   <hr>
+   <div class="line"><b>受文者：</b>${esc($('f-to').value)||'　'}</div>
+   <div class="line"><b>發文日期：</b>${rocDate($('f-date').value)}</div>
+   <div class="line"><b>發文字號：</b>${esc($('f-no').value)||'　'}</div>
+   <div class="line"><b>速別：</b>${esc($('f-speed').value)}　　<b>密等及解密條件：</b>${esc($('f-secret').value)}</div>
+   <div class="line"><b>附件：</b>${esc($('f-attach').value)||'無'}</div>
+   <hr>
+   <div class="blk" style="margin-left:4em;text-indent:-4em"><b>主旨：</b>${esc($('f-subject').value)||'　'}</div>
+   ${explainHTML()}
+   <div style="margin-top:1.5rem"><b>正本：</b>${esc($('f-main').value)||esc($('f-to').value)||'　'}</div>
+   <div><b>副本：</b>${esc($('f-copy').value)||'無'}</div>
+   <div class="signer">${esc($('f-signer').value)||'理事長'}　${esc($('f-signer-name').value)||'○○○'}</div>`;
+}
+$('gen-btn').addEventListener('click',()=>{
+  const w=window.open('','_blank');
+  w.document.write(`<!DOCTYPE html><html lang="zh-TW"><head><meta charset="UTF-8"><title>公文函稿</title>
+   <style>@page{margin:2.5cm;} body{font-family:'Noto Serif TC',serif;color:#000;font-size:16px;line-height:2.1;max-width:760px;margin:0 auto;padding:1.5rem;}
+   h1{text-align:center;font-size:23px;letter-spacing:.4em;margin-bottom:1rem;}
+   hr{border:none;border-top:1px solid #000;margin:.5rem 0;}
+   .meta-row{display:flex;justify-content:space-between;font-size:13px;}
+   .line{margin:.15rem 0;} .blk{margin:.6rem 0;}
+   .signer{text-align:right;margin-top:2.5rem;font-size:18px;letter-spacing:.1em;}
+   @media print{button{display:none;}} button{margin:1rem .3rem;padding:.5rem 1.2rem;font-size:14px;cursor:pointer;}</style>
+   </head><body>${buildDoc()}
+   <div style="text-align:center"><button onclick="window.print()">🖨 列印／存 PDF</button><button onclick="window.close()">關閉</button></div>
+   </body></html>`);
+  w.document.close();
+});
+
+/* 草稿 */
+function getDrafts(){ try{return JSON.parse(localStorage.getItem(KEY))||[];}catch(_){return [];} }
+function setDrafts(a){ try{localStorage.setItem(KEY,JSON.stringify(a));}catch(_){} }
+function collect(){ return {id:Date.now().toString(36),tpl:curTpl,saved:today(),
+  to:$('f-to').value,date:$('f-date').value,no:$('f-no').value,speed:$('f-speed').value,secret:$('f-secret').value,
+  attach:$('f-attach').value,subject:$('f-subject').value,explain:$('f-explain').value,
+  main:$('f-main').value,copy:$('f-copy').value,signer:$('f-signer').value,signerName:$('f-signer-name').value}; }
+function fill(d){
+  curTpl=d.tpl||'blank';
+  document.querySelectorAll('#tpl-pick button').forEach(x=>x.classList.toggle('on',x.dataset.tpl===curTpl));
+  $('f-to').value=d.to||''; $('f-date').value=d.date||''; $('f-no').value=d.no||''; $('f-speed').value=d.speed||'普通件';
+  $('f-secret').value=d.secret||'普通'; $('f-attach').value=d.attach||''; $('f-subject').value=d.subject||'';
+  $('f-explain').value=d.explain||''; $('f-main').value=d.main||''; $('f-copy').value=d.copy||'';
+  $('f-signer').value=d.signer||'理事長'; $('f-signer-name').value=d.signerName||'';
+}
+function renderDrafts(){
+  const a=getDrafts(), box=$('draft-list');
+  if(!a.length){ box.innerHTML='<div class="law" style="border:none;padding:.2rem">尚無草稿。填好後按「存草稿」。</div>'; return; }
+  box.innerHTML=a.map(d=>`<div class="draft" data-id="${d.id}">
+     <div class="dt">${esc(d.subject||'(未填主旨)').slice(0,22)}<div class="dd">${esc(d.to||'')}　${d.saved||''}</div></div>
+     <button data-act="load" data-id="${d.id}">開啟</button>
+     <button class="del" data-act="del" data-id="${d.id}">刪</button></div>`).join('');
+}
+$('draft-list').addEventListener('click',e=>{
+  const b=e.target.closest('[data-act]'); if(!b) return; const a=getDrafts(); const d=a.find(x=>x.id===b.dataset.id);
+  if(b.dataset.act==='load'){ if(d){ fill(d); toast('已載入草稿'); window.scrollTo({top:0,behavior:'smooth'}); } }
+  else { setDrafts(a.filter(x=>x.id!==b.dataset.id)); renderDrafts(); }
+});
+$('save-btn').addEventListener('click',()=>{
+  if(!$('f-subject').value.trim()){ toast('請先填主旨'); return; }
+  const a=getDrafts(); a.unshift(collect()); setDrafts(a.slice(0,30)); renderDrafts(); toast('已存草稿');
+});
+$('clear-btn').addEventListener('click',()=>{ if(confirm('清空目前表單？')){ fill({}); toast('已清空'); } });
+
+let toastT; function toast(m){ const e=$('toast'); e.textContent=m; e.classList.add('show'); clearTimeout(toastT); toastT=setTimeout(()=>e.classList.remove('show'),1900); }
+function init(){ $('f-date').value=today(); applyTpl('blank'); renderDrafts(); }
+
+if(!LOCK){ showApp(); }
+else if(sessionStorage.getItem(UNLOCK_KEY)==='1'){ showApp(); }
+else { showGate(); }
+if('serviceWorker' in navigator){ navigator.serviceWorker.register('sw.js').catch(()=>{}); }
+</script>
+</body>
+</html>
