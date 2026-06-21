@@ -1,0 +1,219 @@
+/**
+ * 透析印藥水 LINE 小幫手 v3 — Apps Script
+ * ════════════════════════════════════════════════════════
+ *  功能①：自動收 userId（LINE webhook）
+ *  功能②：每天自動發提醒（明天要印藥水的人）
+ *  功能③：接收網頁送來的名單（setWeek）
+ *  功能④：儲存/讀取排班歷史（供下週公平輪序）
+ *  功能⑤：儲存/讀取稽核歷史（供下月公平輪序）
+ *
+ *  試算表需要的分頁（不存在會自動建立）：
+ *    userid    自動收 userId
+ *    對照      姓名 | userId
+ *    本週名單  印日期 | 區 | 姓名
+ *    排班歷史  週次 | 卡號 | 姓名 | 狀態 | 治療日
+ *    稽核歷史  月份 | 卡號 | 姓名 | 狀態 | 位置
+ */
+
+var LINE_TOKEN  = "貼上你的金鑰";   // ← Channel access token（不要按 Reissue！）
+var WRITE_SECRET = "yaoshui2026";   // ← 網頁送名單用的暗號（與 Streamlit Secrets 一致）
+
+
+/* ━━━━━━━━━━ doPost（LINE webhook ＋ 網頁 API）━━━━━━━━━━ */
+function doPost(e) {
+  try {
+    var body = JSON.parse(e.postData.contents);
+    var ss = SpreadsheetApp.getActiveSpreadsheet();
+
+    // ── LINE webhook（有 events 欄位，沒有 action）──
+    if (body.events) {
+      var sh = ensureSheet_(ss, "userid", ["時間","事件","userId","傳來的文字"]);
+      (body.events || []).forEach(function(ev) {
+        var uid = ev.source && ev.source.userId;
+        var text = (ev.type === "message" && ev.message && ev.message.type === "text")
+                   ? ev.message.text : "";
+        if (uid) sh.appendRow([new Date(), ev.type, uid, text]);
+      });
+      return ContentService.createTextOutput("OK");
+    }
+
+    // ── 網頁 API（需要暗號）──
+    if (body.secret !== WRITE_SECRET) {
+      return jsonOut_({ok: false, error: "wrong secret"});
+    }
+
+    var action = body.action || "";
+
+    // 寫入本週名單（玉繡按🚀時）
+    if (action === "setWeek") {
+      var sh2 = ensureSheet_(ss, "本週名單", ["印日期","區","姓名"]);
+      sh2.clearContents();
+      sh2.appendRow(["印日期","區","姓名"]);
+      (body.rows || []).forEach(function(r) { sh2.appendRow(r); });
+      return jsonOut_({ok: true, count: (body.rows || []).length});
+    }
+
+    // 讀排班歷史（下週排班前拉回來，確保公平輪序正確）
+    if (action === "getScheduleHistory") {
+      return jsonOut_({ok: true, rows: sheetToArray_(ss, "排班歷史")});
+    }
+
+    // 寫排班歷史（送完名單後把這週紀錄存上來）
+    if (action === "setScheduleHistory") {
+      writeHistory_(ss, "排班歷史", ["週次","卡號","姓名","狀態","治療日"],
+                    body.key, body.rows || []);
+      return jsonOut_({ok: true});
+    }
+
+    // 讀稽核歷史
+    if (action === "getAuditHistory") {
+      return jsonOut_({ok: true, rows: sheetToArray_(ss, "稽核歷史")});
+    }
+
+    // 寫稽核歷史
+    if (action === "setAuditResult") {
+      writeHistory_(ss, "稽核歷史", ["月份","卡號","姓名","狀態","位置"],
+                    body.key, body.rows || []);
+      return jsonOut_({ok: true});
+    }
+
+    // 稽核 LINE 通知（排班後通知每位稽核者負責班次）
+    if (action === "sendAuditNotice") {
+      var map2 = buildUserMap_(ss);
+      var month = body.month || "";
+      var sent2 = 0, miss2 = 0;
+      (body.notices || []).forEach(function(n) {
+        var uid3 = map2[n.name];
+        if (!uid3) { Logger.log("缺 userId（稽核通知）：" + n.name); miss2++; return; }
+        pushLine_(uid3, "📋 " + month + " 你這個月負責【" + n.position + "】稽核藥水，請自行安排兩天進行稽核。🙏");
+        sent2++;
+      });
+      Logger.log("稽核通知：發 " + sent2 + " 人，缺 userId " + miss2 + " 人");
+      return jsonOut_({ok: true, sent: sent2, miss: miss2});
+    }
+
+    return jsonOut_({ok: false, error: "unknown action: " + action});
+  } catch(err) {
+    return jsonOut_({ok: false, error: String(err)});
+  }
+}
+
+function doGet() { return ContentService.createTextOutput("ok"); }
+
+
+/* ━━━━━━━━━━ 每日提醒（明天要印的人）━━━━━━━━━━ */
+function sendReminders() {
+  var ss   = SpreadsheetApp.getActiveSpreadsheet();
+  var tz   = "Asia/Taipei";
+  var target = new Date(Date.now() + 24 * 60 * 60 * 1000);
+  var tStr = Utilities.formatDate(target, tz, "yyyy-MM-dd");
+  var tMd  = Utilities.formatDate(target, tz, "M/d");
+
+  var sh = ss.getSheetByName("本週名單");
+  if (!sh) { Logger.log("找不到『本週名單』分頁"); return; }
+  var rows = sh.getDataRange().getValues();
+  var head = rows[0].map(function(x) { return String(x).trim(); });
+  var iD = head.indexOf("印日期"), iZ = head.indexOf("區"), iN = head.indexOf("姓名");
+
+  var map = buildUserMap_(ss);
+
+  var todo = {};
+  for (var r = 1; r < rows.length; r++) {
+    if (normDate_(rows[r][iD], tz) !== tStr) continue;
+    var nm2 = String(rows[r][iN]).trim(), area = String(rows[r][iZ]).trim();
+    if (!nm2) continue;
+    if (!todo[nm2]) todo[nm2] = [];
+    if (area && todo[nm2].indexOf(area) < 0) todo[nm2].push(area);
+  }
+
+  var sent = 0, miss = 0;
+  for (var name in todo) {
+    var uid2 = map[name];
+    if (!uid2) { Logger.log("缺 userId：" + name); miss++; continue; }
+    var zone  = todo[name].join("、");
+    var zpart = zone ? ("「" + zone + "」") : "";
+    pushLine_(uid2, "🔔 記得明天(" + tMd + ")要印" + zpart + "藥水喔！🙏");
+    sent++;
+  }
+  Logger.log("提醒完成：發 " + sent + " 人，缺 userId " + miss + " 人（印日 " + tStr + "）");
+}
+
+
+/* ━━━━━━━━━━ 試算表選單（手動工具）━━━━━━━━━━ */
+function onOpen() {
+  SpreadsheetApp.getUi().createMenu("📋 藥水小幫手")
+    .addItem("清空本週名單", "clearWeek")
+    .addItem("測試：發 LINE 給自己", "testSelf")
+    .addToUi();
+}
+function clearWeek() {
+  var sh = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("本週名單");
+  if (!sh) return;
+  sh.clearContents();
+  sh.appendRow(["印日期","區","姓名"]);
+  SpreadsheetApp.getUi().alert("✅ 本週名單已清空");
+}
+function testSelf() {
+  pushLine_("U04e906cc9268998aa4f8edf69286858f", "🔔 測試：小幫手正常運作 🙏");
+}
+
+
+/* ━━━━━━━━━━ 工具函式 ━━━━━━━━━━ */
+function jsonOut_(obj) {
+  return ContentService.createTextOutput(JSON.stringify(obj))
+                       .setMimeType(ContentService.MimeType.JSON);
+}
+
+function ensureSheet_(ss, name, headers) {
+  var sh = ss.getSheetByName(name);
+  if (!sh) { sh = ss.insertSheet(name); sh.appendRow(headers); }
+  return sh;
+}
+
+function sheetToArray_(ss, name) {
+  var sh = ss.getSheetByName(name);
+  if (!sh || sh.getLastRow() < 1) return [];
+  return sh.getDataRange().getValues();
+}
+
+/** 把某個 key（週次/月份）的舊紀錄替換成新紀錄 */
+function writeHistory_(ss, sheetName, headers, key, newRows) {
+  if (!key && newRows.length === 0) return;
+  var sh = ensureSheet_(ss, sheetName, headers);
+  var vals = sh.getLastRow() > 0 ? sh.getDataRange().getValues() : [headers];
+  // 保留標題列＋其他 key 的資料
+  var kept = vals.filter(function(r, i) {
+    return i === 0 || String(r[0]) !== String(key);
+  });
+  sh.clearContents();
+  kept.forEach(function(r) { sh.appendRow(r); });
+  newRows.forEach(function(r) { sh.appendRow(r); });
+}
+
+/** 從「對照」分頁建 {姓名: userId} 字典 */
+function buildUserMap_(ss) {
+  var map = {}, sh = ss.getSheetByName("對照");
+  if (!sh) return map;
+  var rows = sh.getDataRange().getValues();
+  for (var i = 1; i < rows.length; i++) {
+    var nm = String(rows[i][0]).trim(), uid = String(rows[i][1]).trim();
+    if (nm && uid) map[nm] = uid;
+  }
+  return map;
+}
+
+function normDate_(v, tz) {
+  if (v instanceof Date) return Utilities.formatDate(v, tz, "yyyy-MM-dd");
+  var s = String(v).trim().replace(/\//g, "-");
+  var m = s.match(/^(\d{4})-(\d{1,2})-(\d{1,2})$/);
+  return m ? (m[1] + "-" + ("0"+m[2]).slice(-2) + "-" + ("0"+m[3]).slice(-2)) : s;
+}
+
+function pushLine_(uid, text) {
+  UrlFetchApp.fetch("https://api.line.me/v2/bot/message/push", {
+    method: "post", contentType: "application/json",
+    headers: {"Authorization": "Bearer " + LINE_TOKEN},
+    payload: JSON.stringify({to: uid, messages: [{type: "text", text: text}]}),
+    muteHttpExceptions: true
+  });
+}
