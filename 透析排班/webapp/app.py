@@ -94,6 +94,7 @@ except Exception:
 
 st.title("💊 透析藥水排班")
 st.caption("上傳班表 Excel → 出名單(表格)。可直接點格子改人名。跨區標 🔺。")
+st.caption("🟢 版本 v2.0（一鍵送雲端）· 2026-06-22")
 
 # ── 互動式導覽（給第一次用的人）──────────────────────
 with st.expander("📖 第一次用？點我看「3 步驟」（給玉繡）", expanded=False):
