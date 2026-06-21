@@ -1,0 +1,38 @@
+name: EBN 版本一致性檢查
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  version-check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: evidence & search BUILD 必須等於 ebn-ver.txt
+        run: |
+          EBN=$(cat ebn-ver.txt | tr -d '[:space:]')
+          FAIL=0
+          for f in evidence.html search.html; do
+            FBUILD=$(grep -oP 'const BUILD="\K[^"]+' "$f" | head -1)
+            if [ "$FBUILD" != "$EBN" ]; then
+              echo "❌ $f BUILD=$FBUILD ≠ ebn-ver.txt=$EBN"
+              FAIL=1
+            else
+              echo "✅ $f BUILD=$FBUILD OK"
+            fi
+          done
+          [ $FAIL -eq 0 ] || exit 1
+
+      - name: lawyer BUILD 必須等於 ver.txt
+        run: |
+          VER=$(cat ver.txt | tr -d '[:space:]')
+          LBUILD=$(grep -oP 'const BUILD="\K[^"]+' lawyer.html | head -1)
+          if [ "$LBUILD" != "$VER" ]; then
+            echo "❌ lawyer.html BUILD=$LBUILD ≠ ver.txt=$VER"
+            exit 1
+          fi
+          echo "✅ lawyer.html BUILD=$LBUILD OK"

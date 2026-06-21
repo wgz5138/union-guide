@@ -345,12 +345,12 @@
 
 <div class="toast" id="toast"></div>
 
+<script src="ebn-common.js"></script>
 <script>
 /* ===== 密碼（與評讀工具獨立，以雜湊儲存，原始碼看不到真密碼）。預設 = qqq11111111（3個q＋8個一）。 =====
    🚨 趕人／重設名單：把 ACCESS_VERSION +1、並換下面 PW_HASH，所有人被踢出、舊密碼全失效，只有新密碼能再進。 */
 const ACCESS_VERSION="1";
 const PW_HASH="2716985802763051", PW_KEY="ebnq_pw_v"+ACCESS_VERSION, UNLOCK_KEY="ebnq_unlocked_v"+ACCESS_VERSION;
-function cyrb53(s,seed=0){ s=s||""; let h1=0xdeadbeef^seed,h2=0x41c6ce57^seed; for(let i=0,c;i<s.length;i++){c=s.charCodeAt(i);h1=Math.imul(h1^c,2654435761);h2=Math.imul(h2^c,1597334677);} h1=Math.imul(h1^(h1>>>16),2246822507);h1^=Math.imul(h2^(h2>>>13),3266489909);h2=Math.imul(h2^(h2>>>16),2246822507);h2^=Math.imul(h1^(h1>>>13),3266489909); return ""+(4294967296*(2097151&h2)+(h1>>>0)); }
 function pwOk(v){ return cyrb53(v)===(localStorage.getItem(PW_KEY)||PW_HASH); }
 function unlock(){ document.body.classList.remove("locked"); document.body.classList.add("unlocked"); if(!localStorage.getItem("ebnq_seen_manual")) setTimeout(()=>document.getElementById("welcome").classList.add("show"),350); }
 function closeManual(){ document.getElementById("manual").classList.remove("show"); localStorage.setItem("ebnq_seen_manual","1"); }
@@ -393,22 +393,8 @@ document.getElementById("man-close2").addEventListener("click",closeManual);
 document.getElementById("man-tour").addEventListener("click",()=>{ closeManual(); startTour(); });
 
 /* ===== 小工具 ===== */
-function val(id){ return document.getElementById(id).value.trim(); }
-function esc(t){ return String(t==null?"":t).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;"); }
 function cleanAbs(t){ return String(t||"").replace(/<h[1-6][^>]*>/gi,"\n").replace(/<\/h[1-6]>/gi,"：").replace(/<[^>]+>/g," ").replace(/[ \t]{2,}/g," ").replace(/\s*\n\s*/g,"\n").trim(); }
-function toast(m){ const t=document.getElementById("toast"); t.textContent=m; t.classList.add("show"); clearTimeout(t._t); t._t=setTimeout(()=>t.classList.remove("show"),2400); }
-function copy(text,ok){ if(navigator.clipboard&&navigator.clipboard.writeText){ navigator.clipboard.writeText(text).then(()=>toast(ok)).catch(()=>fb(text,ok)); } else fb(text,ok); }
-function fb(text,ok){ const ta=document.createElement("textarea"); ta.value=text; ta.style.position="fixed"; ta.style.opacity="0"; document.body.appendChild(ta); ta.select(); try{document.execCommand("copy");toast(ok);}catch(e){toast("複製失敗");} document.body.removeChild(ta); }
-// 從可見的 textarea 複製：先選取（App 內建瀏覽器若擋複製，至少已幫使用者選好、可長按拷貝）
-function copyEl(id,ok){ const el=document.getElementById(id); el.focus(); el.select(); try{el.setSelectionRange(0,el.value.length);}catch(e){}
-  const failMsg="已幫你選取，長按選『拷貝』";
-  if(navigator.clipboard&&navigator.clipboard.writeText){ navigator.clipboard.writeText(el.value).then(()=>toast(ok)).catch(()=>{ let d=false; try{d=document.execCommand("copy");}catch(e){} if(d)toast(ok); else{toast(failMsg);showAppBanner();} }); return; }
-  let d=false; try{d=document.execCommand("copy");}catch(e){} if(d)toast(ok); else{toast(failMsg);showAppBanner();} }
-// App 內建瀏覽器提醒橫幅
-function showAppBanner(){ if(sessionStorage.getItem("hideAppBanner"))return; const b=document.getElementById("appbanner"); if(b)b.classList.add("show"); }
-(function(){ const x=document.getElementById("appbanner-x"); if(x)x.addEventListener("click",()=>{ document.getElementById("appbanner").classList.remove("show"); sessionStorage.setItem("hideAppBanner","1"); });
-  if(/FBAN|FBAV|FBIOS|Instagram|Line\/|MicroMessenger|Twitter|TikTok|GSA\//i.test(navigator.userAgent||"")) showAppBanner(); })();
-// 🔄 自動偵測新版本：跟伺服器上的 ver.txt 比對，有新版就跳橫幅（使用者完全不用管 ?數字、不用刪圖示）
+// 🔄 自動偵測新版本
 const BUILD="2026062015";
 const CHANGELOG=[
   "新增「⚖️ AI 律師」工具（勞動法主場，引法條／判斷對方說法／列證據；法規用全國法規資料庫官方真資料；上方可進）",
@@ -418,27 +404,7 @@ const CHANGELOG=[
   "自動偵測新版本、跳「🔄 有新版」提醒",
   "搜尋自動清掉貼錯的標籤/網址、0 筆自動放寬"
 ];
-function verLabel(){ const b=BUILD,n=+b.slice(8); return b.slice(0,4)+"-"+b.slice(4,6)+"-"+b.slice(6,8)+"（版號 "+(n<10?"0"+n:n)+"）"; }
-function checkUpdate(manual){
-  const vs=document.getElementById("ver-status");
-  if(manual&&vs)vs.textContent=" · 檢查中…";
-  try{
-    fetch("ebn-ver.txt?t="+Date.now(),{cache:"no-store"}).then(r=>r.ok?r.text():null).then(v=>{
-      if(!v){ if(vs)vs.textContent=""; if(manual)toast("查不到更新資訊（可能沒網路）"); return; }
-      v=v.trim();
-      if(v && v!==BUILD){ const b=document.getElementById("updbanner"); if(b)b.classList.add("show"); if(vs)vs.textContent=" · 🔄 有新版（往上看橫幅）"; if(manual)toast("有新版！上方橫幅按「立即更新」"); }
-      else { if(vs)vs.textContent=" · ✓ 已是最新版"; if(manual)toast("✓ 你已經是最新版了"); }
-    }).catch(()=>{ if(vs)vs.textContent=""; if(manual)toast("檢查失敗，請稍後再試"); });
-  }catch(e){ if(manual)toast("檢查失敗"); }
-}
-(function(){
-  checkUpdate(false);
-  const cb=document.getElementById("checkupd-btn"); if(cb)cb.addEventListener("click",e=>{e.preventDefault();checkUpdate(true);});
-  const ub=document.getElementById("updbtn"); if(ub)ub.addEventListener("click",()=>{ location.replace(location.pathname+"?v="+Date.now()); });
-  const ux=document.getElementById("updbanner-x"); if(ux)ux.addEventListener("click",()=>{ const b=document.getElementById("updbanner"); if(b)b.classList.remove("show"); });
-})();
-// 🛜 離線支援：註冊 service worker（沒網路也能打開工具畫面）
-if("serviceWorker" in navigator){ window.addEventListener("load",()=>{ navigator.serviceWorker.register("sw.js").catch(()=>{}); }); }
+initVersionCheck("ebn-ver.txt");
 
 /* ===================== 一鍵清除（換下一題） ===================== */
 function clearSearch(){
@@ -630,13 +596,8 @@ document.getElementById("synth-btn").addEventListener("click",()=>{
 document.getElementById("copy-synth").addEventListener("click",()=>copyEl("synth-out","已複製，貼給 AI 做實證綜合"));
 
 /* ===== ⚡ 付費一鍵：用自己的金鑰直接呼叫 Claude（金鑰與評讀工具共用 localStorage） ===== */
-const PRICE={"claude-sonnet-4-6":{in:3,out:15},"claude-haiku-4-5":{in:1,out:5},"claude-opus-4-8":{in:5,out:25}};
-const USD2NTD=31.5;
-function ntd(usd){ const v=usd*USD2NTD; return "NT$"+(v<100?v.toFixed(2):Math.round(v)); }
-function apiHeaders(key){ return {"x-api-key":key,"anthropic-version":"2023-06-01","anthropic-dangerous-direct-browser-access":"true","content-type":"application/json"}; }
 function apiKey(){ return val("api-key")||localStorage.getItem("ebn_api-key")||""; }
 function costOf(u){ const p=PRICE[document.getElementById("api-model").value]||PRICE["claude-sonnet-4-6"]; return ntd((u.input_tokens||0)/1e6*p.in+(u.output_tokens||0)/1e6*p.out); }
-function apiErr(err){ const s=err&&err.status,b=(err&&err.body)||""; if(s===401)return"金鑰不對(401)"; if(s===400&&/credit|balance|billing/i.test(b))return"金鑰沒額度，請先儲值"; if(s===429)return"太頻繁(429)，稍候再試"; return"失敗"+(s?("("+s+")"):"")+"，可改用免費複製貼上"; }
 async function callClaude(promptText,maxTok){
   const key=apiKey(), model=document.getElementById("api-model").value;
   const r=await fetch("https://api.anthropic.com/v1/messages",{method:"POST",headers:apiHeaders(key),
