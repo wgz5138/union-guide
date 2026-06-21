@@ -62,6 +62,17 @@
   .tile.book .t{color:var(--green-deep);} .tile.book .go{color:var(--green-mid);}
   .tile.shot{border-left-color:var(--gold);}
   .tile.shot .t{color:#8A6D0B;} .tile.shot .go{color:var(--gold);}
+  .tile.plan{border-left-color:var(--green-deep);}
+  .tile.plan .t{color:var(--green-deep);} .tile.plan .go{color:var(--green-mid);}
+
+  /* ===== 五理一監 分區 ===== */
+  .role{display:flex;align-items:center;gap:11px;margin:1.5rem 2px .75rem;padding-top:1rem;border-top:2px solid var(--border);}
+  .role:first-of-type{border-top:none;padding-top:.2rem;margin-top:.4rem;}
+  .role .rb{flex-shrink:0;width:42px;height:42px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-family:'Noto Serif TC',serif;font-weight:700;font-size:17px;color:#fff;box-shadow:0 3px 8px rgba(0,0,0,.14);}
+  .role .rt{font-family:'Noto Serif TC',serif;font-size:17px;font-weight:700;color:var(--ink);line-height:1.2;}
+  .role .rd{font-size:12px;color:var(--ink-soft);margin-top:2px;}
+  .rb.r-chair{background:var(--red);} .rb.r-fin{background:var(--green);} .rb.r-org{background:var(--navy);}
+  .rb.r-doc{background:var(--gold);} .rb.r-wel{background:#7A4F9D;} .rb.r-sup{background:var(--navy-deep,#122A4F);}
 
   .who{background:var(--gold-light);border:1px solid #EAD67A;border-radius:14px;padding:1rem 1.15rem;font-size:13px;color:#5C4000;line-height:1.95;margin:4px 0 6px;}
   .who b{font-weight:700;}
@@ -93,59 +104,86 @@
     <img class="header-logo" src="assets/union-logo.png" alt="高榮企業工會 會徽">
     <div class="header-label">高榮企業工會</div>
     <h1>幹部功能表</h1>
-    <div class="header-sub">幹部辦事工具箱 · 點一下就用</div>
+    <div class="header-sub">依「五理一監」分工 · 點一下就用</div>
     <div class="prep">🏗 籌備中</div>
   </div>
 
   <main>
-    <div class="sec-label">💰 財務管理</div>
+    <p style="font-size:12.5px;color:var(--ink-soft);background:#fff;border:1px solid var(--border);border-radius:12px;padding:.7rem .85rem;margin-bottom:.4rem;line-height:1.75;">
+      依章程第16條，本會置<b>理事五人（含理事長）、監事一人</b>。下面按「<b>五理一監</b>」分工排列，每位幹部找自己的區塊辦事即可；標「建置中」的工具會陸續加入。
+    </p>
+
+    <!-- ① 理事長 -->
+    <div class="role"><div class="rb r-chair">長</div><div><div class="rt">理事長</div><div class="rd">綜理會務 · 對外代表 · 召集會議 · 團體協商</div></div></div>
+    <div class="soon">建置中：<b>會議召集／議程</b>、<b>對外公文</b>、<b>團體協商進度</b>。<br>※ 跨組事項（年度計畫、決算、監察報告）由理事長彙整提會員大會。</div>
+
+    <!-- ② 財務理事 -->
+    <div class="role"><div class="rb r-fin">財</div><div><div class="rt">財務理事（會計／出納）</div><div class="rd">年度預算 · 收支記帳 · 決算報稅</div></div></div>
+    <a class="tile plan" href="plan.html">
+      <div class="row">
+        <span class="ico">📅</span>
+        <div>
+          <div class="t">年度計畫與預算</div>
+          <div class="d">編<b>年度工作計畫</b>與<b>經費收支預算表</b>（自動加總、結餘平衡檢查），列印成<b>會員大會審議文件</b>。</div>
+        </div>
+        <span class="go">→</span>
+      </div>
+    </a>
     <a class="tile book" href="finance.html">
       <div class="row">
         <span class="ico">🧾</span>
         <div>
           <div class="t">工會透明帳本</div>
-          <div class="d">給<b>帳房（出納／財務）</b>用：記每筆收支、看報表、做決算、報稅提醒。資料只存這台裝置。</div>
+          <div class="d">記每筆收支、看報表、做<b>決算</b>、報稅提醒。資料只存這台裝置。</div>
         </div>
         <span class="go">→</span>
       </div>
     </a>
-
     <a class="tile shot" href="receipt.html">
       <div class="row">
         <span class="ico">📷</span>
         <div>
           <div class="t">單據快拍</div>
-          <div class="d">給<b>每位幹部</b>用：在外買文具、刻印章…<b>拍張收據</b>就記好，再傳給帳房收進帳本。</div>
+          <div class="d"><b>每位幹部</b>都用：在外花錢<b>拍張收據</b>就記好，再傳給帳房收進帳本。</div>
         </div>
         <span class="go">→</span>
       </div>
     </a>
-
     <div class="who">
       <span class="h">📌 財務怎麼分工（30 秒看懂）</span>
-      <b>① 帳房一個人</b>：在固定一台手機/電腦用「工會透明帳本」記帳。<br>
-      <b>② 其他幹部</b>：花錢就用「單據快拍」拍照 → 按「匯出給帳本」用 LINE 傳給帳房。<br>
-      <b>③ 帳房</b>：在帳本按「收進帳本」，單據變成一筆支出、照片自動留底。<br>
+      <b>① 財務理事（帳房）</b>：固定一台裝置用「透明帳本」記帳、編預算。<br>
+      <b>② 其他幹部</b>：花錢用「單據快拍」拍照 → 按「匯出給帳本」用 LINE 傳給帳房。<br>
+      <b>③ 帳房</b>：在帳本按「收進帳本」，單據變一筆支出、照片自動留底。<br>
       <b>④ 備份</b>：帳房定期到「設定 → 匯出全部資料」存檔。<br>
-      <span style="display:block;margin-top:6px;color:#7a5c00">※ 資料只在各自的裝置、不上傳；不會自動共用同一本帳。</span>
+      <span style="display:block;margin-top:6px;color:#7a5c00">※ 資料只在各自裝置、不上傳；不會自動共用同一本帳。</span>
     </div>
 
-    <div class="sec-label">🛡 監察稽核</div>
+    <!-- ③ 組織理事 -->
+    <div class="role"><div class="rb r-org">組</div><div><div class="rt">組織理事</div><div class="rd">會員招募 · 會員名冊 · 入會審查</div></div></div>
+    <div class="soon">建置中：<b>會員名冊</b>、<b>入會申請審查</b>、<b>連署／招募進度</b>。</div>
+
+    <!-- ④ 文書理事 -->
+    <div class="role"><div class="rb r-doc">文</div><div><div class="rt">文書理事（秘書）</div><div class="rd">會議文件 · 行政紀錄 · 公告</div></div></div>
+    <div class="soon">建置中：<b>會議文件（議程／簽到／會議紀錄）</b>、<b>公告與通知</b>。</div>
+
+    <!-- ⑤ 福教理事 -->
+    <div class="role"><div class="rb r-wel">福</div><div><div class="rt">福利教育理事</div><div class="rd">會員福利 · 聯誼活動 · 教育訓練</div></div></div>
+    <div class="soon">建置中：<b>福利活動報名</b>、<b>教育訓練講座</b>。</div>
+
+    <!-- 監事 -->
+    <div class="role"><div class="rb r-sup">監</div><div><div class="rt">監事</div><div class="rd">監察會務 · 財務稽核 · 監察意見書</div></div></div>
     <a class="tile id" href="jianshi.html">
       <div class="row">
         <span class="ico">🛡️</span>
         <div>
           <div class="t">AI 監事秘書</div>
-          <div class="d">給<b>監事會</b>用：依章程第24條職權打理<b>進度表</b>、年度監察行事曆，並一鍵產生<b>監察意見書／稽核查核表</b>等公文範本。資料只存這台裝置。</div>
+          <div class="d">依章程第24條職權打理<b>監察進度表</b>、年度監察行事曆，並一鍵產生<b>監察意見書／財務稽核表</b>等公文範本。</div>
         </div>
         <span class="go">→</span>
       </div>
     </a>
 
-    <div class="sec-label">🗂 陸續加入</div>
-    <div class="soon">建置中：<b>會員名冊</b>、<b>會議文件（議程/簽到/會議紀錄）</b>、<b>連署進度</b>。需要哪個先做，跟負責人說一聲。</div>
-
-    <a class="pub" href="gaorong.html">🏠 前往對外「工會網站」（招募/FAQ/加入 Line）→</a>
+    <a class="pub" href="gaorong.html" style="margin-top:1.6rem">🏠 前往對外「工會網站」（招募/FAQ/加入 Line）→</a>
 
     <div class="foot">
       高榮企業工會 · 幹部功能表<br>
