@@ -14,25 +14,35 @@ CONFIG = ["組員名單.csv", "床號分區.csv", "不可印班別.csv", "休診
           "排班紀錄.csv", "稽核紀錄.csv"]
 CELL_RE = re.compile(r'^(.*?)\((\d+)/(\d+)印\)(.*)$')
 
+# xlsx magic bytes = PK header
+def _detect_ext(xls_bytes):
+    return ".xlsx" if xls_bytes[:4] == b'PK\x03\x04' else ".xls"
+
 
 def run_tool(script, xls_bytes, extra_args):
     work = tempfile.mkdtemp()
-    for fn in CONFIG + [script]:
-        src = os.path.join(HERE, fn)
-        if os.path.exists(src):
-            shutil.copy(src, work)
-    xlsp = os.path.join(work, "上傳班表.xls")
-    with open(xlsp, "wb") as f:
-        f.write(xls_bytes)
-    r = subprocess.run([sys.executable, script, xlsp] + list(extra_args),
-                       cwd=work, capture_output=True, text=True, timeout=180)
-    files = {}
-    od = os.path.join(work, "輸出")
-    if os.path.isdir(od):
-        for fn in sorted(os.listdir(od)):
-            with open(os.path.join(od, fn), "rb") as fh:
-                files[fn] = fh.read()
-    return r.stdout + (("\n" + r.stderr) if r.stderr.strip() else ""), files
+    try:
+        for fn in CONFIG + [script]:
+            src = os.path.join(HERE, fn)
+            if os.path.exists(src):
+                shutil.copy(src, work)
+        ext = _detect_ext(xls_bytes)
+        xlsp = os.path.join(work, f"上傳班表{ext}")
+        with open(xlsp, "wb") as f:
+            f.write(xls_bytes)
+        r = subprocess.run([sys.executable, script, xlsp] + list(extra_args),
+                           cwd=work, capture_output=True, text=True, timeout=180)
+        files = {}
+        od = os.path.join(work, "輸出")
+        if os.path.isdir(od):
+            for fn in sorted(os.listdir(od)):
+                with open(os.path.join(od, fn), "rb") as fh:
+                    files[fn] = fh.read()
+        stdout = r.stdout
+        stderr = r.stderr.strip()
+        return stdout + (("\n" + stderr) if stderr else ""), files
+    finally:
+        shutil.rmtree(work, ignore_errors=True)
 
 
 def pick(files, suffix):
@@ -79,6 +89,11 @@ def year_from_cloud(files):
     return pd.Timestamp.now().year
 
 
+def _file_key(up):
+    """用檔名+大小當 key，偵測使用者是否換了新檔案。"""
+    return f"{up.name}_{up.size}"
+
+
 st.set_page_config(page_title="透析藥水排班", page_icon="💊", layout="wide")
 
 # 試算表（LINE 提醒讀這張）— 產生定案後把名單貼到它的「本週名單」分頁
@@ -94,7 +109,7 @@ except Exception:
 
 st.title("💊 透析藥水排班")
 st.caption("上傳班表 Excel → 出名單(表格)。可直接點格子改人名。跨區標 🔺。")
-st.caption("🟢 版本 v2.0（一鍵送雲端）· 2026-06-22")
+st.caption("🟢 版本 v2.1（自動偵測副檔名 / 暫存自動清除）· 2026-06-22")
 
 # ── 互動式導覽（給第一次用的人）──────────────────────
 with st.expander("📖 第一次用？點我看「3 步驟」（給玉繡）", expanded=False):
@@ -125,6 +140,13 @@ up = st.file_uploader("上傳班表 Excel（.xls / .xlsx）", type=["xls", "xlsx
 if not up:
     st.info("👆 先上傳班表 Excel（含每人每天班別/床號的那種檔）。截圖不行喔！")
     st.stop()
+
+# 換新檔案時清除舊的排班結果，避免顯示到舊名單
+fk = _file_key(up)
+if st.session_state.get("_last_file") != fk:
+    for k in ["yao", "cloud_rows", "cloud_disp", "cloud_sheet0", "ak"]:
+        st.session_state.pop(k, None)
+    st.session_state["_last_file"] = fk
 
 data = up.read()
 try:
@@ -172,12 +194,11 @@ if mode.startswith("🟦"):
                             rows.append([f"{yr}-{int(mo):02d}-{int(dy):02d}", r, nm])
                     else:
                         disp.loc[r, c] = nm
-            rows.sort(key=lambda x: (x[0], x[1]))  # 按印日期、再按區排序,輸出整齊
+            rows.sort(key=lambda x: (x[0], x[1]))
             st.session_state["cloud_rows"] = rows
             st.session_state["cloud_disp"] = disp
             st.session_state["cloud_sheet0"] = sheet0
 
-        # 定案後的輸出（放在按鈕 if 外面，下面的「送到雲端」鈕才不會被 rerun 清掉）
         if "cloud_rows" in st.session_state:
             rows = st.session_state["cloud_rows"]
             disp = st.session_state["cloud_disp"]
@@ -189,20 +210,21 @@ if mode.startswith("🟦"):
             # ── 終極版：一鍵送到雲端（自動寫進試算表「本週名單」）──
             if APPS_SCRIPT_URL and WRITE_SECRET:
                 if st.button("🚀 送到雲端（自動排提醒）", type="primary"):
-                    try:
-                        resp = requests.post(
-                            APPS_SCRIPT_URL,
-                            json={"action": "setWeek", "secret": WRITE_SECRET,
-                                  "rows": [[str(x) for x in r] for r in rows]},
-                            timeout=30)
-                        if resp.ok and '"ok":true' in resp.text:
-                            st.success(f"🎉 已送到雲端！共 {len(rows)} 筆。"
-                                       "系統會自動 LINE 提醒，你不用再做任何事。")
-                            st.balloons()
-                        else:
-                            st.error(f"送出失敗（{resp.status_code}）：{resp.text[:200]}")
-                    except Exception as e:
-                        st.error(f"送出失敗：{e}")
+                    with st.spinner("送出中，請稍候…"):
+                        try:
+                            resp = requests.post(
+                                APPS_SCRIPT_URL,
+                                json={"action": "setWeek", "secret": WRITE_SECRET,
+                                      "rows": [[str(x) for x in r] for r in rows]},
+                                timeout=45)
+                            if resp.ok and '"ok":true' in resp.text:
+                                st.success(f"🎉 已送到雲端！共 {len(rows)} 筆。"
+                                           "系統會自動 LINE 提醒，你不用再做任何事。")
+                                st.balloons()
+                            else:
+                                st.error(f"送出失敗（{resp.status_code}）：{resp.text[:200]}")
+                        except Exception as e:
+                            st.error(f"送出失敗：{e}")
             else:
                 st.warning("雲端直送尚未設定（請在 Streamlit Secrets 填 "
                            "APPS_SCRIPT_URL 與 WRITE_SECRET）。可先用下面手動備援。")

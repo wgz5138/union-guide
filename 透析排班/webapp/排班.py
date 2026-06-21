@@ -44,9 +44,9 @@ DEF_ROSTER = [
 # (區域類型, 床號, 盡量避開Y/N)   區域類型=一區/二區/三區… 或 排除/勤務
 DEF_BEDS = [
     ("一區","1-3,21","N"),("一區","5-8","N"),("一區","9-12","N"),("一區","13-17","N"),
-    ("一區","18-20","N"),("一區","22-23","Y"),("一區","22-2329-30","Y"),("一區","29-30","Y"),
+    ("一區","18-20","N"),("一區","22-23","Y"),("一區","29-30","Y"),
     ("一區","25-28","N"),("一區","35-59","N"),
-    ("二區","60-63","N"),("二區","65-68","N"),("二區","71-75","N"),("二區","76-79","N"),
+    ("二區","60-63","Y"),("二區","65-68","N"),("二區","71-75","N"),("二區","76-79","N"),
     ("二區","80-83","N"),("二區","85-89","N"),("二區","85-88","N"),
     ("排除","31-33","N"),("排除","37-39","N"),("排除","37","N"),("排除","50-52","N"),("排除","53-56","N"),
     ("勤務","收水","N"),("勤務","對帳","N"),("勤務","文書","N"),("勤務","查帳","N"),("勤務","W103","N"),
@@ -63,8 +63,8 @@ README = """透析印藥水排班 — 設定檔說明(都可以用 Excel 打開�
    • 區域類型填「一區」「二區」…要開【第三洗腎室】就新增幾列「三區」+ 它的床號,
      程式會自動多排一個三區,不用改程式。
    • 病房/ICU 等不印的床號填「排除」;非床邊勤務填「勤務」。
-   • 「盡量避開」填 Y 的床號(例如 22-23),程式會盡量不排他印,除非那天排不出別人。
-   • 床號要跟班表上「責任區域」欄寫的『一字不差』(例如 1-3,21 / 22-2329-30)。
+   • 「盡量避開」填 Y 的床號(例如 22-23/29-30/60-63),程式會盡量不排他印,除非那天排不出別人。
+   • 床號要跟班表上「責任區域」欄寫的『一字不差』(例如 1-3,21 / 22-23)。
 
 3) 不可印班別.csv    欄位:班別
    • 這些班別的人當天不能印(大夜 N、11-7、2-10'、3'-12、1'-10、副值…)。要加就加一列。
@@ -99,7 +99,7 @@ def ensure_configs():
         with open(F_README,"w",encoding="utf-8") as f: f.write(README)
 
 def _read_rows(path):
-    if not os.path.exists(path):       # 檔案還沒建立=正常,不用警告
+    if not os.path.exists(path):
         return []
     try:
         with open(path, encoding="utf-8-sig") as f:
@@ -269,11 +269,10 @@ def load_history(skip_week=None):
 def assign(members, status, window, hist_cnt):
     idx={m["card"]:i for i,m in enumerate(members)}
     cost={m["card"]:hist_cnt.get(m["card"],0) for m in members}
-    p1={T:prev_treat(T) for T in window}      # 白班印製日(前1治療日)
-    p2={T:prev_treat(p1[T]) if p1[T] else None for T in window}  # 小夜(前2治療日)
+    p1={T:prev_treat(T) for T in window}
+    p2={T:prev_treat(p1[T]) if p1[T] else None for T in window}
 
     def cands(T, areas):
-        """治療日 T、要印 areas 這些區的候選 → {card:(kind,印製日,區,zone,avoid)}"""
         res={}
         for m in members:
             c=m["card"]; nm=m["name"]
@@ -291,14 +290,11 @@ def assign(members, status, window, hist_cnt):
     cross={(T,A):cands(T,set(others[A])) for (T,A) in slots}
 
     assign_slot={}; slot_info={}; member_days={}
-    # 每治療日各區「本區可印人數」(Q2:跨區要從人多的區借)
     area_avail={(T,A):len(same[(T,A)]) for (T,A) in slots}
     def used_day(c,T): return T in member_days.get(c,[])
     def order_same(pool):
-        # 避開(22-23/29-30)擺後 → 印越少越優先(Q1 誰還沒印) → 已排越少 → 穩定
         return sorted(pool, key=lambda c:(pool[c][4], cost[c], len(member_days.get(c,[])), idx[c]))
     def order_cross(pool, T):
-        # Q2:從「組員較多的區」借優先 → 避開擺後 → 印少 → 穩定
         return sorted(pool, key=lambda c:(-area_avail.get((T,pool[c][2]),0), pool[c][4],
                                           cost[c], len(member_days.get(c,[])), idx[c]))
 
@@ -318,14 +314,14 @@ def assign(members, status, window, hist_cnt):
             assign_slot[(T,A)]=c; member_days.setdefault(c,[]).append(T)
             slot_info[(T,A)]=(kind,src,True,av)
             warn(f"※ {lab(T)} {A} 沒有本區的人 → 從「{za}」借「{name_of_g.get(c,c)}」過來印"); break
-    # 回合3:還是空 → 某人印第二次(Q4:盡量間隔久;同日一+二也允許)
+    # 回合3:還是空 → 某人印第二次(盡量間隔久;同日一+二也允許)
     for (T,A) in slots:
         if (T,A) in assign_slot: continue
         merged=dict(cross[(T,A)]); merged.update(same[(T,A)])
         def gap(c):
             ds=member_days.get(c,[]); return min((abs((T-d).days) for d in ds), default=99)
-        cand=[c for c in merged if len(member_days.get(c,[]))<2]   # 上限2次,允許同一天
-        cand.sort(key=lambda c:(merged[c][4], -gap(c), cost[c], idx[c]))  # 避開後→間隔大優先→印少
+        cand=[c for c in merged if len(member_days.get(c,[]))<2]
+        cand.sort(key=lambda c:(merged[c][4], -gap(c), cost[c], idx[c]))
         if cand:
             c=cand[0]; g=gap(c); kind,src,za,z,av=merged[c]; isc=(c not in same[(T,A)])
             assign_slot[(T,A)]=c; member_days.setdefault(c,[]).append(T)
@@ -343,7 +339,7 @@ def assign(members, status, window, hist_cnt):
 
 WD=["週一","週二","週三","週四","週五","週六","週日"]
 def lab(d): return f"{WD[d.weekday()]}{d.month}/{d.day}"
-name_of_g={}     # 給 assign 內訊息用的姓名表
+name_of_g={}
 
 # ===================== 主流程 =====================
 def run():
@@ -380,7 +376,6 @@ def run():
     if not monday:
         print(f"❌ 分頁「{sheet}」抓不到日期,無法決定治療日"); return
 
-    # 名單窗口:從「這週週一的下一個治療日(=週二)」起算 6 個治療日(自動跳週日/連假)
     window=[]; t=next_treat(monday)
     for _ in range(6):
         if t is None: break
@@ -397,8 +392,8 @@ def run():
 
     allcards=[m["card"] for m in members]
     printed=set(member_days.keys())
-    notprinted=[c for c in allcards if c not in printed]      # 沒印的人=休息(都算公平)
-    forced=[c for c in notprinted if c not in able]           # 完全沒可印日(病房/ICU/大夜/休假)
+    notprinted=[c for c in allcards if c not in printed]
+    forced=[c for c in notprinted if c not in able]
 
     # ---------- 螢幕 ----------
     print(f"\n■ 檔案:{os.path.basename(path)}　分頁:{sheet}")
@@ -471,7 +466,7 @@ def run():
     except Exception as e:
         warn(f"⚠ 寫文字檔失敗:{e}")
 
-    # ---------- 雲端貼上版(印日期,區,姓名)→ 給 Google 表 / LINE 提醒 ----------
+    # ---------- 雲端貼上版(印日期,區,姓名) ----------
     out_c=os.path.join(OUT_DIR,f"雲端貼上_{sheet}.csv")
     try:
         with open(out_c,"w",newline="",encoding="utf-8-sig") as f:
@@ -482,7 +477,7 @@ def run():
                     if not c: continue
                     src=slot_info[(T,A)][1]
                     w.writerow([f"{src.year}-{src.month:02d}-{src.day:02d}", A, nm(c)])
-        print(f"\u2714 雲端貼上版：{out_c}")
+        print(f"✔ 雲端貼上版：{out_c}")
     except Exception as e:
         warn(f"⚠ 寫雲端貼上版失敗：{e}")
 
@@ -500,7 +495,7 @@ def run():
         print(f"⚠ 寫排班紀錄失敗(不影響本次名單):{e}")
 
 def _color_excel(path, cols):
-    """把『排不出』標紅、跨區/雙印標橙(O1)。失敗就算了,不影響名單。"""
+    """把『排不出』標紅、跨區/雙印標橙。失敗就算了,不影響名單。"""
     try:
         from openpyxl import load_workbook
         from openpyxl.styles import PatternFill
