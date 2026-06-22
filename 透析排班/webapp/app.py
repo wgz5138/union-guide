@@ -145,7 +145,9 @@ def fetch_last_audit_prefill():
         if len(rows) < 2: return {}
         hdr = [str(x).strip() for x in rows[0]]
         iM, iN, iP = hdr.index("月份"), hdr.index("姓名"), hdr.index("位置")
-        months = [str(r[iM]).strip() for r in rows[1:] if str(r[iM]).strip()]
+        # 只看正常的「YYYY-MM」月份，跳過草稿那筆
+        months = [str(r[iM]).strip() for r in rows[1:]
+                  if re.match(r"^\d{4}-\d{2}$", str(r[iM]).strip())]
         if not months: return {}
         last = max(months)
         pf = {}
@@ -159,6 +161,56 @@ def fetch_last_audit_prefill():
         return pf
     except Exception:
         return {}
+
+# ── 稽核「草稿暫存」：借用稽核歷史的特殊月份鍵存放，不影響公平輪序 ──
+DRAFT_KEY = "草稿"
+
+def fetch_audit_draft():
+    """讀雲端草稿（稽核歷史裡 月份=='草稿' 那幾筆）→ {姓名: (班型, 區)}。"""
+    if not APPS_SCRIPT_URL or not WRITE_SECRET: return {}
+    try:
+        resp = requests.post(APPS_SCRIPT_URL,
+                             json={"action": "getAuditHistory", "secret": WRITE_SECRET},
+                             timeout=20)
+        rows = resp.json().get("rows") or []
+        if len(rows) < 2: return {}
+        hdr = [str(x).strip() for x in rows[0]]
+        iM, iN, iS, iP = (hdr.index("月份"), hdr.index("姓名"),
+                          hdr.index("狀態"), hdr.index("位置"))
+        d = {}
+        for r in rows[1:]:
+            if str(r[iM]).strip() != DRAFT_KEY: continue
+            name = str(r[iN]).strip()
+            if name: d[name] = (str(r[iS]).strip(), str(r[iP]).strip())  # 狀態=班型, 位置=區
+        return d
+    except Exception:
+        return {}
+
+def push_audit_draft(df):
+    """把目前點選存成雲端草稿（借用 setAuditResult，月份=草稿；班型放狀態欄、區放位置欄）。"""
+    if not APPS_SCRIPT_URL or not WRITE_SECRET: return False
+    try:
+        rows = [[DRAFT_KEY, str(r["卡號"]), str(r["姓名"]), str(r["班型"]), str(r["區"])]
+                for _, r in df.iterrows()]
+        resp = requests.post(APPS_SCRIPT_URL,
+                             json={"action": "setAuditResult", "secret": WRITE_SECRET,
+                                   "key": DRAFT_KEY, "rows": rows},
+                             timeout=20)
+        return resp.ok and resp.json().get("ok", False)
+    except Exception:
+        return False
+
+def clear_audit_draft():
+    """清除雲端草稿（送空 rows，月份=草稿 的紀錄會被移除）。"""
+    if not APPS_SCRIPT_URL or not WRITE_SECRET: return False
+    try:
+        resp = requests.post(APPS_SCRIPT_URL,
+                             json={"action": "setAuditResult", "secret": WRITE_SECRET,
+                                   "key": DRAFT_KEY, "rows": []},
+                             timeout=20)
+        return resp.ok and resp.json().get("ok", False)
+    except Exception:
+        return False
 
 def build_corrected_history(cloud_rows, sheet_name, prev_hist_bytes):
     """用玉繡實際定案（cloud_rows）覆蓋 排班.py 原排的歷史，確保公平輪序正確。
@@ -318,7 +370,7 @@ except Exception:
 
 st.title("💊 透析藥水排班")
 st.caption("上傳班表 Excel → 出名單(表格)。可直接點格子改人名。跨區標 🔺。")
-st.caption("🟢 版本 v2.4（稽核快速模式：免上傳、直接點選 / 公平歷史修正 / 稽核 LINE 通知）· 2026-06-22")
+st.caption("🟢 版本 v2.5（稽核快速模式＋💾草稿暫存：可分次填 / 公平歷史修正 / 稽核 LINE 通知）· 2026-06-22")
 
 with st.expander("📖 第一次用？點我看「3 步驟」（給玉繡）", expanded=False):
     st.markdown("""
@@ -331,6 +383,7 @@ with st.expander("📖 第一次用？點我看「3 步驟」（給玉繡）", e
 ### 每月稽核（推薦「⚡ 快速點選」，免上傳）：
 **1️⃣ 切換模式** → 上方選「🟩 每月稽核」→ 稽核方式留在「⚡ 快速點選」，選好「年」「月」。
 **2️⃣ 點選白/夜＋區** → 畫面列出組員，系統已帶出上個月的設定；只要改這個月有變動的人，點一下白班/小夜、一區/二區即可。
+　💾 只填一半沒關係——按「**暫存草稿**」存起來，明天打開會自動接續填。
 **3️⃣ 排稽核** → 按「✅ 排稽核（快速）」。
 **4️⃣ 送到雲端** → 名單排出來後按「🚀 送稽核結果到雲端」。每位稽核者馬上收到 LINE 通知，告訴他們「這個月負責哪一班稽核」。
 
@@ -476,17 +529,23 @@ else:
     if audit_quick:
         # ── 快速模式：免上傳，直接點選白/夜＋區 ──────────────
         st.markdown("#### 2️⃣ 點選每人「白/夜」＋「區」→ 排稽核")
-        st.caption("免上傳 Excel。系統已帶出上個月的設定，只要改這個月有變動的人即可。")
         roster = _load_roster_full()
         if not roster:
             st.error("找不到組員名單（組員名單.csv）。請先確認 repo 裡有這個檔。"); st.stop()
+        # 帶入優先序：①雲端草稿（上次暫存）②上個月設定 ③預設
+        draft   = fetch_audit_draft()
         prefill = fetch_last_audit_prefill()
+        if draft:
+            st.caption("📌 已帶回你上次「暫存」的草稿。改好可再按「💾 暫存」，或直接「✅ 排稽核」。")
+        else:
+            st.caption("免上傳 Excel。系統已帶出上個月的設定，只要改這個月有變動的人即可。")
         base = []
         for m in roster:
-            typ, area = prefill.get(m["姓名"], ("白班", "一區"))
+            nm = m["姓名"]
+            typ, area = draft.get(nm) or prefill.get(nm, ("白班", "一區"))
             if typ not in ("白班","小夜"): typ = "白班"
             if area not in ("一區","二區"): area = "一區"
-            base.append({"卡號": m["卡號"], "姓名": m["姓名"], "班型": typ, "區": area})
+            base.append({"卡號": m["卡號"], "姓名": nm, "班型": typ, "區": area})
         df_q = pd.DataFrame(base)
         edited_q = st.data_editor(
             df_q,
@@ -501,6 +560,20 @@ else:
         n_white = int((edited_q["班型"] == "白班").sum())
         n_night = int((edited_q["班型"] == "小夜").sum())
         st.caption(f"目前：白班 {n_white} 人、小夜 {n_night} 人，共 {len(edited_q)} 人。")
+
+        # 💾 暫存 / 🗑 清除暫存（雲端草稿，可分次填、明天再回來接續）
+        if APPS_SCRIPT_URL and WRITE_SECRET:
+            cda, cdb = st.columns(2)
+            if cda.button("💾 暫存草稿（之後可接續填）"):
+                if push_audit_draft(edited_q):
+                    st.success("✅ 已暫存到雲端！下次打開會自動帶回，可接著填。")
+                else:
+                    st.error("暫存失敗，請稍後再試。")
+            if cdb.button("🗑 清除暫存（改用上月設定）"):
+                if clear_audit_draft():
+                    st.success("✅ 已清除暫存。重新整理後會改帶上個月的設定。")
+                else:
+                    st.error("清除失敗，請稍後再試。")
 
         if st.button("✅ 排稽核（快速）", type="primary"):
             with st.spinner("讀取雲端歷史 + 排稽核中…"):
