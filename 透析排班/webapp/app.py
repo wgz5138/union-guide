@@ -28,11 +28,14 @@ def run_tool(script, xls_bytes, extra_args, config_overrides=None):
         if config_overrides:
             for fn, content in config_overrides.items():
                 with open(os.path.join(work, fn), "wb") as f: f.write(content)
-        ext  = _detect_ext(xls_bytes)
-        xlsp = os.path.join(work, f"上傳班表{ext}")
-        with open(xlsp, "wb") as f: f.write(xls_bytes)
-        r = subprocess.run([sys.executable, script, xlsp] + list(extra_args),
-                           cwd=work, capture_output=True, text=True, timeout=180)
+        if xls_bytes is not None:        # 一般模式：寫入上傳的班表
+            ext  = _detect_ext(xls_bytes)
+            xlsp = os.path.join(work, f"上傳班表{ext}")
+            with open(xlsp, "wb") as f: f.write(xls_bytes)
+            cmd = [sys.executable, script, xlsp] + list(extra_args)
+        else:                            # 快速模式：免上傳 Excel
+            cmd = [sys.executable, script] + list(extra_args)
+        r = subprocess.run(cmd, cwd=work, capture_output=True, text=True, timeout=180)
         files = {}
         od = os.path.join(work, "輸出")
         if os.path.isdir(od):
@@ -115,6 +118,47 @@ def _load_roster_names():
                 if name: mapping[name] = card
     except Exception: pass
     return mapping
+
+def _load_roster_full():
+    """讀組員名單.csv → [{'卡號':.., '姓名':..}]（依檔案順序）"""
+    f = os.path.join(HERE, "組員名單.csv")
+    out = []
+    if not os.path.exists(f): return out
+    try:
+        with open(f, encoding="utf-8-sig") as fp:
+            for row in csv.DictReader(fp):
+                card = (row.get("卡號") or "").strip()
+                name = (row.get("姓名") or "").strip()
+                if name: out.append({"卡號": card, "姓名": name})
+    except Exception: pass
+    return out
+
+def fetch_last_audit_prefill():
+    """從雲端稽核歷史抓「最近一個月」的每人班型/區，給快速模式預先帶入。
+    回傳 {姓名: (班型, 區)}；班型由班次推回（第三班=小夜，否則白班）。"""
+    if not APPS_SCRIPT_URL or not WRITE_SECRET: return {}
+    try:
+        resp = requests.post(APPS_SCRIPT_URL,
+                             json={"action": "getAuditHistory", "secret": WRITE_SECRET},
+                             timeout=20)
+        rows = resp.json().get("rows") or []
+        if len(rows) < 2: return {}
+        hdr = [str(x).strip() for x in rows[0]]
+        iM, iN, iP = hdr.index("月份"), hdr.index("姓名"), hdr.index("位置")
+        months = [str(r[iM]).strip() for r in rows[1:] if str(r[iM]).strip()]
+        if not months: return {}
+        last = max(months)
+        pf = {}
+        for r in rows[1:]:
+            if str(r[iM]).strip() != last: continue
+            name = str(r[iN]).strip(); pos = str(r[iP]).strip()
+            if not name or not pos: continue          # 休息者無位置 → 不帶入
+            area = pos.split("/")[0].strip()
+            typ  = "小夜" if "第三班" in pos else "白班"
+            pf[name] = (typ, area)
+        return pf
+    except Exception:
+        return {}
 
 def build_corrected_history(cloud_rows, sheet_name, prev_hist_bytes):
     """用玉繡實際定案（cloud_rows）覆蓋 排班.py 原排的歷史，確保公平輪序正確。
@@ -274,7 +318,7 @@ except Exception:
 
 st.title("💊 透析藥水排班")
 st.caption("上傳班表 Excel → 出名單(表格)。可直接點格子改人名。跨區標 🔺。")
-st.caption("🟢 版本 v2.3（公平歷史修正 / 稽核 LINE 通知 / 自動選分頁）· 2026-06-22")
+st.caption("🟢 版本 v2.4（稽核快速模式：免上傳、直接點選 / 公平歷史修正 / 稽核 LINE 通知）· 2026-06-22")
 
 with st.expander("📖 第一次用？點我看「3 步驟」（給玉繡）", expanded=False):
     st.markdown("""
@@ -284,34 +328,41 @@ with st.expander("📖 第一次用？點我看「3 步驟」（給玉繡）", e
 **3️⃣ 產生定案 → 送到雲端** → 按「✅ 產生定案」→「🚀 送到雲端」。完成！系統每晚自動 LINE 提醒。
 
 ---
-### 每月稽核，4 步：
-**1️⃣ 切換模式** → 上方選「🟩 每月稽核」，選好「年」「月」。
-**2️⃣ 上傳班表** → 傳這個月的週班表 Excel（有幾週傳哪週都可以，系統自己分析）。
-**3️⃣ 確認班型** → 按「📊 預覽班型」→ 確認每人是白班/夜班（不確定的顯示 ❓，可以手動改）→ 確認沒問題後按「✅ 確認班型 → 排稽核」。
+### 每月稽核（推薦「⚡ 快速點選」，免上傳）：
+**1️⃣ 切換模式** → 上方選「🟩 每月稽核」→ 稽核方式留在「⚡ 快速點選」，選好「年」「月」。
+**2️⃣ 點選白/夜＋區** → 畫面列出組員，系統已帶出上個月的設定；只要改這個月有變動的人，點一下白班/小夜、一區/二區即可。
+**3️⃣ 排稽核** → 按「✅ 排稽核（快速）」。
 **4️⃣ 送到雲端** → 名單排出來後按「🚀 送稽核結果到雲端」。每位稽核者馬上收到 LINE 通知，告訴他們「這個月負責哪一班稽核」。
 
-⚠️ 班表要「Excel 檔本人」，截圖不行。重送會自動蓋掉上次。
+> 也可改用「📤 上傳班表分析」：傳這個月的週班表 Excel，系統自己猜白/夜＋區，你再確認。班表要「Excel 檔本人」，截圖不行。
 """)
 
-st.markdown("#### 1️⃣ 選種類 + 上傳班表")
+st.markdown("#### 1️⃣ 選種類")
 mode = st.radio("要排哪一種？", ["🟦 每週印藥水", "🟩 每月稽核"], horizontal=True)
-up   = st.file_uploader("上傳班表 Excel（.xls / .xlsx）", type=["xls","xlsx"])
 
-if not up:
-    st.info("👆 先上傳班表 Excel（含每人每天班別/床號的那種檔）。截圖不行喔！")
-    st.stop()
+# 每月稽核可選「快速點選（免上傳）」或「上傳班表分析」
+audit_quick = False
+if mode.startswith("🟩"):
+    method = st.radio("稽核方式", ["⚡ 快速點選（免上傳 Excel，推薦）", "📤 上傳班表分析"],
+                      horizontal=True)
+    audit_quick = method.startswith("⚡")
 
-fk = _file_key(up)
-if st.session_state.get("_last_file") != fk:
-    for k in ["yao","cloud_rows","cloud_disp","cloud_sheet0","ak","ak_shifts","ak_month_key"]:
-        st.session_state.pop(k, None)
-    st.session_state["_last_file"] = fk
-
-data = up.read()
-try:
-    sheets = pd.ExcelFile(io.BytesIO(data)).sheet_names
-except Exception as e:
-    st.error(f"讀不到班表分頁：{e}"); st.stop()
+data = None; sheets = []
+if not audit_quick:                       # 需要 Excel 的兩條路：每週印藥水 / 上傳班表稽核
+    up = st.file_uploader("上傳班表 Excel（.xls / .xlsx）", type=["xls","xlsx"])
+    if not up:
+        st.info("👆 先上傳班表 Excel（含每人每天班別/床號的那種檔）。截圖不行喔！")
+        st.stop()
+    fk = _file_key(up)
+    if st.session_state.get("_last_file") != fk:
+        for k in ["yao","cloud_rows","cloud_disp","cloud_sheet0","ak","ak_shifts","ak_month_key"]:
+            st.session_state.pop(k, None)
+        st.session_state["_last_file"] = fk
+    data = up.read()
+    try:
+        sheets = pd.ExcelFile(io.BytesIO(data)).sheet_names
+    except Exception as e:
+        st.error(f"讀不到班表分頁：{e}"); st.stop()
 
 
 # ═══════════════════════ 每週印藥水 ═══════════════════════
@@ -422,46 +473,86 @@ else:
         st.session_state.pop("ak", None)
         st.session_state["ak_month_key"] = month_key
 
-    # ── Stage 1：確認班型 ──────────────────────────────────
-    st.markdown("#### 2️⃣ 確認班型（程式猜測 → 玉繡確認）")
-    st.caption("程式從班表判斷白/夜，不確定的顯示 ❓，請手動改。")
-
-    if st.button("📊 預覽班型", type="secondary"):
-        with st.spinner("分析班表中…"):
-            df_shifts = detect_shifts_quick(data, int(yy), int(mm))
-        if df_shifts.empty:
-            st.error("找不到該月份的班表資料，請確認分頁是否包含此月份。")
-        else:
-            st.session_state["ak_shifts"] = df_shifts
-            st.session_state.pop("ak", None)
-
-    if "ak_shifts" in st.session_state:
-        df_shifts = st.session_state["ak_shifts"]
-        st.caption("👇 可直接點「確認班型」欄修改。")
-        edited_shifts = st.data_editor(
-            df_shifts,
+    if audit_quick:
+        # ── 快速模式：免上傳，直接點選白/夜＋區 ──────────────
+        st.markdown("#### 2️⃣ 點選每人「白/夜」＋「區」→ 排稽核")
+        st.caption("免上傳 Excel。系統已帶出上個月的設定，只要改這個月有變動的人即可。")
+        roster = _load_roster_full()
+        if not roster:
+            st.error("找不到組員名單（組員名單.csv）。請先確認 repo 裡有這個檔。"); st.stop()
+        prefill = fetch_last_audit_prefill()
+        base = []
+        for m in roster:
+            typ, area = prefill.get(m["姓名"], ("白班", "一區"))
+            if typ not in ("白班","小夜"): typ = "白班"
+            if area not in ("一區","二區"): area = "一區"
+            base.append({"卡號": m["卡號"], "姓名": m["姓名"], "班型": typ, "區": area})
+        df_q = pd.DataFrame(base)
+        edited_q = st.data_editor(
+            df_q,
             column_config={
-                "程式猜測": st.column_config.TextColumn("程式猜測", disabled=True),
-                "確認班型": st.column_config.SelectboxColumn(
-                    "確認班型 ✏️", options=["白班","夜班","❓"], required=True)
+                "卡號": st.column_config.TextColumn("卡號", disabled=True),
+                "姓名": st.column_config.TextColumn("姓名", disabled=True),
+                "班型": st.column_config.SelectboxColumn("班型 ✏️", options=["白班","小夜"], required=True),
+                "區":   st.column_config.SelectboxColumn("區 ✏️",   options=["一區","二區"], required=True),
             },
-            use_container_width=True, hide_index=True, key="shift_edit"
+            use_container_width=True, hide_index=True, key="quick_edit"
         )
-        uncertain = (edited_shifts["確認班型"] == "❓").sum()
-        if uncertain > 0:
-            st.warning(f"⚠️ 還有 {uncertain} 人班型是 ❓，這些人本月排稽核時會略過。")
+        n_white = int((edited_q["班型"] == "白班").sum())
+        n_night = int((edited_q["班型"] == "小夜").sum())
+        st.caption(f"目前：白班 {n_white} 人、小夜 {n_night} 人，共 {len(edited_q)} 人。")
 
-        if st.button("✅ 確認班型 → 排稽核", type="primary"):
+        if st.button("✅ 排稽核（快速）", type="primary"):
             with st.spinner("讀取雲端歷史 + 排稽核中…"):
-                override_df  = edited_shifts[["卡號","姓名","確認班型"]].rename(columns={"確認班型":"班型"})
-                override_csv = override_df.to_csv(index=False).encode("utf-8-sig")
-                config_overrides = {"班型覆蓋.csv": override_csv}
+                quick_csv = edited_q.to_csv(index=False).encode("utf-8-sig")
+                config_overrides = {"快速名冊.csv": quick_csv}
                 if APPS_SCRIPT_URL and WRITE_SECRET:
                     hist_csv = fetch_history_csv("getAuditHistory")
                     if hist_csv: config_overrides["稽核紀錄.csv"] = hist_csv
                 out, files, updated_hist = run_tool(
-                    "稽核.py", data, [month_key], config_overrides)
+                    "稽核.py", None, ["--quick", month_key], config_overrides)
                 st.session_state["ak"] = (out, files, updated_hist)
+    else:
+        # ── Stage 1：確認班型（上傳班表分析）──────────────────
+        st.markdown("#### 2️⃣ 確認班型（程式猜測 → 玉繡確認）")
+        st.caption("程式從班表判斷白/夜，不確定的顯示 ❓，請手動改。")
+
+        if st.button("📊 預覽班型", type="secondary"):
+            with st.spinner("分析班表中…"):
+                df_shifts = detect_shifts_quick(data, int(yy), int(mm))
+            if df_shifts.empty:
+                st.error("找不到該月份的班表資料，請確認分頁是否包含此月份。")
+            else:
+                st.session_state["ak_shifts"] = df_shifts
+                st.session_state.pop("ak", None)
+
+        if "ak_shifts" in st.session_state:
+            df_shifts = st.session_state["ak_shifts"]
+            st.caption("👇 可直接點「確認班型」欄修改。")
+            edited_shifts = st.data_editor(
+                df_shifts,
+                column_config={
+                    "程式猜測": st.column_config.TextColumn("程式猜測", disabled=True),
+                    "確認班型": st.column_config.SelectboxColumn(
+                        "確認班型 ✏️", options=["白班","夜班","❓"], required=True)
+                },
+                use_container_width=True, hide_index=True, key="shift_edit"
+            )
+            uncertain = (edited_shifts["確認班型"] == "❓").sum()
+            if uncertain > 0:
+                st.warning(f"⚠️ 還有 {uncertain} 人班型是 ❓，這些人本月排稽核時會略過。")
+
+            if st.button("✅ 確認班型 → 排稽核", type="primary"):
+                with st.spinner("讀取雲端歷史 + 排稽核中…"):
+                    override_df  = edited_shifts[["卡號","姓名","確認班型"]].rename(columns={"確認班型":"班型"})
+                    override_csv = override_df.to_csv(index=False).encode("utf-8-sig")
+                    config_overrides = {"班型覆蓋.csv": override_csv}
+                    if APPS_SCRIPT_URL and WRITE_SECRET:
+                        hist_csv = fetch_history_csv("getAuditHistory")
+                        if hist_csv: config_overrides["稽核紀錄.csv"] = hist_csv
+                    out, files, updated_hist = run_tool(
+                        "稽核.py", data, [month_key], config_overrides)
+                    st.session_state["ak"] = (out, files, updated_hist)
 
     # ── Stage 2：稽核名單 + 送雲端 ────────────────────────
     if "ak" in st.session_state:
