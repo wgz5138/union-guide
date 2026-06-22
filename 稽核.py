@@ -1,13 +1,18 @@
 # -*- coding: utf-8 -*-
 """
-透析「稽核藥水 AK」每月自動排班程式  v0.2
+透析「稽核藥水 AK」每月自動排班程式  v0.3
 ===============================================================
+v0.3 新增:
+  • 快速模式（免上傳 Excel）：python 稽核.py --quick 2026-06
+    直接讀「快速名冊.csv」(卡號, 姓名, 班型, 區) 排稽核，
+    白/夜與一區/二區由網頁玉繡點選決定，不必解析班表。
 v0.2 新增:
   • 支援「班型覆蓋.csv」— 網頁 Stage 1 玉繡確認後寫入，程式優先採用
     格式: 卡號, 姓名, 班型（白班/夜班）
   • 稽核歷史可從外部 CSV 傳入（雲端學習用）
 
 用法:  python 稽核.py <週班1.xls> [週班2.xls ...] [月份 例 2026-06]
+        python 稽核.py --quick 2026-06            # 快速模式，讀 快速名冊.csv
 """
 import os, sys, csv, re, traceback
 from datetime import date, datetime, timedelta
@@ -20,6 +25,7 @@ F_SHIFTS  = os.path.join(BASE, "不可印班別.csv")
 F_HOLIDAY = os.path.join(BASE, "休診日.csv")
 F_HISTORY = os.path.join(BASE, "稽核紀錄.csv")
 F_SHIFT_OVERRIDE = os.path.join(BASE, "班型覆蓋.csv")   # ← Stage 1 玉繡確認的班型
+F_QUICK   = os.path.join(BASE, "快速名冊.csv")           # ← 快速模式：卡號,姓名,班型,區
 OUT_DIR   = os.path.join(BASE, "輸出")
 os.makedirs(OUT_DIR, exist_ok=True)
 
@@ -290,41 +296,11 @@ def assign(members, info, hist_cnt):
             warn(f"❌ {sl[0]} {sl[1]} 第{sl[2]}班 完全排不出人，請人工處理")
     return slots, assigned, used, crossed
 
-def run():
-    args=sys.argv[1:]
-    files=[a for a in args if a.lower().endswith((".xls",".xlsx"))]
-    month_args=[a for a in args if re.fullmatch(r"\d{4}\D?\d{1,2}", a)]
-    missing=[f for f in files if not os.path.exists(f)]
-    if not files or missing:
-        if missing: print("❌ 找不到這些檔案：" + "、".join(missing))
-        print("用法: python 稽核.py <週班1.xls> [週班2.xls ...] [月份 例 2026-06]")
-        return
-
-    global ZONE2AREA, SHIFT_EXCLUDE, HOLIDAYS
-    ZONE2AREA=load_beds(); SHIFT_EXCLUDE=load_shifts(); HOLIDAYS=load_holidays()
-
-    want=None
-    if month_args:
-        mm=re.search(r"(\d{4})\D?(\d{1,2})", month_args[0])
-        want=(int(mm.group(1)), int(mm.group(2)))
-
-    try:
-        month_status,name_of,by_name,(yy,mm),fw_mon,fw_status=parse_month(files, want)
-    except Exception as e:
-        print(f"❌ 讀班表失敗：{e}"); return
-
-    roster=load_roster()
-    members=match_members(roster, month_status, name_of, by_name)
-
-    # 載入班型覆蓋（玉繡 Stage 1 確認）
-    overrides = load_shift_overrides()
-    if overrides:
-        print(f"ℹ 套用班型覆蓋：{len(overrides)} 人")
-
-    info=classify(members, month_status, fw_status, overrides)
-    tag=f"{yy}-{mm:02d}"
-    hist_cnt,hist_rest=load_history(skip_month=tag)
-    slots,assigned,used,crossed=assign(members, info, hist_cnt)
+def emit(members, info, slots, assigned, used, crossed, hist_cnt, hist_rest, tag,
+         name_of=None, fw_mon=None):
+    """共用輸出：螢幕表格 + Excel + 文字 + 稽核紀錄 CSV。
+       Excel 模式與快速模式皆呼叫此函式，產出格式完全一致。"""
+    name_of = name_of or {}
     nm=lambda c: ({m["card"]:m["name"] for m in members}).get(c) or name_of.get(c,c)
     def disp(a,g,s):
         c=assigned.get((a,g,s))
@@ -332,7 +308,8 @@ def run():
         return nm(c) + ("(跨區)" if (a,g,s) in crossed else "")
     rest_members=[m["card"] for m in members if m["card"] not in used]
 
-    print(f"\n■ 月份：{tag}（第一週起 {fw_mon}）")
+    head = f"（第一週起 {fw_mon}）" if fw_mon else "（快速點選模式）"
+    print(f"\n■ 月份：{tag}{head}")
     print(f"■ 規則：每月12位｜白班→一二班、小夜→三班｜分區看第一週小班\n")
     print("="*14+f"  {tag} 稽核藥水 AK 名單  "+"="*14)
     for a in AREAS:
@@ -404,8 +381,86 @@ def run():
     except Exception as e:
         print(f"⚠ 寫稽核紀錄失敗：{e}")
 
+
+def run():
+    """Excel 模式：解析班表 → 猜白/夜＋區 → 排稽核。"""
+    args=sys.argv[1:]
+    files=[a for a in args if a.lower().endswith((".xls",".xlsx"))]
+    month_args=[a for a in args if re.fullmatch(r"\d{4}\D?\d{1,2}", a)]
+    missing=[f for f in files if not os.path.exists(f)]
+    if not files or missing:
+        if missing: print("❌ 找不到這些檔案：" + "、".join(missing))
+        print("用法: python 稽核.py <週班1.xls> [週班2.xls ...] [月份 例 2026-06]")
+        return
+
+    global ZONE2AREA, SHIFT_EXCLUDE, HOLIDAYS
+    ZONE2AREA=load_beds(); SHIFT_EXCLUDE=load_shifts(); HOLIDAYS=load_holidays()
+
+    want=None
+    if month_args:
+        mm=re.search(r"(\d{4})\D?(\d{1,2})", month_args[0])
+        want=(int(mm.group(1)), int(mm.group(2)))
+
+    try:
+        month_status,name_of,by_name,(yy,mm),fw_mon,fw_status=parse_month(files, want)
+    except Exception as e:
+        print(f"❌ 讀班表失敗：{e}"); return
+
+    roster=load_roster()
+    members=match_members(roster, month_status, name_of, by_name)
+
+    # 載入班型覆蓋（玉繡 Stage 1 確認）
+    overrides = load_shift_overrides()
+    if overrides:
+        print(f"ℹ 套用班型覆蓋：{len(overrides)} 人")
+
+    info=classify(members, month_status, fw_status, overrides)
+    tag=f"{yy}-{mm:02d}"
+    hist_cnt,hist_rest=load_history(skip_month=tag)
+    slots,assigned,used,crossed=assign(members, info, hist_cnt)
+    emit(members, info, slots, assigned, used, crossed, hist_cnt, hist_rest, tag,
+         name_of=name_of, fw_mon=fw_mon)
+
+
+def run_quick(month_arg):
+    """快速模式：讀 快速名冊.csv（卡號,姓名,班型,區）直接排稽核，不必解析班表。"""
+    rows=_read_rows(F_QUICK)
+    if not rows:
+        print("❌ 找不到『快速名冊.csv』或內容是空的。"); return
+
+    if month_arg:
+        m=re.search(r"(\d{4})\D?(\d{1,2})", month_arg); yy,mm=int(m.group(1)),int(m.group(2))
+    else:
+        t=date.today(); yy,mm=t.year,t.month
+    tag=f"{yy}-{mm:02d}"
+
+    members=[]; info={}; seen=set()
+    for r in rows:
+        card=(r.get("卡號") or "").strip(); name=(r.get("姓名") or "").strip()
+        typ_raw=(r.get("班型") or "").strip(); area=(r.get("區") or "").strip()
+        if not card and not name: continue
+        key=card or name
+        if key in seen: continue
+        seen.add(key)
+        typ = "白" if "白" in typ_raw else ("夜" if ("夜" in typ_raw or "小夜" in typ_raw) else None)
+        if area not in ("一區","二區"):
+            warn(f"⚠ 「{name}」的區『{area}』不是一區/二區，本月可能排不進去")
+        members.append({"card":key,"name":name})
+        info[key]={"type":typ,"area":area,"name":name}
+
+    print(f"ℹ 快速點選模式：{len(members)} 人")
+    hist_cnt,hist_rest=load_history(skip_month=tag)
+    slots,assigned,used,crossed=assign(members, info, hist_cnt)
+    emit(members, info, slots, assigned, used, crossed, hist_cnt, hist_rest, tag)
+
+
 def main():
-    try: run()
+    try:
+        if "--quick" in sys.argv[1:]:
+            month_args=[a for a in sys.argv[1:] if re.fullmatch(r"\d{4}\D?\d{1,2}", a)]
+            run_quick(month_args[0] if month_args else None)
+        else:
+            run()
     except Exception as e:
         print("\n❌ 程式遇到沒預期到的狀況，但已幫你攔下來(不會弄壞檔案)。")
         print("   錯誤訊息：", e); traceback.print_exc()
