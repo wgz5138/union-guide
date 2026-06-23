@@ -213,6 +213,56 @@ def clear_audit_draft():
     except Exception:
         return False
 
+# ── 💬 意見回饋：借用稽核歷史（特殊鍵「意見-時間」）存放，不動 LINE 程式 ──
+APP_VER = "v2.7"
+FEEDBACK_PREFIX = "意見-"
+
+def push_feedback(step, detail, expect, urgency, who):
+    """把一筆回饋寫進雲端（不影響排班/稽核：狀態欄非『稽核/休』故公平輪序會略過）。"""
+    if not APPS_SCRIPT_URL or not WRITE_SECRET: return False
+    now = datetime.now().strftime("%Y-%m-%d %H:%M:%S.%f")   # 含微秒 → 每筆鍵唯一
+    key = FEEDBACK_PREFIX + now
+    blob = "問題：" + (detail or "").strip()
+    if (expect or "").strip(): blob += "｜期望：" + expect.strip()
+    blob += "｜版本：" + APP_VER
+    row = [key, (step or ""), (who or "").strip() or "(未留名)", (urgency or ""), blob]
+    try:
+        resp = requests.post(APPS_SCRIPT_URL,
+                             json={"action": "setAuditResult", "secret": WRITE_SECRET,
+                                   "key": key, "rows": [row]},
+                             timeout=20)
+        return resp.ok and resp.json().get("ok", False)
+    except Exception:
+        return False
+
+def fetch_feedback_list():
+    """讀回所有回饋（稽核歷史裡 月份 以『意見-』開頭的列），新到舊。"""
+    if not APPS_SCRIPT_URL or not WRITE_SECRET: return []
+    try:
+        resp = requests.post(APPS_SCRIPT_URL,
+                             json={"action": "getAuditHistory", "secret": WRITE_SECRET},
+                             timeout=20)
+        rows = resp.json().get("rows") or []
+        if len(rows) < 2: return []
+        hdr = [str(x).strip() for x in rows[0]]
+        iM, iC, iN, iS, iP = (hdr.index("月份"), hdr.index("卡號"), hdr.index("姓名"),
+                              hdr.index("狀態"), hdr.index("位置"))
+        out = []
+        for r in rows[1:]:
+            k = str(r[iM]).strip()
+            if not k.startswith(FEEDBACK_PREFIX): continue
+            out.append({
+                "時間": k[len(FEEDBACK_PREFIX):],
+                "步驟": str(r[iC]).strip(),
+                "急迫": str(r[iS]).strip(),
+                "內容": str(r[iP]).strip(),
+                "留言者": str(r[iN]).strip(),
+            })
+        out.reverse()   # 新的在最上面
+        return out
+    except Exception:
+        return []
+
 def build_corrected_history(cloud_rows, sheet_name, prev_hist_bytes):
     """用玉繡實際定案（cloud_rows）覆蓋 排班.py 原排的歷史，確保公平輪序正確。
     cloud_rows: [[印日期, 區, 姓名], ...]
@@ -371,7 +421,7 @@ except Exception:
 
 st.title("💊 透析藥水排班")
 st.caption("上傳班表 Excel → 出名單(表格)。可直接點格子改人名。跨區標 🔺。")
-st.caption("🟢 版本 v2.6（🔊 語音導覽＋稽核快速模式＋💾草稿暫存）· 2026-06-23")
+st.caption("🟢 版本 v2.7（💬 意見回饋＋🔊 語音導覽＋稽核快速模式＋💾草稿暫存）· 2026-06-23")
 
 with st.expander("📖 第一次用？點我看「3 步驟」（給玉繡）", expanded=False):
     st.markdown("""
@@ -445,6 +495,42 @@ with st.expander("🔊 語音導覽（不會用？點一下，手機念給你聽
                    .replace("__YAO__", json.dumps(_VOICE_YAO))
                    .replace("__JI__", json.dumps(_VOICE_JI)))
     components.html(_voice_html, height=150)
+
+# ── 💬 回報問題／給建議（誰都能填，存到雲端給管理者看）──────────────
+with st.expander("💬 有問題？回報一下（會存起來，管理者會看到）", expanded=False):
+    st.caption("不用很會講～照下面選一選、簡單打幾個字就好。")
+    fb_step = st.selectbox("① 你卡在哪一步？",
+        ["上傳班表", "排印藥水", "微調名單", "送到雲端",
+         "稽核－點選白夜/區", "暫存草稿", "收不到 LINE 通知", "語音導覽", "其他／不確定"],
+        key="fb_step")
+    fb_detail = st.text_area("② 發生什麼事？（你看到什麼、按了什麼、畫面寫什麼）", key="fb_detail")
+    fb_expect = st.text_input("③ 你希望它變怎樣？（可不填）", key="fb_expect")
+    fb_urg = st.radio("④ 急不急？", ["還好", "有點急", "很急"], horizontal=True, key="fb_urg")
+    fb_who = st.text_input("⑤ 你的名字（可不填）", key="fb_who")
+    if st.button("📨 送出回報", type="primary", key="fb_send"):
+        if not fb_detail.strip():
+            st.warning("請至少在 ② 簡單描述一下發生什麼事 🙏")
+        elif not (APPS_SCRIPT_URL and WRITE_SECRET):
+            st.error("雲端尚未設定，無法送出。")
+        elif push_feedback(fb_step, fb_detail, fb_expect, fb_urg, fb_who):
+            st.success("✅ 已送出！謝謝你的回報，我們看到會處理 🙏")
+            st.balloons()
+        else:
+            st.error("送出失敗，請稍後再試。")
+
+# ── 🔧 管理者：看大家的回報（用管理密碼進入）─────────────────────
+with st.expander("🔧 管理者：看大家的回報", expanded=False):
+    fb_pw = st.text_input("輸入管理密碼", type="password", key="fb_admin_pw")
+    if fb_pw:
+        if fb_pw == WRITE_SECRET:
+            fbs = fetch_feedback_list()
+            if not fbs:
+                st.info("目前還沒有任何回報。")
+            else:
+                st.caption(f"共 {len(fbs)} 則（新到舊）")
+                st.dataframe(pd.DataFrame(fbs), use_container_width=True, hide_index=True)
+        else:
+            st.error("密碼不對。")
 
 st.markdown("#### 1️⃣ 選種類")
 mode = st.radio("要排哪一種？", ["🟦 每週印藥水", "🟩 每月稽核"], horizontal=True)
