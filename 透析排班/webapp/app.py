@@ -4,7 +4,7 @@
   • Fix2：稽核送出後 LINE 通知每位稽核者責任班次
   • Fix3：自動選最接近今天的班表分頁
 """
-import os, io, re, csv, json, hashlib, tempfile, shutil, subprocess, sys
+import os, io, re, csv, json, base64, hashlib, tempfile, shutil, subprocess, sys
 from datetime import date, datetime
 import pandas as pd
 import streamlit as st
@@ -214,7 +214,7 @@ def clear_audit_draft():
         return False
 
 # ── 💬 意見回饋：借用稽核歷史（特殊鍵「意見-時間」）存放，不動 LINE 程式 ──
-APP_VER = "v2.9"
+APP_VER = "v3.0"
 FEEDBACK_PREFIX = "意見-"
 
 def push_feedback(step, detail, expect, urgency, who):
@@ -269,6 +269,24 @@ def fetch_feedback_list():
         return out
     except Exception:
         return []
+
+def fetch_latest_banbiao():
+    """從雲端（Apps Script 讀 Gmail「班表」標籤的最新 Excel 附件）抓班表。
+    回傳 (bytes, 說明) 或 (None, 錯誤訊息)。"""
+    if not APPS_SCRIPT_URL or not WRITE_SECRET:
+        return None, "雲端尚未設定"
+    try:
+        resp = requests.post(APPS_SCRIPT_URL,
+                             json={"action": "getLatestBanbiao", "secret": WRITE_SECRET},
+                             timeout=60)
+        d = resp.json()
+        if not d.get("ok"):
+            return None, d.get("error", "未知錯誤")
+        data = base64.b64decode(d["b64"])
+        info = f'{d.get("filename","班表")}（{d.get("date","")}）'
+        return data, info
+    except Exception as e:
+        return None, str(e)
 
 def build_corrected_history(cloud_rows, sheet_name, prev_hist_bytes):
     """用玉繡實際定案（cloud_rows）覆蓋 排班.py 原排的歷史，確保公平輪序正確。
@@ -428,7 +446,7 @@ except Exception:
 
 st.title("💊 透析藥水排班")
 st.caption("上傳班表 Excel → 出名單(表格)。可直接點格子改人名。跨區標 🔺。")
-st.caption("🟢 版本 v2.9（🔊 導覽改正常語速＋句間停頓／💬 意見回饋／稽核快速模式／💾草稿暫存）· 2026-06-23")
+st.caption("🟢 版本 v3.0（📥 雲端自動抓班表／🔊 語音導覽／💬 意見回饋／稽核快速模式／💾草稿暫存）· 2026-06-23")
 
 with st.expander("📖 第一次用？點我看「3 步驟」（給玉繡）", expanded=False):
     st.markdown("""
@@ -559,15 +577,41 @@ with st.expander("📋 大家回報過的問題（公開・看看有沒有人提
 st.markdown("#### 1️⃣ 選種類")
 mode = st.radio("要排哪一種？", ["🟦 每週印藥水", "🟩 每月稽核"], horizontal=True)
 
-# 每月稽核可選「快速點選（免上傳）」或「上傳班表分析」
+# 每月稽核可選「快速點選（免上傳）」或「上傳班表分析」；每週印藥水可選雲端自動抓或自己上傳
 audit_quick = False
+week_cloud = False
 if mode.startswith("🟩"):
     method = st.radio("稽核方式", ["⚡ 快速點選（免上傳 Excel，推薦）", "📤 上傳班表分析"],
                       horizontal=True)
     audit_quick = method.startswith("⚡")
+else:
+    src = st.radio("班表從哪來？", ["📥 用雲端最新班表（免上傳，推薦）", "📤 自己上傳 Excel"],
+                   horizontal=True)
+    week_cloud = src.startswith("📥")
 
 data = None; sheets = []
-if not audit_quick:                       # 需要 Excel 的兩條路：每週印藥水 / 上傳班表稽核
+if mode.startswith("🟦") and week_cloud:
+    # 從雲端 Gmail 自動抓最新班表（文書把班表寄進來後，這裡一鍵抓）
+    if st.button("📥 抓取雲端最新班表", type="primary"):
+        with st.spinner("從雲端抓最新班表中…"):
+            _b, _info = fetch_latest_banbiao()
+        if _b is None:
+            st.error("抓不到雲端班表：" + _info + "（你也可以改選『自己上傳』）")
+        else:
+            st.session_state["cloud_banbiao"] = (_b, _info)
+            for k in ["yao", "cloud_rows", "cloud_disp", "cloud_sheet0"]:
+                st.session_state.pop(k, None)
+    if "cloud_banbiao" in st.session_state:
+        data, _info = st.session_state["cloud_banbiao"]
+        st.success("✅ 已載入雲端班表：" + _info)
+        try:
+            sheets = pd.ExcelFile(io.BytesIO(data)).sheet_names
+        except Exception as e:
+            st.error(f"讀不到班表分頁：{e}"); st.stop()
+    else:
+        st.info("👆 按「📥 抓取雲端最新班表」，把文書寄進來的最新班表抓進來。")
+        st.stop()
+elif not audit_quick:                     # 自己上傳（每週印藥水 / 上傳班表稽核）
     up = st.file_uploader("上傳班表 Excel（.xls / .xlsx）", type=["xls","xlsx"])
     if not up:
         st.info("👆 先上傳班表 Excel（含每人每天班別/床號的那種檔）。截圖不行喔！")
