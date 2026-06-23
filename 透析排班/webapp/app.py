@@ -214,7 +214,7 @@ def clear_audit_draft():
         return False
 
 # ── 💬 意見回饋：借用稽核歷史（特殊鍵「意見-時間」）存放，不動 LINE 程式 ──
-APP_VER = "v2.8"
+APP_VER = "v2.9"
 FEEDBACK_PREFIX = "意見-"
 
 def push_feedback(step, detail, expect, urgency, who):
@@ -428,7 +428,7 @@ except Exception:
 
 st.title("💊 透析藥水排班")
 st.caption("上傳班表 Excel → 出名單(表格)。可直接點格子改人名。跨區標 🔺。")
-st.caption("🟢 版本 v2.8（💬 意見回饋公開＋亂碼保護＋🔊 語音導覽＋稽核快速模式＋💾草稿暫存）· 2026-06-23")
+st.caption("🟢 版本 v2.9（🔊 導覽改正常語速＋句間停頓／💬 意見回饋／稽核快速模式／💾草稿暫存）· 2026-06-23")
 
 with st.expander("📖 第一次用？點我看「3 步驟」（給玉繡）", expanded=False):
     st.markdown("""
@@ -482,26 +482,44 @@ with st.expander("🔊 語音導覽（不會用？點一下，手機念給你聽
     <div style="font-family:-apple-system,'PingFang TC',sans-serif;text-align:center">
       <button style="BTN background:#2563eb" onclick="sayIt(YAO)">🔵 印藥水導覽</button>
       <button style="BTN background:#16a34a" onclick="sayIt(JI)">🟢 稽核導覽</button>
-      <button style="BTN background:#6b7280" onclick="window.speechSynthesis.cancel()">⏹ 停止</button>
-      <p style="color:#666;font-size:13px;margin-top:8px">點藍色聽「印藥水」、綠色聽「稽核」；要停就按停止。</p>
+      <button style="BTN background:#6b7280" onclick="stopAll()">⏹ 停止</button>
+      <p style="color:#666;font-size:13px;margin-top:8px">點藍色聽「印藥水」、綠色聽「稽核」；正常語速、每句之間會停一下讓你跟著做。要停就按停止。</p>
     </div>
     <script>
       var YAO = __YAO__;
       var JI  = __JI__;
-      function sayIt(t){
-        try{ window.speechSynthesis.cancel(); }catch(e){}
-        var u = new SpeechSynthesisUtterance(t);
+      var _stop = false;
+      function _speakSeq(arr, i){
+        if(_stop || i >= arr.length){ return; }
+        var u = new SpeechSynthesisUtterance(arr[i]);
         u.lang = 'zh-TW';
-        u.rate = 0.8;          // 語速慢一點
+        u.rate = 1.0;                                   // 正常語速
+        u.onend = function(){
+          // 有動作的句子（按/選/傳/點/改/存/送）多停一下，讓人來得及做
+          var gap = /[按選傳點改存送]/.test(arr[i]) ? 4500 : 2500;
+          setTimeout(function(){ _speakSeq(arr, i+1); }, gap);
+        };
         window.speechSynthesis.speak(u);
       }
+      function sayIt(t){
+        _stop = false;
+        try{ window.speechSynthesis.cancel(); }catch(e){}
+        var parts = t.split('。');
+        var arr = [];
+        for(var k=0;k<parts.length;k++){
+          var s = parts[k].replace(/^\\s+|\\s+$/g,'');
+          if(s.length>0){ arr.push(s + '。'); }
+        }
+        _speakSeq(arr, 0);
+      }
+      function stopAll(){ _stop = true; try{ window.speechSynthesis.cancel(); }catch(e){} }
     </script>
     """
     _voice_html = (_voice_html
                    .replace("BTN", _btn)
                    .replace("__YAO__", json.dumps(_VOICE_YAO))
                    .replace("__JI__", json.dumps(_VOICE_JI)))
-    components.html(_voice_html, height=150)
+    components.html(_voice_html, height=175)
 
 # ── 💬 回報問題／給建議（誰都能填，存到雲端給管理者看）──────────────
 with st.expander("💬 有問題？回報一下（會存起來，大家都看得到）", expanded=False):
