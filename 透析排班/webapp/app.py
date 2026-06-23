@@ -214,7 +214,7 @@ def clear_audit_draft():
         return False
 
 # ── 💬 意見回饋：借用稽核歷史（特殊鍵「意見-時間」）存放，不動 LINE 程式 ──
-APP_VER = "v3.0"
+APP_VER = "v3.1"
 FEEDBACK_PREFIX = "意見-"
 
 def push_feedback(step, detail, expect, urgency, who):
@@ -446,7 +446,7 @@ except Exception:
 
 st.title("💊 透析藥水排班")
 st.caption("上傳班表 Excel → 出名單(表格)。可直接點格子改人名。跨區標 🔺。")
-st.caption("🟢 版本 v3.0（📥 雲端自動抓班表／🔊 語音導覽／💬 意見回饋／稽核快速模式／💾草稿暫存）· 2026-06-23")
+st.caption("🟢 版本 v3.1（稽核「區」未設防呆／📥 雲端抓班表／🔊 語音導覽／💬 意見回饋／💾草稿暫存）· 2026-06-23")
 
 with st.expander("📖 第一次用？點我看「3 步驟」（給玉繡）", expanded=False):
     st.markdown("""
@@ -752,9 +752,13 @@ else:
         base = []
         for m in roster:
             nm = m["姓名"]
-            typ, area = draft.get(nm) or prefill.get(nm, ("白班", "一區"))
+            pre = draft.get(nm) or prefill.get(nm)   # 有草稿/上次才帶；沒有就留「未設」
+            if pre:
+                typ, area = pre
+            else:
+                typ, area = "白班", "❓"               # 冷啟動：區留❓未設，逼人設定、避免默默全一區
             if typ not in ("白班","小夜"): typ = "白班"
-            if area not in ("一區","二區"): area = "一區"
+            if area not in ("一區","二區","❓"): area = "❓"
             base.append({"卡號": m["卡號"], "姓名": nm, "班型": typ, "區": area})
         df_q = pd.DataFrame(base)
         edited_q = st.data_editor(
@@ -763,13 +767,25 @@ else:
                 "卡號": st.column_config.TextColumn("卡號", disabled=True),
                 "姓名": st.column_config.TextColumn("姓名", disabled=True),
                 "班型": st.column_config.SelectboxColumn("班型 ✏️", options=["白班","小夜"], required=True),
-                "區":   st.column_config.SelectboxColumn("區 ✏️",   options=["一區","二區"], required=True),
+                "區":   st.column_config.SelectboxColumn("區 ✏️",   options=["一區","二區","❓"], required=True),
             },
             use_container_width=True, hide_index=True, key="quick_edit"
         )
         n_white = int((edited_q["班型"] == "白班").sum())
         n_night = int((edited_q["班型"] == "小夜").sum())
-        st.caption(f"目前：白班 {n_white} 人、小夜 {n_night} 人，共 {len(edited_q)} 人。")
+        n_a1    = int((edited_q["區"] == "一區").sum())
+        n_a2    = int((edited_q["區"] == "二區").sum())
+        n_unset = int((edited_q["區"] == "❓").sum())
+        st.caption(f"目前：白班 {n_white}、小夜 {n_night}；一區 {n_a1}、二區 {n_a2}"
+                   + (f"；❓未設區 {n_unset}" if n_unset else "") + f"（共 {len(edited_q)} 人）")
+        if n_unset:
+            st.warning(f"⚠️ 還有 {n_unset} 人的「區」是 ❓ 未設，請先點成一區/二區，否則他們會排不進去（會噴錯）。")
+        if n_unset == 0 and n_a2 == 0:
+            st.warning("⚠️ 目前沒有人在「二區」——二區的稽核會排不出來，確認是不是漏設了？")
+        if n_unset == 0 and n_a1 == 0:
+            st.warning("⚠️ 目前沒有人在「一區」。")
+        if n_night == 0:
+            st.warning("⚠️ 目前沒有人是「小夜」——第三班（小夜）會排不出來。")
 
         # 💾 暫存 / 🗑 清除暫存（雲端草稿，可分次填、明天再回來接續）
         if APPS_SCRIPT_URL and WRITE_SECRET:
@@ -786,6 +802,9 @@ else:
                     st.error("清除失敗，請稍後再試。")
 
         if st.button("✅ 排稽核（快速）", type="primary"):
+          if n_unset > 0:
+            st.error(f"還有 {n_unset} 人的「區」是 ❓ 未設，請先全部點成一區/二區，再排稽核。")
+          else:
             with st.spinner("讀取雲端歷史 + 排稽核中…"):
                 quick_csv = edited_q.to_csv(index=False).encode("utf-8-sig")
                 config_overrides = {"快速名冊.csv": quick_csv}
