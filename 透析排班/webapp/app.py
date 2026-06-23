@@ -4,10 +4,11 @@
   • Fix2：稽核送出後 LINE 通知每位稽核者責任班次
   • Fix3：自動選最接近今天的班表分頁
 """
-import os, io, re, csv, tempfile, shutil, subprocess, sys
+import os, io, re, csv, json, tempfile, shutil, subprocess, sys
 from datetime import date, datetime
 import pandas as pd
 import streamlit as st
+import streamlit.components.v1 as components
 import requests
 
 HERE = os.path.dirname(os.path.abspath(__file__))
@@ -370,7 +371,7 @@ except Exception:
 
 st.title("💊 透析藥水排班")
 st.caption("上傳班表 Excel → 出名單(表格)。可直接點格子改人名。跨區標 🔺。")
-st.caption("🟢 版本 v2.5（稽核快速模式＋💾草稿暫存：可分次填 / 公平歷史修正 / 稽核 LINE 通知）· 2026-06-22")
+st.caption("🟢 版本 v2.6（🔊 語音導覽＋稽核快速模式＋💾草稿暫存）· 2026-06-23")
 
 with st.expander("📖 第一次用？點我看「3 步驟」（給玉繡）", expanded=False):
     st.markdown("""
@@ -389,6 +390,61 @@ with st.expander("📖 第一次用？點我看「3 步驟」（給玉繡）", e
 
 > 也可改用「📤 上傳班表分析」：傳這個月的週班表 Excel，系統自己猜白/夜＋區，你再確認。班表要「Excel 檔本人」，截圖不行。
 """)
+
+# ── 🔊 語音導覽（點按鈕，用瀏覽器內建的聲音直接念出來，免音檔）──────────
+_VOICE_YAO = (
+    "玉繡你好。我們一步一步來，不用緊張。"
+    "第一步，先打開排班網頁。如果畫面在睡覺、黑黑的，就點一下把它叫醒，等它跑一下。"
+    "打開以後，看上面，選每週印藥水那個藍色的。"
+    "接著，按上傳班表，把這個禮拜的班表，Excel 檔，傳上去。記得，要 Excel 檔本人，截圖不行喔。"
+    "傳好以後，選這一週的分頁。通常系統會自己選好最接近今天的，你看一下對不對就好。"
+    "然後，按排印藥水，等它幾秒鐘。"
+    "等一下，就會跑出一張名單表格。如果想換人，直接點那一格，把名字改掉就好。"
+    "改好以後，按產生定案。"
+    "最後，按送到雲端。看到畫面有氣球飛出來，就成功囉。"
+    "這樣就好了。系統會自己用 LINE 提醒要印的人，你不用再做別的事，輕鬆一下。"
+)
+_VOICE_JI = (
+    "玉繡你好。這個更簡單，連班表都不用傳喔。"
+    "第一步，一樣先打開排班網頁，在睡的話點一下叫醒它。"
+    "打開以後，看上面，選每月稽核那個綠色的。"
+    "下面會出現稽核方式，讓它停在快速點選就好，不用上傳東西。"
+    "接著，選好年跟月。"
+    "下面就會跑出組員的名單。系統會自動幫你帶上個月的設定。"
+    "你只要看每一個人，是白班還是小夜，是一區還是二區。這個月有變動的，點一下改；沒變的就不用動。"
+    "如果一下子填不完，沒關係，按暫存草稿，明天打開它會自動幫你帶回來，接著填就好。"
+    "都確認好了，按排稽核。"
+    "等一下，就會跑出這個月的稽核名單。想換人，一樣直接點格子改。"
+    "最後，按送稽核結果到雲端。每一位稽核的人，就會收到 LINE 通知。"
+    "這樣就完成囉。你做得很好，放輕鬆。"
+)
+with st.expander("🔊 語音導覽（不會用？點一下，手機念給你聽）", expanded=False):
+    _btn = ("padding:14px 18px;margin:6px;border:none;border-radius:12px;"
+            "font-size:18px;color:#fff;cursor:pointer;")
+    _voice_html = """
+    <div style="font-family:-apple-system,'PingFang TC',sans-serif;text-align:center">
+      <button style="BTN background:#2563eb" onclick="sayIt(YAO)">🔵 印藥水導覽</button>
+      <button style="BTN background:#16a34a" onclick="sayIt(JI)">🟢 稽核導覽</button>
+      <button style="BTN background:#6b7280" onclick="window.speechSynthesis.cancel()">⏹ 停止</button>
+      <p style="color:#666;font-size:13px;margin-top:8px">點藍色聽「印藥水」、綠色聽「稽核」；要停就按停止。</p>
+    </div>
+    <script>
+      var YAO = __YAO__;
+      var JI  = __JI__;
+      function sayIt(t){
+        try{ window.speechSynthesis.cancel(); }catch(e){}
+        var u = new SpeechSynthesisUtterance(t);
+        u.lang = 'zh-TW';
+        u.rate = 0.8;          // 語速慢一點
+        window.speechSynthesis.speak(u);
+      }
+    </script>
+    """
+    _voice_html = (_voice_html
+                   .replace("BTN", _btn)
+                   .replace("__YAO__", json.dumps(_VOICE_YAO))
+                   .replace("__JI__", json.dumps(_VOICE_JI)))
+    components.html(_voice_html, height=150)
 
 st.markdown("#### 1️⃣ 選種類")
 mode = st.radio("要排哪一種？", ["🟦 每週印藥水", "🟩 每月稽核"], horizontal=True)
