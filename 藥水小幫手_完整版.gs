@@ -1,11 +1,12 @@
 /**
- * 透析印藥水 LINE 小幫手 v3 — Apps Script
+ * 透析印藥水 LINE 小幫手 v4 — Apps Script
  * ════════════════════════════════════════════════════════
  *  功能①：自動收 userId（LINE webhook）
  *  功能②：每天自動發提醒（明天要印藥水的人）
  *  功能③：接收網頁送來的名單（setWeek）
  *  功能④：儲存/讀取排班歷史（供下週公平輪序）
  *  功能⑤：儲存/讀取稽核歷史（供下月公平輪序）
+ *  功能⑥：getLatestBanbiao — 讀 Gmail「班表」標籤最新 Excel 附件（網頁一鍵抓班表）★新
  *
  *  試算表需要的分頁（不存在會自動建立）：
  *    userid    自動收 userId
@@ -92,6 +93,35 @@ function doPost(e) {
       return jsonOut_({ok: true, sent: sent2, miss: miss2});
     }
 
+    // ★新：讀 Gmail「班表」標籤裡最新的 Excel 附件（給網頁「📥 用雲端最新班表」）
+    if (action === "getLatestBanbiao") {
+      var label = GmailApp.getUserLabelByName("班表");
+      var threads = label ? label.getThreads(0, 30) : [];
+      var bestAtt = null, bestDate = null;
+      for (var ti = 0; ti < threads.length; ti++) {
+        var msgs = threads[ti].getMessages();
+        for (var mi = 0; mi < msgs.length; mi++) {
+          var md = msgs[mi].getDate();
+          var atts = msgs[mi].getAttachments();
+          for (var ai = 0; ai < atts.length; ai++) {
+            var nm = atts[ai].getName().toLowerCase();
+            if (nm.indexOf(".xls") >= 0) {            // 抓 .xls / .xlsx
+              if (!bestDate || md > bestDate) { bestDate = md; bestAtt = atts[ai]; }
+            }
+          }
+        }
+      }
+      if (!bestAtt) {
+        return jsonOut_({ok: false, error: "找不到『班表』標籤下的 Excel 附件（請確認班表信已進來並貼上『班表』標籤）"});
+      }
+      return jsonOut_({
+        ok: true,
+        filename: bestAtt.getName(),
+        date: Utilities.formatDate(bestDate, "Asia/Taipei", "yyyy-MM-dd HH:mm"),
+        b64: Utilities.base64Encode(bestAtt.getBytes())
+      });
+    }
+
     return jsonOut_({ok: false, error: "unknown action: " + action});
   } catch(err) {
     return jsonOut_({ok: false, error: String(err)});
@@ -155,6 +185,27 @@ function clearWeek() {
 }
 function testSelf() {
   pushLine_("U04e906cc9268998aa4f8edf69286858f", "🔔 測試：小幫手正常運作 🙏");
+}
+
+/** 測試用：跑一次看 Gmail 抓不抓得到班表（在編輯器選這個函式按▶執行，會跳授權）。 */
+function testGetLatestBanbiao() {
+  var label = GmailApp.getUserLabelByName("班表");
+  var threads = label ? label.getThreads(0, 30) : [];
+  var bestAtt = null, bestDate = null;
+  for (var ti = 0; ti < threads.length; ti++) {
+    var msgs = threads[ti].getMessages();
+    for (var mi = 0; mi < msgs.length; mi++) {
+      var md = msgs[mi].getDate();
+      var atts = msgs[mi].getAttachments();
+      for (var ai = 0; ai < atts.length; ai++) {
+        if (atts[ai].getName().toLowerCase().indexOf(".xls") >= 0) {
+          if (!bestDate || md > bestDate) { bestDate = md; bestAtt = atts[ai]; }
+        }
+      }
+    }
+  }
+  Logger.log(bestAtt ? ("找到：" + bestAtt.getName() + "（" + bestDate + "）")
+                     : "沒找到『班表』標籤下的 Excel 附件");
 }
 
 
