@@ -518,19 +518,17 @@ with st.expander("💬 有問題？回報一下（會存起來，管理者會看
         else:
             st.error("送出失敗，請稍後再試。")
 
-# ── 🔧 管理者：看大家的回報（用管理密碼進入）─────────────────────
-with st.expander("🔧 管理者：看大家的回報", expanded=False):
-    fb_pw = st.text_input("輸入管理密碼", type="password", key="fb_admin_pw")
-    if fb_pw:
-        if fb_pw == WRITE_SECRET:
-            fbs = fetch_feedback_list()
-            if not fbs:
-                st.info("目前還沒有任何回報。")
-            else:
-                st.caption(f"共 {len(fbs)} 則（新到舊）")
-                st.dataframe(pd.DataFrame(fbs), use_container_width=True, hide_index=True)
+# ── 🔧 看大家的回報（給管理者看，免密碼；按「載入」才去抓，不拖慢平常）──
+with st.expander("🔧 看大家的回報", expanded=False):
+    if st.button("🔄 載入回報", key="fb_load"):
+        st.session_state["_fbs"] = fetch_feedback_list()
+    if "_fbs" in st.session_state:
+        fbs = st.session_state["_fbs"]
+        if not fbs:
+            st.info("目前還沒有任何回報。")
         else:
-            st.error("密碼不對。")
+            st.caption(f"共 {len(fbs)} 則（新到舊）")
+            st.dataframe(pd.DataFrame(fbs), use_container_width=True, hide_index=True)
 
 st.markdown("#### 1️⃣ 選種類")
 mode = st.radio("要排哪一種？", ["🟦 每週印藥水", "🟩 每月稽核"], horizontal=True)
