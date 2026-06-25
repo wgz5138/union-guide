@@ -1,8 +1,8 @@
 /**
- * 透析印藥水 LINE 小幫手 v5.1 — Apps Script
+ * 透析印藥水 LINE 小幫手 v5.2 — Apps Script
  * ════════════════════════════════════════════════════════
  *  功能①：自動收 userId（LINE webhook）
- *  功能②：每天自動發提醒 ★兩層：①印日的前一個上班日「🔔記得M/d要印」②印藥水當天「⚠️今天就要印」保險防漏接（跳過週日/休診日）
+ *  功能②：每天自動發提醒 ★兩層：①印日的前一個上班日「🔔記得M/d要印」②印藥水當天「⚠️今天就要印」保險防漏接（跳過週日/休診日）★含防重複：同一天同一人同一則只發一次
  *  功能③：接收網頁送來的名單（setWeek）
  *  功能④：儲存/讀取排班歷史（供下週公平輪序）
  *  功能⑤：儲存/讀取稽核歷史（供下月公平輪序）
@@ -145,10 +145,11 @@ function parseYmd_(s) {
 }
 
 
-/* ━━━━━━━━━━ 每日提醒（兩層：前一個上班日提醒 ＋ 印藥水當天保險）━━━━━━━━━━
+/* ━━━━━━━━━━ 每日提醒（兩層：前一個上班日提醒 ＋ 印藥水當天保險；含防重複）━━━━━━━━━━
  * 第一層：今天 = 印日期的前一個上班日 → 「🔔 記得 M/d 要印…」（提前準備）
  * 第二層：今天 = 印日期本身         → 「⚠️ 今天就要印…」（最後保險，防前一天那次因任何原因沒發成功而漏接）
- * 兩層各發一則，所以每人每次印藥水會收到兩種訊息。
+ * ★防重複：每發一則就記在「提醒紀錄」分頁（日期｜類型｜姓名｜印日）。同一天同一人同一則只發一次，
+ *   不管手動測試或鬧鐘跑幾次都不會重複洗版。
  */
 function sendReminders() {
   var ss = SpreadsheetApp.getActiveSpreadsheet();
@@ -180,28 +181,43 @@ function sendReminders() {
     else if (printStr === todayStr) bucket = sameday;       // 今天就是印藥水當天
     if (!bucket) continue;
 
-    if (!bucket[nm2]) bucket[nm2] = {areas: [], printStr: pStr};
+    if (!bucket[nm2]) bucket[nm2] = {areas: [], printStr: printStr};
     if (area && bucket[nm2].areas.indexOf(area) < 0) bucket[nm2].areas.push(area);
   }
 
-  var sent = 0, miss = 0;
-  function flush_(todo, makeMsg) {
+  // ★防重複：載入「提醒紀錄」裡今天已發過的 key
+  var logSh = ensureSheet_(ss, "提醒紀錄", ["日期","類型","姓名","印日","時間"]);
+  var sentKeys = {};
+  var logRows = logSh.getDataRange().getValues();
+  for (var li = 1; li < logRows.length; li++) {
+    if (String(logRows[li][0]).trim() === todayStr) {
+      sentKeys[ logRows[li][1] + "|" + logRows[li][2] + "|" + logRows[li][3] ] = true;
+    }
+  }
+
+  var sent = 0, miss = 0, dup = 0;
+  function flush_(todo, type, makeMsg) {
     for (var name in todo) {
+      var info = todo[name];
+      var key = type + "|" + name + "|" + info.printStr;
+      if (sentKeys[key]) { dup++; continue; }              // 今天已發過 → 跳過，不重複發
       var uid2 = map[name];
       if (!uid2) { Logger.log("缺 userId：" + name); miss++; continue; }
-      var info = todo[name];
       var md = Utilities.formatDate(parseYmd_(info.printStr), tz, "M/d");
       var zone = info.areas.join("、");
       var zpart = zone ? ("「" + zone + "」") : "";
       pushLine_(uid2, makeMsg(md, zpart));
+      logSh.appendRow([todayStr, type, name, info.printStr, new Date()]);
+      sentKeys[key] = true;
       sent++;
     }
   }
-  flush_(advance, function(md, zpart) { return "🔔 記得 " + md + " 要印" + zpart + "藥水喔！🙏"; });
-  flush_(sameday, function(md, zpart) { return "⚠️ 今天 " + md + " 就要印" + zpart + "藥水喔！別忘了 🙏"; });
+  flush_(advance, "前一天", function(md, zpart) { return "🔔 記得 " + md + " 要印" + zpart + "藥水喔！🙏"; });
+  flush_(sameday, "當天",   function(md, zpart) { return "⚠️ 今天 " + md + " 就要印" + zpart + "藥水喔！別忘了 🙏"; });
 
   Logger.log("提醒完成：前一天 " + Object.keys(advance).length + " 人、當天保險 "
-             + Object.keys(sameday).length + " 人，共發 " + sent + " 則，缺 userId " + miss + " 次（今天 " + todayStr + "）");
+             + Object.keys(sameday).length + " 人，實發 " + sent + " 則，已發過跳過 " + dup
+             + " 則，缺 userId " + miss + " 次（今天 " + todayStr + "）");
 }
 
 
