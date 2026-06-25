@@ -1,8 +1,8 @@
 /**
- * 透析印藥水 LINE 小幫手 v5.2 — Apps Script
+ * 透析印藥水 LINE 小幫手 v5.3 — Apps Script
  * ════════════════════════════════════════════════════════
  *  功能①：自動收 userId（LINE webhook）
- *  功能②：每天自動發提醒 ★兩層：①印日的前一個上班日「🔔記得M/d要印」②印藥水當天「⚠️今天就要印」保險防漏接（跳過週日/休診日）★含防重複：同一天同一人同一則只發一次
+ *  功能②：每天自動發提醒 ★名單日期=上班日，印藥水日=上班日的前一個上班日（跳週日/休診日）；提前一則+當天一則；含防重複
  *  功能③：接收網頁送來的名單（setWeek）
  *  功能④：儲存/讀取排班歷史（供下週公平輪序）
  *  功能⑤：儲存/讀取稽核歷史（供下月公平輪序）
@@ -145,10 +145,12 @@ function parseYmd_(s) {
 }
 
 
-/* ━━━━━━━━━━ 每日提醒（兩層：前一個上班日提醒 ＋ 印藥水當天保險；含防重複）━━━━━━━━━━
- * 第一層：今天 = 印日期的前一個上班日 → 「🔔 記得 M/d 要印…」（提前準備）
- * 第二層：今天 = 印日期本身         → 「⚠️ 今天就要印…」（最後保險，防前一天那次因任何原因沒發成功而漏接）
- * ★防重複：每發一則就記在「提醒紀錄」分頁（日期｜類型｜姓名｜印日）。同一天同一人同一則只發一次，
+/* ━━━━━━━━━━ 每日提醒（錨定「印藥水日」；兩層＋防重複）━━━━━━━━━━
+ * ★名單那欄日期 = 組員「上班日」。真正要印藥水的日子 =「上班日的前一個上班日」（跳週日/休診日）。
+ *   例：上班日 6/22(一)，因 6/21(日)沒人 → 印藥水日 = 6/20(六)。
+ * 第一層（提前）：今天 = 印藥水日的前一個上班日 → 「🔔 記得 M/d 要印…」
+ * 第二層（當天）：今天 = 印藥水日             → 「⚠️ 今天 M/d 要印…」
+ * ★防重複：每發一則就記在「提醒紀錄」分頁（日期｜類型｜姓名｜印藥水日）。同一天同一人同一則只發一次，
  *   不管手動測試或鬧鐘跑幾次都不會重複洗版。
  */
 function sendReminders() {
@@ -160,28 +162,31 @@ function sendReminders() {
   if (!sh) { Logger.log("找不到『本週名單』分頁"); return; }
   var rows = sh.getDataRange().getValues();
   var head = rows[0].map(function(x) { return String(x).trim(); });
-  var iD = head.indexOf("印日期"), iZ = head.indexOf("區"), iN = head.indexOf("姓名");
+  var iD = head.indexOf("印日期"); if (iD < 0) iD = head.indexOf("上班日");
+  var iZ = head.indexOf("區"), iN = head.indexOf("姓名");
 
   var map = buildUserMap_(ss);
-  var advance = {};   // 前一天提醒：姓名 → {areas:[], printStr}
-  var sameday = {};   // 當天保險：姓名 → {areas:[], printStr}
+  var advance = {};   // 提前提醒：姓名 → {areas:[], printStr=印藥水日}
+  var sameday = {};   // 當天提醒：姓名 → {areas:[], printStr=印藥水日}
 
   for (var r = 1; r < rows.length; r++) {
-    var pStr = normDate_(rows[r][iD], tz);
-    var pd = parseYmd_(pStr);
-    if (!pd) continue;
-    var printStr = Utilities.formatDate(pd, tz, "yyyy-MM-dd");
-    var remindStr = Utilities.formatDate(prevWorkday_(pd, tz), tz, "yyyy-MM-dd");
+    var dStr = normDate_(rows[r][iD], tz);                  // 名單上的日期 = 上班日
+    var dd = parseYmd_(dStr);
+    if (!dd) continue;
+    var pDay = prevWorkday_(dd, tz);                        // 印藥水日 = 上班日的前一個上班日
+    var aDay = prevWorkday_(pDay, tz);                      // 提前日 = 印藥水日再前一個上班日
+    var Pstr = Utilities.formatDate(pDay, tz, "yyyy-MM-dd");
+    var Astr = Utilities.formatDate(aDay, tz, "yyyy-MM-dd");
 
     var nm2 = String(rows[r][iN]).trim(), area = String(rows[r][iZ]).trim();
     if (!nm2) continue;
 
     var bucket = null;
-    if (remindStr === todayStr) bucket = advance;          // 今天是前一個上班日
-    else if (printStr === todayStr) bucket = sameday;       // 今天就是印藥水當天
+    if (Pstr === todayStr) bucket = sameday;               // 今天就是印藥水日
+    else if (Astr === todayStr) bucket = advance;          // 今天是印藥水日的前一個上班日
     if (!bucket) continue;
 
-    if (!bucket[nm2]) bucket[nm2] = {areas: [], printStr: printStr};
+    if (!bucket[nm2]) bucket[nm2] = {areas: [], printStr: Pstr};   // printStr 一律存「印藥水日」
     if (area && bucket[nm2].areas.indexOf(area) < 0) bucket[nm2].areas.push(area);
   }
 
@@ -215,7 +220,7 @@ function sendReminders() {
   flush_(advance, "前一天", function(md, zpart) { return "🔔 記得 " + md + " 要印" + zpart + "藥水喔！🙏"; });
   flush_(sameday, "當天",   function(md, zpart) { return "⚠️ 今天 " + md + " 就要印" + zpart + "藥水喔！別忘了 🙏"; });
 
-  Logger.log("提醒完成：前一天 " + Object.keys(advance).length + " 人、當天保險 "
+  Logger.log("提醒完成：提前 " + Object.keys(advance).length + " 人、當天 "
              + Object.keys(sameday).length + " 人，實發 " + sent + " 則，已發過跳過 " + dup
              + " 則，缺 userId " + miss + " 次（今天 " + todayStr + "）");
 }
