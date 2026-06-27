@@ -277,10 +277,10 @@
     </div>
 
     <div id="translate-all-row" style="display:none;margin:10px 0 4px">
-      <button class="btn btn-ghost" id="translate-all-btn" style="width:100%;border-color:rgba(46,213,160,.4);color:#2ed5a0">🌐 一鍵翻譯全部文章標題＋摘要</button>
-      <div id="translate-all-status" style="font-size:12px;color:var(--muted);margin-top:5px;text-align:center"></div>
+      <button class="btn btn-ghost" id="translate-all-btn" style="width:100%;border-color:rgba(46,213,160,.4);color:#2ed5a0;font-size:15px;padding:.8rem">🌐 開啟 Chrome 翻譯（翻譯全部文獻）</button>
+      <div id="translate-all-status" style="font-size:12px;color:var(--muted);margin-top:6px;text-align:center;line-height:1.7"></div>
     </div>
-    <div id="results"></div>
+    <div id="results" lang="en"></div>
 
     <!-- ③ AI 綜合 -->
     <div id="synth-wrap" style="display:none">
@@ -428,7 +428,7 @@ document.getElementById("man-tour").addEventListener("click",()=>{ closeManual()
 /* ===== 小工具 ===== */
 function cleanAbs(t){ return String(t||"").replace(/<h[1-6][^>]*>/gi,"\n").replace(/<\/h[1-6]>/gi,"：").replace(/<[^>]+>/g," ").replace(/[ \t]{2,}/g," ").replace(/\s*\n\s*/g,"\n").trim(); }
 // 🔄 自動偵測新版本
-const BUILD="2026062705";
+const BUILD="2026062706";
 const CHANGELOG=[
   "每篇文獻新增「🌐 翻譯中文」：有 API 金鑰用 Claude 翻（醫學術語更準），沒有則自動用 MyMemory 免費翻，不需跳頁",
   "新增「⚖️ AI 律師」工具（勞動法主場，引法條／判斷對方說法／列證據；法規用全國法規資料庫官方真資料；上方可進）",
@@ -577,14 +577,14 @@ function renderResults(){
     const abs = r.abstractText ? esc(cleanAbs(r.abstractText)) : "（這篇沒有提供摘要）";
     const trText=encodeURIComponent((r.title||"")+(r.abstractText?"\n\n"+cleanAbs(r.abstractText):""));
     const trUrl=`https://translate.google.com/?sl=en&tl=zh-TW&text=${trText}&op=translate`;
-    return `<div class="res">
+    return `<div class="res" lang="en">
       <div class="res-top">
         <input type="checkbox" class="res-chk" data-i="${i}">
-        <div class="res-title">${esc(r.title||"(無標題)")}</div>
+        <div class="res-title" lang="en">${esc(r.title||"(無標題)")}</div>
       </div>
-      <div class="res-meta">${esc(meta)}</div>
+      <div class="res-meta" lang="en">${esc(meta)}</div>
       <div class="res-badges">${typeBadge(r)}${oa}</div>
-      <div class="res-abs" id="abs-${i}">${abs}</div>
+      <div class="res-abs" id="abs-${i}" lang="en">${abs}</div>
       <div class="res-more" data-i="${i}">展開摘要 ▾</div>
       <div class="res-src">📍 全文在這幾個地方找（到醫院網路點開）：</div>
       <div class="res-actions">
@@ -682,19 +682,24 @@ document.getElementById("pay-toggle").addEventListener("click",()=>{ const d=doc
   const s=localStorage.getItem("ebnq_"+id); if(s)el.value=s;
   el.addEventListener("input",()=>localStorage.setItem("ebnq_"+id,el.value)); });
 
-/* ===== 🌐 一鍵翻譯全部：逐篇開 Google 翻譯分頁 ===== */
+/* ===== 🌐 開啟 Chrome 翻譯 ===== */
 (function(){
   const btn=document.getElementById("translate-all-btn");
   const sta=document.getElementById("translate-all-status");
   if(!btn) return;
   btn.addEventListener("click",()=>{
     if(!RESULTS.length){ toast("請先搜尋"); return; }
-    RESULTS.forEach(r=>{
-      const text=(r.title||"")+(r.abstractText?"\n\n"+cleanAbs(r.abstractText):"");
-      const url=`https://translate.google.com/?sl=en&tl=zh-TW&text=${encodeURIComponent(text)}&op=translate`;
-      window.open(url,"_blank","noopener");
-    });
-    sta.textContent=`已開 ${RESULTS.length} 個 Google 翻譯分頁（若被擋住請允許彈出視窗）`;
+    // 把整頁語言設成 en，觸發 Chrome 內建翻譯偵測
+    document.documentElement.lang="en";
+    document.getElementById("results").lang="en";
+    sta.innerHTML=`
+      <b style="color:#2ed5a0">✅ 已觸發瀏覽器翻譯偵測</b><br>
+      Chrome 右上角或網址列右側應出現 <b>「翻譯這個網頁？」</b> → 點「翻譯」即可全頁中文化。<br>
+      <span style="color:var(--muted)">若沒出現：右鍵點頁面空白處 → 選「翻譯成中文（繁體）」</span>`;
+    btn.textContent="🌐 已開啟（右鍵→翻譯成中文）";
+    btn.style.opacity="0.6";
+    // 額外：觸發 translate 事件讓沉浸式翻譯等擴充元件感知
+    document.getElementById("results").dispatchEvent(new Event("translate",{bubbles:true}));
   });
 })();
 
