@@ -90,6 +90,9 @@
   .b.rct{background:rgba(79,157,255,.14);color:var(--blue);border:1px solid rgba(79,157,255,.3)}
   .b.oa{background:rgba(46,213,160,.14);color:var(--green);border:1px solid rgba(46,213,160,.3)}
   .b.coch{background:rgba(183,155,255,.14);color:var(--violet);border:1px solid rgba(183,155,255,.3)}
+  .res-tr{font-size:13px;color:#a8e8c8;line-height:1.8;background:rgba(46,213,160,.06);border:1px solid rgba(46,213,160,.22);border-radius:10px;padding:10px 12px;white-space:pre-wrap}
+  .res-tr .tr-title{font-weight:700;color:#2ed5a0;margin-bottom:6px}
+  .res-tr .tr-loading{color:var(--muted);font-style:italic}
   .res-abs{font-size:13px;color:var(--txt2);line-height:1.7;margin:10px 0 0 27px;max-height:84px;overflow:hidden;position:relative;transition:max-height .25s}
   .res-abs.open{max-height:1500px}
   .res-abs::after{content:'';position:absolute;left:0;right:0;bottom:0;height:30px;background:linear-gradient(transparent,#0c1320)}
@@ -421,8 +424,9 @@ document.getElementById("man-tour").addEventListener("click",()=>{ closeManual()
 /* ===== 小工具 ===== */
 function cleanAbs(t){ return String(t||"").replace(/<h[1-6][^>]*>/gi,"\n").replace(/<\/h[1-6]>/gi,"：").replace(/<[^>]+>/g," ").replace(/[ \t]{2,}/g," ").replace(/\s*\n\s*/g,"\n").trim(); }
 // 🔄 自動偵測新版本
-const BUILD="2026062701";
+const BUILD="2026062702";
 const CHANGELOG=[
+  "每篇文獻新增「🌐 翻譯中文」：有 API 金鑰用 Claude 翻（醫學術語更準），沒有則自動用 MyMemory 免費翻，不需跳頁",
   "新增「⚖️ AI 律師」工具（勞動法主場，引法條／判斷對方說法／列證據；法規用全國法規資料庫官方真資料；上方可進）",
   "新增「🗑 一鍵清除」，換下一題免逐格手刪",
   "掃碼分享頁 ＋ 30 秒回饋問卷",
@@ -578,7 +582,9 @@ function renderResults(){
         <a class="btn btn-ghost btn-sm" href="https://scholar.google.com/scholar?q=${encodeURIComponent(r.title||"")}" target="_blank" rel="noopener">🔍 Google 學術</a>
         <button class="btn btn-ghost btn-sm" data-link="${i}">🔗 複製連結（存 LINE）</button>
         <button class="btn btn-ghost btn-sm" data-eval="${i}">📋 帶去評讀</button>
+        <button class="btn btn-ghost btn-sm" data-tr="${i}">🌐 翻譯中文</button>
       </div>
+      <div class="res-tr" id="tr-${i}" style="display:none;margin:10px 0 0 27px"></div>
     </div>`;
   }).join("");
   box.querySelectorAll(".res-more").forEach(el=>el.addEventListener("click",()=>{
@@ -587,6 +593,7 @@ function renderResults(){
   }));
   box.querySelectorAll("[data-eval]").forEach(b=>b.addEventListener("click",()=>toEval(RESULTS[+b.dataset.eval])));
   box.querySelectorAll("[data-link]").forEach(b=>b.addEventListener("click",()=>copyLink(RESULTS[+b.dataset.link])));
+  box.querySelectorAll("[data-tr]").forEach(b=>b.addEventListener("click",()=>translateCard(b,+b.dataset.tr)));
 }
 function bestUrl(r){ return r.doi?("https://doi.org/"+r.doi) : r.pmid?("https://pubmed.ncbi.nlm.nih.gov/"+r.pmid+"/") : ("https://scholar.google.com/scholar?q="+encodeURIComponent(r.title||"")); }
 function copyLink(r){ const meta=[r.journalTitle,r.pubYear].filter(Boolean).join(", "); copy((r.title||"")+(meta?("（"+meta+"）"):"")+"\n"+bestUrl(r),"已複製『標題＋連結』，可貼到 LINE 存檔"); }
@@ -665,6 +672,47 @@ document.getElementById("pay-toggle").addEventListener("click",()=>{ const d=doc
 ["q-desc","q-query"].forEach(id=>{ const el=document.getElementById(id);
   const s=localStorage.getItem("ebnq_"+id); if(s)el.value=s;
   el.addEventListener("input",()=>localStorage.setItem("ebnq_"+id,el.value)); });
+
+/* ===== 🌐 翻譯中文 ===== */
+async function translateCard(btn, i){
+  const r=RESULTS[i];
+  const box=document.getElementById("tr-"+i);
+  if(!box) return;
+  // 已翻譯過：切換顯示/隱藏
+  if(box.dataset.done==="1"){ box.style.display=box.style.display==="none"?"block":"none"; btn.textContent=box.style.display==="none"?"🌐 翻譯中文":"🌐 隱藏翻譯"; return; }
+  box.style.display="block";
+  box.innerHTML='<span class="tr-loading">翻譯中，請稍候⋯⋯</span>';
+  btn.disabled=true;
+  const title=r.title||"";
+  const abstract=cleanAbs(r.abstractText||"");
+  try{
+    if(apiKey()){
+      // 有金鑰：用 Claude 翻譯（醫學術語更準）
+      const prompt=`請將以下醫學文獻的【標題】和【摘要】翻譯成繁體中文。保留專有名詞的英文原文在括號內（例：洗腎中低血壓（intradialytic hypotension））。格式：
+【標題】翻譯結果
+【摘要】翻譯結果
+
+標題：${title}
+摘要：${abstract||"（無摘要）"}`;
+      const {text}=await callClaude(prompt, 1500);
+      box.innerHTML=`<div>${esc(text).replace(/\n/g,"<br>")}</div>`;
+    } else {
+      // 無金鑰：用 MyMemory 免費 API（英→繁中）
+      const toTranslate=(title+(abstract?"\n\n"+abstract:"")).slice(0,4800);
+      const resp=await fetch(`https://api.mymemory.translated.net/get?q=${encodeURIComponent(toTranslate)}&langpair=en|zh-TW`);
+      if(!resp.ok) throw new Error("HTTP "+resp.status);
+      const data=await resp.json();
+      if(data.responseStatus!==200) throw new Error(data.responseDetails||"翻譯失敗");
+      box.innerHTML=`<div>${esc(data.responseData.translatedText).replace(/\n/g,"<br>")}</div>
+        <div style="margin-top:8px;font-size:11.5px;color:var(--muted)">由 MyMemory 免費翻譯・貼你的 API 金鑰可改用 Claude（醫學術語更準）</div>`;
+    }
+    box.dataset.done="1";
+    btn.textContent="🌐 隱藏翻譯";
+  }catch(e){
+    box.innerHTML=`<span style="color:var(--red)">翻譯失敗：${esc(e.message)}。請稍後再試。</span>`;
+    btn.textContent="🌐 翻譯中文";
+  } finally { btn.disabled=false; }
+}
 
 /* ===== 手機折疊選單 ===== */
 (function(){
