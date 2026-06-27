@@ -395,8 +395,9 @@ document.getElementById("man-tour").addEventListener("click",()=>{ closeManual()
 /* ===== 小工具 ===== */
 function cleanAbs(t){ return String(t||"").replace(/<h[1-6][^>]*>/gi,"\n").replace(/<\/h[1-6]>/gi,"：").replace(/<[^>]+>/g," ").replace(/[ \t]{2,}/g," ").replace(/\s*\n\s*/g,"\n").trim(); }
 // 🔄 自動偵測新版本
-const BUILD="2026062015";
+const BUILD="2026062716";
 const CHANGELOG=[
+  "AI 綜合回答自動保存：重整、更新、重開 App 後會自動帶回，不會再不見（換新題或按清除才清掉）",
   "新增「⚖️ AI 律師」工具（勞動法主場，引法條／判斷對方說法／列證據；法規用全國法規資料庫官方真資料；上方可進）",
   "新增「🗑 一鍵清除」，換下一題免逐格手刪",
   "掃碼分享頁 ＋ 30 秒回饋問卷",
@@ -412,6 +413,7 @@ function clearSearch(){
   ["q-desc","q-query","q-prompt-out","synth-out"].forEach(id=>{ const el=document.getElementById(id); if(el) el.value=""; });
   ["q-prompt-box","synth-box","synth-result","synth-wrap"].forEach(id=>{ const el=document.getElementById(id); if(el) el.style.display="none"; });
   const sr=document.getElementById("synth-result"); if(sr) sr.textContent="";
+  localStorage.removeItem("ebnq_synth"); // 一併清掉保存的 AI 回答
   const rs=document.getElementById("results"); if(rs) rs.innerHTML="";
   const st=document.getElementById("status"); if(st) st.innerHTML="";
   window.scrollTo({top:0,behavior:"smooth"});
@@ -484,6 +486,7 @@ async function doSearch(isRetry, overrideQ){
   const q=(overrideQ!=null)?overrideQ:buildQuery();
   document.getElementById("fallback").classList.remove("show");
   if(!q){ toast("請先輸入查詢關鍵字"); return; }
+  if(!isRetry){ const sr=document.getElementById("synth-result"); if(sr){ sr.textContent=""; sr.style.display="none"; } localStorage.removeItem("ebnq_synth"); } // 查新題：清掉上一題保存的 AI 回答
   document.getElementById("status").textContent="搜尋中⋯⋯";
   document.getElementById("results").innerHTML="";
   document.getElementById("synth-wrap").style.display="none";
@@ -625,6 +628,7 @@ document.getElementById("synth-auto-btn").addEventListener("click",async()=>{
   try{
     const {text,usage}=await callClaude(buildSynthPrompt(picks));
     res.textContent=text+"\n\n—— 這次花約 "+costOf(usage)+"（最終判斷仍由醫師／你決定）——";
+    localStorage.setItem("ebnq_synth", res.textContent); // AI 回答自動保存，重整/更新後帶回
   }catch(err){ res.textContent="⚡ "+apiErr(err); }
 });
 ["api-key","api-model"].forEach(id=>{ const el=document.getElementById(id); const s=localStorage.getItem("ebn_"+id); if(s)el.value=s;
@@ -635,6 +639,9 @@ document.getElementById("pay-toggle").addEventListener("click",()=>{ const d=doc
 ["q-desc","q-query"].forEach(id=>{ const el=document.getElementById(id);
   const s=localStorage.getItem("ebnq_"+id); if(s)el.value=s;
   el.addEventListener("input",()=>localStorage.setItem("ebnq_"+id,el.value)); });
+
+/* AI 綜合回答：自動保存，重整／更新／重開後自動帶回（這台裝置） */
+(function(){ const s=localStorage.getItem("ebnq_synth"); if(s){ document.getElementById("synth-wrap").style.display="block"; const r=document.getElementById("synth-result"); r.style.display="block"; r.textContent=s; } })();
 
 /* ===== 📲 換裝置接力（不含金鑰） ===== */
 function collectState(){ return { v:1, app:"search", desc:val("q-desc"), query:val("q-query"),
@@ -647,7 +654,7 @@ function applyState(s){
   if(s.years!=null) document.getElementById("f-years").value=s.years;
   if(typeof s.coch==="boolean") document.getElementById("f-coch").checked=s.coch;
   if(s.query && s.query.trim()) doSearch();
-  if(s.synth){ document.getElementById("synth-wrap").style.display="block"; const r=document.getElementById("synth-result"); r.style.display="block"; r.textContent=s.synth; }
+  if(s.synth){ document.getElementById("synth-wrap").style.display="block"; const r=document.getElementById("synth-result"); r.style.display="block"; r.textContent=s.synth; localStorage.setItem("ebnq_synth",s.synth); }
 }
 document.getElementById("relay-toggle").addEventListener("click",()=>{ const b=document.getElementById("relay-body"); b.style.display=b.style.display==="none"?"block":"none"; });
 document.getElementById("relay-copy").addEventListener("click",()=>copy(JSON.stringify(collectState()),"已複製進度，傳到另一台貼上接力"));
