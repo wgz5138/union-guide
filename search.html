@@ -113,6 +113,11 @@
   .relay-toggle{font-size:12.5px;color:var(--blue);cursor:pointer;user-select:none;display:inline-block;margin:14px 0 4px}
   @keyframes dots{0%{content:''}33%{content:'.'}66%{content:'..'}100%{content:'...'}}
   .dots::after{content:'';animation:dots 1.2s infinite}
+  .refine-row{display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin-bottom:8px}
+  .refine-label{font-size:11px;color:var(--muted);min-width:72px;flex-shrink:0}
+  .rchip{font-size:12px;padding:4px 11px;border-radius:20px;border:1px solid var(--line);color:var(--txt2);cursor:pointer;user-select:none;transition:.12s;background:#0F1622}
+  .rchip:hover{border-color:var(--amber);color:var(--amber)}
+  .rchip.on{background:rgba(255,177,61,.15);border-color:var(--amber);color:var(--amber);font-weight:600}
   footer{text-align:center;padding:24px 16px 40px;font-size:11.5px;color:var(--muted);line-height:1.8;max-width:720px;margin:0 auto}
 
   /* 操作手冊 */
@@ -268,6 +273,43 @@
     </div>
 
     <div id="status"></div>
+
+    <!-- 精準化面板：結果 ≥50 時自動出現 -->
+    <div id="refine-panel" style="display:none;margin:4px 0 10px">
+      <div class="card" style="border-color:rgba(255,177,61,.3);background:rgba(255,177,61,.04)">
+        <div style="font-size:13px;color:var(--amber);font-weight:600;margin-bottom:10px">🎯 結果太多？點選條件精準化，自動加進查詢重搜：</div>
+        <div class="refine-row"><span class="refine-label">👤 病人</span>
+          <span class="rchip" data-q='AND (adult OR adults)'>成人</span>
+          <span class="rchip" data-q='AND (elderly OR "older adults" OR aged)'>老年 ≥65歲</span>
+          <span class="rchip" data-q='AND (children OR pediatric OR paediatric)'>兒童</span>
+          <span class="rchip" data-q='AND (ICU OR "intensive care" OR critically ill)'>重症/ICU</span>
+          <span class="rchip" data-q='AND (chronic kidney disease OR dialysis OR hemodialysis)'>洗腎/慢腎</span>
+          <span class="rchip" data-q='AND (diabetes OR diabetic)'>糖尿病</span>
+        </div>
+        <div class="refine-row"><span class="refine-label">💊 介入</span>
+          <span class="rchip" data-q='AND (drug OR pharmacological OR medication OR pharmacotherapy)'>藥物治療</span>
+          <span class="rchip" data-q='AND (non-pharmacological OR lifestyle OR behavioral)'>非藥物/行為</span>
+          <span class="rchip" data-q='AND (surgery OR surgical OR procedure OR operation)'>手術/處置</span>
+          <span class="rchip" data-q='AND (monitoring OR surveillance OR management)'>監測/管理</span>
+        </div>
+        <div class="refine-row"><span class="refine-label">📊 結果</span>
+          <span class="rchip" data-q='AND (mortality OR survival OR death)'>死亡率/存活</span>
+          <span class="rchip" data-q='AND (hospitalization OR readmission OR "hospital stay")'>住院/再入院</span>
+          <span class="rchip" data-q='AND ("quality of life" OR QOL OR wellbeing)'>生活品質</span>
+          <span class="rchip" data-q='AND (adverse OR complication OR "side effect")'>副作用/併發症</span>
+          <span class="rchip" data-q='AND (diagnosis OR diagnostic OR sensitivity OR specificity)'>診斷</span>
+        </div>
+        <div class="refine-row"><span class="refine-label">🕐 時程</span>
+          <span class="rchip" data-q='AND (acute OR immediate OR short-term)'>急性/短期</span>
+          <span class="rchip" data-q='AND (chronic OR long-term OR longitudinal)'>慢性/長期</span>
+        </div>
+        <div id="refine-preview" style="margin-top:10px;font-size:12px;color:var(--muted);min-height:16px;word-break:break-all"></div>
+        <div class="btn-row" style="margin-top:8px">
+          <button class="btn btn-ghost btn-sm" id="refine-clear">✕ 清除所有選項</button>
+          <button class="btn btn-primary" id="refine-go" style="flex:1" disabled>🔎 套用精準條件，重新搜尋</button>
+        </div>
+      </div>
+    </div>
 
     <div class="fallback" id="fallback">
       <p>⚠ 直接搜尋被擋住了（可能是網路或防火牆）。沒關係，幫你一鍵開好「已填關鍵字」的搜尋頁：</p>
@@ -430,7 +472,7 @@ document.getElementById("man-tour").addEventListener("click",()=>{ closeManual()
 /* ===== 小工具 ===== */
 function cleanAbs(t){ return String(t||"").replace(/<h[1-6][^>]*>/gi,"\n").replace(/<\/h[1-6]>/gi,"：").replace(/<[^>]+>/g," ").replace(/[ \t]{2,}/g," ").replace(/\s*\n\s*/g,"\n").trim(); }
 // 🔄 自動偵測新版本
-const BUILD="2026062707";
+const BUILD="2026062708";
 const CHANGELOG=[
   "每篇文獻新增「🌐 翻譯中文」：有 API 金鑰用 Claude 翻（醫學術語更準），沒有則自動用 MyMemory 免費翻，不需跳頁",
   "新增「⚖️ AI 律師」工具（勞動法主場，引法條／判斷對方說法／列證據；法規用全國法規資料庫官方真資料；上方可進）",
@@ -525,6 +567,7 @@ async function doSearch(isRetry, overrideQ){
   if(!q){ toast("請先輸入查詢關鍵字"); return; }
   document.getElementById("status").innerHTML='搜尋中<span class="dots"></span>';
   document.getElementById("results").innerHTML="";
+  if(window._hideRefinePanel) window._hideRefinePanel();
   document.getElementById("synth-wrap").style.display="none";
   try{
     const url=`${EPMC}?query=${encodeURIComponent(q)}&format=json&resultType=core&pageSize=25&sort=`;
@@ -545,6 +588,7 @@ async function doSearch(isRetry, overrideQ){
     }
     document.getElementById("status").textContent=`找到約 ${data.hitCount} 篇，顯示前 ${RESULTS.length} 篇（標題＋摘要）：`;
     renderResults(); updateSelCount();
+    if(window._showRefinePanel) window._showRefinePanel(data.hitCount||0);
     document.getElementById("translate-all-row").style.display="block";
     document.getElementById("translate-all-status").textContent="";
     document.getElementById("translate-all-btn").textContent="🌐 一鍵翻譯全部文章標題＋摘要";
@@ -755,6 +799,55 @@ async function translateOne(btn, i){
     sta.textContent=`完成！${done} 篇${fail?`，${fail} 篇失敗（再按一次重試）`:"✓"}`;
     btn.textContent="🌐 一鍵翻譯全部文章標題＋摘要";
   });
+})();
+
+/* ===== 🎯 精準化面板 ===== */
+(function(){
+  const panel=document.getElementById("refine-panel");
+  const preview=document.getElementById("refine-preview");
+  const goBtn=document.getElementById("refine-go");
+  const clearBtn=document.getElementById("refine-clear");
+  if(!panel) return;
+
+  function selectedChips(){ return [...document.querySelectorAll(".rchip.on")]; }
+  function updatePreview(){
+    const chips=selectedChips();
+    if(!chips.length){ preview.textContent=""; goBtn.disabled=true; return; }
+    const extra=chips.map(c=>c.dataset.q).join(" ");
+    const base=val("q-query");
+    preview.innerHTML=`<b style="color:var(--amber)">加入條件：</b>${esc(extra)}`;
+    goBtn.disabled=false;
+  }
+
+  document.querySelectorAll(".rchip").forEach(chip=>{
+    chip.addEventListener("click",()=>{ chip.classList.toggle("on"); updatePreview(); });
+  });
+
+  clearBtn.addEventListener("click",()=>{
+    document.querySelectorAll(".rchip.on").forEach(c=>c.classList.remove("on"));
+    updatePreview();
+  });
+
+  goBtn.addEventListener("click",()=>{
+    const chips=selectedChips();
+    if(!chips.length) return;
+    const extra=chips.map(c=>c.dataset.q).join(" ");
+    const base=val("q-query");
+    const refined=base+" "+extra;
+    document.getElementById("q-query").value=refined;
+    localStorage.setItem("ebnq_q-query",refined);
+    doSearch();
+  });
+
+  // 結果 ≥50 時顯示面板（由 doSearch 呼叫）
+  window._showRefinePanel=function(hitCount){
+    if(hitCount>=50){
+      panel.style.display="block";
+    } else {
+      panel.style.display="none";
+    }
+  };
+  window._hideRefinePanel=function(){ panel.style.display="none"; };
 })();
 
 /* ===== 手機折疊選單 ===== */
