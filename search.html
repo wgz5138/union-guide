@@ -233,7 +233,10 @@
     <!-- ① 中文描述 → 關鍵字 -->
     <div class="label"><span class="n">1</span>不會下關鍵字？用中文描述你的問題<button id="clear-btn" type="button" style="margin-left:auto;font-size:11px;text-transform:none;letter-spacing:0;background:rgba(255,122,122,.12);color:#ff9a9a;border:1px solid rgba(255,122,122,.35);border-radius:16px;padding:5px 12px;cursor:pointer;font-family:inherit">🗑 清除換下一題</button></div>
     <div class="card">
-      <textarea class="txt" id="q-desc" rows="3" placeholder="例：糖尿病長期洗腎病人，洗腎中嚴重低血壓、水脫不掉，有什麼處理方式？"></textarea>
+      <div style="position:relative">
+        <textarea class="txt" id="q-desc" rows="3" placeholder="例：糖尿病長期洗腎病人，洗腎中嚴重低血壓、水脫不掉，有什麼處理方式？" style="padding-right:48px"></textarea>
+        <button id="mic-btn" type="button" title="語音輸入（繁體中文）" style="position:absolute;right:8px;top:8px;width:34px;height:34px;border-radius:50%;border:1px solid var(--line);background:#0F1622;color:var(--txt2);font-size:17px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:.15s">🎤</button>
+      </div>
       <div class="btn-row">
         <button class="btn btn-ghost" id="q-prompt-btn">🧠 免費：複製貼給 AI</button>
         <button class="btn btn-ghost" id="q-auto-btn">⚡ 付費：直接生成查詢</button>
@@ -396,13 +399,14 @@
     <p>幫你<b>快速找醫學文獻的「標題＋摘要」</b>。你認出對的那篇，再用<b>醫院網路</b>點連結拿全文。它不抓全文（標題＋摘要就夠你認出來）。</p>
 
     <h3>不會下英文關鍵字？沒關係</h3>
-    <div class="tip">第①步用<b>中文</b>描述你的問題 → 按「🧠 幫我想英文關鍵字」→ 把提示詞貼給 ChatGPT/Claude → 它回你一行英文查詢 → 貼到第②步搜尋。</div>
+    <div class="tip">第①步用<b>中文</b>描述你的問題（或按 <b>🎤</b> 直接說）→ 按「🧠 幫我想英文關鍵字」→ 貼給 ChatGPT/Claude → 拿到英文查詢 → 貼到第②步搜尋。</div>
 
-    <h3>三步驟</h3>
+    <h3>四步驟</h3>
     <ol>
-      <li>（選）中文描述問題 → 產生查詢 → 貼給 AI → 拿到英文查詢</li>
+      <li>（選）中文描述問題（可語音輸入🎤）→ 產生查詢 → 貼給 AI → 拿到英文查詢</li>
       <li>把英文查詢貼進搜尋框 → 可篩「系統回顧／RCT、年份、只看 Cochrane」→ 按搜尋</li>
-      <li>跑出清單（標題＋摘要）→ 每篇可：看 PubMed／出版社全文、🔗 複製連結存 LINE、📋 帶去評讀</li>
+      <li>結果太多？→ <b>精準化面板</b>自動出現，點選病人／介入／結果條件一鍵縮範圍</li>
+      <li>跑出清單 → 每篇可：<b>🌐 翻譯中文</b>、看全文、🔗 複製連結存 LINE、📋 帶去評讀</li>
     </ol>
 
     <h3>全文去哪拿？</h3>
@@ -436,14 +440,17 @@ document.getElementById("wel-more").addEventListener("click",()=>{ document.getE
 document.getElementById("wel-tour").addEventListener("click",()=>{ document.getElementById("welcome").classList.remove("show"); startTour(); });
 /* ===== 互動導覽 ===== */
 const TOUR=[
-  {sel:"#q-desc", t:"① <b>用中文描述你的臨床問題</b>就好，不會下英文關鍵字沒關係。"},
-  {sel:"#demo-btn", t:"② 不想打字？點 <b>「🧪 一鍵試範例」</b> 直接看它能搜出文獻。"},
-  {sel:"#q-query", t:"③ 或把英文查詢貼這格按 <b>搜尋</b>；換查詢按 <b>「✕ 清空」</b> 再貼。"},
-  {sel:"#status", t:"④ 結果會列在下面：看到對的 → 點連結拿全文，或 <b>「📋 帶去評讀」</b>。走完囉 🎉"}
+  {sel:"#q-desc", t:"① <b>用中文描述你的臨床問題</b>——或按右側 <b>🎤</b> 直接說，自動轉成文字。"},
+  {sel:"#q-query", t:"② AI 或你自己給的英文查詢，貼到這裡按 <b>🔎 搜尋</b>；可篩研究類型、年份、Cochrane。"},
+  {sel:"#demo-btn", t:"③ 第一次用？按 <b>「🧪 一鍵試範例」</b> 直接看搜尋效果，不用打字。"},
+  {sel:"#refine-panel", t:"④ 搜到太多篇？<b>精準化面板</b>會自動出現——點選病人／介入／結果條件，一鍵重搜縮範圍。", lazy:true},
+  {sel:"#translate-all-row", t:"⑤ 看到英文頭痛？<b>一鍵翻譯全部</b>，中文標題＋摘要直接顯示在卡片裡。", lazy:true},
+  {sel:"#synth-wrap", t:"⑥ 最後：勾選幾篇 → <b>AI 綜合</b> 幫你整理成實證結論附出處。走完囉 🎉", lazy:true}
 ];
 let _ti=0;
 function tourStep(){ document.querySelectorAll(".tour-hi").forEach(e=>e.classList.remove("tour-hi"));
-  const s=TOUR[_ti], el=document.querySelector(s.sel);
+  const s=TOUR[_ti]; let el=document.querySelector(s.sel);
+  if(s.lazy&&(!el||el.style.display==="none")){ document.getElementById("tour-text").innerHTML="（"+(_ti+1)+"/"+TOUR.length+"）"+s.t+'<br><span style="font-size:12px;color:var(--muted)">（請先搜尋後才會顯示此功能）</span>'; document.getElementById("tour-next").textContent=_ti===TOUR.length-1?"完成 ✓":"下一步 →"; return; }
   if(el){ el.classList.add("tour-hi"); el.scrollIntoView({behavior:"smooth",block:"center"}); }
   document.getElementById("tour-text").innerHTML="（"+(_ti+1)+"/"+TOUR.length+"）"+s.t;
   document.getElementById("tour-next").textContent=_ti===TOUR.length-1?"完成 ✓":"下一步 →"; }
@@ -472,7 +479,7 @@ document.getElementById("man-tour").addEventListener("click",()=>{ closeManual()
 /* ===== 小工具 ===== */
 function cleanAbs(t){ return String(t||"").replace(/<h[1-6][^>]*>/gi,"\n").replace(/<\/h[1-6]>/gi,"：").replace(/<[^>]+>/g," ").replace(/[ \t]{2,}/g," ").replace(/\s*\n\s*/g,"\n").trim(); }
 // 🔄 自動偵測新版本
-const BUILD="2026062708";
+const BUILD="2026062709";
 const CHANGELOG=[
   "每篇文獻新增「🌐 翻譯中文」：有 API 金鑰用 Claude 翻（醫學術語更準），沒有則自動用 MyMemory 免費翻，不需跳頁",
   "新增「⚖️ AI 律師」工具（勞動法主場，引法條／判斷對方說法／列證據；法規用全國法規資料庫官方真資料；上方可進）",
@@ -848,6 +855,40 @@ async function translateOne(btn, i){
     }
   };
   window._hideRefinePanel=function(){ panel.style.display="none"; };
+})();
+
+/* ===== 🎤 語音輸入（Web Speech API，繁體中文） ===== */
+(function(){
+  const btn=document.getElementById("mic-btn");
+  const ta=document.getElementById("q-desc");
+  if(!btn||!ta) return;
+  const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
+  if(!SR){ btn.title="此瀏覽器不支援語音輸入（請用 Chrome）"; btn.style.opacity=".35"; btn.disabled=true; return; }
+  let rec=null, listening=false;
+  btn.addEventListener("click",()=>{
+    if(listening){ rec&&rec.stop(); return; }
+    rec=new SR();
+    rec.lang="zh-TW";
+    rec.continuous=false;
+    rec.interimResults=true;
+    rec.maxAlternatives=1;
+    let interim="";
+    const base=ta.value;
+    rec.onstart=()=>{ listening=true; btn.textContent="🔴"; btn.style.color="var(--red)"; btn.style.borderColor="var(--red)"; toast("🎤 說話中，放開說完會自動停"); };
+    rec.onresult=e=>{
+      interim="";
+      let final="";
+      for(let i=e.resultIndex;i<e.results.length;i++){
+        if(e.results[i].isFinal) final+=e.results[i][0].transcript;
+        else interim+=e.results[i][0].transcript;
+      }
+      ta.value=(base?base+"\n":"")+final+interim;
+      localStorage.setItem("ebnq_q-desc",ta.value);
+    };
+    rec.onerror=e=>{ toast("語音錯誤："+e.error); };
+    rec.onend=()=>{ listening=false; btn.textContent="🎤"; btn.style.color=""; btn.style.borderColor=""; };
+    rec.start();
+  });
 })();
 
 /* ===== 手機折疊選單 ===== */
