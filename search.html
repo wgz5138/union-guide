@@ -37,13 +37,23 @@
   body.locked{overflow:hidden} #app{display:none}
   body.unlocked #app{display:block} body.unlocked #gate{display:none}
 
-  .topbar{display:flex;align-items:center;gap:10px;max-width:720px;margin:0 auto;padding:16px 16px 0}
-  .topbar .logo{width:36px;height:36px;border-radius:9px;display:flex;align-items:center;justify-content:center;font-size:18px;background:rgba(63,214,208,.12);color:var(--cyan);border:1px solid rgba(63,214,208,.35);box-shadow:0 0 16px rgba(63,214,208,.18)}
-  .topbar .ttl{font-size:16px;font-weight:700;color:var(--head)} .topbar .sub{font-size:11px;color:var(--muted)}
-  .topbar .right{margin-left:auto;display:flex;gap:8px}
-  .topbar .link{font-size:11px;padding:6px 11px;border-radius:20px;background:#0F1622;color:var(--blue);border:1px solid var(--line);text-decoration:none;font-family:inherit;cursor:pointer}
+  .topbar-wrap{position:sticky;top:0;z-index:900;background:rgba(10,14,22,.92);backdrop-filter:blur(8px);border-bottom:1px solid var(--line)}
+  .topbar{display:flex;align-items:center;gap:10px;max-width:720px;margin:0 auto;padding:10px 16px}
+  .topbar .logo{width:34px;height:34px;border-radius:9px;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:17px;background:rgba(63,214,208,.12);color:var(--cyan);border:1px solid rgba(63,214,208,.35)}
+  .topbar .ttl{font-size:15px;font-weight:700;color:var(--head);white-space:nowrap} .topbar .sub{font-size:10px;color:var(--muted)}
+  .topbar .right{margin-left:auto;display:flex;gap:6px;align-items:center}
+  .topbar .link{font-size:11px;padding:5px 10px;border-radius:20px;background:#0F1622;color:var(--blue);border:1px solid var(--line);text-decoration:none;font-family:inherit;cursor:pointer;white-space:nowrap}
+  /* 手機版：折疊選單 */
+  #top-menu-btn{display:none;background:none;border:1px solid var(--line);border-radius:8px;color:var(--txt2);padding:5px 9px;font-size:15px;cursor:pointer;line-height:1}
+  #top-menu{display:flex;gap:6px;align-items:center;flex-wrap:wrap}
+  @media(max-width:540px){
+    #top-menu-btn{display:block}
+    #top-menu{display:none;position:absolute;top:100%;right:0;left:0;background:var(--panel);border-bottom:1px solid var(--line);padding:10px 14px;flex-direction:column;align-items:flex-start;gap:6px;z-index:901}
+    #top-menu.open{display:flex}
+    .topbar .right{position:relative}
+  }
 
-  main{max-width:720px;margin:0 auto;padding:14px 16px 70px}
+  main{max-width:720px;margin:0 auto;padding:14px 16px 80px}
   .label{font-size:11px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin:20px 0 9px;display:flex;align-items:center;gap:8px}
   .label .n{width:20px;height:20px;border-radius:6px;background:rgba(79,157,255,.14);color:var(--blue);display:flex;align-items:center;justify-content:center;font-size:11px}
   .card{background:linear-gradient(180deg,var(--panel),var(--panel2));border:1px solid var(--line);border-radius:14px;padding:16px}
@@ -68,7 +78,8 @@
   .ai-links{display:flex;gap:8px;margin-top:10px;flex-wrap:wrap}.ai-links a{flex:1;min-width:130px;text-align:center;text-decoration:none}
 
   #status{font-size:13px;color:var(--muted);margin:14px 0 6px;min-height:18px}
-  .res{border:1px solid var(--line);border-radius:12px;padding:14px;margin-bottom:10px;background:#0F18260f}
+  .res{border:1px solid var(--line);border-radius:12px;padding:14px;margin-bottom:10px;background:#0F18260f;transition:border-color .15s}
+  .res.selected{border-color:rgba(63,214,208,.55);background:rgba(63,214,208,.04)}
   .res-top{display:flex;gap:10px;align-items:flex-start}
   .res-chk{margin-top:3px;width:17px;height:17px;accent-color:var(--cyan);flex-shrink:0}
   .res-title{flex:1;font-size:15px;font-weight:600;color:var(--head);line-height:1.45}
@@ -95,6 +106,8 @@
   .toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(20px);background:#1A2433;color:#fff;border:1px solid var(--line);padding:.7rem 1.2rem;border-radius:30px;font-size:13px;opacity:0;pointer-events:none;transition:.25s;z-index:1100}
   .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
   .relay-toggle{font-size:12.5px;color:var(--blue);cursor:pointer;user-select:none;display:inline-block;margin:14px 0 4px}
+  @keyframes dots{0%{content:''}33%{content:'.'}66%{content:'..'}100%{content:'...'}}
+  .dots::after{content:'';animation:dots 1.2s infinite}
   footer{text-align:center;padding:24px 16px 40px;font-size:11.5px;color:var(--muted);line-height:1.8;max-width:720px;margin:0 auto}
 
   /* 操作手冊 */
@@ -157,18 +170,23 @@
 </div>
 
 <div id="app">
+  <div class="topbar-wrap">
   <div class="topbar">
     <div class="logo">🔎</div>
     <div><div class="ttl">臨床快查</div><div class="sub mono">Evidence Quick-Search</div></div>
     <div class="right">
-      <button class="link" id="manual-btn" type="button">❓ 怎麼用</button>
-      <a class="link" id="share-btn" href="share.html" target="_blank" rel="noopener">📲 分享</a>
-      <button class="link" id="chpw-btn" type="button">🔑 改密碼</button>
-      <a class="link" href="lawyer.html">⚖️ AI 律師</a>
-      <a class="link" href="evidence.html">→ 評讀工具</a>
+      <button id="top-menu-btn" type="button" aria-label="選單">⋯</button>
+      <div id="top-menu">
+        <button class="link" id="manual-btn" type="button">❓ 怎麼用</button>
+        <a class="link" id="share-btn" href="share.html" target="_blank" rel="noopener">📲 分享</a>
+        <button class="link" id="chpw-btn" type="button">🔑 改密碼</button>
+        <a class="link" href="lawyer.html">⚖️ AI 律師</a>
+        <a class="link" href="evidence.html">→ 評讀工具</a>
+      </div>
     </div>
   </div>
-  <div style="text-align:right;font-size:11.5px;color:var(--muted);margin:-2px 2px 6px">
+  </div>
+  <div style="text-align:right;font-size:11.5px;color:var(--muted);margin:6px 2px 2px">
     <span id="ver-line"></span><span id="ver-status" style="color:var(--cyan)"></span> · <a href="#" id="checkupd-btn" style="color:var(--cyan)">🔄 檢查更新</a> · <a href="#" id="verinfo-btn" style="color:var(--cyan)">ℹ️ 版本說明</a>
   </div>
 
@@ -259,8 +277,15 @@
 
     <!-- ③ AI 綜合 -->
     <div id="synth-wrap" style="display:none">
-      <div class="label"><span class="n">3</span>請 AI 綜合（勾選文獻後）</div>
+      <div class="label">
+        <span class="n">3</span>請 AI 綜合（勾選文獻後）
+        <span style="margin-left:auto;display:flex;gap:6px">
+          <button id="sel-all" type="button" style="font-size:11px;background:rgba(79,157,255,.1);color:var(--blue);border:1px solid rgba(79,157,255,.3);border-radius:14px;padding:3px 10px;cursor:pointer;font-family:inherit">全選</button>
+          <button id="sel-none" type="button" style="font-size:11px;background:rgba(94,110,133,.1);color:var(--muted);border:1px solid var(--line);border-radius:14px;padding:3px 10px;cursor:pointer;font-family:inherit">全取消</button>
+        </span>
+      </div>
       <div class="card">
+        <div id="sel-count" style="font-size:12px;color:var(--muted);margin-bottom:8px"></div>
         <div class="btn-row">
           <button class="btn btn-ghost" id="synth-btn">🧪 免費：產生綜合提示詞</button>
           <button class="btn btn-ghost" id="synth-auto-btn">⚡ 付費：直接綜合</button>
@@ -271,6 +296,7 @@
           <div class="hint">AI 只會根據你勾的這幾篇摘要回答、並標出處，不會憑空編造。最終臨床判斷仍由醫師／你決定。</div>
         </div>
         <div id="synth-result" style="display:none;margin-top:12px;background:#0A111C;border:1px solid var(--line);border-radius:10px;padding:14px;font-size:13.5px;color:var(--txt2);line-height:1.85;white-space:pre-wrap"></div>
+        <div id="copy-synth-result-row" style="display:none;margin-top:8px"><button class="btn btn-ghost" id="copy-synth-result">📋 複製 AI 綜合結果</button></div>
       </div>
     </div>
   </main>
@@ -395,7 +421,7 @@ document.getElementById("man-tour").addEventListener("click",()=>{ closeManual()
 /* ===== 小工具 ===== */
 function cleanAbs(t){ return String(t||"").replace(/<h[1-6][^>]*>/gi,"\n").replace(/<\/h[1-6]>/gi,"：").replace(/<[^>]+>/g," ").replace(/[ \t]{2,}/g," ").replace(/\s*\n\s*/g,"\n").trim(); }
 // 🔄 自動偵測新版本
-const BUILD="2026062015";
+const BUILD="2026062701";
 const CHANGELOG=[
   "新增「⚖️ AI 律師」工具（勞動法主場，引法條／判斷對方說法／列證據；法規用全國法規資料庫官方真資料；上方可進）",
   "新增「🗑 一鍵清除」，換下一題免逐格手刪",
@@ -414,6 +440,8 @@ function clearSearch(){
   const sr=document.getElementById("synth-result"); if(sr) sr.textContent="";
   const rs=document.getElementById("results"); if(rs) rs.innerHTML="";
   const st=document.getElementById("status"); if(st) st.innerHTML="";
+  const sc=document.getElementById("sel-count"); if(sc) sc.textContent="";
+  const cr=document.getElementById("copy-synth-result-row"); if(cr) cr.style.display="none";
   window.scrollTo({top:0,behavior:"smooth"});
   toast("已清除，可以查下一題 👍");
 }
@@ -484,7 +512,7 @@ async function doSearch(isRetry, overrideQ){
   const q=(overrideQ!=null)?overrideQ:buildQuery();
   document.getElementById("fallback").classList.remove("show");
   if(!q){ toast("請先輸入查詢關鍵字"); return; }
-  document.getElementById("status").textContent="搜尋中⋯⋯";
+  document.getElementById("status").innerHTML='搜尋中<span class="dots"></span>';
   document.getElementById("results").innerHTML="";
   document.getElementById("synth-wrap").style.display="none";
   try{
@@ -505,7 +533,7 @@ async function doSearch(isRetry, overrideQ){
       return;
     }
     document.getElementById("status").textContent=`找到約 ${data.hitCount} 篇，顯示前 ${RESULTS.length} 篇（標題＋摘要）：`;
-    renderResults();
+    renderResults(); updateSelCount();
     document.getElementById("synth-wrap").style.display="block";
   }catch(err){
     document.getElementById("status").textContent="";
@@ -622,9 +650,11 @@ document.getElementById("synth-auto-btn").addEventListener("click",async()=>{
   const picks=pickedRefs(); if(!picks.length){ toast("請先勾選要綜合的文獻"); return; }
   if(!apiKey()){ toast("先在上面貼你的 API 金鑰"); return; }
   const res=document.getElementById("synth-result"); res.style.display="block"; res.textContent="⚡ AI 綜合中⋯⋯約 10～30 秒";
+  const copyRow=document.getElementById("copy-synth-result-row"); if(copyRow) copyRow.style.display="none";
   try{
     const {text,usage}=await callClaude(buildSynthPrompt(picks));
     res.textContent=text+"\n\n—— 這次花約 "+costOf(usage)+"（最終判斷仍由醫師／你決定）——";
+    if(copyRow) copyRow.style.display="block";
   }catch(err){ res.textContent="⚡ "+apiErr(err); }
 });
 ["api-key","api-model"].forEach(id=>{ const el=document.getElementById(id); const s=localStorage.getItem("ebn_"+id); if(s)el.value=s;
@@ -635,6 +665,44 @@ document.getElementById("pay-toggle").addEventListener("click",()=>{ const d=doc
 ["q-desc","q-query"].forEach(id=>{ const el=document.getElementById(id);
   const s=localStorage.getItem("ebnq_"+id); if(s)el.value=s;
   el.addEventListener("input",()=>localStorage.setItem("ebnq_"+id,el.value)); });
+
+/* ===== 手機折疊選單 ===== */
+(function(){
+  const btn=document.getElementById("top-menu-btn"), menu=document.getElementById("top-menu");
+  if(!btn||!menu) return;
+  btn.addEventListener("click",e=>{ e.stopPropagation(); menu.classList.toggle("open"); });
+  document.addEventListener("click",()=>menu.classList.remove("open"));
+  menu.querySelectorAll("a,button").forEach(el=>el.addEventListener("click",()=>menu.classList.remove("open")));
+})();
+
+/* ===== 勾選卡片高亮 ===== */
+document.getElementById("results").addEventListener("change",e=>{
+  if(!e.target.matches(".res-chk")) return;
+  const card=e.target.closest(".res");
+  if(card) card.classList.toggle("selected", e.target.checked);
+  updateSelCount();
+});
+
+/* ===== 全選 / 全取消 / 計數 ===== */
+function updateSelCount(){
+  const all=document.querySelectorAll(".res-chk").length;
+  const checked=document.querySelectorAll(".res-chk:checked").length;
+  const sc=document.getElementById("sel-count");
+  if(sc) sc.textContent = checked ? `已勾選 ${checked} / ${all} 篇` : "";
+}
+document.getElementById("sel-all").addEventListener("click",()=>{
+  document.querySelectorAll(".res-chk").forEach(c=>{ c.checked=true; const card=c.closest(".res"); if(card) card.classList.add("selected"); });
+  updateSelCount();
+});
+document.getElementById("sel-none").addEventListener("click",()=>{
+  document.querySelectorAll(".res-chk").forEach(c=>{ c.checked=false; const card=c.closest(".res"); if(card) card.classList.remove("selected"); });
+  updateSelCount();
+});
+
+/* ===== 複製 AI 綜合結果 ===== */
+document.getElementById("copy-synth-result").addEventListener("click",()=>{
+  const r=document.getElementById("synth-result"); copy(r.textContent,"✅ 已複製 AI 綜合結果");
+});
 
 /* ===== 📲 換裝置接力（不含金鑰） ===== */
 function collectState(){ return { v:1, app:"search", desc:val("q-desc"), query:val("q-query"),
