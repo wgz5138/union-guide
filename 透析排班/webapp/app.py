@@ -66,6 +66,21 @@ def extract_notes(stdout):
             notes.append(s)
     return notes
 
+def extract_fairness(stdout):
+    """抽出【公平累計】表格區段（含標題）。"""
+    lines = stdout.splitlines()
+    in_block = False; block = []
+    for ln in lines:
+        s = ln.strip()
+        if "【公平累計】" in s:
+            in_block = True
+        if in_block:
+            if s == "" and block:    # 空行代表區段結束
+                break
+            if s:
+                block.append(s)
+    return block
+
 def parse_grid(df):
     names = df.copy(); dates = df.copy(); marks = df.copy()
     for r in df.index:
@@ -339,7 +354,7 @@ def _build_line_txt(rows, disp_df=None):
 
 
 # ── 💬 意見回饋：借用稽核歷史（特殊鍵「意見-時間」）存放，不動 LINE 程式 ──
-APP_VER = "v3.7"
+APP_VER = "v3.8"
 FEEDBACK_PREFIX = "意見-"
 
 def push_feedback(step, detail, expect, urgency, who):
@@ -582,7 +597,7 @@ if TEST_MODE:
 
 st.title("💊 透析藥水排班")
 st.caption("上傳班表 Excel → 出名單(表格)。可直接點格子改人名。跨區標 🔺。")
-st.caption("🟢 版本 v3.7（測試模式小巫用／定案後顯示休息人員／公平排班升級）· 2026-06-28")
+st.caption("🟢 版本 v3.8（雲端歷史修正／公平累計統計可查看／測試模式）· 2026-06-28")
 
 with st.expander("📖 第一次用？點我看「3 步驟」（給玉繡）", expanded=False):
     st.markdown("""
@@ -833,6 +848,13 @@ if mode.startswith("🟦"):
             _edit_T = st.data_editor(override_names.T, use_container_width=True, key="yao_edit")
             edited = _edit_T.T   # 轉回 area×day 給後續邏輯用
             for n in extract_notes(out): st.write("・" + n)
+
+            # 公平累計統計（含本週預覽）
+            _fair_lines = extract_fairness(out)
+            if _fair_lines:
+                with st.expander("📊 查看公平累計（印/休統計）", expanded=False):
+                    st.caption("排序：印次越少 → 越優先被排到印。休次越多 → 下次更優先。")
+                    st.code("\n".join(_fair_lines), language=None)
 
             st.markdown("#### 3️⃣ 產生定案 → 送到雲端")
             if st.button("✅ 產生定案（套用修改）", type="primary"):
