@@ -290,6 +290,46 @@ def detect_shifts_quick(data, yy, mm):
 def _file_key(up): return f"{up.name}_{up.size}"
 
 
+# ── LINE 公告文字格式 ─────────────────────────────────────
+def _build_line_txt(rows):
+    """產生和截圖一模一樣的 LINE 公告格式文字。"""
+    from datetime import datetime as _dt
+    DOW = {0:"週一",1:"週二",2:"週三",3:"週四",4:"週五",5:"週六",6:"週日"}
+
+    day_map = {}
+    for r in rows:
+        d_str, area, name = str(r[0]), str(r[1]), str(r[2])
+        if not name or name in ("", "❌排不出"): continue
+        if d_str not in day_map: day_map[d_str] = {}
+        day_map[d_str][area] = name
+
+    if not day_map: return ""
+
+    def fmt(d_str):
+        d = _dt.strptime(d_str, "%Y-%m-%d")
+        return f"{DOW[d.weekday()]} {d.month}/{d.day}"
+
+    sorted_dates = sorted(day_map.keys())
+    header = f"印藥水名單 (治療日 {fmt(sorted_dates[0])}~ {fmt(sorted_dates[-1])})"
+    lines = [header, ""]
+
+    for d_str in sorted_dates:
+        line = fmt(d_str)
+        for area in ["一區","二區","三區"]:
+            nm = day_map[d_str].get(area, "")
+            if nm: line += f"\t{area}:{nm}"
+        lines.append(line)
+
+    roster = _load_roster_full()
+    if roster:
+        printing = {str(r[2]) for r in rows if r[2]}
+        resting = [m["姓名"] for m in roster if m["姓名"] not in printing]
+        if resting:
+            lines += ["", "休息：" + "、".join(resting)]
+
+    return "\n".join(lines)
+
+
 # ── Fix4：定案草稿跨 session 保留 ────────────────────────
 def _save_draft(rows, sheet0, disp_df):
     try:
@@ -537,11 +577,24 @@ if mode.startswith("🟦"):
         st.success("✅ 定案完成！")
         st.dataframe(disp.T, use_container_width=True)   # 轉置：日期當列，區當欄，手機友善
 
-        # Fix5：下載排班圖片
-        _png = _disp_to_png(disp.T, title=f"印藥水名單（{sheet0}）")
-        if _png:
-            st.download_button("🖼️ 下載排班圖片（PNG）", _png,
-                               file_name=f"排班_{sheet0}.png", mime="image/png")
+        # LINE 公告文字（可長按複製 / 下載 txt 傳群組）
+        _line_txt = _build_line_txt(rows)
+        if _line_txt:
+            st.markdown("**📋 LINE 群組公告格式**")
+            st.text_area("長按複製，或下載 txt 直接傳 LINE 群組",
+                         _line_txt, height=220, key="line_txt_preview")
+            st.download_button("⬇️ 下載 txt 傳 LINE 群組",
+                               _line_txt.encode("utf-8"),
+                               file_name=f"印藥水名單_{sheet0}.txt",
+                               mime="text/plain")
+
+        with st.expander("🖼️ 下載排班圖片（PNG）"):
+            _png = _disp_to_png(disp.T, title=f"印藥水名單（{sheet0}）")
+            if _png:
+                st.download_button("⬇️ 下載 PNG", _png,
+                                   file_name=f"排班_{sheet0}.png", mime="image/png")
+            else:
+                st.caption("（圖片產生失敗，請用上方文字格式）")
 
         if APPS_SCRIPT_URL and WRITE_SECRET:
             if st.button("🚀 送到雲端（自動排提醒）", type="primary"):
