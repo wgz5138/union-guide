@@ -425,7 +425,7 @@ def fetch_latest_audit_result():
     except Exception as _e:
         return None, str(_e)
 
-def _sync_to_gs(action, rows, timeout=150, retries=2):
+def _sync_to_gs(action, rows, timeout=30, retries=2):
     """送資料到 GS，逾時自動重試。回傳 (ok, n, err_msg)。"""
     last_err = ""
     for attempt in range(retries):
