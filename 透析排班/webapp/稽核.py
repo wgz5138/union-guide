@@ -257,12 +257,14 @@ def assign(members, info, hist_cnt, hist_rest=None):
     idx={c:i for i,c in enumerate(cards)}
     # 公平排序：印次數 - 休息次數，負值越大（休越多）越優先稽核
     cost={c: hist_cnt.get(c,0) - hist_rest.get(c,0) for c in cards}
+    n_white=sum(1 for c in cards if info[c]["type"]=="白")
     n_night=sum(1 for c in cards if info[c]["type"]=="夜")
-    extra_night_to_band2 = max(0, n_night-4)
+    # 白班優先排第二班；只有白班人數 < 小夜人數時，才允許小夜補第二班
+    allow_night_band2 = n_white < n_night
     slots=[(a,g,s) for a in AREAS for g in GROUPS for s in SHIFTS]
     def need_type(s):
         if s==3: return "夜"
-        if s==2: return "白或夜" if extra_night_to_band2>0 else "白"
+        if s==2: return "白或夜" if allow_night_band2 else "白"
         return "白"
     def type_ok(c,s):
         t=info[c]["type"]; nt=need_type(s)
