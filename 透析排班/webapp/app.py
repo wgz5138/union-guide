@@ -1582,16 +1582,21 @@ if mode.startswith("📊"):
                 st.success(f"**{_month}** 稽核名單")
                 _稽核者 = _df_la[_df_la["狀態"] == "稽核"].copy().reset_index(drop=True)
                 _休息者 = _df_la[_df_la["狀態"] == "休"].copy().reset_index(drop=True)
-                _c1, _c2 = st.columns(2)
-                with _c1:
-                    st.markdown("**稽核者**")
+                # 若有位置欄，拆成 區/組/班次 三欄顯示成表格
+                if _稽核者["位置"].str.strip().any():
+                    def _split_pos(p):
+                        parts = str(p).split("/") if "/" in str(p) else ["", "", str(p)]
+                        while len(parts) < 3: parts.append("")
+                        return parts[0], parts[1], parts[2]
+                    _稽核者[["區","組","班次"]] = pd.DataFrame(
+                        [_split_pos(p) for p in _稽核者["位置"]], index=_稽核者.index)
+                    st.dataframe(_稽核者[["區","組","班次","姓名"]].rename(columns={"姓名":"稽核者"}),
+                                 use_container_width=True, hide_index=True)
+                else:
                     for _, _row in _稽核者.iterrows():
-                        _pos = f"（{_row['位置']}）" if str(_row.get("位置","")).strip() else ""
-                        st.write(f"✅ {_row['姓名']}{_pos}")
-                with _c2:
-                    st.markdown("**休息者**")
-                    for _, _row in _休息者.iterrows():
-                        st.write(f"🏖️ {_row['姓名']}")
+                        st.write(f"✅ {_row['姓名']}")
+                if not _休息者.empty:
+                    st.markdown("**本月休息：**" + "、".join(_休息者["姓名"].tolist()))
         else:
             st.info("按「🔄 讀取最新稽核名單」載入玉繡最新一次排的稽核。")
 
