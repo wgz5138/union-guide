@@ -52,6 +52,8 @@ function handleAction_(body) {
   if (a === "setAuditResult")     return setAuditResult_(body);
   if (a === "sendAuditNotice")    return sendAuditNotice_(body);
   if (a === "getLatestBanbiao")   return getLatestBanbiao_();
+  if (a === "getWeekDraft")       return getWeekDraft_();
+  if (a === "setWeekDraft")       return setWeekDraft_(body);
   return json_({ok: false, error: "unknown action: " + a});
 }
 
@@ -90,6 +92,23 @@ function setScheduleHistory_(body) {
   sh.clearContents();
   kept.forEach(function(r)    { sh.appendRow(r); });
   newRows.forEach(function(r) { sh.appendRow(r); });
+  return json_({ok: true});
+}
+
+
+/* ━━━━━━━━━━ 排班草稿（供小巫雙重確認）━━━━━━━━━━ */
+function getWeekDraft_() {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var sh = getOrCreate_(ss, "排班草稿", ["週次","印日期","區","姓名"]);
+  return json_({ok: true, rows: sh.getDataRange().getValues()});
+}
+
+function setWeekDraft_(body) {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var sh = getOrCreate_(ss, "排班草稿", ["週次","印日期","區","姓名"]);
+  sh.clearContents();
+  sh.appendRow(["週次","印日期","區","姓名"]);
+  (body.rows || []).forEach(function(r) { sh.appendRow(r); });
   return json_({ok: true});
 }
 

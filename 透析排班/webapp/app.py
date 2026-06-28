@@ -228,6 +228,60 @@ def clear_audit_draft():
     except Exception:
         return False
 
+# ── 印藥水定案雲端草稿（讓小巫雙重確認）───────────────────
+def push_week_draft(rows, sheet0):
+    """把玉繡的定案存到雲端草稿（排班草稿分頁），讓小巫可以讀取確認。"""
+    if not APPS_SCRIPT_URL or not WRITE_SECRET: return False
+    try:
+        cloud_rows = [[str(sheet0)] + [str(v) for v in r] for r in rows]
+        resp = requests.post(APPS_SCRIPT_URL,
+                             json={"action": "setWeekDraft", "secret": WRITE_SECRET,
+                                   "rows": cloud_rows},
+                             timeout=20)
+        return resp.ok and resp.json().get("ok", False)
+    except Exception:
+        return False
+
+def fetch_week_draft():
+    """讀取雲端草稿 → (rows, sheet0)；沒有草稿回傳 (None, None)。"""
+    if not APPS_SCRIPT_URL or not WRITE_SECRET: return None, None
+    try:
+        resp = requests.post(APPS_SCRIPT_URL,
+                             json={"action": "getWeekDraft", "secret": WRITE_SECRET},
+                             timeout=20)
+        d = resp.json()
+        if not d.get("ok") or not d.get("rows"): return None, None
+        rows_raw = d["rows"]
+        if len(rows_raw) < 2: return None, None
+        sheet0 = str(rows_raw[1][0])
+        rows = [r[1:] for r in rows_raw[1:]]
+        return rows, sheet0
+    except Exception:
+        return None, None
+
+def clear_week_draft_cloud():
+    """清除雲端草稿。"""
+    if not APPS_SCRIPT_URL or not WRITE_SECRET: return False
+    try:
+        resp = requests.post(APPS_SCRIPT_URL,
+                             json={"action": "setWeekDraft", "secret": WRITE_SECRET,
+                                   "rows": []},
+                             timeout=20)
+        return resp.ok and resp.json().get("ok", False)
+    except Exception:
+        return False
+
+def _reconstruct_disp_from_rows(rows):
+    """從 cloud_rows 重建簡化版 disp DataFrame（日期×區 的 pivot，供草稿檢視）。"""
+    if not rows: return pd.DataFrame()
+    try:
+        df = pd.DataFrame([[str(v) for v in r] for r in rows], columns=["印日期","區","姓名"])
+        pivot = df.pivot_table(index="區", columns="印日期", values="姓名", aggfunc="first").fillna("")
+        pivot.index.name = None; pivot.columns.name = None
+        return pivot
+    except Exception:
+        return pd.DataFrame(rows, columns=["印日期","區","姓名"])
+
 # ── 印藥水定案本機草稿（app 重開可恢復）────────────────────
 WEEK_DRAFT_PATH = os.path.join(HERE, "last_week_draft.json")
 
@@ -354,7 +408,7 @@ def _build_line_txt(rows, disp_df=None):
 
 
 # ── 💬 意見回饋：借用稽核歷史（特殊鍵「意見-時間」）存放，不動 LINE 程式 ──
-APP_VER = "v3.8"
+APP_VER = "v3.9"
 FEEDBACK_PREFIX = "意見-"
 
 def push_feedback(step, detail, expect, urgency, who):
@@ -597,7 +651,7 @@ if TEST_MODE:
 
 st.title("💊 透析藥水排班")
 st.caption("上傳班表 Excel → 出名單(表格)。可直接點格子改人名。跨區標 🔺。")
-st.caption("🟢 版本 v3.8（雲端歷史修正／公平累計統計可查看／測試模式）· 2026-06-28")
+st.caption("🟢 版本 v3.9（排班草稿同步／小巫雙重確認）· 2026-06-28")
 
 with st.expander("📖 第一次用？點我看「3 步驟」（給玉繡）", expanded=False):
     st.markdown("""
@@ -782,6 +836,19 @@ elif not audit_quick:                     # 自己上傳（每週印藥水 / 上
 # ═══════════════════════ 每週印藥水 ═══════════════════════
 if mode.startswith("🟦"):
 
+    # ── 📥 小巫用：讀取玉繡暫存的草稿 ─────────────────────
+    if "cloud_rows" not in st.session_state and APPS_SCRIPT_URL and WRITE_SECRET:
+        if st.button("📥 讀取玉繡的排班草稿（小巫確認用）", key="load_week_draft_btn"):
+            with st.spinner("讀取草稿中…"):
+                _drows, _dsheet0 = fetch_week_draft()
+            if _drows is None:
+                st.warning("雲端目前沒有暫存草稿。請玉繡先按「💾 暫存草稿（讓小巫確認）」。")
+            else:
+                st.session_state["cloud_rows"]   = _drows
+                st.session_state["cloud_disp"]   = _reconstruct_disp_from_rows(_drows)
+                st.session_state["cloud_sheet0"] = _dsheet0
+                st.rerun()
+
     # 草稿恢復：關掉 app 再回來，顯示上次定案
     if "cloud_rows" not in st.session_state:
         _wd = _load_week_draft()
@@ -891,6 +958,25 @@ if mode.startswith("🟦"):
             _resting  = [m["姓名"] for m in _roster_all if m["姓名"] not in _printing]
             if _resting:
                 st.info("😴 本週休息：" + "、".join(_resting))
+
+        # 💾 暫存草稿：讓小巫可以讀取確認
+        if TEST_MODE:
+            if st.button("🧪 暫存草稿（測試模擬）", key="week_draft_test"):
+                st.info("🧪 測試模式：模擬暫存成功，但沒有真的寫到雲端。")
+        elif APPS_SCRIPT_URL and WRITE_SECRET:
+            _wd1, _wd2 = st.columns(2)
+            if _wd1.button("💾 暫存草稿（讓小巫確認）", key="week_draft_save"):
+                with st.spinner("暫存中…"):
+                    _ok = push_week_draft(rows, sheet0)
+                if _ok:
+                    st.success("✅ 草稿已存到雲端！小巫可按「📥 讀取玉繡的排班草稿」來確認。")
+                else:
+                    st.error("暫存失敗，請稍後再試。")
+            if _wd2.button("🗑 清除草稿", key="week_draft_clear"):
+                if clear_week_draft_cloud():
+                    st.success("✅ 草稿已清除。")
+                else:
+                    st.error("清除失敗。")
 
         # LINE 群組公告文字
         _line_txt = _build_line_txt(rows, disp_df=disp)
