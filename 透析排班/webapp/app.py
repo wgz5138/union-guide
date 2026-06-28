@@ -213,8 +213,75 @@ def clear_audit_draft():
     except Exception:
         return False
 
+# ── 印藥水定案本機草稿（app 重開可恢復）────────────────────
+WEEK_DRAFT_PATH = os.path.join(HERE, "last_week_draft.json")
+
+def _save_week_draft(rows, sheet0, disp_df):
+    try:
+        payload = {
+            "rows": [[str(v) for v in r] for r in rows],
+            "sheet0": str(sheet0),
+            "disp": {
+                "columns": [str(c) for c in disp_df.columns],
+                "index":   [str(i) for i in disp_df.index],
+                "data":    [[("" if str(v) in ("nan","None") else str(v))
+                             for v in row] for row in disp_df.values]
+            }
+        }
+        with open(WEEK_DRAFT_PATH, "w", encoding="utf-8") as f:
+            json.dump(payload, f, ensure_ascii=False)
+    except Exception:
+        pass
+
+def _load_week_draft():
+    if not os.path.exists(WEEK_DRAFT_PATH): return None
+    try:
+        with open(WEEK_DRAFT_PATH, "r", encoding="utf-8") as f:
+            return json.load(f)
+    except Exception:
+        return None
+
+def _clear_week_draft():
+    try:
+        if os.path.exists(WEEK_DRAFT_PATH): os.remove(WEEK_DRAFT_PATH)
+    except Exception:
+        pass
+
+
+# ── LINE 群組公告文字格式 ─────────────────────────────────
+def _build_line_txt(rows):
+    """產生可直接傳 LINE 群組的公告文字（日期 一區:姓名 二區:姓名 ／ 休息：...）。"""
+    from datetime import datetime as _dt
+    DOW = {0:"週一",1:"週二",2:"週三",3:"週四",4:"週五",5:"週六",6:"週日"}
+    day_map = {}
+    for r in rows:
+        d_str, area, name = str(r[0]), str(r[1]), str(r[2])
+        if not name or name in ("", "❌排不出"): continue
+        if d_str not in day_map: day_map[d_str] = {}
+        day_map[d_str][area] = name
+    if not day_map: return ""
+    def fmt(d_str):
+        d = _dt.strptime(d_str, "%Y-%m-%d")
+        return f"{DOW[d.weekday()]} {d.month}/{d.day}"
+    sorted_dates = sorted(day_map.keys())
+    lines = [f"印藥水名單 (治療日 {fmt(sorted_dates[0])}~ {fmt(sorted_dates[-1])})", ""]
+    for d_str in sorted_dates:
+        line = fmt(d_str)
+        for area in ["一區","二區","三區"]:
+            nm = day_map[d_str].get(area, "")
+            if nm: line += f"\t{area}:{nm}"
+        lines.append(line)
+    roster = _load_roster_full()
+    if roster:
+        printing = {str(r[2]) for r in rows if r[2]}
+        resting = [m["姓名"] for m in roster if m["姓名"] not in printing]
+        if resting:
+            lines += ["", "休息：" + "、".join(resting)]
+    return "\n".join(lines)
+
+
 # ── 💬 意見回饋：借用稽核歷史（特殊鍵「意見-時間」）存放，不動 LINE 程式 ──
-APP_VER = "v3.1"
+APP_VER = "v3.2"
 FEEDBACK_PREFIX = "意見-"
 
 def push_feedback(step, detail, expect, urgency, who):
@@ -446,7 +513,7 @@ except Exception:
 
 st.title("💊 透析藥水排班")
 st.caption("上傳班表 Excel → 出名單(表格)。可直接點格子改人名。跨區標 🔺。")
-st.caption("🟢 版本 v3.1（稽核「區」未設防呆／📥 雲端抓班表／🔊 語音導覽／💬 意見回饋／💾草稿暫存）· 2026-06-23")
+st.caption("🟢 版本 v3.2（📋 LINE公告txt／直式排班表手機友善／定案存檔可恢復）· 2026-06-28")
 
 with st.expander("📖 第一次用？點我看「3 步驟」（給玉繡）", expanded=False):
     st.markdown("""
@@ -618,7 +685,7 @@ elif not audit_quick:                     # 自己上傳（每週印藥水 / 上
         st.stop()
     fk = _file_key(up)
     if st.session_state.get("_last_file") != fk:
-        for k in ["yao","cloud_rows","cloud_disp","cloud_sheet0","ak","ak_shifts","ak_month_key"]:
+        for k in ["yao","cloud_rows","cloud_disp","cloud_sheet0","ak","ak_shifts","ak_month_key","yao_edit"]:
             st.session_state.pop(k, None)
         st.session_state["_last_file"] = fk
     data = up.read()
@@ -630,95 +697,132 @@ elif not audit_quick:                     # 自己上傳（每週印藥水 / 上
 
 # ═══════════════════════ 每週印藥水 ═══════════════════════
 if mode.startswith("🟦"):
-    st.markdown("#### 2️⃣ 選這一週 → 排班 → 微調")
-    # Fix3：自動選最接近今天的分頁
-    best = _best_sheet_index(sheets)
-    sheet = st.selectbox("選「這一週」的分頁", sheets, index=best)
 
-    if st.button("➡️ 排印藥水", type="primary"):
-        with st.spinner("讀取雲端歷史 + 排班中…"):
-            config_overrides = {}
-            if APPS_SCRIPT_URL and WRITE_SECRET:
-                hist_csv = fetch_history_csv("getScheduleHistory")
-                if hist_csv: config_overrides["排班紀錄.csv"] = hist_csv
-            out, files, updated_hist = run_tool("排班.py", data, [sheet], config_overrides)
-            st.session_state["yao"] = (out, files, sheet, updated_hist)
+    # 草稿恢復：關掉 app 再回來，顯示上次定案
+    if "cloud_rows" not in st.session_state:
+        _wd = _load_week_draft()
+        if _wd:
+            st.info(f"📂 找到上次的定案（{_wd.get('sheet0','')}），要恢復嗎？")
+            _cy, _cn = st.columns(2)
+            if _cy.button("✅ 恢復，直接送雲端"):
+                try:
+                    _d = _wd["disp"]
+                    st.session_state["cloud_rows"]   = _wd["rows"]
+                    st.session_state["cloud_disp"]   = pd.DataFrame(
+                        _d["data"], index=_d["index"], columns=_d["columns"])
+                    st.session_state["cloud_sheet0"] = _wd["sheet0"]
+                    st.rerun()
+                except Exception as _e:
+                    st.error(f"恢復失敗：{_e}")
+            if _cn.button("❌ 不用，重新排"):
+                _clear_week_draft(); st.rerun()
 
-    if "yao" in st.session_state:
-        out, files, sheet0, updated_hist = st.session_state["yao"]
-        fn, b = pick(files, ".xlsx")
-        if not b:
-            st.error("沒產生名單，請看下方訊息。"); st.code(out); st.stop()
-        grid  = pd.read_excel(io.BytesIO(b), index_col=0).fillna("")
-        names, dates, marks = parse_grid(grid)
-        yr    = year_from_cloud(files)
+    # 正常排班流程（需要班表資料）
+    if data is not None:
+        st.markdown("#### 2️⃣ 選這一週 → 排班 → 微調")
+        best = _best_sheet_index(sheets)
+        sheet = st.selectbox("選「這一週」的分頁", sheets, index=best)
 
-        st.subheader(f"印藥水名單（{sheet0}）")
-        st.caption("👇 想換人就直接點格子改名字（日期自動沿用）。改好再按「產生定案」。")
-        edited = st.data_editor(names, use_container_width=True, key="yao_edit")
-        for n in extract_notes(out): st.write("・" + n)
+        if st.button("➡️ 排印藥水", type="primary"):
+            with st.spinner("讀取雲端歷史 + 排班中…"):
+                config_overrides = {}
+                if APPS_SCRIPT_URL and WRITE_SECRET:
+                    hist_csv = fetch_history_csv("getScheduleHistory")
+                    if hist_csv: config_overrides["排班紀錄.csv"] = hist_csv
+                out, files, updated_hist = run_tool("排班.py", data, [sheet], config_overrides)
+                st.session_state["yao"] = (out, files, sheet, updated_hist)
 
-        st.markdown("#### 3️⃣ 產生定案 → 送到雲端")
-        if st.button("✅ 產生定案（套用修改）", type="primary"):
-            disp = edited.copy(); rows = []
-            for r in edited.index:
-                for c in edited.columns:
-                    nm = str(edited.loc[r,c]).strip()
-                    dt = dates.loc[r,c]; mk = marks.loc[r,c]
-                    if nm and nm != "❌排不出":
-                        disp.loc[r,c] = f"{nm}({dt}印){mk}" if dt else nm
-                        if dt:
-                            mo,dy = dt.split("/")
-                            rows.append([f"{yr}-{int(mo):02d}-{int(dy):02d}", r, nm])
-                    else:
-                        disp.loc[r,c] = nm
-            rows.sort(key=lambda x:(x[0],x[1]))
-            st.session_state["cloud_rows"]   = rows
-            st.session_state["cloud_disp"]   = disp
-            st.session_state["cloud_sheet0"] = sheet0
+        if "yao" in st.session_state:
+            out, files, sheet0, updated_hist = st.session_state["yao"]
+            fn, b = pick(files, ".xlsx")
+            if not b:
+                st.error("沒產生名單，請看下方訊息。"); st.code(out); st.stop()
+            grid  = pd.read_excel(io.BytesIO(b), index_col=0).fillna("")
+            names, dates, marks = parse_grid(grid)
+            yr    = year_from_cloud(files)
 
-        if "cloud_rows" in st.session_state:
-            rows   = st.session_state["cloud_rows"]
-            disp   = st.session_state["cloud_disp"]
-            sheet0 = st.session_state["cloud_sheet0"]
-            st.success("✅ 定案完成！")
-            st.dataframe(disp, use_container_width=True)
+            st.subheader(f"印藥水名單（{sheet0}）")
+            st.caption("👇 想換人就直接點格子改名字（日期自動沿用）。改好再按「產生定案」。")
+            _edit_T = st.data_editor(names.T, use_container_width=True, key="yao_edit")
+            edited = _edit_T.T   # 轉回 area×day 給後續邏輯用
+            for n in extract_notes(out): st.write("・" + n)
 
-            if APPS_SCRIPT_URL and WRITE_SECRET:
-                if st.button("🚀 送到雲端（自動排提醒）", type="primary"):
-                    with st.spinner("送出中，請稍候…"):
-                        try:
-                            resp = requests.post(
-                                APPS_SCRIPT_URL,
-                                json={"action":"setWeek","secret":WRITE_SECRET,
-                                      "rows":[[str(x) for x in r] for r in rows]},
-                                timeout=45)
-                            if resp.ok and '"ok":true' in resp.text:
-                                st.success(f"🎉 已送到雲端！共 {len(rows)} 筆。系統會自動 LINE 提醒，你不用再做任何事。")
-                                st.balloons()
-                                # Fix1：用玉繡實際定案重建歷史，推送雲端
-                                _, _, _, updated_hist = st.session_state.get("yao",(None,None,None,{}))
-                                corrected = build_corrected_history(
-                                    rows, sheet0, (updated_hist or {}).get("排班紀錄.csv"))
-                                ok2 = push_history("setScheduleHistory", corrected, sheet0)
-                                if ok2: st.caption("✅ 排班歷史已同步（依玉繡實際定案），下週公平輪序更準確。")
-                            else:
-                                st.error(f"送出失敗（{resp.status_code}）：{resp.text[:200]}")
-                        except Exception as e:
-                            st.error(f"送出失敗：{e}")
-            else:
-                st.warning("雲端直送尚未設定（請在 Streamlit Secrets 填 APPS_SCRIPT_URL 與 WRITE_SECRET）。")
+            st.markdown("#### 3️⃣ 產生定案 → 送到雲端")
+            if st.button("✅ 產生定案（套用修改）", type="primary"):
+                disp = edited.copy(); rows = []
+                for r in edited.index:
+                    for c in edited.columns:
+                        nm = str(edited.loc[r,c]).strip()
+                        dt = dates.loc[r,c]; mk = marks.loc[r,c]
+                        if nm and nm != "❌排不出":
+                            disp.loc[r,c] = f"{nm}({dt}印){mk}" if dt else nm
+                            if dt:
+                                mo,dy = dt.split("/")
+                                rows.append([f"{yr}-{int(mo):02d}-{int(dy):02d}", r, nm])
+                        else:
+                            disp.loc[r,c] = nm
+                rows.sort(key=lambda x:(x[0],x[1]))
+                st.session_state["cloud_rows"]   = rows
+                st.session_state["cloud_disp"]   = disp
+                st.session_state["cloud_sheet0"] = sheet0
+                _save_week_draft(rows, sheet0, disp)   # 自動存檔
 
-            with st.expander("📋 手動備援（複製貼到試算表 / 下載 CSV）"):
-                cloud = pd.DataFrame(rows, columns=["印日期","區","姓名"])
-                tsv = cloud.to_csv(index=False, sep="\t")
-                st.markdown("① 按右上角複製鈕　→　② 開試算表「本週名單」　→　③ 點 A1 貼上")
-                st.code(tsv, language=None)
-                st.link_button("🔗 開啟試算表（本週名單）", SHEET_URL)
-                st.download_button("⬇️ 下載 CSV 檔",
-                                   cloud.to_csv(index=False).encode("utf-8-sig"),
-                                   file_name=f"雲端貼上_{sheet0}.csv", mime="text/csv")
+    # 定案顯示（有定案就顯示，不管是否剛排班）
+    if "cloud_rows" in st.session_state:
+        rows   = st.session_state["cloud_rows"]
+        disp   = st.session_state["cloud_disp"]
+        sheet0 = st.session_state["cloud_sheet0"]
+        st.success("✅ 定案完成！")
+        st.dataframe(disp.T, use_container_width=True)   # 直式：日期當列，區當欄
 
+        # LINE 群組公告文字
+        _line_txt = _build_line_txt(rows)
+        if _line_txt:
+            st.markdown("**📋 LINE 群組公告格式**")
+            st.text_area("長按複製，或按下方按鈕下載 txt 傳 LINE",
+                         _line_txt, height=220, key="line_txt_box")
+            st.download_button("⬇️ 下載 txt 傳 LINE 群組",
+                               _line_txt.encode("utf-8"),
+                               file_name=f"印藥水名單_{sheet0}.txt",
+                               mime="text/plain")
+
+        if APPS_SCRIPT_URL and WRITE_SECRET:
+            if st.button("🚀 送到雲端（自動排提醒）", type="primary"):
+                with st.spinner("送出中，請稍候…"):
+                    try:
+                        resp = requests.post(
+                            APPS_SCRIPT_URL,
+                            json={"action":"setWeek","secret":WRITE_SECRET,
+                                  "rows":[[str(x) for x in r] for r in rows]},
+                            timeout=45)
+                        if resp.ok and '"ok":true' in resp.text:
+                            st.success(f"🎉 已送到雲端！共 {len(rows)} 筆。系統會自動 LINE 提醒，你不用再做任何事。")
+                            st.balloons()
+                            _, _, _, updated_hist = st.session_state.get("yao",(None,None,None,{}))
+                            corrected = build_corrected_history(
+                                rows, sheet0, (updated_hist or {}).get("排班紀錄.csv"))
+                            ok2 = push_history("setScheduleHistory", corrected, sheet0)
+                            if ok2: st.caption("✅ 排班歷史已同步（依玉繡實際定案），下週公平輪序更準確。")
+                            _clear_week_draft()   # 送出成功後清除草稿
+                        else:
+                            st.error(f"送出失敗（{resp.status_code}）：{resp.text[:200]}")
+                    except Exception as e:
+                        st.error(f"送出失敗：{e}")
+        else:
+            st.warning("雲端直送尚未設定（請在 Streamlit Secrets 填 APPS_SCRIPT_URL 與 WRITE_SECRET）。")
+
+        with st.expander("📋 手動備援（複製貼到試算表 / 下載 CSV）"):
+            cloud = pd.DataFrame(rows, columns=["印日期","區","姓名"])
+            tsv = cloud.to_csv(index=False, sep="\t")
+            st.markdown("① 按右上角複製鈕　→　② 開試算表「本週名單」　→　③ 點 A1 貼上")
+            st.code(tsv, language=None)
+            st.link_button("🔗 開啟試算表（本週名單）", SHEET_URL)
+            st.download_button("⬇️ 下載 CSV 檔",
+                               cloud.to_csv(index=False).encode("utf-8-sig"),
+                               file_name=f"雲端貼上_{sheet0}.csv", mime="text/csv")
+
+    if "yao" in st.session_state and data is not None:
+        _, files, _, _ = st.session_state["yao"]
         with st.expander("⬇️ 其他檔案下載（列印用 xlsx / 貼 LINE 用 txt）"):
             for fn, b in files.items():
                 st.download_button(f"⬇️ {fn}", b, file_name=fn, key="dl_"+fn)
