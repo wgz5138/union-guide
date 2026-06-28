@@ -281,7 +281,7 @@ def _build_line_txt(rows):
 
 
 # ── 💬 意見回饋：借用稽核歷史（特殊鍵「意見-時間」）存放，不動 LINE 程式 ──
-APP_VER = "v3.2"
+APP_VER = "v3.3"
 FEEDBACK_PREFIX = "意見-"
 
 def push_feedback(step, detail, expect, urgency, who):
@@ -513,7 +513,7 @@ except Exception:
 
 st.title("💊 透析藥水排班")
 st.caption("上傳班表 Excel → 出名單(表格)。可直接點格子改人名。跨區標 🔺。")
-st.caption("🟢 版本 v3.2（📋 LINE公告txt／直式排班表手機友善／定案存檔可恢復）· 2026-06-28")
+st.caption("🟢 版本 v3.3（重排自動套回上次修改／📋 LINE公告txt／直式手機友善／定案可恢復）· 2026-06-28")
 
 with st.expander("📖 第一次用？點我看「3 步驟」（給玉繡）", expanded=False):
     st.markdown("""
@@ -731,6 +731,7 @@ if mode.startswith("🟦"):
                     if hist_csv: config_overrides["排班紀錄.csv"] = hist_csv
                 out, files, updated_hist = run_tool("排班.py", data, [sheet], config_overrides)
                 st.session_state["yao"] = (out, files, sheet, updated_hist)
+                st.session_state.pop("yao_edit", None)   # 清掉舊 editor 狀態，讓下面重新套定案
 
         if "yao" in st.session_state:
             out, files, sheet0, updated_hist = st.session_state["yao"]
@@ -741,9 +742,26 @@ if mode.startswith("🟦"):
             names, dates, marks = parse_grid(grid)
             yr    = year_from_cloud(files)
 
+            # 自動套回上次定案的修改（如顏凰任→張雅雯），避免重排後又要重改
+            override_names = names.copy()
+            _prev_rows  = st.session_state.get("cloud_rows", [])
+            _prev_sheet = st.session_state.get("cloud_sheet0", "")
+            if _prev_rows and _prev_sheet == sheet0:
+                for _cr in _prev_rows:
+                    try:
+                        _dstr, _area, _nm = _cr[0], _cr[1], _cr[2]
+                        _mo = int(_dstr.split('-')[1]); _dy = int(_dstr.split('-')[2])
+                        _tgt = f"{_mo}/{_dy}"
+                        for _col in dates.columns:
+                            if str(dates.loc[_area, _col]).strip() == _tgt:
+                                override_names.loc[_area, _col] = _nm
+                                break
+                    except Exception:
+                        pass
+
             st.subheader(f"印藥水名單（{sheet0}）")
             st.caption("👇 想換人就直接點格子改名字（日期自動沿用）。改好再按「產生定案」。")
-            _edit_T = st.data_editor(names.T, use_container_width=True, key="yao_edit")
+            _edit_T = st.data_editor(override_names.T, use_container_width=True, key="yao_edit")
             edited = _edit_T.T   # 轉回 area×day 給後續邏輯用
             for n in extract_notes(out): st.write("・" + n)
 
