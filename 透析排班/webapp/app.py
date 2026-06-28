@@ -277,7 +277,7 @@ def fetch_schedule_stats():
     try:
         resp = requests.post(APPS_SCRIPT_URL,
                              json={"action": "getScheduleHistory", "secret": WRITE_SECRET},
-                             timeout=20)
+                             timeout=30)
         d = resp.json()
         if not d.get("ok") or not d.get("rows"): return None
         rows = d["rows"]
@@ -286,14 +286,15 @@ def fetch_schedule_stats():
         df["狀態"] = df["狀態"].astype(str).str.strip()
         # 只統計正常 印/休（排除草稿、修正等特殊週次）
         df = df[df["狀態"].isin(["印","休"])]
+        if df.empty: return None
         grp = df.groupby(["卡號","姓名"])["狀態"].value_counts().unstack(fill_value=0)
         grp = grp.reindex(columns=["印","休"], fill_value=0).reset_index()
         grp.columns = ["卡號","姓名","印次","休次"]
         grp["淨值(印-休)"] = grp["印次"] - grp["休次"]
         grp = grp.sort_values("淨值(印-休)", ascending=False).reset_index(drop=True)
         return grp
-    except Exception:
-        return None
+    except Exception as _e:
+        return str(_e)   # 回傳錯誤字串，UI 可顯示
 
 def save_schedule_stats(df):
     """把統計表重建為歷史 rows 並整批推送到雲端（清空重建）。"""
@@ -374,8 +375,8 @@ def fetch_audit_stats():
         grp.columns = ["卡號","姓名","稽核次","休次"]
         grp["淨值(稽核-休)"] = grp["稽核次"] - grp["休次"]
         return grp.sort_values("淨值(稽核-休)", ascending=False).reset_index(drop=True)
-    except Exception:
-        return None
+    except Exception as _e:
+        return str(_e)
 
 def save_audit_stats(df):
     """把稽核統計表重建為歷史 rows 並整批推送到 GS（清空重建）。"""
@@ -1449,8 +1450,10 @@ if mode.startswith("📊"):
                     st.error(f"同步失敗：{_serr or '未知錯誤'}")
         if "schedule_stats" in st.session_state:
             df_st = st.session_state["schedule_stats"]
-            if isinstance(df_st, str):
+            if isinstance(df_st, str) and df_st == "empty":
                 st.warning("雲端還沒有排班歷史。請按「📤 同步本機CSV→雲端」把今年全年歷史上傳。")
+            elif isinstance(df_st, str):
+                st.error(f"讀取失敗：{df_st}")
             else:
                 df_st = df_st.copy()
                 st.caption(f"共 {len(df_st)} 人｜淨值越小 → 印次少 → 下次優先被排印")
@@ -1498,8 +1501,10 @@ if mode.startswith("📊"):
                     st.error(f"同步失敗：{_aerr or '未知錯誤'}")
         if "audit_stats" in st.session_state:
             df_ast = st.session_state["audit_stats"]
-            if isinstance(df_ast, str):
+            if isinstance(df_ast, str) and df_ast == "empty":
                 st.warning("雲端還沒有稽核歷史。請按「📤 同步本機CSV→雲端」把今年全年歷史上傳。")
+            elif isinstance(df_ast, str):
+                st.error(f"讀取失敗：{df_ast}")
             else:
                 df_ast = df_ast.copy()
                 st.caption(f"共 {len(df_ast)} 人｜淨值越小 → 稽核次少 → 下次優先被排稽核")
