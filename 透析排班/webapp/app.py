@@ -397,6 +397,40 @@ def save_audit_stats(df):
     except Exception:
         return False
 
+def sync_schedule_history_from_csv():
+    """把本機排班紀錄.csv 整批上傳到 GS 排班歷史（覆蓋，初始化用）。"""
+    if not APPS_SCRIPT_URL or not WRITE_SECRET: return False, 0
+    csv_path = os.path.join(HERE, "排班紀錄.csv")
+    if not os.path.exists(csv_path): return False, 0
+    try:
+        df = pd.read_csv(csv_path, encoding="utf-8-sig", dtype=str).fillna("")
+        rows = [list(r) for _, r in df.iterrows()]
+        resp = requests.post(APPS_SCRIPT_URL,
+                             json={"action": "setAllScheduleHistory", "secret": WRITE_SECRET,
+                                   "rows": rows},
+                             timeout=60)
+        ok = resp.ok and resp.json().get("ok", False)
+        return ok, len(rows)
+    except Exception:
+        return False, 0
+
+def sync_audit_history_from_csv():
+    """把本機稽核紀錄.csv 整批上傳到 GS 稽核歷史（覆蓋，初始化用）。"""
+    if not APPS_SCRIPT_URL or not WRITE_SECRET: return False, 0
+    csv_path = os.path.join(HERE, "稽核紀錄.csv")
+    if not os.path.exists(csv_path): return False, 0
+    try:
+        df = pd.read_csv(csv_path, encoding="utf-8-sig", dtype=str).fillna("")
+        rows = [list(r) for _, r in df.iterrows()]
+        resp = requests.post(APPS_SCRIPT_URL,
+                             json={"action": "setAllAuditHistory", "secret": WRITE_SECRET,
+                                   "rows": rows},
+                             timeout=60)
+        ok = resp.ok and resp.json().get("ok", False)
+        return ok, len(rows)
+    except Exception:
+        return False, 0
+
 def _reconstruct_disp_from_rows(rows):
     """從 cloud_rows 重建簡化版 disp DataFrame（日期×區 的 pivot，供草稿檢視）。"""
     if not rows: return pd.DataFrame()
@@ -1396,14 +1430,25 @@ if mode.startswith("📊"):
     # ── Tab1：印藥水統計 ──────────────────────────────────
     with tab1:
         st.caption("每人累積印藥水次數與休息次數。可直接改，改完按「💾 存回雲端」，下次排班即生效。")
-        if st.button("🔄 讀取", type="primary", key="stats_load"):
+        _sc1, _sc2 = st.columns(2)
+        if _sc1.button("🔄 讀取", type="primary", key="stats_load"):
             with st.spinner("讀取中…"):
                 _st = fetch_schedule_stats()
             st.session_state["schedule_stats"] = _st if _st is not None else "empty"
+        if not TEST_MODE and APPS_SCRIPT_URL and WRITE_SECRET:
+            if _sc2.button("📤 同步本機CSV→雲端", key="stats_sync_local",
+                           help="把 repo 裡的排班紀錄.csv（含今年全年歷史）整批上傳到雲端，覆蓋現有資料。"):
+                with st.spinner("上傳中，請稍候…"):
+                    _sok, _sn = sync_schedule_history_from_csv()
+                if _sok:
+                    st.success(f"✅ 已同步 {_sn} 筆排班歷史到雲端！按「🔄 讀取」確認。")
+                    st.session_state.pop("schedule_stats", None)
+                else:
+                    st.error("同步失敗，請稍後再試。")
         if "schedule_stats" in st.session_state:
             df_st = st.session_state["schedule_stats"]
             if isinstance(df_st, str):
-                st.warning("雲端還沒有排班歷史。請先完成幾次「送到雲端」後再來看。")
+                st.warning("雲端還沒有排班歷史。請按「📤 同步本機CSV→雲端」把今年全年歷史上傳。")
             else:
                 df_st = df_st.copy()
                 st.caption(f"共 {len(df_st)} 人｜淨值越小 → 印次少 → 下次優先被排印")
@@ -1434,14 +1479,25 @@ if mode.startswith("📊"):
     # ── Tab2：稽核統計 ──────────────────────────────────
     with tab2:
         st.caption("每人累積稽核次數與休息次數。可直接改，改完按「💾 存回雲端」，下次排稽核即生效。")
-        if st.button("🔄 讀取", type="primary", key="audit_stats_load"):
+        _ac1, _ac2 = st.columns(2)
+        if _ac1.button("🔄 讀取", type="primary", key="audit_stats_load"):
             with st.spinner("讀取中…"):
                 _ast = fetch_audit_stats()
             st.session_state["audit_stats"] = _ast if _ast is not None else "empty"
+        if not TEST_MODE and APPS_SCRIPT_URL and WRITE_SECRET:
+            if _ac2.button("📤 同步本機CSV→雲端", key="audit_sync_local",
+                           help="把 repo 裡的稽核紀錄.csv（含今年全年歷史）整批上傳到雲端，覆蓋現有資料。"):
+                with st.spinner("上傳中，請稍候…"):
+                    _aok, _an = sync_audit_history_from_csv()
+                if _aok:
+                    st.success(f"✅ 已同步 {_an} 筆稽核歷史到雲端！按「🔄 讀取」確認。")
+                    st.session_state.pop("audit_stats", None)
+                else:
+                    st.error("同步失敗，請稍後再試。")
         if "audit_stats" in st.session_state:
             df_ast = st.session_state["audit_stats"]
             if isinstance(df_ast, str):
-                st.warning("雲端還沒有稽核歷史。請先完成幾次「送稽核結果到雲端」後再來看。")
+                st.warning("雲端還沒有稽核歷史。請按「📤 同步本機CSV→雲端」把今年全年歷史上傳。")
             else:
                 df_ast = df_ast.copy()
                 st.caption(f"共 {len(df_ast)} 人｜淨值越小 → 稽核次少 → 下次優先被排稽核")
