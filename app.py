@@ -406,7 +406,7 @@ except Exception:
 
 st.title("💊 透析藥水排班")
 st.caption("上傳班表 Excel → 出名單(表格)。可直接點格子改人名。跨區標 🔺。")
-st.caption("🟢 版本 v2.5（定案自動儲存可恢復 / 下載排班圖片）· 2026-06-28")
+st.caption("🟢 版本 v2.5（定案自動儲存可恢復 / 排班表直向顯示手機友善 / 下載排班圖片）· 2026-06-28")
 
 with st.expander("📖 第一次用？點我看「3 步驟」（給玉繡）", expanded=False):
     st.markdown("""
@@ -442,7 +442,7 @@ if not audit_quick:
     if up:
         fk = _file_key(up)
         if st.session_state.get("_last_file") != fk:
-            for k in ["yao","cloud_rows","cloud_disp","cloud_sheet0","ak","ak_shifts","ak_month_key"]:
+            for k in ["yao","cloud_rows","cloud_disp","cloud_sheet0","ak","ak_shifts","ak_month_key","yao_edit"]:
                 st.session_state.pop(k, None)
             st.session_state["_last_file"] = fk
         data = up.read()
@@ -504,8 +504,9 @@ if mode.startswith("🟦"):
             yr    = year_from_cloud(files)
 
             st.subheader(f"印藥水名單（{sheet0}）")
-            st.caption("👇 想換人就直接點格子改名字（日期自動沿用）。改好再按「產生定案」。")
-            edited = st.data_editor(names, use_container_width=True, key="yao_edit")
+            st.caption("👇 想換人就直接點姓名格子改（日期自動沿用）。改好再按「產生定案」。")
+            _edit_T = st.data_editor(names.T, use_container_width=True, key="yao_edit")
+            edited = _edit_T.T   # 轉回 area×day 格式供後續邏輯使用
             for n in extract_notes(out): st.write("・" + n)
 
             st.markdown("#### 3️⃣ 產生定案 → 送到雲端")
@@ -534,10 +535,10 @@ if mode.startswith("🟦"):
         disp   = st.session_state["cloud_disp"]
         sheet0 = st.session_state["cloud_sheet0"]
         st.success("✅ 定案完成！")
-        st.dataframe(disp, use_container_width=True)
+        st.dataframe(disp.T, use_container_width=True)   # 轉置：日期當列，區當欄，手機友善
 
         # Fix5：下載排班圖片
-        _png = _disp_to_png(disp, title=f"印藥水名單（{sheet0}）")
+        _png = _disp_to_png(disp.T, title=f"印藥水名單（{sheet0}）")
         if _png:
             st.download_button("🖼️ 下載排班圖片（PNG）", _png,
                                file_name=f"排班_{sheet0}.png", mime="image/png")
