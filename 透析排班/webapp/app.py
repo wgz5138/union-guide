@@ -339,7 +339,7 @@ def _build_line_txt(rows, disp_df=None):
 
 
 # ── 💬 意見回饋：借用稽核歷史（特殊鍵「意見-時間」）存放，不動 LINE 程式 ──
-APP_VER = "v3.6"
+APP_VER = "v3.7"
 FEEDBACK_PREFIX = "意見-"
 
 def push_feedback(step, detail, expect, urgency, who):
@@ -569,9 +569,20 @@ try:
 except Exception:
     APPS_SCRIPT_URL = ""; WRITE_SECRET = ""
 
+# ── 測試模式（小巫用）：排班演算法照常跑，但不寫雲端、不送 LINE ────
+with st.sidebar:
+    st.markdown("### ⚙️ 設定")
+    TEST_MODE = st.toggle("🧪 測試模式（小巫用）", value=False,
+                          help="開啟後可完整測試排班流程，但不會真的寫到雲端、也不會送 LINE 通知。")
+    if TEST_MODE:
+        st.warning("測試模式已開啟。\n\n所有「送到雲端」和「送通知」按鈕均為模擬，不影響正式資料。")
+
+if TEST_MODE:
+    st.error("🧪 測試模式 — 排班照常跑，但不寫雲端、不送 LINE。關掉左側開關即可切回正式模式。")
+
 st.title("💊 透析藥水排班")
 st.caption("上傳班表 Excel → 出名單(表格)。可直接點格子改人名。跨區標 🔺。")
-st.caption("🟢 版本 v3.6（定案後顯示實際休息人員／排班公平升級：印次-休次平衡）· 2026-06-28")
+st.caption("🟢 版本 v3.7（測試模式小巫用／定案後顯示休息人員／公平排班升級）· 2026-06-28")
 
 with st.expander("📖 第一次用？點我看「3 步驟」（給玉繡）", expanded=False):
     st.markdown("""
@@ -870,7 +881,11 @@ if mode.startswith("🟦"):
                                file_name=f"印藥水名單_{sheet0}.txt",
                                mime="text/plain")
 
-        if APPS_SCRIPT_URL and WRITE_SECRET:
+        if TEST_MODE:
+            if st.button("🧪 送到雲端（測試模擬）", type="secondary"):
+                st.info(f"🧪 測試模式：模擬送出 {len(rows)} 筆，但實際上**沒有**寫到雲端，也沒有送 LINE 通知。")
+                st.balloons()
+        elif APPS_SCRIPT_URL and WRITE_SECRET:
             if st.button("🚀 送到雲端（自動排提醒）", type="primary"):
                 with st.spinner("送出中，請稍候…"):
                     try:
@@ -976,7 +991,13 @@ else:
             st.warning("⚠️ 目前沒有人是「小夜」——第三班（小夜）會排不出來。")
 
         # 💾 暫存 / 🗑 清除暫存（雲端草稿，可分次填、明天再回來接續）
-        if APPS_SCRIPT_URL and WRITE_SECRET:
+        if TEST_MODE:
+            cda, cdb = st.columns(2)
+            if cda.button("🧪 暫存草稿（測試模擬）"):
+                st.info("🧪 測試模式：模擬暫存成功，但沒有真的寫到雲端。")
+            if cdb.button("🧪 清除暫存（測試模擬）"):
+                st.info("🧪 測試模式：模擬清除成功，但沒有真的動雲端。")
+        elif APPS_SCRIPT_URL and WRITE_SECRET:
             cda, cdb = st.columns(2)
             if cda.button("💾 暫存草稿（之後可接續填）"):
                 if push_audit_draft(edited_q):
@@ -1059,7 +1080,11 @@ else:
                                     key="ak_edit", hide_index=True)
         for n in extract_notes(out): st.write("・" + n)
 
-        if APPS_SCRIPT_URL and WRITE_SECRET:
+        if TEST_MODE:
+            if st.button("🧪 送稽核結果到雲端（測試模擬）", type="secondary"):
+                st.info("🧪 測試模式：模擬送出成功，但實際上**沒有**寫到雲端，也沒有送 LINE 通知給稽核者。")
+                st.balloons()
+        elif APPS_SCRIPT_URL and WRITE_SECRET:
             if st.button("🚀 送稽核結果到雲端", type="primary"):
                 with st.spinner("送出中，請稍候…"):
                     ak_hist_b = files.get("稽核紀錄_輸出.csv")
