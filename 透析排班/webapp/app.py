@@ -250,76 +250,88 @@ def _clear_week_draft():
 
 # ── LINE 群組公告文字格式 ─────────────────────────────────
 def _build_line_txt(rows, disp_df=None):
-    """產生可直接傳 LINE 群組的公告文字（治療日 一區:姓名 二區:姓名 ／ 休息：...）。
+    """LINE 群組公告：左欄顯示印藥水日期，每治療日獨立一列（不碰撞）。
 
     disp_df: 定案 DataFrame（index=一區/二區, columns=治療日欄標）。
-    提供 disp_df 時以治療日分組（正確）；否則退回以印藥水日期分組（會有日期錯位）。
+    提供 disp_df 時從格子內容（如「張雅雯(7/1印)」）取得印藥水日期顯示於左欄。
     """
     from datetime import datetime as _dt
     DOW = {0:"週一",1:"週二",2:"週三",3:"週四",4:"週五",5:"週六",6:"週日"}
 
-    # 從 rows 推算年份
     yr_val = pd.Timestamp.now().year
     for _r in rows:
         try: yr_val = int(str(_r[0]).split('-')[0]); break
         except Exception: pass
 
-    day_map = {}
+    def _parse_col(col_str):
+        m = re.search(r'(\d{1,2})/(\d{1,2})', str(col_str))
+        if m: return yr_val, int(m.group(1)), int(m.group(2))
+        m = re.search(r'(\d{4})-(\d{2})-(\d{2})', str(col_str))
+        if m: return int(m.group(1)), int(m.group(2)), int(m.group(3))
+        return None, None, None
 
-    if disp_df is not None:
-        # 用治療日（disp_df 的欄標）分組，才不會日期錯位
-        for col in disp_df.columns:
-            col_str = str(col)
-            # 支援 "週四7/2"、"7/2"、"2026-07-02 00:00:00" 等格式
-            m_slash = re.search(r'(\d{1,2})/(\d{1,2})', col_str)
-            m_iso   = re.search(r'(\d{4})-(\d{2})-(\d{2})', col_str)
-            if m_slash:
-                col_mo, col_dy = int(m_slash.group(1)), int(m_slash.group(2))
-            elif m_iso:
-                yr_val = int(m_iso.group(1))
-                col_mo, col_dy = int(m_iso.group(2)), int(m_iso.group(3))
-            else:
-                continue
-            d_str = f"{yr_val}-{col_mo:02d}-{col_dy:02d}"
-            for area in ["一區","二區","三區"]:
-                if area not in disp_df.index: continue
-                v = str(disp_df.loc[area, col]).strip()
-                if not v or v in ("nan","None","❌排不出"): continue
-                # 去掉 "(6/30印)" 標註，只留姓名
-                nm_m = CELL_RE.match(v)
-                nm = nm_m.group(1).strip() if nm_m else v
-                if not nm: continue
-                if d_str not in day_map: day_map[d_str] = {}
-                day_map[d_str][area] = nm
-    else:
-        # 退回以印藥水日期分組（舊行為，可能日期錯位）
-        for r in rows:
-            d_str, area, name = str(r[0]), str(r[1]), str(r[2])
-            if not name or name in ("", "❌排不出"): continue
-            if d_str not in day_map: day_map[d_str] = {}
-            day_map[d_str][area] = name
-
-    if not day_map: return ""
+    def _dstr(yr, mo, dy): return f"{yr}-{mo:02d}-{dy:02d}"
 
     def fmt(d_str):
         d = _dt.strptime(d_str, "%Y-%m-%d")
         return f"{DOW[d.weekday()]} {d.month}/{d.day}"
 
-    sorted_dates = sorted(day_map.keys())
-    lines = [f"印藥水名單 (治療日 {fmt(sorted_dates[0])}~ {fmt(sorted_dates[-1])})", ""]
-    for d_str in sorted_dates:
-        if not day_map.get(d_str): continue
-        line = fmt(d_str)
+    # treats: list of {t: 治療日str, p: 印藥水日str, a: {area: name}}
+    treats = []
+
+    if disp_df is not None:
+        for col in disp_df.columns:
+            t_yr, t_mo, t_dy = _parse_col(col)
+            if t_yr is None: continue
+            t_str = _dstr(t_yr, t_mo, t_dy)
+
+            assigns = {}
+            print_str = None   # 取第一個有(印)標注的印藥水日
+            for area in ["一區","二區","三區"]:
+                if area not in disp_df.index: continue
+                v = str(disp_df.loc[area, col]).strip()
+                if not v or v in ("nan","None","❌排不出"): continue
+                nm_m = CELL_RE.match(v)
+                if nm_m:
+                    nm = nm_m.group(1).strip()
+                    p_mo, p_dy = int(nm_m.group(2)), int(nm_m.group(3))
+                    if print_str is None:
+                        print_str = _dstr(t_yr, p_mo, p_dy)
+                else:
+                    nm = v
+                if nm:
+                    assigns[area] = nm
+
+            if assigns:
+                treats.append({"t": t_str, "p": print_str or t_str, "a": assigns})
+    else:
+        # fallback：印藥水日分組（可能碰撞，舊行為）
+        tmp = {}
+        for r in rows:
+            p_str, area, name = str(r[0]), str(r[1]), str(r[2])
+            if not name or name in ("","❌排不出"): continue
+            if p_str not in tmp: tmp[p_str] = {}
+            tmp[p_str][area] = name
+        for p_str in sorted(tmp):
+            treats.append({"t": p_str, "p": p_str, "a": tmp[p_str]})
+
+    if not treats: return ""
+    treats.sort(key=lambda x: x["t"])   # 依治療日排序
+
+    # 標題用治療日範圍（說明這週涵蓋哪幾天）
+    lines = [f"印藥水名單 (治療日 {fmt(treats[0]['t'])}~ {fmt(treats[-1]['t'])})", ""]
+
+    for e in treats:
+        line = fmt(e["p"])   # 左欄 = 印藥水日期
         for area in ["一區","二區","三區"]:
-            nm = day_map[d_str].get(area, "")
+            nm = e["a"].get(area, "")
             if nm: line += f"\t{area}:{nm}"
         lines.append(line)
 
     roster = _load_roster_full()
     if roster:
         printing = set()
-        for ds in day_map.values():
-            printing.update(ds.values())
+        for e in treats: printing.update(e["a"].values())
         resting = [m["姓名"] for m in roster if m["姓名"] not in printing]
         if resting:
             lines += ["", "休息：" + "、".join(resting)]
@@ -327,7 +339,7 @@ def _build_line_txt(rows, disp_df=None):
 
 
 # ── 💬 意見回饋：借用稽核歷史（特殊鍵「意見-時間」）存放，不動 LINE 程式 ──
-APP_VER = "v3.4"
+APP_VER = "v3.5"
 FEEDBACK_PREFIX = "意見-"
 
 def push_feedback(step, detail, expect, urgency, who):
@@ -559,7 +571,7 @@ except Exception:
 
 st.title("💊 透析藥水排班")
 st.caption("上傳班表 Excel → 出名單(表格)。可直接點格子改人名。跨區標 🔺。")
-st.caption("🟢 版本 v3.4（LINE公告治療日正確／重排套回修改／直式手機友善／定案可恢復）· 2026-06-28")
+st.caption("🟢 版本 v3.5（LINE公告左欄改為印藥水日期、每治療日獨立一列不碰撞／重排套回修改／直式手機友善）· 2026-06-28")
 
 with st.expander("📖 第一次用？點我看「3 步驟」（給玉繡）", expanded=False):
     st.markdown("""
