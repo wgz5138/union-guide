@@ -271,6 +271,52 @@ def clear_week_draft_cloud():
     except Exception:
         return False
 
+def fetch_schedule_stats():
+    """從雲端排班歷史彙總每人印/休次數 → DataFrame，或 None。"""
+    if not APPS_SCRIPT_URL or not WRITE_SECRET: return None
+    try:
+        resp = requests.post(APPS_SCRIPT_URL,
+                             json={"action": "getScheduleHistory", "secret": WRITE_SECRET},
+                             timeout=20)
+        d = resp.json()
+        if not d.get("ok") or not d.get("rows"): return None
+        rows = d["rows"]
+        if len(rows) < 2: return None
+        df = pd.DataFrame(rows[1:], columns=[str(x) for x in rows[0]])
+        df["狀態"] = df["狀態"].astype(str).str.strip()
+        # 只統計正常 印/休（排除草稿、修正等特殊週次）
+        df = df[df["狀態"].isin(["印","休"])]
+        grp = df.groupby(["卡號","姓名"])["狀態"].value_counts().unstack(fill_value=0)
+        grp = grp.reindex(columns=["印","休"], fill_value=0).reset_index()
+        grp.columns = ["卡號","姓名","印次","休次"]
+        grp["淨值(印-休)"] = grp["印次"] - grp["休次"]
+        grp = grp.sort_values("淨值(印-休)", ascending=False).reset_index(drop=True)
+        return grp
+    except Exception:
+        return None
+
+def save_schedule_stats(df):
+    """把統計表重建為歷史 rows 並整批推送到雲端（清空重建）。"""
+    if not APPS_SCRIPT_URL or not WRITE_SECRET: return False
+    try:
+        rows = []
+        for _, r in df.iterrows():
+            card = str(r["卡號"]).strip()
+            name = str(r["姓名"]).strip()
+            n_print = max(0, int(r["印次"]))
+            n_rest  = max(0, int(r["休次"]))
+            for i in range(n_print):
+                rows.append([f"統計-印{i+1:02d}", card, name, "印", ""])
+            for i in range(n_rest):
+                rows.append([f"統計-休{i+1:02d}", card, name, "休", ""])
+        resp = requests.post(APPS_SCRIPT_URL,
+                             json={"action": "setAllScheduleHistory", "secret": WRITE_SECRET,
+                                   "rows": rows},
+                             timeout=30)
+        return resp.ok and resp.json().get("ok", False)
+    except Exception:
+        return False
+
 def _reconstruct_disp_from_rows(rows):
     """從 cloud_rows 重建簡化版 disp DataFrame（日期×區 的 pivot，供草稿檢視）。"""
     if not rows: return pd.DataFrame()
@@ -408,7 +454,7 @@ def _build_line_txt(rows, disp_df=None):
 
 
 # ── 💬 意見回饋：借用稽核歷史（特殊鍵「意見-時間」）存放，不動 LINE 程式 ──
-APP_VER = "v3.9"
+APP_VER = "v3.10"
 FEEDBACK_PREFIX = "意見-"
 
 def push_feedback(step, detail, expect, urgency, who):
@@ -651,7 +697,7 @@ if TEST_MODE:
 
 st.title("💊 透析藥水排班")
 st.caption("上傳班表 Excel → 出名單(表格)。可直接點格子改人名。跨區標 🔺。")
-st.caption("🟢 版本 v3.9（排班草稿同步／小巫雙重確認）· 2026-06-28")
+st.caption("🟢 版本 v3.10（排班統計可查看／可修改／可存回雲端）· 2026-06-28")
 
 with st.expander("📖 第一次用？點我看「3 步驟」（給玉繡）", expanded=False):
     st.markdown("""
@@ -782,12 +828,14 @@ with st.expander("📋 大家回報過的問題（公開・看看有沒有人提
             st.dataframe(pd.DataFrame(fbs), use_container_width=True, hide_index=True)
 
 st.markdown("#### 1️⃣ 選種類")
-mode = st.radio("要排哪一種？", ["🟦 每週印藥水", "🟩 每月稽核"], horizontal=True)
+mode = st.radio("要排哪一種？", ["🟦 每週印藥水", "🟩 每月稽核", "📊 排班統計"], horizontal=True)
 
 # 每月稽核可選「快速點選（免上傳）」或「上傳班表分析」；每週印藥水可選雲端自動抓或自己上傳
 audit_quick = False
 week_cloud = False
-if mode.startswith("🟩"):
+if mode.startswith("📊"):
+    pass   # 統計頁不需要上傳
+elif mode.startswith("🟩"):
     method = st.radio("稽核方式", ["⚡ 快速點選（免上傳 Excel，推薦）", "📤 上傳班表分析"],
                       horizontal=True)
     audit_quick = method.startswith("⚡")
@@ -797,7 +845,9 @@ else:
     week_cloud = src.startswith("📥")
 
 data = None; sheets = []
-if mode.startswith("🟦") and week_cloud:
+if mode.startswith("📊"):
+    pass   # 不需要 data
+elif mode.startswith("🟦") and week_cloud:
     # 從雲端 Gmail 自動抓最新班表（文書把班表寄進來後，這裡一鍵抓）
     if st.button("📥 抓取雲端最新班表", type="primary"):
         with st.spinner("從雲端抓最新班表中…"):
@@ -1221,3 +1271,50 @@ else:
         with st.expander("⬇️ 其他檔案下載"):
             for fn, b in files.items():
                 st.download_button(f"⬇️ {fn}", b, file_name=fn, key="akdl_"+fn)
+
+
+# ═══════════════════════ 排班統計 ═══════════════════════
+if mode.startswith("📊"):
+    st.markdown("#### 📊 印藥水排班統計（每人累積印/休次）")
+    st.caption("顯示每人累積印藥水次數與休息次數。可直接點格子修改，改完按「💾 存回雲端」，下次排班就會用新數字分配。")
+
+    if st.button("🔄 讀取最新統計", type="primary", key="stats_load"):
+        with st.spinner("讀取中…"):
+            _st = fetch_schedule_stats()
+        if _st is None:
+            st.warning("雲端還沒有排班歷史，或讀取失敗。請先完成幾次「送到雲端」後再來看。")
+        else:
+            st.session_state["schedule_stats"] = _st
+
+    if "schedule_stats" in st.session_state:
+        df_st = st.session_state["schedule_stats"].copy()
+        st.caption(f"共 {len(df_st)} 人｜淨值越小 → 印次少 → 下次排班越優先被排到印")
+        edited_st = st.data_editor(
+            df_st,
+            column_config={
+                "卡號":       st.column_config.TextColumn("卡號", disabled=True),
+                "姓名":       st.column_config.TextColumn("姓名", disabled=True),
+                "印次":       st.column_config.NumberColumn("印次 ✏️", min_value=0, step=1),
+                "休次":       st.column_config.NumberColumn("休次 ✏️", min_value=0, step=1),
+                "淨值(印-休)": st.column_config.NumberColumn("淨值(印-休)", disabled=True),
+            },
+            use_container_width=True, hide_index=True, key="stats_edit"
+        )
+        # 即時更新淨值顯示
+        edited_st["淨值(印-休)"] = edited_st["印次"] - edited_st["休次"]
+
+        if TEST_MODE:
+            if st.button("🧪 存回雲端（測試模擬）", key="stats_save_test"):
+                st.info("🧪 測試模式：模擬儲存成功，但沒有真的寫到雲端。")
+        elif APPS_SCRIPT_URL and WRITE_SECRET:
+            if st.button("💾 存回雲端（更新排班統計）", type="primary", key="stats_save"):
+                with st.spinner("儲存中…"):
+                    ok = save_schedule_stats(edited_st)
+                if ok:
+                    st.success("✅ 排班統計已更新！下次按「排印藥水」時會自動用新數字分配。")
+                    st.session_state["schedule_stats"] = edited_st.reset_index(drop=True)
+                    st.balloons()
+                else:
+                    st.error("儲存失敗，請稍後再試。")
+        else:
+            st.warning("雲端尚未設定（請在 Streamlit Secrets 填 APPS_SCRIPT_URL 與 WRITE_SECRET）。")

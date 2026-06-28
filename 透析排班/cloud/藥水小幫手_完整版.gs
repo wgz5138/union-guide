@@ -52,8 +52,9 @@ function handleAction_(body) {
   if (a === "setAuditResult")     return setAuditResult_(body);
   if (a === "sendAuditNotice")    return sendAuditNotice_(body);
   if (a === "getLatestBanbiao")   return getLatestBanbiao_();
-  if (a === "getWeekDraft")       return getWeekDraft_();
-  if (a === "setWeekDraft")       return setWeekDraft_(body);
+  if (a === "getWeekDraft")            return getWeekDraft_();
+  if (a === "setWeekDraft")            return setWeekDraft_(body);
+  if (a === "setAllScheduleHistory")   return setAllScheduleHistory_(body);
   return json_({ok: false, error: "unknown action: " + a});
 }
 
@@ -92,6 +93,17 @@ function setScheduleHistory_(body) {
   sh.clearContents();
   kept.forEach(function(r)    { sh.appendRow(r); });
   newRows.forEach(function(r) { sh.appendRow(r); });
+  return json_({ok: true});
+}
+
+
+/* ━━━━━━━━━━ 整批覆寫排班歷史（統計修正用）━━━━━━━━━━ */
+function setAllScheduleHistory_(body) {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var sh = getOrCreate_(ss, "排班歷史", ["週次","卡號","姓名","狀態","治療日"]);
+  sh.clearContents();
+  sh.appendRow(["週次","卡號","姓名","狀態","治療日"]);
+  (body.rows || []).forEach(function(r) { sh.appendRow(r); });
   return json_({ok: true});
 }
 
