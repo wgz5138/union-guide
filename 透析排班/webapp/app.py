@@ -1082,7 +1082,9 @@ if mode.startswith("🟦"):
                 st.session_state["cloud_rows"]   = rows
                 st.session_state["cloud_disp"]   = disp
                 st.session_state["cloud_sheet0"] = sheet0
-                _save_week_draft(rows, sheet0, disp)   # 自動存檔
+                _save_week_draft(rows, sheet0, disp)   # 自動存本機
+                if not TEST_MODE and APPS_SCRIPT_URL and WRITE_SECRET:
+                    push_week_draft(rows, sheet0)      # 自動存雲端草稿（含手動修改）
 
     # 定案顯示（有定案就顯示，不管是否剛排班）
     if "cloud_rows" in st.session_state:
@@ -1173,8 +1175,17 @@ if mode.startswith("🟦"):
 
     if "yao" in st.session_state and data is not None:
         _, files, _, _ = st.session_state["yao"]
+        _FILE_LABELS = {
+            ".xlsx": "📋 列印用（Excel，貼到護理站公告欄）",
+            ".txt":  "💬 傳 LINE 群組用（文字，複製貼上）",
+            ".csv":  "☁️ 雲端貼上用（CSV，貼到 Google 試算表）",
+        }
         with st.expander("⬇️ 其他檔案下載（列印用 xlsx / 貼 LINE 用 txt）"):
             for fn, b in files.items():
+                ext = os.path.splitext(fn)[1].lower()
+                label = _FILE_LABELS.get(ext, "")
+                if label:
+                    st.caption(label)
                 st.download_button(f"⬇️ {fn}", b, file_name=fn, key="dl_"+fn)
 
 
@@ -1364,7 +1375,16 @@ else:
                            edited_ak.to_csv(index=False).encode("utf-8-sig"),
                            file_name=f"稽核名單_{month_key}.csv", mime="text/csv")
         with st.expander("⬇️ 其他檔案下載"):
+            _AK_FILE_LABELS = {
+                ".csv":  "📊 稽核紀錄（上傳到雲端歷史用）",
+                ".xlsx": "📋 列印用（Excel）",
+                ".txt":  "💬 傳 LINE 群組用（文字）",
+            }
             for fn, b in files.items():
+                ext = os.path.splitext(fn)[1].lower()
+                label = _AK_FILE_LABELS.get(ext, "")
+                if label:
+                    st.caption(label)
                 st.download_button(f"⬇️ {fn}", b, file_name=fn, key="akdl_"+fn)
 
 
