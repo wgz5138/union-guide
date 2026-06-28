@@ -399,37 +399,39 @@ def save_audit_stats(df):
 
 def sync_schedule_history_from_csv():
     """把本機排班紀錄.csv 整批上傳到 GS 排班歷史（覆蓋，初始化用）。"""
-    if not APPS_SCRIPT_URL or not WRITE_SECRET: return False, 0
+    if not APPS_SCRIPT_URL or not WRITE_SECRET: return False, 0, "未設定 URL/Secret"
     csv_path = os.path.join(HERE, "排班紀錄.csv")
-    if not os.path.exists(csv_path): return False, 0
+    if not os.path.exists(csv_path): return False, 0, "找不到排班紀錄.csv"
     try:
         df = pd.read_csv(csv_path, encoding="utf-8-sig", dtype=str).fillna("")
         rows = [list(r) for _, r in df.iterrows()]
         resp = requests.post(APPS_SCRIPT_URL,
                              json={"action": "setAllScheduleHistory", "secret": WRITE_SECRET,
                                    "rows": rows},
-                             timeout=60)
-        ok = resp.ok and resp.json().get("ok", False)
-        return ok, len(rows)
-    except Exception:
-        return False, 0
+                             timeout=90)
+        d = resp.json()
+        ok = resp.ok and d.get("ok", False)
+        return ok, len(rows), d.get("error", "") if not ok else ""
+    except Exception as e:
+        return False, 0, str(e)
 
 def sync_audit_history_from_csv():
     """把本機稽核紀錄.csv 整批上傳到 GS 稽核歷史（覆蓋，初始化用）。"""
-    if not APPS_SCRIPT_URL or not WRITE_SECRET: return False, 0
+    if not APPS_SCRIPT_URL or not WRITE_SECRET: return False, 0, "未設定 URL/Secret"
     csv_path = os.path.join(HERE, "稽核紀錄.csv")
-    if not os.path.exists(csv_path): return False, 0
+    if not os.path.exists(csv_path): return False, 0, "找不到稽核紀錄.csv"
     try:
         df = pd.read_csv(csv_path, encoding="utf-8-sig", dtype=str).fillna("")
         rows = [list(r) for _, r in df.iterrows()]
         resp = requests.post(APPS_SCRIPT_URL,
                              json={"action": "setAllAuditHistory", "secret": WRITE_SECRET,
                                    "rows": rows},
-                             timeout=60)
-        ok = resp.ok and resp.json().get("ok", False)
-        return ok, len(rows)
-    except Exception:
-        return False, 0
+                             timeout=90)
+        d = resp.json()
+        ok = resp.ok and d.get("ok", False)
+        return ok, len(rows), d.get("error", "") if not ok else ""
+    except Exception as e:
+        return False, 0, str(e)
 
 def _reconstruct_disp_from_rows(rows):
     """從 cloud_rows 重建簡化版 disp DataFrame（日期×區 的 pivot，供草稿檢視）。"""
@@ -1439,12 +1441,12 @@ if mode.startswith("📊"):
             if _sc2.button("📤 同步本機CSV→雲端", key="stats_sync_local",
                            help="把 repo 裡的排班紀錄.csv（含今年全年歷史）整批上傳到雲端，覆蓋現有資料。"):
                 with st.spinner("上傳中，請稍候…"):
-                    _sok, _sn = sync_schedule_history_from_csv()
+                    _sok, _sn, _serr = sync_schedule_history_from_csv()
                 if _sok:
                     st.success(f"✅ 已同步 {_sn} 筆排班歷史到雲端！按「🔄 讀取」確認。")
                     st.session_state.pop("schedule_stats", None)
                 else:
-                    st.error("同步失敗，請稍後再試。")
+                    st.error(f"同步失敗：{_serr or '未知錯誤'}")
         if "schedule_stats" in st.session_state:
             df_st = st.session_state["schedule_stats"]
             if isinstance(df_st, str):
@@ -1488,12 +1490,12 @@ if mode.startswith("📊"):
             if _ac2.button("📤 同步本機CSV→雲端", key="audit_sync_local",
                            help="把 repo 裡的稽核紀錄.csv（含今年全年歷史）整批上傳到雲端，覆蓋現有資料。"):
                 with st.spinner("上傳中，請稍候…"):
-                    _aok, _an = sync_audit_history_from_csv()
+                    _aok, _an, _aerr = sync_audit_history_from_csv()
                 if _aok:
                     st.success(f"✅ 已同步 {_an} 筆稽核歷史到雲端！按「🔄 讀取」確認。")
                     st.session_state.pop("audit_stats", None)
                 else:
-                    st.error("同步失敗，請稍後再試。")
+                    st.error(f"同步失敗：{_aerr or '未知錯誤'}")
         if "audit_stats" in st.session_state:
             df_ast = st.session_state["audit_stats"]
             if isinstance(df_ast, str):
