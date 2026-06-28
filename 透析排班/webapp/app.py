@@ -401,6 +401,30 @@ def save_audit_stats(df):
     except Exception:
         return False
 
+def fetch_latest_audit_result():
+    """從 GS 稽核歷史讀取最新一個月的名單明細（稽核者含位置、休息者列出）。
+    回傳 (月份str, DataFrame) 或 (None, None) 或 (None, 錯誤字串)。"""
+    if not APPS_SCRIPT_URL or not WRITE_SECRET: return None, None
+    try:
+        resp = requests.post(APPS_SCRIPT_URL,
+                             json={"action": "getAuditHistory", "secret": WRITE_SECRET},
+                             timeout=30)
+        d = resp.json()
+        if not d.get("ok") or not d.get("rows"): return None, None
+        rows = d["rows"]
+        if len(rows) < 2: return None, None
+        df = pd.DataFrame([[str(c) for c in r] for r in rows[1:]], columns=[str(x) for x in rows[0]])
+        excl = (df["月份"].str.startswith("意見-") |
+                df["月份"].str.startswith("統計-") |
+                (df["月份"] == "草稿"))
+        valid = df[~excl & df["狀態"].isin(["稽核","休"])].copy()
+        if valid.empty: return None, None
+        latest = sorted(valid["月份"].unique())[-1]   # 字典排序，115-07 > 115-06 > 114-12
+        result = valid[valid["月份"] == latest][["姓名","狀態","位置"]].reset_index(drop=True)
+        return latest, result
+    except Exception as _e:
+        return None, str(_e)
+
 def sync_schedule_history_from_csv():
     """把本機排班紀錄.csv 整批上傳到 GS 排班歷史（覆蓋，初始化用）。"""
     if not APPS_SCRIPT_URL or not WRITE_SECRET: return False, 0, "未設定 URL/Secret"
@@ -1431,7 +1455,7 @@ else:
 # ═══════════════════════ 統計管理 ═══════════════════════
 if mode.startswith("📊"):
     st.markdown("#### 📊 統計管理")
-    tab1, tab2, tab3 = st.tabs(["📋 印藥水統計", "📋 稽核統計", "👥 組員名單"])
+    tab1, tab2, tab3, tab4 = st.tabs(["📋 印藥水統計", "📋 稽核統計", "📋 最新稽核名單", "👥 組員名單"])
 
     # ── Tab1：印藥水統計 ──────────────────────────────────
     with tab1:
@@ -1535,8 +1559,44 @@ if mode.startswith("📊"):
                         else:
                             st.error("儲存失敗，請稍後再試。")
 
-    # ── Tab3：組員名單 ──────────────────────────────────
+    # ── Tab3：最新稽核名單 ──────────────────────────────────
     with tab3:
+        st.caption("讀取玉繡最新一次送出的稽核名單，確認當月稽核安排。")
+        if st.button("🔄 讀取最新稽核名單", type="primary", key="latest_audit_load"):
+            with st.spinner("讀取中…"):
+                _lm, _lr = fetch_latest_audit_result()
+            if _lm is None and isinstance(_lr, str):
+                st.session_state["latest_audit"] = ("error", _lr)
+            elif _lm is None:
+                st.session_state["latest_audit"] = ("empty", None)
+            else:
+                st.session_state["latest_audit"] = (_lm, _lr)
+        if "latest_audit" in st.session_state:
+            _la = st.session_state["latest_audit"]
+            if _la[0] == "error":
+                st.error(f"讀取失敗：{_la[1]}")
+            elif _la[0] == "empty":
+                st.warning("雲端還沒有稽核歷史，請先同步稽核紀錄.csv 到雲端。")
+            else:
+                _month, _df_la = _la
+                st.success(f"**{_month}** 稽核名單")
+                _稽核者 = _df_la[_df_la["狀態"] == "稽核"].copy().reset_index(drop=True)
+                _休息者 = _df_la[_df_la["狀態"] == "休"].copy().reset_index(drop=True)
+                _c1, _c2 = st.columns(2)
+                with _c1:
+                    st.markdown("**稽核者**")
+                    for _, _row in _稽核者.iterrows():
+                        _pos = f"（{_row['位置']}）" if str(_row.get("位置","")).strip() else ""
+                        st.write(f"✅ {_row['姓名']}{_pos}")
+                with _c2:
+                    st.markdown("**休息者**")
+                    for _, _row in _休息者.iterrows():
+                        st.write(f"🏖️ {_row['姓名']}")
+        else:
+            st.info("按「🔄 讀取最新稽核名單」載入玉繡最新一次排的稽核。")
+
+    # ── Tab4：組員名單 ──────────────────────────────────
+    with tab4:
         st.caption("雲端主檔組員名單。新增/刪除組員後按「💾 存回雲端」，之後排班就會用新名單。")
         _m1, _m2 = st.columns(2)
         if _m1.button("🔄 讀取", type="primary", key="members_load"):
