@@ -339,7 +339,7 @@ def _build_line_txt(rows, disp_df=None):
 
 
 # ── 💬 意見回饋：借用稽核歷史（特殊鍵「意見-時間」）存放，不動 LINE 程式 ──
-APP_VER = "v3.5"
+APP_VER = "v3.6"
 FEEDBACK_PREFIX = "意見-"
 
 def push_feedback(step, detail, expect, urgency, who):
@@ -571,7 +571,7 @@ except Exception:
 
 st.title("💊 透析藥水排班")
 st.caption("上傳班表 Excel → 出名單(表格)。可直接點格子改人名。跨區標 🔺。")
-st.caption("🟢 版本 v3.5（LINE公告左欄改為印藥水日期、每治療日獨立一列不碰撞／重排套回修改／直式手機友善）· 2026-06-28")
+st.caption("🟢 版本 v3.6（定案後顯示實際休息人員／排班公平升級：印次-休次平衡）· 2026-06-28")
 
 with st.expander("📖 第一次用？點我看「3 步驟」（給玉繡）", expanded=False):
     st.markdown("""
@@ -850,6 +850,14 @@ if mode.startswith("🟦"):
         sheet0 = st.session_state["cloud_sheet0"]
         st.success("✅ 定案完成！")
         st.dataframe(disp.T, use_container_width=True)   # 直式：日期當列，區當欄
+
+        # 定案後顯示實際休息人員（依玉繡最終調整，非演算法原始結果）
+        _roster_all = _load_roster_full()
+        if _roster_all:
+            _printing = {str(r[2]).strip() for r in rows if r[2]}
+            _resting  = [m["姓名"] for m in _roster_all if m["姓名"] not in _printing]
+            if _resting:
+                st.info("😴 本週休息：" + "、".join(_resting))
 
         # LINE 群組公告文字
         _line_txt = _build_line_txt(rows, disp_df=disp)

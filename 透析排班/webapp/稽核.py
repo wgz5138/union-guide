@@ -251,10 +251,12 @@ def load_history(skip_month=None):
 AREAS=["一區","二區"]; GROUPS=["W135","W246"]; SHIFTS=[1,2,3]
 BAND=["","第一班","第二班","第三班"]
 
-def assign(members, info, hist_cnt):
+def assign(members, info, hist_cnt, hist_rest=None):
+    if hist_rest is None: hist_rest = {}
     cards=[m["card"] for m in members]
     idx={c:i for i,c in enumerate(cards)}
-    cost={c:hist_cnt.get(c,0) for c in cards}
+    # 公平排序：印次數 - 休息次數，負值越大（休越多）越優先稽核
+    cost={c: hist_cnt.get(c,0) - hist_rest.get(c,0) for c in cards}
     n_night=sum(1 for c in cards if info[c]["type"]=="夜")
     extra_night_to_band2 = max(0, n_night-4)
     slots=[(a,g,s) for a in AREAS for g in GROUPS for s in SHIFTS]
@@ -417,7 +419,7 @@ def run():
     info=classify(members, month_status, fw_status, overrides)
     tag=f"{yy}-{mm:02d}"
     hist_cnt,hist_rest=load_history(skip_month=tag)
-    slots,assigned,used,crossed=assign(members, info, hist_cnt)
+    slots,assigned,used,crossed=assign(members, info, hist_cnt, hist_rest)
     emit(members, info, slots, assigned, used, crossed, hist_cnt, hist_rest, tag,
          name_of=name_of, fw_mon=fw_mon)
 
@@ -450,7 +452,7 @@ def run_quick(month_arg):
 
     print(f"ℹ 快速點選模式：{len(members)} 人")
     hist_cnt,hist_rest=load_history(skip_month=tag)
-    slots,assigned,used,crossed=assign(members, info, hist_cnt)
+    slots,assigned,used,crossed=assign(members, info, hist_cnt, hist_rest)
     emit(members, info, slots, assigned, used, crossed, hist_cnt, hist_rest, tag)
 
 

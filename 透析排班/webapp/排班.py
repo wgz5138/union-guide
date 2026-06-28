@@ -266,9 +266,11 @@ def load_history(skip_week=None):
     return cnt, rest
 
 # ===================== 核心排班(以治療日為軸,區域數一般化) =====================
-def assign(members, status, window, hist_cnt):
+def assign(members, status, window, hist_cnt, hist_rest=None):
+    if hist_rest is None: hist_rest = {}
     idx={m["card"]:i for i,m in enumerate(members)}
-    cost={m["card"]:hist_cnt.get(m["card"],0) for m in members}
+    # 公平排序：印次數 - 休息次數，負值越大（休越多）越優先印
+    cost={m["card"]: hist_cnt.get(m["card"],0) - hist_rest.get(m["card"],0) for m in members}
     p1={T:prev_treat(T) for T in window}
     p2={T:prev_treat(p1[T]) if p1[T] else None for T in window}
 
@@ -387,7 +389,7 @@ def run():
     members=match_members(roster, status, name_of, by_name)
     name_of_g={**name_of, **{mm["card"]:mm["name"] for mm in members}}
     hist_cnt, hist_rest = load_history(skip_week=sheet)
-    slots, assign_slot, slot_info, member_days, able = assign(members, status, window, hist_cnt)
+    slots, assign_slot, slot_info, member_days, able = assign(members, status, window, hist_cnt, hist_rest)
     nm=lambda c: ({m["card"]:m["name"] for m in members}).get(c) or name_of.get(c,c)
 
     allcards=[m["card"] for m in members]
