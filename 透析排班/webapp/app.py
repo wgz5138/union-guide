@@ -282,14 +282,16 @@ def fetch_schedule_stats():
         if not d.get("ok") or not d.get("rows"): return None
         rows = d["rows"]
         if len(rows) < 2: return None
-        df = pd.DataFrame(rows[1:], columns=[str(x) for x in rows[0]])
-        df["狀態"] = df["狀態"].astype(str).str.strip()
+        df = pd.DataFrame([[str(c) for c in r] for r in rows[1:]], columns=[str(x) for x in rows[0]])
+        df["狀態"] = df["狀態"].str.strip()
         # 只統計正常 印/休（排除草稿、修正等特殊週次）
         df = df[df["狀態"].isin(["印","休"])]
         if df.empty: return None
         grp = df.groupby(["卡號","姓名"])["狀態"].value_counts().unstack(fill_value=0)
         grp = grp.reindex(columns=["印","休"], fill_value=0).reset_index()
         grp.columns = ["卡號","姓名","印次","休次"]
+        grp["印次"] = pd.to_numeric(grp["印次"], errors="coerce").fillna(0).astype(int)
+        grp["休次"] = pd.to_numeric(grp["休次"], errors="coerce").fillna(0).astype(int)
         grp["淨值(印-休)"] = grp["印次"] - grp["休次"]
         grp = grp.sort_values("淨值(印-休)", ascending=False).reset_index(drop=True)
         return grp
@@ -363,16 +365,17 @@ def fetch_audit_stats():
         if not d.get("ok") or not d.get("rows"): return None
         rows = d["rows"]
         if len(rows) < 2: return None
-        df = pd.DataFrame(rows[1:], columns=[str(x) for x in rows[0]])
-        df["狀態"] = df["狀態"].astype(str).str.strip()
+        df = pd.DataFrame([[str(c) for c in r] for r in rows[1:]], columns=[str(x) for x in rows[0]])
+        df["狀態"] = df["狀態"].str.strip()
         # 排除草稿和意見回饋，其餘（正常月份 + 統計重建記錄）都納入計算
-        excl = (df["月份"].astype(str).str.startswith("意見-") |
-                (df["月份"].astype(str) == "草稿"))
+        excl = (df["月份"].str.startswith("意見-") | (df["月份"] == "草稿"))
         valid = df[~excl & df["狀態"].isin(["稽核","休"])]
         if valid.empty: return pd.DataFrame(columns=["卡號","姓名","稽核次","休次","淨值(稽核-休)"])
         grp = valid.groupby(["卡號","姓名"])["狀態"].value_counts().unstack(fill_value=0)
         grp = grp.reindex(columns=["稽核","休"], fill_value=0).reset_index()
         grp.columns = ["卡號","姓名","稽核次","休次"]
+        grp["稽核次"] = pd.to_numeric(grp["稽核次"], errors="coerce").fillna(0).astype(int)
+        grp["休次"]   = pd.to_numeric(grp["休次"],   errors="coerce").fillna(0).astype(int)
         grp["淨值(稽核-休)"] = grp["稽核次"] - grp["休次"]
         return grp.sort_values("淨值(稽核-休)", ascending=False).reset_index(drop=True)
     except Exception as _e:
