@@ -364,9 +364,10 @@ def fetch_audit_stats():
         if len(rows) < 2: return None
         df = pd.DataFrame(rows[1:], columns=[str(x) for x in rows[0]])
         df["狀態"] = df["狀態"].astype(str).str.strip()
-        # 只統計真實月份（排除草稿/回饋）
-        valid = df[df["月份"].astype(str).str.match(r"^\d{4}-\d{2}$")]
-        valid = valid[valid["狀態"].isin(["稽核","休"])]
+        # 排除草稿和意見回饋，其餘（正常月份 + 統計重建記錄）都納入計算
+        excl = (df["月份"].astype(str).str.startswith("意見-") |
+                (df["月份"].astype(str) == "草稿"))
+        valid = df[~excl & df["狀態"].isin(["稽核","休"])]
         if valid.empty: return pd.DataFrame(columns=["卡號","姓名","稽核次","休次","淨值(稽核-休)"])
         grp = valid.groupby(["卡號","姓名"])["狀態"].value_counts().unstack(fill_value=0)
         grp = grp.reindex(columns=["稽核","休"], fill_value=0).reset_index()
@@ -776,7 +777,7 @@ if TEST_MODE:
 
 st.title("💊 透析藥水排班")
 st.caption("上傳班表 Excel → 出名單(表格)。可直接點格子改人名。跨區標 🔺。")
-st.caption("🟢 版本 v3.11（統計管理：印藥水統計／稽核統計／組員名單均可雲端編輯）· 2026-06-28")
+st.caption("🟢 版本 v3.11（統計管理 3 合 1 ／草稿自動偵測／組員名單雲端化）· 2026-06-28")
 
 with st.expander("📖 第一次用？點我看「3 步驟」（給玉繡）", expanded=False):
     st.markdown("""
@@ -1395,6 +1396,8 @@ if mode.startswith("📊"):
                     "淨值(印-休)": st.column_config.NumberColumn("淨值", disabled=True),
                 }, use_container_width=True, hide_index=True, key="stats_edit")
                 edited_st["淨值(印-休)"] = edited_st["印次"] - edited_st["休次"]
+                st.download_button("⬇️ 下載統計 CSV", edited_st.to_csv(index=False).encode("utf-8-sig"),
+                                   file_name="印藥水統計.csv", mime="text/csv", key="stats_dl")
                 if TEST_MODE:
                     if st.button("🧪 存回雲端（模擬）", key="stats_save_test"):
                         st.info("🧪 測試模式：模擬儲存成功，沒有真的寫到雲端。")
@@ -1431,6 +1434,8 @@ if mode.startswith("📊"):
                     "淨值(稽核-休)":  st.column_config.NumberColumn("淨值", disabled=True),
                 }, use_container_width=True, hide_index=True, key="audit_stats_edit")
                 edited_ast["淨值(稽核-休)"] = edited_ast["稽核次"] - edited_ast["休次"]
+                st.download_button("⬇️ 下載統計 CSV", edited_ast.to_csv(index=False).encode("utf-8-sig"),
+                                   file_name="稽核統計.csv", mime="text/csv", key="audit_stats_dl")
                 if TEST_MODE:
                     if st.button("🧪 存回雲端（模擬）", key="audit_stats_save_test"):
                         st.info("🧪 測試模式：模擬儲存成功，沒有真的寫到雲端。")
@@ -1448,12 +1453,28 @@ if mode.startswith("📊"):
     # ── Tab3：組員名單 ──────────────────────────────────
     with tab3:
         st.caption("雲端主檔組員名單。新增/刪除組員後按「💾 存回雲端」，之後排班就會用新名單。")
-        if st.button("🔄 讀取", type="primary", key="members_load"):
+        _m1, _m2 = st.columns(2)
+        if _m1.button("🔄 讀取", type="primary", key="members_load"):
             with st.spinner("讀取中…"):
                 _mem = fetch_members_cloud()
             st.session_state["members_cloud"] = _mem if _mem is not None else "empty"
+        if _m2.button("📤 從本機 CSV 同步到雲端", key="members_sync_local",
+                      help="第一次使用：把 repo 裡的 組員名單.csv 上傳到雲端，之後就以雲端為主。"):
+            _local_csv = os.path.join(HERE, "組員名單.csv")
+            if os.path.exists(_local_csv):
+                try:
+                    _ldf = pd.read_csv(_local_csv, encoding="utf-8-sig")
+                    if save_members_cloud(_ldf[["卡號","姓名"]]):
+                        st.session_state["members_cloud"] = _ldf[["卡號","姓名"]].reset_index(drop=True)
+                        st.success(f"✅ 已同步 {len(_ldf)} 人到雲端！")
+                    else:
+                        st.error("同步失敗，請稍後再試。")
+                except Exception as _e:
+                    st.error(f"讀取本機 CSV 失敗：{_e}")
+            else:
+                st.error("找不到本機 組員名單.csv，請確認 repo 裡有這個檔。")
         if "members_cloud" not in st.session_state:
-            st.info("按「🔄 讀取」載入組員名單。\n\n若雲端還沒有，可先貼入本機 CSV 資料後存回雲端。")
+            st.info("按「🔄 讀取」載入雲端組員名單；若第一次使用，按「📤 從本機 CSV 同步到雲端」初始化。")
         elif isinstance(st.session_state["members_cloud"], str):
             st.warning("雲端還沒有組員名單，請手動新增後存回雲端。")
             _empty = pd.DataFrame(columns=["卡號","姓名"])
@@ -1471,6 +1492,8 @@ if mode.startswith("📊"):
             st.caption(f"共 {len(df_mem)} 人｜可新增列（點最下方 + 號）或直接改名字/卡號")
             edited_mem = st.data_editor(df_mem, num_rows="dynamic",
                                         use_container_width=True, hide_index=True, key="members_edit")
+            st.download_button("⬇️ 下載組員名單 CSV", edited_mem.to_csv(index=False).encode("utf-8-sig"),
+                               file_name="組員名單.csv", mime="text/csv", key="members_dl")
             if TEST_MODE:
                 if st.button("🧪 存回雲端（模擬）", key="members_save_test"):
                     st.info("🧪 測試模式：模擬儲存成功，沒有真的寫到雲端。")

@@ -58,6 +58,8 @@ function handleAction_(body) {
   if (a === "getMembers")              return getMembers_();
   if (a === "setMembers")              return setMembers_(body);
   if (a === "setAllAuditHistory")      return setAllAuditHistory_(body);
+  if (a === "deleteScheduleWeek")      return deleteScheduleWeek_(body);
+  if (a === "deleteAuditMonth")        return deleteAuditMonth_(body);
   return json_({ok: false, error: "unknown action: " + a});
 }
 
@@ -121,10 +123,52 @@ function setMembers_(body) {
 function setAllAuditHistory_(body) {
   var ss = SpreadsheetApp.getActiveSpreadsheet();
   var sh = getOrCreate_(ss, "稽核歷史", ["月份","卡號","姓名","狀態","位置"]);
+  var data = sh.getDataRange().getValues();
+  var header = data[0];
+  // 保留草稿與意見回饋，清除正常月份和統計重建記錄
+  var kept = [header];
+  for (var i = 1; i < data.length; i++) {
+    var m = String(data[i][0]).trim();
+    if (m === "草稿" || m.indexOf("意見-") === 0) kept.push(data[i]);
+  }
   sh.clearContents();
-  sh.appendRow(["月份","卡號","姓名","狀態","位置"]);
+  kept.forEach(function(r) { sh.appendRow(r); });
   (body.rows || []).forEach(function(r) { sh.appendRow(r); });
   return json_({ok: true});
+}
+
+
+/* ━━━━━━━━━━ 刪除特定週次/月份（管理員修正用）━━━━━━━━━━ */
+function deleteScheduleWeek_(body) {
+  var key = String(body.key || "");
+  if (!key) return json_({ok: false, error: "key is required"});
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var sh = getOrCreate_(ss, "排班歷史", ["週次","卡號","姓名","狀態","治療日"]);
+  var data = sh.getDataRange().getValues();
+  var header = data[0];
+  var kept = [header];
+  for (var i = 1; i < data.length; i++) {
+    if (String(data[i][0]).trim() !== key) kept.push(data[i]);
+  }
+  sh.clearContents();
+  kept.forEach(function(r) { sh.appendRow(r); });
+  return json_({ok: true, deleted: data.length - kept.length});
+}
+
+function deleteAuditMonth_(body) {
+  var key = String(body.key || "");
+  if (!key) return json_({ok: false, error: "key is required"});
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var sh = getOrCreate_(ss, "稽核歷史", ["月份","卡號","姓名","狀態","位置"]);
+  var data = sh.getDataRange().getValues();
+  var header = data[0];
+  var kept = [header];
+  for (var i = 1; i < data.length; i++) {
+    if (String(data[i][0]).trim() !== key) kept.push(data[i]);
+  }
+  sh.clearContents();
+  kept.forEach(function(r) { sh.appendRow(r); });
+  return json_({ok: true, deleted: data.length - kept.length});
 }
 
 
