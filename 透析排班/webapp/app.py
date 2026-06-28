@@ -425,6 +425,26 @@ def fetch_latest_audit_result():
     except Exception as _e:
         return None, str(_e)
 
+def _sync_to_gs(action, rows, timeout=150, retries=2):
+    """送資料到 GS，逾時自動重試。回傳 (ok, n, err_msg)。"""
+    last_err = ""
+    for attempt in range(retries):
+        try:
+            resp = requests.post(APPS_SCRIPT_URL,
+                                 json={"action": action, "secret": WRITE_SECRET, "rows": rows},
+                                 timeout=timeout)
+            d = resp.json()
+            if resp.ok and d.get("ok", False):
+                return True, len(rows), ""
+            last_err = d.get("error", "GAS 回傳失敗")
+            break
+        except requests.exceptions.Timeout:
+            last_err = f"連線逾時（第{attempt+1}次，共{retries}次）"
+        except Exception as e:
+            last_err = str(e)
+            break
+    return False, 0, last_err
+
 def sync_schedule_history_from_csv():
     """把本機排班紀錄.csv 整批上傳到 GS 排班歷史（覆蓋，初始化用）。"""
     if not APPS_SCRIPT_URL or not WRITE_SECRET: return False, 0, "未設定 URL/Secret"
@@ -433,13 +453,7 @@ def sync_schedule_history_from_csv():
     try:
         df = pd.read_csv(csv_path, encoding="utf-8-sig", dtype=str).fillna("")
         rows = [list(r) for _, r in df.iterrows()]
-        resp = requests.post(APPS_SCRIPT_URL,
-                             json={"action": "setAllScheduleHistory", "secret": WRITE_SECRET,
-                                   "rows": rows},
-                             timeout=90)
-        d = resp.json()
-        ok = resp.ok and d.get("ok", False)
-        return ok, len(rows), d.get("error", "") if not ok else ""
+        return _sync_to_gs("setAllScheduleHistory", rows)
     except Exception as e:
         return False, 0, str(e)
 
@@ -451,13 +465,7 @@ def sync_audit_history_from_csv():
     try:
         df = pd.read_csv(csv_path, encoding="utf-8-sig", dtype=str).fillna("")
         rows = [list(r) for _, r in df.iterrows()]
-        resp = requests.post(APPS_SCRIPT_URL,
-                             json={"action": "setAllAuditHistory", "secret": WRITE_SECRET,
-                                   "rows": rows},
-                             timeout=90)
-        d = resp.json()
-        ok = resp.ok and d.get("ok", False)
-        return ok, len(rows), d.get("error", "") if not ok else ""
+        return _sync_to_gs("setAllAuditHistory", rows)
     except Exception as e:
         return False, 0, str(e)
 
@@ -1474,7 +1482,8 @@ if mode.startswith("📊"):
                     st.success(f"✅ 已同步 {_sn} 筆排班歷史到雲端！按「🔄 讀取」確認。")
                     st.session_state.pop("schedule_stats", None)
                 else:
-                    st.error(f"同步失敗：{_serr or '未知錯誤'}")
+                    _hint = "（Google 伺服器較慢，已自動重試，請再按一次）" if "逾時" in (_serr or "") else ""
+                    st.error(f"同步失敗：{_serr or '未知錯誤'}{_hint}")
         if "schedule_stats" in st.session_state:
             df_st = st.session_state["schedule_stats"]
             if isinstance(df_st, str) and df_st == "empty":
@@ -1525,7 +1534,8 @@ if mode.startswith("📊"):
                     st.success(f"✅ 已同步 {_an} 筆稽核歷史到雲端！按「🔄 讀取」確認。")
                     st.session_state.pop("audit_stats", None)
                 else:
-                    st.error(f"同步失敗：{_aerr or '未知錯誤'}")
+                    _hint = "（Google 伺服器較慢，已自動重試，請再按一次）" if "逾時" in (_aerr or "") else ""
+                    st.error(f"同步失敗：{_aerr or '未知錯誤'}{_hint}")
         if "audit_stats" in st.session_state:
             df_ast = st.session_state["audit_stats"]
             if isinstance(df_ast, str) and df_ast == "empty":
