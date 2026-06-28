@@ -55,6 +55,9 @@ function handleAction_(body) {
   if (a === "getWeekDraft")            return getWeekDraft_();
   if (a === "setWeekDraft")            return setWeekDraft_(body);
   if (a === "setAllScheduleHistory")   return setAllScheduleHistory_(body);
+  if (a === "getMembers")              return getMembers_();
+  if (a === "setMembers")              return setMembers_(body);
+  if (a === "setAllAuditHistory")      return setAllAuditHistory_(body);
   return json_({ok: false, error: "unknown action: " + a});
 }
 
@@ -93,6 +96,34 @@ function setScheduleHistory_(body) {
   sh.clearContents();
   kept.forEach(function(r)    { sh.appendRow(r); });
   newRows.forEach(function(r) { sh.appendRow(r); });
+  return json_({ok: true});
+}
+
+
+/* ━━━━━━━━━━ 組員名單（雲端主檔）━━━━━━━━━━ */
+function getMembers_() {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var sh = getOrCreate_(ss, "組員名單", ["卡號","姓名"]);
+  return json_({ok: true, rows: sh.getDataRange().getValues()});
+}
+
+function setMembers_(body) {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var sh = getOrCreate_(ss, "組員名單", ["卡號","姓名"]);
+  sh.clearContents();
+  sh.appendRow(["卡號","姓名"]);
+  (body.rows || []).forEach(function(r) { sh.appendRow(r); });
+  return json_({ok: true});
+}
+
+
+/* ━━━━━━━━━━ 整批覆寫稽核歷史（統計修正用）━━━━━━━━━━ */
+function setAllAuditHistory_(body) {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var sh = getOrCreate_(ss, "稽核歷史", ["月份","卡號","姓名","狀態","位置"]);
+  sh.clearContents();
+  sh.appendRow(["月份","卡號","姓名","狀態","位置"]);
+  (body.rows || []).forEach(function(r) { sh.appendRow(r); });
   return json_({ok: true});
 }
 
