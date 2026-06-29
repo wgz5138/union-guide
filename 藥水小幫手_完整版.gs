@@ -1,5 +1,5 @@
 /**
- * 透析印藥水 LINE 小幫手 — Apps Script v2.1
+ * 透析印藥水 LINE 小幫手 — Apps Script v2.2
  *
  * Web App URL（部署後固定）：
  *   https://script.google.com/macros/s/AKfycbx25V8mO_F14agwPLesmKfQP_1m7LRmEVgC639De3TjYf661istXWGYEmFrez1feHs/exec
@@ -93,14 +93,14 @@ function getScheduleHistory_() {
 }
 
 function setScheduleHistory_(body) {
-  var key = String(body.key || "");
+  var key = String(body.key || "").trim();
   var newRows = body.rows || [];
   var ss = SpreadsheetApp.openById(SS_ID);
   var sh = getOrCreate_(ss, "排班歷史", ["週次","卡號","姓名","狀態","治療日"]);
   var data = sh.getDataRange().getValues();
   var kept = [data[0]];
   for (var i = 1; i < data.length; i++) {
-    if (String(data[i][0]) !== key) kept.push(data[i]);
+    if (String(data[i][0]).trim() !== key) kept.push(data[i]);
   }
   writeAll_(sh, kept.concat(newRows));
   return json_({ok: true});
@@ -166,14 +166,14 @@ function getAuditHistory_() {
 }
 
 function setAuditResult_(body) {
-  var key = String(body.key || "");
+  var key = String(body.key || "").trim();
   var newRows = body.rows || [];
   var ss = SpreadsheetApp.openById(SS_ID);
   var sh = getOrCreate_(ss, "稽核歷史", ["月份","卡號","姓名","狀態","位置"]);
   var data = sh.getDataRange().getValues();
   var kept = [data[0]];
   for (var i = 1; i < data.length; i++) {
-    if (String(data[i][0]) !== key) kept.push(data[i]);
+    if (String(data[i][0]).trim() !== key) kept.push(data[i]);
   }
   writeAll_(sh, kept.concat(newRows));
   return json_({ok: true});
@@ -235,26 +235,32 @@ function getLatestBanbiao_() {
   try {
     var label = GmailApp.getUserLabelByName("班表");
     if (!label) return json_({ok: false, error: "找不到 Gmail 標籤「班表」"});
-    var threads = label.getThreads(0, 10);
+    var threads = label.getThreads(0, 30);
     if (!threads.length) return json_({ok: false, error: "標籤「班表」裡沒有郵件"});
+    var bestAtt = null, bestDate = null, bestMsg = null;
     for (var t = 0; t < threads.length; t++) {
       var msgs = threads[t].getMessages();
-      for (var m = msgs.length - 1; m >= 0; m--) {
+      for (var m = 0; m < msgs.length; m++) {
+        var msgDate = msgs[m].getDate();
         var atts = msgs[m].getAttachments();
         for (var a = 0; a < atts.length; a++) {
-          var fn = atts[a].getName();
-          if (/\.(xls|xlsx)$/i.test(fn)) {
-            return json_({
-              ok: true,
-              filename: fn,
-              date: Utilities.formatDate(msgs[m].getDate(), "Asia/Taipei", "yyyy-MM-dd"),
-              b64: Utilities.base64Encode(atts[a].getBytes())
-            });
+          if (/\.(xls|xlsx)$/i.test(atts[a].getName())) {
+            if (!bestDate || msgDate > bestDate) {
+              bestDate = msgDate;
+              bestAtt  = atts[a];
+              bestMsg  = msgs[m];
+            }
           }
         }
       }
     }
-    return json_({ok: false, error: "標籤「班表」裡沒有找到 Excel 附件"});
+    if (!bestAtt) return json_({ok: false, error: "標籤「班表」裡沒有找到 Excel 附件"});
+    return json_({
+      ok: true,
+      filename: bestAtt.getName(),
+      date: Utilities.formatDate(bestDate, "Asia/Taipei", "yyyy-MM-dd"),
+      b64: Utilities.base64Encode(bestAtt.getBytes())
+    });
   } catch(err) {
     return json_({ok: false, error: String(err)});
   }
@@ -273,7 +279,7 @@ function sendReminders() {
     var sh = ss.getSheetByName("本週名單");
     if (!sh) { Logger.log("找不到『本週名單』分頁"); return; }
     var rows = sh.getDataRange().getValues();
-    if (!rows || !rows[0]) { Logger.log("本週名單是空的"); return; }
+    if (!rows || rows.length < 2) { Logger.log("本週名單是空的（無資料行）"); return; }
 
     var head = rows[0].map(function(x) { return String(x).trim(); });
     var iD = head.indexOf("印日期");
@@ -365,12 +371,15 @@ function normDate_(v, tz) {
 }
 
 function pushLine_(uid, text) {
-  UrlFetchApp.fetch("https://api.line.me/v2/bot/message/push", {
+  var resp = UrlFetchApp.fetch("https://api.line.me/v2/bot/message/push", {
     method: "post", contentType: "application/json",
     headers: { "Authorization": "Bearer " + LINE_TOKEN },
     payload: JSON.stringify({ to: uid, messages: [{ type: "text", text: text }] }),
     muteHttpExceptions: true
   });
+  if (resp.getResponseCode() !== 200) {
+    Logger.log("LINE API 錯誤 (uid=" + uid + ")：" + resp.getResponseCode() + " " + resp.getContentText());
+  }
 }
 
 function testSelf() {
