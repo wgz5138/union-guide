@@ -1,316 +1,378 @@
 /**
- * 透析印藥水 LINE 小幫手 v5.3 — Apps Script
- * ════════════════════════════════════════════════════════
- *  功能①：自動收 userId（LINE webhook）
- *  功能②：每天自動發提醒 ★名單日期=上班日，印藥水日=上班日的前一個上班日（跳週日/休診日）；提前一則+當天一則；含防重複
- *  功能③：接收網頁送來的名單（setWeek）
- *  功能④：儲存/讀取排班歷史（供下週公平輪序）
- *  功能⑤：儲存/讀取稽核歷史（供下月公平輪序）
- *  功能⑥：getLatestBanbiao — 讀 Gmail「班表」標籤最新 Excel 附件（網頁一鍵抓班表）
+ * 透析印藥水 LINE 小幫手 — Apps Script v2.1
+ *
+ * Web App URL（部署後固定）：
+ *   https://script.google.com/macros/s/AKfycbx25V8mO_F14agwPLesmKfQP_1m7LRmEVgC639De3TjYf661istXWGYEmFrez1feHs/exec
+ *
+ * SS_ID（Google Sheets）：
+ *   1UF-DjDcrIPDbp016vkIyV9zsLF6Qz5EBo6Bq-z6t-Js
+ *
+ * 重建步驟：
+ *   1. 新增 GAS 獨立專案
+ *   2. 貼上此檔案全部程式碼
+ *   3. 更新 LINE_TOKEN（從 LINE Developers Console 複製）
+ *   4. 部署 Web App（Execute as: Me，Access: Anyone）→ 複製新網址
+ *   5. 請預秀到 LINE Developers Console 更新 Webhook URL
+ *   6. 設定觸發條件：sendReminders 每天早上 7 點
  */
 
-var LINE_TOKEN  = "貼上你的金鑰";   // ← Channel access token（不要按 Reissue！）
-var WRITE_SECRET = "yaoshui2026";   // ← 網頁送名單用的暗號（與 Streamlit Secrets 一致）
+var LINE_TOKEN   = "zeJ2uTt7yRF4EQZ1nN0tgQqZqfzkScfWxTmEtGjPDbByEtjEKkQucms/SYc9uYiEyHbODMrsqlB2L+z0Xl1EPpe4/w/nIR9AT6xb+7gBUgsPlqjEsj4Hp907Zr/gMkpiJWlSWaU20t4vI6au33BKbAdB04t89/1O/w1cDnyilFU=";
+var WRITE_SECRET = "yaoshui2026";
+var SS_ID        = "1UF-DjDcrIPDbp016vkIyV9zsLF6Qz5EBo6Bq-z6t-Js";
 
-// ★休診日（沒診、不上班的日子）：過年/國定假日要的話自己加，格式 "2026-01-01"。週日自動跳，不用列。
-var EXTRA_HOLIDAYS = [
-  // "2026-01-01",
-  // "2026-02-16",
-];
-
-
-/* ━━━━━━━━━━ doPost（LINE webhook ＋ 網頁 API）━━━━━━━━━━ */
+/* ━━━━━━━━━━ 路由 ━━━━━━━━━━ */
 function doPost(e) {
   try {
     var body = JSON.parse(e.postData.contents);
-    var ss = SpreadsheetApp.getActiveSpreadsheet();
-
-    // ── LINE webhook（有 events 欄位，沒有 action）──
-    if (body.events) {
-      var sh = ensureSheet_(ss, "userid", ["時間","事件","userId","傳來的文字"]);
-      (body.events || []).forEach(function(ev) {
-        var uid = ev.source && ev.source.userId;
-        var text = (ev.type === "message" && ev.message && ev.message.type === "text")
-                   ? ev.message.text : "";
-        if (uid) sh.appendRow([new Date(), ev.type, uid, text]);
-      });
-      return ContentService.createTextOutput("OK");
+    if (body.action) {
+      if (body.secret !== WRITE_SECRET)
+        return json_({ok: false, error: "unauthorized"});
+      return handleAction_(body);
     }
-
-    // ── 網頁 API（需要暗號）──
-    if (body.secret !== WRITE_SECRET) {
-      return jsonOut_({ok: false, error: "wrong secret"});
-    }
-
-    var action = body.action || "";
-
-    if (action === "setWeek") {
-      var sh2 = ensureSheet_(ss, "本週名單", ["印日期","區","姓名"]);
-      sh2.clearContents();
-      sh2.appendRow(["印日期","區","姓名"]);
-      (body.rows || []).forEach(function(r) { sh2.appendRow(r); });
-      return jsonOut_({ok: true, count: (body.rows || []).length});
-    }
-
-    if (action === "getScheduleHistory") {
-      return jsonOut_({ok: true, rows: sheetToArray_(ss, "排班歷史")});
-    }
-
-    if (action === "setScheduleHistory") {
-      writeHistory_(ss, "排班歷史", ["週次","卡號","姓名","狀態","治療日"],
-                    body.key, body.rows || []);
-      return jsonOut_({ok: true});
-    }
-
-    if (action === "getAuditHistory") {
-      return jsonOut_({ok: true, rows: sheetToArray_(ss, "稽核歷史")});
-    }
-
-    if (action === "setAuditResult") {
-      writeHistory_(ss, "稽核歷史", ["月份","卡號","姓名","狀態","位置"],
-                    body.key, body.rows || []);
-      return jsonOut_({ok: true});
-    }
-
-    if (action === "sendAuditNotice") {
-      var map2 = buildUserMap_(ss);
-      var month = body.month || "";
-      var sent2 = 0, miss2 = 0;
-      (body.notices || []).forEach(function(n) {
-        var uid3 = map2[n.name];
-        if (!uid3) { Logger.log("缺 userId（稽核通知）：" + n.name); miss2++; return; }
-        pushLine_(uid3, "📋 " + month + " 你這個月負責【" + n.position + "】稽核藥水，請自行安排兩天進行稽核。🙏");
-        sent2++;
-      });
-      Logger.log("稽核通知：發 " + sent2 + " 人，缺 userId " + miss2 + " 人");
-      return jsonOut_({ok: true, sent: sent2, miss: miss2});
-    }
-
-    if (action === "getLatestBanbiao") {
-      var label = GmailApp.getUserLabelByName("班表");
-      var threads = label ? label.getThreads(0, 30) : [];
-      var bestAtt = null, bestDate = null;
-      for (var ti = 0; ti < threads.length; ti++) {
-        var msgs = threads[ti].getMessages();
-        for (var mi = 0; mi < msgs.length; mi++) {
-          var md = msgs[mi].getDate();
-          var atts = msgs[mi].getAttachments();
-          for (var ai = 0; ai < atts.length; ai++) {
-            if (atts[ai].getName().toLowerCase().indexOf(".xls") >= 0) {
-              if (!bestDate || md > bestDate) { bestDate = md; bestAtt = atts[ai]; }
-            }
-          }
-        }
-      }
-      if (!bestAtt) {
-        return jsonOut_({ok: false, error: "找不到『班表』標籤下的 Excel 附件（請確認班表信已進來並貼上『班表』標籤）"});
-      }
-      return jsonOut_({
-        ok: true,
-        filename: bestAtt.getName(),
-        date: Utilities.formatDate(bestDate, "Asia/Taipei", "yyyy-MM-dd HH:mm"),
-        b64: Utilities.base64Encode(bestAtt.getBytes())
-      });
-    }
-
-    return jsonOut_({ok: false, error: "unknown action: " + action});
+    handleWebhook_(body);
+    return ContentService.createTextOutput("OK");
   } catch(err) {
-    return jsonOut_({ok: false, error: String(err)});
+    return ContentService.createTextOutput("OK");
   }
 }
 
 function doGet() { return ContentService.createTextOutput("ok"); }
 
 
-/* ━━━━━━━━━━ 上班日工具（跳過週日 + 休診日）━━━━━━━━━━ */
-function isWorkday_(d, tz) {
-  if (d.getDay() === 0) return false;                       // 週日休
-  var s = Utilities.formatDate(d, tz, "yyyy-MM-dd");
-  return EXTRA_HOLIDAYS.indexOf(s) < 0;                     // 不在休診清單
-}
-/** 嚴格「之前」最近的上班日 */
-function prevWorkday_(d, tz) {
-  var x = new Date(d.getTime());
-  for (var i = 0; i < 21; i++) {
-    x = new Date(x.getTime() - 24 * 60 * 60 * 1000);
-    if (isWorkday_(x, tz)) return x;
-  }
-  return x;
-}
-/** "yyyy-MM-dd" → Date（本地時間正午，避時區誤差） */
-function parseYmd_(s) {
-  var m = String(s).trim().match(/^(\d{4})-(\d{1,2})-(\d{1,2})$/);
-  if (!m) return null;
-  return new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]), 12, 0, 0);
-}
-
-
-/* ━━━━━━━━━━ 每日提醒（錨定「印藥水日」；兩層＋防重複）━━━━━━━━━━
- * ★名單那欄日期 = 組員「上班日」。真正要印藥水的日子 =「上班日的前一個上班日」（跳週日/休診日）。
- *   例：上班日 6/22(一)，因 6/21(日)沒人 → 印藥水日 = 6/20(六)。
- * 第一層（提前）：今天 = 印藥水日的前一個上班日 → 「🔔 記得 M/d 要印…」
- * 第二層（當天）：今天 = 印藥水日             → 「⚠️ 今天 M/d 要印…」
- * ★防重複：每發一則就記在「提醒紀錄」分頁（日期｜類型｜姓名｜印藥水日）。同一天同一人同一則只發一次，
- *   不管手動測試或鬧鐘跑幾次都不會重複洗版。
- */
-function sendReminders() {
-  var ss = SpreadsheetApp.getActiveSpreadsheet();
-  var tz = "Asia/Taipei";
-  var todayStr = Utilities.formatDate(new Date(), tz, "yyyy-MM-dd");
-
-  var sh = ss.getSheetByName("本週名單");
-  if (!sh) { Logger.log("找不到『本週名單』分頁"); return; }
-  var rows = sh.getDataRange().getValues();
-  var head = rows[0].map(function(x) { return String(x).trim(); });
-  var iD = head.indexOf("印日期"); if (iD < 0) iD = head.indexOf("上班日");
-  var iZ = head.indexOf("區"), iN = head.indexOf("姓名");
-
-  var map = buildUserMap_(ss);
-  var advance = {};   // 提前提醒：姓名 → {areas:[], printStr=印藥水日}
-  var sameday = {};   // 當天提醒：姓名 → {areas:[], printStr=印藥水日}
-
-  for (var r = 1; r < rows.length; r++) {
-    var dStr = normDate_(rows[r][iD], tz);                  // 名單上的日期 = 上班日
-    var dd = parseYmd_(dStr);
-    if (!dd) continue;
-    var pDay = prevWorkday_(dd, tz);                        // 印藥水日 = 上班日的前一個上班日
-    var aDay = prevWorkday_(pDay, tz);                      // 提前日 = 印藥水日再前一個上班日
-    var Pstr = Utilities.formatDate(pDay, tz, "yyyy-MM-dd");
-    var Astr = Utilities.formatDate(aDay, tz, "yyyy-MM-dd");
-
-    var nm2 = String(rows[r][iN]).trim(), area = String(rows[r][iZ]).trim();
-    if (!nm2) continue;
-
-    var bucket = null;
-    if (Pstr === todayStr) bucket = sameday;               // 今天就是印藥水日
-    else if (Astr === todayStr) bucket = advance;          // 今天是印藥水日的前一個上班日
-    if (!bucket) continue;
-
-    if (!bucket[nm2]) bucket[nm2] = {areas: [], printStr: Pstr};   // printStr 一律存「印藥水日」
-    if (area && bucket[nm2].areas.indexOf(area) < 0) bucket[nm2].areas.push(area);
-  }
-
-  // ★防重複：載入「提醒紀錄」裡今天已發過的 key
-  var logSh = ensureSheet_(ss, "提醒紀錄", ["日期","類型","姓名","印日","時間"]);
-  var sentKeys = {};
-  var logRows = logSh.getDataRange().getValues();
-  for (var li = 1; li < logRows.length; li++) {
-    if (String(logRows[li][0]).trim() === todayStr) {
-      sentKeys[ logRows[li][1] + "|" + logRows[li][2] + "|" + logRows[li][3] ] = true;
-    }
-  }
-
-  var sent = 0, miss = 0, dup = 0;
-  function flush_(todo, type, makeMsg) {
-    for (var name in todo) {
-      var info = todo[name];
-      var key = type + "|" + name + "|" + info.printStr;
-      if (sentKeys[key]) { dup++; continue; }              // 今天已發過 → 跳過，不重複發
-      var uid2 = map[name];
-      if (!uid2) { Logger.log("缺 userId：" + name); miss++; continue; }
-      var md = Utilities.formatDate(parseYmd_(info.printStr), tz, "M/d");
-      var zone = info.areas.join("、");
-      var zpart = zone ? ("「" + zone + "」") : "";
-      pushLine_(uid2, makeMsg(md, zpart));
-      logSh.appendRow([todayStr, type, name, info.printStr, new Date()]);
-      sentKeys[key] = true;
-      sent++;
-    }
-  }
-  flush_(advance, "前一天", function(md, zpart) { return "🔔 記得 " + md + " 要印" + zpart + "藥水喔！🙏"; });
-  flush_(sameday, "當天",   function(md, zpart) { return "⚠️ 今天 " + md + " 就要印" + zpart + "藥水喔！別忘了 🙏"; });
-
-  Logger.log("提醒完成：提前 " + Object.keys(advance).length + " 人、當天 "
-             + Object.keys(sameday).length + " 人，實發 " + sent + " 則，已發過跳過 " + dup
-             + " 則，缺 userId " + miss + " 次（今天 " + todayStr + "）");
+/* ━━━━━━━━━━ Action 路由 ━━━━━━━━━━ */
+function handleAction_(body) {
+  var a = body.action;
+  if (a === "setWeek")               return setWeek_(body);
+  if (a === "getScheduleHistory")    return getScheduleHistory_();
+  if (a === "setScheduleHistory")    return setScheduleHistory_(body);
+  if (a === "getAuditHistory")       return getAuditHistory_();
+  if (a === "setAuditResult")        return setAuditResult_(body);
+  if (a === "sendAuditNotice")       return sendAuditNotice_(body);
+  if (a === "getLatestBanbiao")      return getLatestBanbiao_();
+  if (a === "getWeekDraft")          return getWeekDraft_();
+  if (a === "setWeekDraft")          return setWeekDraft_(body);
+  if (a === "setAllScheduleHistory") return setAllScheduleHistory_(body);
+  if (a === "getMembers")            return getMembers_();
+  if (a === "setMembers")            return setMembers_(body);
+  if (a === "setAllAuditHistory")    return setAllAuditHistory_(body);
+  if (a === "deleteScheduleWeek")    return deleteScheduleWeek_(body);
+  if (a === "deleteAuditMonth")      return deleteAuditMonth_(body);
+  return json_({ok: false, error: "unknown action: " + a});
 }
 
 
-/* ━━━━━━━━━━ 試算表選單（手動工具）━━━━━━━━━━ */
-function onOpen() {
-  SpreadsheetApp.getUi().createMenu("📋 藥水小幫手")
-    .addItem("清空本週名單", "clearWeek")
-    .addItem("測試：發 LINE 給自己", "testSelf")
-    .addToUi();
-}
-function clearWeek() {
-  var sh = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("本週名單");
-  if (!sh) return;
+/* ━━━━━━━━━━ 批次寫入（setValues，不用 appendRow 迴圈）━━━━━━━━━━ */
+function writeAll_(sh, rows2d) {
   sh.clearContents();
-  sh.appendRow(["印日期","區","姓名"]);
-  SpreadsheetApp.getUi().alert("✅ 本週名單已清空");
+  if (!rows2d || rows2d.length === 0) return;
+  var cols = rows2d.reduce(function(m, r) { return Math.max(m, r.length); }, 0);
+  if (cols === 0) return;
+  var data = rows2d.map(function(r) {
+    var row = r.slice();
+    while (row.length < cols) row.push("");
+    return row;
+  });
+  sh.getRange(1, 1, data.length, cols).setValues(data);
 }
-function testSelf() {
-  pushLine_("U04e906cc9268998aa4f8edf69286858f", "🔔 測試：小幫手正常運作 🙏");
+
+
+/* ━━━━━━━━━━ 本週名單 ━━━━━━━━━━ */
+function setWeek_(body) {
+  var ss = SpreadsheetApp.openById(SS_ID);
+  var sh = getOrCreate_(ss, "本週名單", ["印日期","區","姓名"]);
+  writeAll_(sh, [["印日期","區","姓名"]].concat(body.rows || []));
+  return json_({ok: true});
 }
-function testGetLatestBanbiao() {
-  var label = GmailApp.getUserLabelByName("班表");
-  var threads = label ? label.getThreads(0, 30) : [];
-  var bestAtt = null, bestDate = null;
-  for (var ti = 0; ti < threads.length; ti++) {
-    var msgs = threads[ti].getMessages();
-    for (var mi = 0; mi < msgs.length; mi++) {
-      var md = msgs[mi].getDate();
-      var atts = msgs[mi].getAttachments();
-      for (var ai = 0; ai < atts.length; ai++) {
-        if (atts[ai].getName().toLowerCase().indexOf(".xls") >= 0) {
-          if (!bestDate || md > bestDate) { bestDate = md; bestAtt = atts[ai]; }
+
+
+/* ━━━━━━━━━━ 排班歷史 ━━━━━━━━━━ */
+function getScheduleHistory_() {
+  var ss = SpreadsheetApp.openById(SS_ID);
+  var sh = getOrCreate_(ss, "排班歷史", ["週次","卡號","姓名","狀態","治療日"]);
+  return json_({ok: true, rows: sh.getDataRange().getValues()});
+}
+
+function setScheduleHistory_(body) {
+  var key = String(body.key || "");
+  var newRows = body.rows || [];
+  var ss = SpreadsheetApp.openById(SS_ID);
+  var sh = getOrCreate_(ss, "排班歷史", ["週次","卡號","姓名","狀態","治療日"]);
+  var data = sh.getDataRange().getValues();
+  var kept = [data[0]];
+  for (var i = 1; i < data.length; i++) {
+    if (String(data[i][0]) !== key) kept.push(data[i]);
+  }
+  writeAll_(sh, kept.concat(newRows));
+  return json_({ok: true});
+}
+
+function setAllScheduleHistory_(body) {
+  var ss = SpreadsheetApp.openById(SS_ID);
+  var sh = getOrCreate_(ss, "排班歷史", ["週次","卡號","姓名","狀態","治療日"]);
+  writeAll_(sh, [["週次","卡號","姓名","狀態","治療日"]].concat(body.rows || []));
+  return json_({ok: true});
+}
+
+function deleteScheduleWeek_(body) {
+  var key = String(body.key || "");
+  if (!key) return json_({ok: false, error: "key is required"});
+  var ss = SpreadsheetApp.openById(SS_ID);
+  var sh = getOrCreate_(ss, "排班歷史", ["週次","卡號","姓名","狀態","治療日"]);
+  var data = sh.getDataRange().getValues();
+  var kept = [data[0]];
+  for (var i = 1; i < data.length; i++) {
+    if (String(data[i][0]).trim() !== key) kept.push(data[i]);
+  }
+  writeAll_(sh, kept);
+  return json_({ok: true, deleted: data.length - kept.length});
+}
+
+
+/* ━━━━━━━━━━ 組員名單 ━━━━━━━━━━ */
+function getMembers_() {
+  var ss = SpreadsheetApp.openById(SS_ID);
+  var sh = getOrCreate_(ss, "組員名單", ["卡號","姓名"]);
+  return json_({ok: true, rows: sh.getDataRange().getValues()});
+}
+
+function setMembers_(body) {
+  var ss = SpreadsheetApp.openById(SS_ID);
+  var sh = getOrCreate_(ss, "組員名單", ["卡號","姓名"]);
+  writeAll_(sh, [["卡號","姓名"]].concat(body.rows || []));
+  return json_({ok: true});
+}
+
+
+/* ━━━━━━━━━━ 排班草稿 ━━━━━━━━━━ */
+function getWeekDraft_() {
+  var ss = SpreadsheetApp.openById(SS_ID);
+  var sh = getOrCreate_(ss, "排班草稿", ["週次","印日期","區","姓名"]);
+  return json_({ok: true, rows: sh.getDataRange().getValues()});
+}
+
+function setWeekDraft_(body) {
+  var ss = SpreadsheetApp.openById(SS_ID);
+  var sh = getOrCreate_(ss, "排班草稿", ["週次","印日期","區","姓名"]);
+  writeAll_(sh, [["週次","印日期","區","姓名"]].concat(body.rows || []));
+  return json_({ok: true});
+}
+
+
+/* ━━━━━━━━━━ 稽核歷史 ━━━━━━━━━━ */
+function getAuditHistory_() {
+  var ss = SpreadsheetApp.openById(SS_ID);
+  var sh = getOrCreate_(ss, "稽核歷史", ["月份","卡號","姓名","狀態","位置"]);
+  return json_({ok: true, rows: sh.getDataRange().getValues()});
+}
+
+function setAuditResult_(body) {
+  var key = String(body.key || "");
+  var newRows = body.rows || [];
+  var ss = SpreadsheetApp.openById(SS_ID);
+  var sh = getOrCreate_(ss, "稽核歷史", ["月份","卡號","姓名","狀態","位置"]);
+  var data = sh.getDataRange().getValues();
+  var kept = [data[0]];
+  for (var i = 1; i < data.length; i++) {
+    if (String(data[i][0]) !== key) kept.push(data[i]);
+  }
+  writeAll_(sh, kept.concat(newRows));
+  return json_({ok: true});
+}
+
+function setAllAuditHistory_(body) {
+  var ss = SpreadsheetApp.openById(SS_ID);
+  var sh = getOrCreate_(ss, "稽核歷史", ["月份","卡號","姓名","狀態","位置"]);
+  var data = sh.getDataRange().getValues();
+  var kept = [data[0]];
+  for (var i = 1; i < data.length; i++) {
+    var tag = String(data[i][0]).trim();
+    if (tag === "草稿" || tag.indexOf("意見-") === 0) kept.push(data[i]);
+  }
+  writeAll_(sh, kept.concat(body.rows || []));
+  return json_({ok: true});
+}
+
+function deleteAuditMonth_(body) {
+  var key = String(body.key || "");
+  if (!key) return json_({ok: false, error: "key is required"});
+  var ss = SpreadsheetApp.openById(SS_ID);
+  var sh = getOrCreate_(ss, "稽核歷史", ["月份","卡號","姓名","狀態","位置"]);
+  var data = sh.getDataRange().getValues();
+  var kept = [data[0]];
+  for (var i = 1; i < data.length; i++) {
+    if (String(data[i][0]).trim() !== key) kept.push(data[i]);
+  }
+  writeAll_(sh, kept);
+  return json_({ok: true, deleted: data.length - kept.length});
+}
+
+
+/* ━━━━━━━━━━ 稽核 LINE 通知 ━━━━━━━━━━ */
+function sendAuditNotice_(body) {
+  var notices = body.notices || [];
+  var month   = body.month || "";
+  var map     = loadUserMap_();
+  var sent = 0, miss = 0;
+  notices.forEach(function(n) {
+    var uid = map[n.name];
+    if (!uid) { miss++; return; }
+    try {
+      pushLine_(uid,
+        "📋 " + month + " 稽核藥水 AK 名單\n" +
+        "您的位置：" + n.position + "\n請確認，謝謝！🙏");
+      sent++;
+    } catch(e) {
+      Logger.log("推送失敗 " + n.name + "：" + e);
+      miss++;
+    }
+  });
+  return json_({ok: true, sent: sent, miss: miss});
+}
+
+
+/* ━━━━━━━━━━ 從 Gmail 抓最新班表 ━━━━━━━━━━ */
+function getLatestBanbiao_() {
+  try {
+    var label = GmailApp.getUserLabelByName("班表");
+    if (!label) return json_({ok: false, error: "找不到 Gmail 標籤「班表」"});
+    var threads = label.getThreads(0, 10);
+    if (!threads.length) return json_({ok: false, error: "標籤「班表」裡沒有郵件"});
+    for (var t = 0; t < threads.length; t++) {
+      var msgs = threads[t].getMessages();
+      for (var m = msgs.length - 1; m >= 0; m--) {
+        var atts = msgs[m].getAttachments();
+        for (var a = 0; a < atts.length; a++) {
+          var fn = atts[a].getName();
+          if (/\.(xls|xlsx)$/i.test(fn)) {
+            return json_({
+              ok: true,
+              filename: fn,
+              date: Utilities.formatDate(msgs[m].getDate(), "Asia/Taipei", "yyyy-MM-dd"),
+              b64: Utilities.base64Encode(atts[a].getBytes())
+            });
+          }
         }
       }
     }
+    return json_({ok: false, error: "標籤「班表」裡沒有找到 Excel 附件"});
+  } catch(err) {
+    return json_({ok: false, error: String(err)});
   }
-  Logger.log(bestAtt ? ("找到：" + bestAtt.getName() + "（" + bestDate + "）")
-                     : "沒找到『班表』標籤下的 Excel 附件");
+}
+
+
+/* ━━━━━━━━━━ 每日提醒（排程觸發）━━━━━━━━━━ */
+function sendReminders() {
+  try {
+    var ss  = SpreadsheetApp.openById(SS_ID);
+    var tz  = "Asia/Taipei";
+    var target = new Date(Date.now() + 24 * 60 * 60 * 1000);
+    var tStr   = Utilities.formatDate(target, tz, "yyyy-MM-dd");
+    var tMd    = Utilities.formatDate(target, tz, "M/d");
+
+    var sh = ss.getSheetByName("本週名單");
+    if (!sh) { Logger.log("找不到『本週名單』分頁"); return; }
+    var rows = sh.getDataRange().getValues();
+    if (!rows || !rows[0]) { Logger.log("本週名單是空的"); return; }
+
+    var head = rows[0].map(function(x) { return String(x).trim(); });
+    var iD = head.indexOf("印日期");
+    var iZ = head.indexOf("區");
+    var iN = head.indexOf("姓名");
+    if (iD < 0 || iN < 0) { Logger.log("本週名單欄位對不上，找不到「印日期」或「姓名」"); return; }
+
+    var map  = loadUserMap_();
+    var todo = {};
+    for (var r = 1; r < rows.length; r++) {
+      if (normDate_(rows[r][iD], tz) !== tStr) continue;
+      var nm   = String(rows[r][iN]).trim();
+      var area = iZ >= 0 ? String(rows[r][iZ]).trim() : "";
+      if (!nm) continue;
+      if (!todo[nm]) todo[nm] = [];
+      if (area && todo[nm].indexOf(area) < 0) todo[nm].push(area);
+    }
+
+    var sent = 0, miss = 0;
+    for (var name in todo) {
+      var uid = map[name];
+      if (!uid) { Logger.log("缺 userId：" + name); miss++; continue; }
+      var zone  = todo[name].join("、");
+      var zpart = zone ? ("「" + zone + "」") : "";
+      try {
+        pushLine_(uid, "🔔 記得明天(" + tMd + ")要印" + zpart + "藥水喔！🙏");
+        sent++;
+      } catch(pushErr) {
+        Logger.log("推送失敗 " + name + "：" + pushErr);
+        miss++;
+      }
+    }
+    Logger.log("提醒完成：發 " + sent + " 人，缺 " + miss + " 人（目標印日 " + tStr + "）");
+  } catch(e) {
+    Logger.log("sendReminders 錯誤：" + e.toString());
+  }
+}
+
+
+/* ━━━━━━━━━━ LINE webhook：收 userId ━━━━━━━━━━ */
+function handleWebhook_(body) {
+  var ss = SpreadsheetApp.openById(SS_ID);
+  var sh = ss.getSheetByName("userid");
+  if (!sh) {
+    sh = ss.insertSheet("userid");
+    sh.appendRow(["時間","事件","userId","傳來的文字(名字)"]);
+  }
+  (body.events || []).forEach(function(ev) {
+    var uid  = ev.source && ev.source.userId;
+    var text = (ev.type === "message" && ev.message && ev.message.type === "text")
+               ? ev.message.text : "";
+    if (uid) sh.appendRow([new Date(), ev.type, uid, text]);
+  });
 }
 
 
 /* ━━━━━━━━━━ 工具函式 ━━━━━━━━━━ */
-function jsonOut_(obj) {
-  return ContentService.createTextOutput(JSON.stringify(obj))
-                       .setMimeType(ContentService.MimeType.JSON);
-}
-function ensureSheet_(ss, name, headers) {
+function getOrCreate_(ss, name, headers) {
   var sh = ss.getSheetByName(name);
   if (!sh) { sh = ss.insertSheet(name); sh.appendRow(headers); }
   return sh;
 }
-function sheetToArray_(ss, name) {
-  var sh = ss.getSheetByName(name);
-  if (!sh || sh.getLastRow() < 1) return [];
-  return sh.getDataRange().getValues();
-}
-function writeHistory_(ss, sheetName, headers, key, newRows) {
-  if (!key && newRows.length === 0) return;
-  var sh = ensureSheet_(ss, sheetName, headers);
-  var vals = sh.getLastRow() > 0 ? sh.getDataRange().getValues() : [headers];
-  var kept = vals.filter(function(r, i) {
-    return i === 0 || String(r[0]) !== String(key);
-  });
-  sh.clearContents();
-  kept.forEach(function(r) { sh.appendRow(r); });
-  newRows.forEach(function(r) { sh.appendRow(r); });
-}
-function buildUserMap_(ss) {
-  var map = {}, sh = ss.getSheetByName("對照");
-  if (!sh) return map;
-  var rows = sh.getDataRange().getValues();
-  for (var i = 1; i < rows.length; i++) {
-    var nm = String(rows[i][0]).trim(), uid = String(rows[i][1]).trim();
+
+function loadUserMap_() {
+  var ss = SpreadsheetApp.openById(SS_ID);
+  var mh = ss.getSheetByName("對照");
+  var map = {};
+  if (!mh) return map;
+  var mr = mh.getDataRange().getValues();
+  for (var i = 1; i < mr.length; i++) {
+    var nm  = String(mr[i][0]).trim();
+    var uid = String(mr[i][1]).trim();
     if (nm && uid) map[nm] = uid;
   }
   return map;
 }
+
+function json_(obj) {
+  return ContentService
+    .createTextOutput(JSON.stringify(obj))
+    .setMimeType(ContentService.MimeType.JSON);
+}
+
 function normDate_(v, tz) {
   if (v instanceof Date) return Utilities.formatDate(v, tz, "yyyy-MM-dd");
   var s = String(v).trim().replace(/\//g, "-");
   var m = s.match(/^(\d{4})-(\d{1,2})-(\d{1,2})$/);
   return m ? (m[1] + "-" + ("0"+m[2]).slice(-2) + "-" + ("0"+m[3]).slice(-2)) : s;
 }
+
 function pushLine_(uid, text) {
   UrlFetchApp.fetch("https://api.line.me/v2/bot/message/push", {
     method: "post", contentType: "application/json",
-    headers: {"Authorization": "Bearer " + LINE_TOKEN},
-    payload: JSON.stringify({to: uid, messages: [{type: "text", text: text}]}),
+    headers: { "Authorization": "Bearer " + LINE_TOKEN },
+    payload: JSON.stringify({ to: uid, messages: [{ type: "text", text: text }] }),
     muteHttpExceptions: true
   });
+}
+
+function testSelf() {
+  pushLine_("U04e906cc9268998aa4f8edf69286858f", "🔔 測試：小幫手正常運作 🙏");
 }
