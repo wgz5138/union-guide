@@ -76,6 +76,10 @@
 
   .prompt-area{width:100%;min-height:150px;background:#0A111C;border:1px solid var(--line);border-radius:10px;padding:.85rem;font-family:'JetBrains Mono',monospace;font-size:12px;line-height:1.6;color:var(--txt2);white-space:pre-wrap;resize:vertical}
   .ai-links{display:flex;gap:8px;margin-top:10px;flex-wrap:wrap}.ai-links a{flex:1;min-width:130px;text-align:center;text-decoration:none}
+  .q-box-row{display:grid;grid-template-columns:auto 1fr auto;align-items:center;gap:8px;margin-bottom:8px}
+  .q-label{font-size:12px;font-weight:700;color:var(--acc);white-space:nowrap;min-width:80px}
+  .q-label small{font-weight:400;color:var(--muted);margin-left:4px}
+  .q-search-btn{white-space:nowrap;flex:0 0 auto}
 
   #status{font-size:13px;color:var(--muted);margin:14px 0 6px;min-height:18px}
   .res{border:1px solid var(--line);border-radius:12px;padding:14px;margin-bottom:10px;background:#0F18260f;transition:border-color .15s}
@@ -238,7 +242,15 @@
           <a class="btn btn-ghost btn-sm" href="https://chatgpt.com/" target="_blank" rel="noopener">↗ ChatGPT</a>
           <a class="btn btn-ghost btn-sm" href="https://claude.ai/new" target="_blank" rel="noopener">↗ Claude</a>
         </div>
-        <div class="hint">AI 回你三行查詢。先貼 <b>QUERY1（精準，目標 10~50 篇）</b>；太多篇就回來用精準化面板加條件；沒結果就貼 <b>QUERY2（寬鬆）</b> 或 <b>QUERY3（超寬鬆）</b>。</div>
+        <div class="hint" style="margin-bottom:6px">把 AI 回覆整段貼下方 → 自動拆出三組查詢字串</div>
+        <textarea class="prompt-area" id="q-reply-in" rows="4" placeholder="把 AI 回給你的整段文字（含 QUERY1: … QUERY2: … QUERY3: …）貼在這裡"></textarea>
+        <button class="btn btn-ghost" id="parse-reply-btn" style="width:100%;margin-top:6px">⚡ 解析 → 產生三個查詢格</button>
+      </div>
+      <!-- 三個查詢格（AI 產生後顯示） -->
+      <div id="q-boxes" style="display:none;margin-top:10px">
+        <div class="q-box-row"><span class="q-label">QUERY1 <small>精準 10~50 篇</small></span><input class="txt" id="qb1" autocapitalize="off" autocorrect="off" spellcheck="false" placeholder="（等 AI 生成）"><button class="btn btn-primary q-search-btn" data-qb="qb1">🔎 搜這個</button></div>
+        <div class="q-box-row"><span class="q-label">QUERY2 <small>寬鬆 50~150 篇</small></span><input class="txt" id="qb2" autocapitalize="off" autocorrect="off" spellcheck="false" placeholder="（等 AI 生成）"><button class="btn btn-ghost q-search-btn" data-qb="qb2">🔎 搜這個</button></div>
+        <div class="q-box-row"><span class="q-label">QUERY3 <small>超寬鬆</small></span><input class="txt" id="qb3" autocapitalize="off" autocorrect="off" spellcheck="false" placeholder="（等 AI 生成）"><button class="btn btn-ghost q-search-btn" data-qb="qb3">🔎 搜這個</button></div>
       </div>
     </div>
 
@@ -424,7 +436,7 @@ document.getElementById("man-tour").addEventListener("click",()=>{ closeManual()
 /* ===== 小工具 ===== */
 function cleanAbs(t){ return String(t||"").replace(/<h[1-6][^>]*>/gi,"\n").replace(/<\/h[1-6]>/gi,"：").replace(/<[^>]+>/g," ").replace(/[ \t]{2,}/g," ").replace(/\s*\n\s*/g,"\n").trim(); }
 // 🔄 自動偵測新版本
-const BUILD="2026062711";
+const BUILD="2026062712";
 const CHANGELOG=[
   "每篇文獻新增「🌐 翻譯中文」：有 API 金鑰用 Claude 翻（醫學術語更準），沒有則自動用 MyMemory 免費翻，不需跳頁",
   "新增「⚖️ AI 律師」工具（勞動法主場，引法條／判斷對方說法／列證據；法規用全國法規資料庫官方真資料；上方可進）",
@@ -493,6 +505,38 @@ document.getElementById("q-prompt-btn").addEventListener("click",()=>{
   document.getElementById("q-prompt-box").style.display="block";
 });
 document.getElementById("copy-qprompt").addEventListener("click",()=>copyEl("q-prompt-out","已複製，貼給 AI 拿查詢字串"));
+
+/* ── 解析 AI 回覆 → 三個查詢格 ── */
+function showQueryBoxes(q1,q2,q3){
+  const ids=["qb1","qb2","qb3"]; const qs=[q1,q2,q3];
+  ids.forEach((id,i)=>{ const el=document.getElementById(id); if(el) el.value=qs[i]||""; });
+  document.getElementById("q-boxes").style.display="block";
+}
+function parseQueryReply(text){
+  const clean=s=>(s||"").replace(/^\s*QUERY\s*\d*\s*[:：（(]\s*/i,"").replace(/[）)]\s*$/,"").replace(/\[[^\]]*\]/g," ").trim();
+  const lines=text.split(/\n/).map(l=>l.trim()).filter(Boolean);
+  const pick=(n)=>{
+    const re=new RegExp("QUERY\\s*"+n+"\\s*[:：]","i");
+    const l=lines.find(l=>re.test(l)); return l?clean(l):"";
+  };
+  return [pick(1),pick(2),pick(3)];
+}
+document.getElementById("parse-reply-btn").addEventListener("click",()=>{
+  const text=document.getElementById("q-reply-in").value;
+  if(!text.trim()){ toast("請先貼入 AI 回覆"); return; }
+  const [q1,q2,q3]=parseQueryReply(text);
+  if(!q1&&!q2&&!q3){ toast("找不到 QUERY1/2/3，確認 AI 有回三行查詢"); return; }
+  showQueryBoxes(q1,q2,q3);
+});
+document.querySelectorAll(".q-search-btn").forEach(btn=>{
+  btn.addEventListener("click",()=>{
+    const q=document.getElementById(btn.dataset.qb).value.trim();
+    if(!q){ toast("這格是空的"); return; }
+    document.getElementById("q-query").value=q;
+    localStorage.setItem("ebnq_q-query",q);
+    document.getElementById("search-btn").click();
+  });
+});
 
 /* ===== ② 搜尋（Europe PMC API） ===== */
 const EPMC="https://www.ebi.ac.uk/europepmc/webservices/rest/search";
@@ -653,18 +697,25 @@ async function callClaude(promptText,maxTok){
 document.getElementById("q-auto-btn").addEventListener("click",async()=>{
   const desc=val("q-desc"); if(!desc){ toast("先用中文描述你的問題"); return; }
   if(!apiKey()){ toast("先在上面貼你的 API 金鑰"); return; }
-  const st=document.getElementById("status"); st.textContent="⚡ 生成查詢中⋯⋯";
+  const st=document.getElementById("status"); st.textContent="⚡ 生成三組查詢中⋯⋯";
   try{
-    const {text,usage}=await callClaude(`你是醫學文獻檢索專家。將以下臨床問題轉成一行精準英文查詢字串（給 Europe PMC 搜尋用）。
-規則：AND/OR 大寫、片語加引號、同義詞用 OR 展開；不要用 PubMed 欄位標籤（[tiab][Mesh]等）；
-⚠️ 務必抓準時間點與情境（如「洗腎後回家」≠「洗腎中」，關鍵字完全不同）。
-目標：搜出 10~50 篇精準結果。只回查詢字串本身，不要任何說明文字。
-
-臨床問題：`+desc, 400);
-    const q=text.trim().replace(/^QUERY\d*[:：]\s*/i,"").split("\n")[0].trim();
-    document.getElementById("q-query").value=q; localStorage.setItem("ebnq_q-query",q);
-    st.textContent="⚡ 已生成查詢（花約 "+costOf(usage)+"），搜尋中⋯⋯";
-    doSearch();
+    const prompt=[
+      "你是醫學文獻檢索專家。將以下臨床問題轉成三行英文查詢字串（給 Europe PMC 搜尋用）。",
+      "規則：AND/OR 大寫、片語加引號、同義詞 OR 展開；不要 PubMed 欄位標籤。",
+      "⚠️ 務必抓準時間點與情境（如「洗腎後回家」≠「洗腎中」，關鍵字完全不同）。",
+      "請只回覆三行，格式完全照以下，不加任何說明：",
+      "QUERY1: （精準版：三個 AND 條件，目標 10~50 篇）",
+      "QUERY2: （寬鬆版：1~2 個 AND 條件，目標 50~150 篇）",
+      "QUERY3: （超寬鬆版：單一概念，篇數不限）",
+      "",
+      "臨床問題："+desc
+    ].join("\n");
+    const {text,usage}=await callClaude(prompt, 600);
+    const [q1,q2,q3]=parseQueryReply(text);
+    showQueryBoxes(q1,q2,q3);
+    document.getElementById("q-boxes").scrollIntoView({behavior:"smooth",block:"center"});
+    st.textContent="⚡ 已生成三組查詢（花約 "+costOf(usage)+"），點格子旁「🔎 搜這個」即可";
+    document.getElementById("q-prompt-box").style.display="none";
   }catch(err){ st.textContent="⚡ "+apiErr(err); }
 });
 document.getElementById("synth-auto-btn").addEventListener("click",async()=>{
