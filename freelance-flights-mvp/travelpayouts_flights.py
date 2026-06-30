@@ -189,7 +189,8 @@ def _fetch_offers(route):
     if not result.get("success", True):
         raise RuntimeError(f"API 回報錯誤：{result}")
 
-    offers = result.get("data", [])
+    # 只留有 price 的票，避免後面 min()/取值時 KeyError
+    offers = [o for o in result.get("data", []) if o.get("price") is not None]
     currency = result.get("currency", CURRENCY).upper()
     return offers, currency, round_trip
 
