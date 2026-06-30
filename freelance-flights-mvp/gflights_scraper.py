@@ -28,6 +28,7 @@ import os
 import re
 from datetime import date, datetime
 from logging.handlers import RotatingFileHandler
+from urllib.parse import urlencode
 
 from playwright.sync_api import sync_playwright
 
@@ -84,9 +85,15 @@ log = setup_logging()
 def build_url(route):
     q = (f"Flights from {route['origin']} to {route['dest']} "
          f"on {route['date']} oneway")
-    from urllib.parse import urlencode
     return ("https://www.google.com/travel/flights?"
             + urlencode({"q": q, "curr": "TWD", "hl": "zh-TW", "gl": "TW"}))
+
+
+def has_results(body):
+    """畫面是否真的有航班結果：要有『真實票價($數字)』＋『小時』且無錯誤。
+    （只看「小時」會被頁尾「24 小時內的資訊」誤判，故必須要有票價。）"""
+    return (bool(re.search(r"\$\s*[\d,]{3,}", body)) and "小時" in body
+            and not any(e in body for e in 錯誤線索))
 
 
 def parse(text, route):
@@ -132,8 +139,7 @@ def load_with_retry(page, route):
                 page.get_by_text(label, exact=False).first.click(timeout=1500)
             except Exception:
                 pass
-        body = page.inner_text("body")
-        if any(k in body for k in 結果線索) and not any(e in body for e in 錯誤線索):
+        if has_results(page.inner_text("body")):
             return True
         page.wait_for_timeout(2500)
     return False
@@ -151,7 +157,7 @@ def parse_baggage(text):
 
 def click_flight(page, price, depart):
     """在列表找出「票價＋出發時間」相符的航班並點開（回傳是否點到）。"""
-    pf = f"{price:,}"
+    pf = f"${price:,}"   # 含 $，避免 5,699 誤配 15,699
     for li in page.query_selector_all("li"):
         try:
             t = li.inner_text()
@@ -226,7 +232,7 @@ def extract(page, route):
                         pass
                     # 確認回到列表，否則重載
                     try:
-                        if not any(k in page.inner_text("body") for k in 結果線索):
+                        if not has_results(page.inner_text("body")):
                             load_with_retry(page, route)
                     except Exception:
                         load_with_retry(page, route)
