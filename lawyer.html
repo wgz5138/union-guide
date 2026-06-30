@@ -481,8 +481,9 @@ document.getElementById("man-close2").addEventListener("click",closeManual);
 
 /* ===== 小工具 ===== */
 /* 🔄 自動偵測新版本 */
-const BUILD="2026062121";
+const BUILD="2026063001";
 const CHANGELOG=[
+  "法規庫12小時節流：本機有快取時不再每次重抓 1.8MB，手機流量大減；手動「重新抓」按鈕不受節流限制",
   "新增互動導覽（首頁『▶ 帶我走一遍』）：6 步驟，特別講清楚『免費 vs 付費』怎麼用",
   "法規庫改可摺疊＋預設不全攤（手機不再被上千條洗很長）；搜尋或點分類才列出、超過60條提示縮小範圍",
   "付費說明寫清楚：不是訂閱、是儲值用多少扣多少、額度會過期、一題大概多少、怎麼拿金鑰；強調免費路隨時在",
@@ -629,13 +630,18 @@ function applyOfficial(d,announce){
 }
 function fetchOfficial(announce){
   return fetch("laws.json?t="+Date.now(),{cache:"no-store"}).then(r=>r.ok?r.json():null).then(d=>{
-    if(!applyOfficial(d,announce)&&announce) toast("還沒有官方 laws.json（要等每週自動更新或手動跑一次 Action）");
+    if(applyOfficial(d,announce)) localStorage.setItem("law_fetch_ts",String(Date.now()));
+    else if(announce) toast("還沒有官方 laws.json（要等每週自動更新或手動跑一次 Action）");
   }).catch(()=>{ if(announce) toast("抓不到官方法規（可能沒網路）"); });
 }
-/* 開頁：先用本機快取瞬間顯示（不必每次下載近 1MB），再背景抓最新、有變更才換。 */
+/* 開頁：先用本機快取瞬間顯示（不必每次下載），再以12小時節流判斷是否背景重抓官方版。
+   localStorage 佔 ~16% 配額（選 a：保留快取，換「開頁即時＋手機少下載 1.8MB」）。
+   「🔄 重新抓官方法規」按鈕仍可隨時強制重抓，不受節流限制。 */
 if(!localStorage.getItem("law_db")){
   try{ const c=JSON.parse(localStorage.getItem(LAW_CACHE_KEY)||"null"); if(c&&Array.isArray(c.laws)&&c.laws.length) applyOfficial(c,false); }catch(e){}
-  fetchOfficial(false);
+  const _LAW_THROTTLE=12*60*60*1000;
+  const _lastFetch=parseInt(localStorage.getItem("law_fetch_ts")||"0",10);
+  if(!_lastFetch||Date.now()-_lastFetch>_LAW_THROTTLE) fetchOfficial(false);
 }
 
 /* 注入給 AI 的法條：不把整套法典塞進提示詞，只挑「與本案最相關」的數十條
