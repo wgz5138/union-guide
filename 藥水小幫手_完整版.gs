@@ -1,5 +1,5 @@
 /**
- * 透析印藥水 LINE 小幫手 — Apps Script v2.2
+ * 透析印藥水 LINE 小幫手 — Apps Script v2.3
  *
  * Web App URL（部署後固定）：
  *   https://script.google.com/macros/s/AKfycbx25V8mO_F14agwPLesmKfQP_1m7LRmEVgC639De3TjYf661istXWGYEmFrez1feHs/exec
@@ -272,9 +272,12 @@ function sendReminders() {
   try {
     var ss  = SpreadsheetApp.openById(SS_ID);
     var tz  = "Asia/Taipei";
-    var target = new Date(Date.now() + 24 * 60 * 60 * 1000);
-    var tStr   = Utilities.formatDate(target, tz, "yyyy-MM-dd");
-    var tMd    = Utilities.formatDate(target, tz, "M/d");
+    var now      = new Date();
+    var tomorrow = new Date(now.getTime() + 24 * 60 * 60 * 1000);
+    var todayStr    = Utilities.formatDate(now,      tz, "yyyy-MM-dd");
+    var tomorrowStr = Utilities.formatDate(tomorrow, tz, "yyyy-MM-dd");
+    var todayMd     = Utilities.formatDate(now,      tz, "M/d");
+    var tomorrowMd  = Utilities.formatDate(tomorrow, tz, "M/d");
 
     var sh = ss.getSheetByName("本週名單");
     if (!sh) { Logger.log("找不到『本週名單』分頁"); return; }
@@ -287,32 +290,37 @@ function sendReminders() {
     var iN = head.indexOf("姓名");
     if (iD < 0 || iN < 0) { Logger.log("本週名單欄位對不上，找不到「印日期」或「姓名」"); return; }
 
-    var map  = loadUserMap_();
-    var todo = {};
+    var map = loadUserMap_();
+    var todoToday    = {};
+    var todoTomorrow = {};
+
     for (var r = 1; r < rows.length; r++) {
-      if (normDate_(rows[r][iD], tz) !== tStr) continue;
+      var dateStr = normDate_(rows[r][iD], tz);
       var nm   = String(rows[r][iN]).trim();
       var area = iZ >= 0 ? String(rows[r][iZ]).trim() : "";
       if (!nm) continue;
-      if (!todo[nm]) todo[nm] = [];
-      if (area && todo[nm].indexOf(area) < 0) todo[nm].push(area);
+      var bucket = dateStr === todayStr ? todoToday
+                 : dateStr === tomorrowStr ? todoTomorrow : null;
+      if (!bucket) continue;
+      if (!bucket[nm]) bucket[nm] = [];
+      if (area && bucket[nm].indexOf(area) < 0) bucket[nm].push(area);
     }
 
     var sent = 0, miss = 0;
-    for (var name in todo) {
-      var uid = map[name];
-      if (!uid) { Logger.log("缺 userId：" + name); miss++; continue; }
-      var zone  = todo[name].join("、");
-      var zpart = zone ? ("「" + zone + "」") : "";
-      try {
-        pushLine_(uid, "🔔 記得明天(" + tMd + ")要印" + zpart + "藥水喔！🙏");
-        sent++;
-      } catch(pushErr) {
-        Logger.log("推送失敗 " + name + "：" + pushErr);
-        miss++;
+    function sendTo_(todo, makeMsg) {
+      for (var name in todo) {
+        var uid = map[name];
+        if (!uid) { Logger.log("缺 userId：" + name); miss++; continue; }
+        var zpart = todo[name].length ? ("「" + todo[name].join("、") + "」") : "";
+        try { pushLine_(uid, makeMsg(zpart)); sent++; }
+        catch(e) { Logger.log("推送失敗 " + name + "：" + e); miss++; }
       }
     }
-    Logger.log("提醒完成：發 " + sent + " 人，缺 " + miss + " 人（目標印日 " + tStr + "）");
+
+    sendTo_(todoTomorrow, function(zp) { return "🔔 記得明天(" + tomorrowMd + ")要印" + zp + "藥水喔！🙏"; });
+    sendTo_(todoToday,    function(zp) { return "⚠️ 今天(" + todayMd + ")記得印" + zp + "藥水！別忘了 🙏"; });
+
+    Logger.log("提醒完成：發 " + sent + " 人，缺 " + miss + " 人（今天 " + todayStr + "）");
   } catch(e) {
     Logger.log("sendReminders 錯誤：" + e.toString());
   }
