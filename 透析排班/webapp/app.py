@@ -104,18 +104,36 @@ def year_from_cloud(files):
 
 # ── Fix3：自動選最接近今天的班表分頁 ─────────────────────
 def _best_sheet_index(sheets):
-    """分頁名稱有日期（如 2026-06-16）→ 選最接近今天的；否則選最後一頁。"""
+    """分頁名稱有日期 → 選最接近今天的；否則選最後一頁。
+    支援完整日期（2026-06-16）及 MMDD/MMDD-MMDD 格式（0706、0706-0712）。"""
     today = date.today()
     best_idx = len(sheets) - 1
     best_delta = None
     for i, sn in enumerate(sheets):
-        m = re.search(r"(\d{4})[/\-.](\d{1,2})[/\-.](\d{1,2})", str(sn))
+        sn_str = str(sn)
+        # 完整日期格式：2026-06-16
+        m = re.search(r"(\d{4})[/\-.](\d{1,2})[/\-.](\d{1,2})", sn_str)
         if m:
             try:
                 d = date(int(m.group(1)), int(m.group(2)), int(m.group(3)))
                 delta = abs((d - today).days)
                 if best_delta is None or delta < best_delta:
                     best_delta = delta; best_idx = i
+            except Exception: pass
+            continue
+        # MMDD 或 MMDD-MMDD 格式：0706、0629-0712
+        m2 = re.match(r"(\d{2})(\d{2})", sn_str.strip())
+        if m2:
+            try:
+                mo, dy = int(m2.group(1)), int(m2.group(2))
+                if 1 <= mo <= 12 and 1 <= dy <= 31:
+                    yr = today.year
+                    d = date(yr, mo, dy)
+                    if (today - d).days > 180:
+                        d = date(yr + 1, mo, dy)
+                    delta = abs((d - today).days)
+                    if best_delta is None or delta < best_delta:
+                        best_delta = delta; best_idx = i
             except Exception: pass
     return best_idx
 
