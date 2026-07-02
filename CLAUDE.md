@@ -122,6 +122,62 @@
 | `jianshi.html` | 監事 |
 | `activity.html` | 活動 |
 
+---
+
+## 透析印藥水 LINE 小幫手
+
+### 系統架構
+
+| 元件 | 位置 |
+|---|---|
+| GAS 後端程式碼（備份） | `/home/user/union-guide/藥水小幫手_完整版.gs`（branch: `claude/line-webhook-permission-wc9dwc`） |
+| Streamlit 排班 App | repo: `wgz5138/union-guide`，branch: `claude/dialysate-scheduling-rl20mk`，路徑: `透析排班/webapp/app.py` |
+| Google Sheet | `https://docs.google.com/spreadsheets/d/1UF-DjDcrIPDbp016vkIyV9zsLF6Qz5EBo6Bq-z6t-Js` |
+| GAS Web App URL（現役）| `https://script.google.com/macros/s/AKfycbxU0UM3gRmt_I69tWY3whwypJso1O7nhh44igdua3G_Lbi_WQ_hwGNBqkTERim5U3HR/exec` |
+| LINE Bot | 印藥水小幫手(new)，在 LINE Developers Console → Provider → wgz5138 |
+
+### GAS 程式（藥水小幫手_完整版.gs）
+
+- **版本**：v2.3
+- **觸發**：`sendReminders` 每天早上 7 點（時間觸發器，GAS 觸發條件手動設定）
+- **Webhook**：`doPost` 接收 LINE 事件，只記錄 userId 到試算表「userid」分頁，不自動回覆
+- **LINE_TOKEN**：在 GAS 程式碼第 19 行
+- **WRITE_SECRET**：`yaoshui2026`
+- **SS_ID**：`1UF-DjDcrIPDbp016vkIyV9zsLF6Qz5EBo6Bq-z6t-Js`
+
+### GAS 部署重要說明
+
+- 執行身分：**我（wgz5138@gmail.com）**
+- 誰可以存取：**所有人**（不是「所有 Google 帳戶的使用者」）
+- LINE Verify 永遠顯示 302 是 GAS 先天限制，**不影響實際運作**，忽略即可
+- 實際運作驗證：到 GAS「執行記錄」看有無 doPost 紀錄；到 Sheet「userid」分頁看有無新資料
+
+### Streamlit 排班 App（透析藥水排班 v3.11）
+
+- **功能**：上傳/抓取雲端班表 → 排印藥水名單 → 定案送雲端 → LINE 自動提醒
+- **修改方式**：直接編輯 repo `wgz5138/union-guide` 的 `claude/dialysate-scheduling-rl20mk` branch，push 後 Streamlit 自動重新部署
+- **git 操作**：用 `git worktree add /tmp/xxx origin/claude/dialysate-scheduling-rl20mk` 建立工作區再修改
+- **班表來源**：Gmail 標籤「班表」→ 新信件要先在 Gmail 手動加上「班表」標籤才能被抓到
+- **跨區借人標記**：🔺 顯示在表格名字後面，定案時自動去除
+
+### 每月 LINE 發送量估算
+
+- 每日提醒（今天+明天各1則）× 2人/天 × ~26天/月 ≈ **100 則**
+- 稽核通知（每月一次）≈ **5-10 則**
+- **合計約 105-110 則/月**，免費方案上限 200 則，安全 ✓
+- 五個禮拜的月份約 120 則，仍在上限內 ✓
+
+### 常見問題
+
+**Q：Gmail 班表抓到舊的**
+A：新信件要在 Gmail 手動加「班表」標籤，再按「抓取雲端最新班表」。建議設篩選器自動貼標（寄件人 wcjung 或主旨含班表）。
+
+**Q：週次預設選到錯的週**
+A：已修正，使用台灣時區（UTC+8）判斷最近週次，不受 Streamlit 伺服器 UTC 時差影響。
+
+**Q：LINE Verify 顯示 302**
+A：GAS 先天限制，忽略。確認 doPost 執行記錄有出現即代表正常。
+
 ## 使用者偏好與背景
 
 - 職業：醫療/護理相關，會使用臨床文獻工具
