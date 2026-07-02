@@ -59,7 +59,7 @@
   .btn-row{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
 
   .seg{display:flex;gap:6px;flex-wrap:wrap}
-  .seg button{flex:1;min-width:120px;background:#0C131F;border:1px solid var(--line);color:var(--txt2);border-radius:9px;padding:.6rem .5rem;font-family:inherit;font-size:13px;cursor:pointer}
+  .seg button{flex:1;min-width:90px;background:#0C131F;border:1px solid var(--line);color:var(--txt2);border-radius:9px;padding:.6rem .5rem;font-family:inherit;font-size:13px;cursor:pointer}
   .seg button.on{background:rgba(63,214,208,.14);border-color:var(--cyan);color:var(--cyan);font-weight:700}
   .grid2{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
   .grid2 > div{flex:1;min-width:150px}
@@ -221,6 +221,7 @@
       <div class="seg" id="seg-mode">
         <button data-v="litig" class="on">⚖️ 打官司 / 申訴</button>
         <button data-v="nego">🤝 勞資協商 / 談判</button>
+        <button data-v="guide">📋 申辦 / 程序指引</button>
       </div>
       <div class="grid2">
         <div>
@@ -249,6 +250,7 @@
         </div>
       </div>
       <button class="btn btn-ghost" id="demo-btn" style="width:100%;margin-top:10px">🧪 帶入「加班費補發爭議」範例（不用打字）</button>
+      <button class="btn btn-ghost" id="demo-patent-btn" style="width:100%;margin-top:6px">🧪 帶入「個人申請發明專利」範例（不用打字）</button>
       <div id="profile-toggle" style="font-size:12.5px;color:var(--blue);cursor:pointer;user-select:none;margin-top:12px">🪪 我的身分背景／本案文件（選填，只存這台・AI 每次都會參考）▾</div>
       <div id="profile-body" style="display:none;margin-top:8px">
         <button class="btn btn-ghost btn-sm" id="profile-tpl" style="margin-bottom:8px">📋 帶入範本（照著把你的公告貼進去）</button>
@@ -482,8 +484,9 @@ document.getElementById("man-close2").addEventListener("click",closeManual);
 
 /* ===== 小工具 ===== */
 /* 🔄 自動偵測新版本 */
-const BUILD="2026063002";
+const BUILD="2026070201";
 const CHANGELOG=[
+  "新增「📋 申辦 / 程序指引」用途：切換後 AI 改為程序顧問角色，逐步說明申辦流程、文件、費用、時程與常見陷阱；同步新增「個人申請發明專利」範例按鈕，一鍵帶入情境直接問",
   "新增智慧財產領域：專利法（12條核心條文）、商標法（5條）、著作權法（6條）、營業秘密法（4條）、智慧財產案件審理法（1條）放進法規快照；法律領域下拉新增「智財」選項；AI 律師針對智財案件自動注入相關核心條文",
   "法規庫12小時節流：本機有快取時不再每次重抓 1.8MB，手機流量大減；手動「重新抓」按鈕不受節流限制",
   "新增互動導覽（首頁『▶ 帶我走一遍』）：6 步驟，特別講清楚『免費 vs 付費』怎麼用",
@@ -771,8 +774,33 @@ function setMode(v){ document.querySelectorAll("#seg-mode button").forEach(b=>b.
 document.querySelectorAll("#seg-mode button").forEach(b=>b.addEventListener("click",()=>{ setMode(b.dataset.v); localStorage.setItem("law_mode",b.dataset.v); }));
 
 function systemPrompt(focus){
-  const mode=modeVal()==="nego"?"勞資協商／談判（目標：在不撕破臉前提下爭取最大權益、留下對我方有利的書面紀錄、避免口頭放棄權利）":"訴訟／申訴（目標：站穩法律請求權基礎、預判對方抗辯並反駁、把證據與舉證責任講清楚）";
+  const mv=modeVal();
   const field=document.getElementById("f-field").value, side=document.getElementById("f-side").value;
+  const lctx=lawContext(focus);
+  const pctx=(function(){ var p=val("profile"); return p?("\n\n〈申請人補充資料〉\n"+p):""; })();
+  if(mv==="guide"){
+    return `你是一位台灣的法律及行政程序顧問，熟悉智慧財產申請、行政程序與各類政府申辦手續（尤其是發明專利、新型專利、設計專利、商標、著作權登記）。請全程使用繁體中文，步驟清楚、條列式說明，像稱職的顧問一樣帶使用者走完申辦流程。
+
+【本案設定】用途：申辦程序指引；法律領域：${field}；我的身分：${side}。
+
+【你的任務，每次回覆都要做到】
+1. 步驟清單：把申辦流程拆成「步驟 1 → 2 → 3…」，每步說明做什麼、去哪裡辦、需要什麼文件。
+2. 文件清單：列出所有需要準備的文件，標明線上送或正本、中文或英文。
+3. 費用與時程：給出官方規費大略金額（申請費、年費、加速審查等）以及預估審查期間（可引用智慧財產局公告的平均審查天數）。
+4. 官方管道：具體給出政府機關名稱、網站（如「台灣智慧財產局 TIPO：https://www.tipo.gov.tw」、「專利電子申請系統」、「商標電子申請系統」）。
+5. 常見陷阱與注意事項：點出初學者最容易出錯的地方（如新穎性自我揭露、優先權 12 個月期限、說明書請求項撰寫、一件一發明原則等）。
+6. 後續維護提醒：提醒年費繳納時程、核准後義務，以及是否需要委任專利師（Patent Attorney）。
+7. 結尾一行：本回覆為參考資訊，正式申請以智慧財產局最新規定為準，複雜技術或跨國申請建議委任專利師或商標代理人。
+
+【引用紀律】
+- 引用法條格式：【法規名稱 第X條】。
+- 下方〈可用法條原文〉是依本案挑出的相關條文節選，引用其中條文可視為已核實。
+- 若要引用其中沒有的條號，標示「⚠ 待查」。
+
+〈可用法條原文〉
+${lctx}${pctx}`;
+  }
+  const mode=mv==="nego"?"勞資協商／談判（目標：在不撕破臉前提下爭取最大權益、留下對我方有利的書面紀錄、避免口頭放棄權利）":"訴訟／申訴（目標：站穩法律請求權基礎、預判對方抗辯並反駁、把證據與舉證責任講清楚）";
   return `你是一位台灣的執業律師，最擅長「勞動法」（尤其加班費、工時、資遣、勞資爭議），同時熟悉民法、刑法、個人資料保護法、商標法。請全程使用繁體中文，像真正的律師那樣替當事人攻防、條理清楚、可直接照著做。
 
 【本案設定】用途：${mode}；法律領域：${field}；我方立場：${side}。
@@ -800,10 +828,12 @@ function systemPrompt(focus){
 - 使用者貼來的真實判決，才據以摘要、引用其字號與要旨。
 
 〈可用法條原文〉
-${lawContext(focus)}${(function(){ var p=val("profile"); return p?("\n\n〈本案背景與院內文件（當事人提供，務必納入判斷；**院內具體規定／要件優先於通則**，例如補發要件、逆算時效）〉\n"+p):""; })()}`;
+${lctx}${(function(){ var p=val("profile"); return p?("\n\n〈本案背景與院內文件（當事人提供，務必納入判斷；**院內具體規定／要件優先於通則**，例如補發要件、逆算時效）〉\n"+p):""; })()}`;
 }
 function userTurnText(situation){
-  const m=modeVal()==="nego"?"（這是要拿去『協商／談判』用）":"（這是要拿去『打官司／申訴』用）";
+  const mv=modeVal();
+  if(mv==="guide") return `以下是我的申辦需求：\n${situation}\n\n請給我完整的步驟流程、文件清單、費用與時程，以及常見陷阱和注意事項。`;
+  const m=mv==="nego"?"（這是要拿去『協商／談判』用）":"（這是要拿去『打官司／申訴』用）";
   return `${m}\n以下是我的狀況／對方說的話：\n${situation}\n\n請依你的任務：引法條、判斷對方說法有無道理並給我可回覆的反駁、講清楚舉證責任、給策略建議，並『務必』誠實點出我的弱點與對方（對造律師）會怎麼打我，不要只挑對我有利的講。`;
 }
 
@@ -1004,6 +1034,16 @@ document.getElementById("demo-btn").addEventListener("click",()=>{
   ["f-field","f-side","situation"].forEach(id=>localStorage.setItem("law_"+id,document.getElementById(id).value));
   localStorage.setItem("law_mode","nego");
   toast("已帶入加班費範例，按「⚡ 問 AI 律師」或「🧠 複製提示詞」");
+  window.scrollTo({top:document.getElementById("situation").getBoundingClientRect().top+window.scrollY-80,behavior:"smooth"});
+});
+document.getElementById("demo-patent-btn").addEventListener("click",()=>{
+  document.getElementById("f-field").value="智財";
+  document.getElementById("f-side").value="個人原告";
+  setMode("guide");
+  document.getElementById("situation").value="我有一個發明想申請專利保護，打算以個人名義申請台灣的發明專利。請問：整個申請流程是什麼？需要準備哪些文件（說明書、申請書、圖式等）？費用大約多少？審查要多久？有哪些常見陷阱或我一定要注意的事？我完全沒有申請過專利的經驗。";
+  ["f-field","f-side","situation"].forEach(id=>localStorage.setItem("law_"+id,document.getElementById(id).value));
+  localStorage.setItem("law_mode","guide");
+  toast("已帶入個人專利申請範例，按「⚡ 問 AI 律師」或「🧠 複製提示詞」");
   window.scrollTo({top:document.getElementById("situation").getBoundingClientRect().top+window.scrollY-80,behavior:"smooth"});
 });
 document.getElementById("clear-btn").addEventListener("click",()=>{
