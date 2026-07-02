@@ -106,7 +106,8 @@ def year_from_cloud(files):
 def _best_sheet_index(sheets):
     """分頁名稱有日期 → 選最接近今天的；否則選最後一頁。
     支援完整日期（2026-06-16）及 MMDD/MMDD-MMDD 格式（0706、0706-0712）。"""
-    today = date.today()
+    from datetime import timezone, timedelta
+    today = datetime.now(timezone(timedelta(hours=8))).date()  # 台灣時區
     best_idx = len(sheets) - 1
     best_delta = None
     for i, sn in enumerate(sheets):
