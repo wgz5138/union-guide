@@ -1143,8 +1143,15 @@ if mode.startswith("🟦"):
                         pass
 
             st.subheader(f"印藥水名單（{sheet0}）")
-            st.caption("👇 想換人就直接點格子改名字（日期自動沿用）。改好再按「產生定案」。")
-            _edit_T = st.data_editor(override_names.T, use_container_width=True, key="yao_edit")
+            st.caption("👇 想換人就直接點格子改名字（日期自動沿用）。改好再按「產生定案」。🔺 = 跨區借人")
+            # 顯示用：名字後面加跨區標記 🔺
+            display_names = override_names.copy()
+            for _r in override_names.index:
+                for _c in override_names.columns:
+                    _mk = str(marks.loc[_r, _c]).strip() if (_r in marks.index and _c in marks.columns) else ""
+                    if _mk:
+                        display_names.loc[_r, _c] = str(override_names.loc[_r, _c]) + _mk
+            _edit_T = st.data_editor(display_names.T, use_container_width=True, key="yao_edit")
             edited = _edit_T.T   # 轉回 area×day 給後續邏輯用
             for n in extract_notes(out): st.write("・" + n)
 
@@ -1160,7 +1167,7 @@ if mode.startswith("🟦"):
                 disp = edited.copy(); rows = []
                 for r in edited.index:
                     for c in edited.columns:
-                        nm = str(edited.loc[r,c]).strip()
+                        nm = re.sub(r'🔺', '', str(edited.loc[r,c])).strip()  # 去掉顯示用標記
                         dt = dates.loc[r,c]; mk = marks.loc[r,c]
                         if nm and nm != "❌排不出":
                             disp.loc[r,c] = f"{nm}({dt}印){mk}" if dt else nm
