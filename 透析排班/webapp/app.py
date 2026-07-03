@@ -339,6 +339,23 @@ def save_schedule_stats(df):
     except Exception:
         return False
 
+def fetch_schedule_history_raw():
+    """從雲端排班歷史取得原始明細 → DataFrame(週次/卡號/姓名/狀態/治療日)，或 None。"""
+    if not APPS_SCRIPT_URL or not WRITE_SECRET: return None
+    try:
+        resp = requests.post(APPS_SCRIPT_URL,
+                             json={"action": "getScheduleHistory", "secret": WRITE_SECRET},
+                             timeout=30)
+        d = resp.json()
+        if not d.get("ok") or not d.get("rows"): return None
+        rows = d["rows"]
+        if len(rows) < 2: return None
+        df = pd.DataFrame([[str(c) for c in r] for r in rows[1:]], columns=[str(x) for x in rows[0]])
+        df["狀態"] = df["狀態"].str.strip()
+        return df[df["狀態"].isin(["印","休"])].reset_index(drop=True)
+    except Exception as _e:
+        return str(_e)
+
 def fetch_members_cloud():
     """從 GS 雲端讀取組員名單 → DataFrame(卡號/姓名)，或 None。"""
     if not APPS_SCRIPT_URL or not WRITE_SECRET: return None
@@ -625,7 +642,7 @@ def _build_line_txt(rows, disp_df=None):
 
 
 # ── 💬 意見回饋：借用稽核歷史（特殊鍵「意見-時間」）存放，不動 LINE 程式 ──
-APP_VER = "v3.11"
+APP_VER = "v3.12"
 FEEDBACK_PREFIX = "意見-"
 
 def push_feedback(step, detail, expect, urgency, who):
@@ -868,7 +885,7 @@ if TEST_MODE:
 
 st.title("💊 透析藥水排班")
 st.caption("上傳班表 Excel → 出名單(表格)。可直接點格子改人名。跨區標 🔺。")
-st.caption("🟢 版本 v3.11（統計管理 3 合 1 ／草稿自動偵測／組員名單雲端化）· 2026-06-28")
+st.caption("🟢 版本 v3.12（新增印/休明細查詢）· 2026-07-03")
 
 with st.expander("📖 第一次用？點我看「3 步驟」（給玉繡）", expanded=False):
     st.markdown("""
@@ -1542,6 +1559,39 @@ if mode.startswith("📊"):
                             st.balloons()
                         else:
                             st.error("儲存失敗，請稍後再試。")
+
+    # ── Tab1 下半：個人明細查詢 ──────────────────────────
+    with tab1:
+        with st.expander("🔍 查詢個人印/休明細（點我展開）", expanded=False):
+            _dc1, _dc2 = st.columns([2, 1])
+            if _dc1.button("🔄 載入明細資料", key="detail_load"):
+                with st.spinner("讀取中…"):
+                    _raw = fetch_schedule_history_raw()
+                st.session_state["schedule_detail"] = _raw if _raw is not None else "empty"
+            if "schedule_detail" in st.session_state:
+                _raw = st.session_state["schedule_detail"]
+                if isinstance(_raw, str) and _raw == "empty":
+                    st.warning("雲端無歷史資料。")
+                elif isinstance(_raw, str):
+                    st.error(f"讀取失敗：{_raw}")
+                else:
+                    names = sorted(_raw["姓名"].unique().tolist())
+                    sel_name = st.selectbox("選擇人員", names, key="detail_sel")
+                    if sel_name:
+                        person_df = _raw[_raw["姓名"] == sel_name].copy()
+                        n_print = (person_df["狀態"] == "印").sum()
+                        n_rest  = (person_df["狀態"] == "休").sum()
+                        st.caption(f"**{sel_name}** — 印 {n_print} 次 ／ 休 {n_rest} 次")
+                        # 顯示欄位：週次 + 狀態 + 治療日（若有）
+                        show_cols = ["週次", "狀態"]
+                        if "治療日" in person_df.columns:
+                            show_cols.append("治療日")
+                        disp = person_df[show_cols].sort_values("週次").reset_index(drop=True)
+                        def _color_row(row):
+                            color = "#d4edda" if row["狀態"] == "印" else "#fff3cd"
+                            return [f"background-color:{color}"] * len(row)
+                        st.dataframe(disp.style.apply(_color_row, axis=1),
+                                     use_container_width=True, hide_index=True)
 
     # ── Tab2：稽核統計 ──────────────────────────────────
     with tab2:
