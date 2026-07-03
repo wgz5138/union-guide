@@ -1582,13 +1582,23 @@ if mode.startswith("📊"):
                         n_print = (person_df["狀態"] == "印").sum()
                         n_rest  = (person_df["狀態"] == "休").sum()
                         st.caption(f"**{sel_name}** — 印 {n_print} 次 ／ 休 {n_rest} 次")
-                        # 週次可能被 Google Sheets 把前導零吃掉（0112→112），轉回 MM/DD
+                        # 週次可能被 Google Sheets 把前導零吃掉（0112→112），轉回 YYYY/MM/DD
+                        from datetime import timezone, timedelta
+                        _today = datetime.now(timezone(timedelta(hours=8))).date()
                         def _fmt_week(w):
                             s = str(w).strip()
-                            # 純數字 3-4 碼 → 補零到4碼 → MM/DD
+                            # 純數字 3-4 碼 → 補零到4碼 → 推算年份 → YYYY/MM/DD
                             if re.match(r"^\d{3,4}$", s):
                                 s = s.zfill(4)
-                                return f"{s[:2]}/{s[2:]}"
+                                try:
+                                    mo, dy = int(s[:2]), int(s[2:])
+                                    yr = _today.year
+                                    d = date(yr, mo, dy)
+                                    if (d - _today).days > 180:
+                                        d = date(yr - 1, mo, dy)
+                                    return d.strftime("%Y/%m/%d")
+                                except Exception:
+                                    return s
                             return s
                         person_df["日期"] = person_df["週次"].apply(_fmt_week)
                         show_cols = ["日期", "狀態"]
