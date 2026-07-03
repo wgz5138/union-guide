@@ -1582,11 +1582,19 @@ if mode.startswith("📊"):
                         n_print = (person_df["狀態"] == "印").sum()
                         n_rest  = (person_df["狀態"] == "休").sum()
                         st.caption(f"**{sel_name}** — 印 {n_print} 次 ／ 休 {n_rest} 次")
-                        # 顯示欄位：週次 + 狀態 + 治療日（若有）
-                        show_cols = ["週次", "狀態"]
-                        if "治療日" in person_df.columns:
+                        # 週次可能被 Google Sheets 把前導零吃掉（0112→112），轉回 MM/DD
+                        def _fmt_week(w):
+                            s = str(w).strip()
+                            # 純數字 3-4 碼 → 補零到4碼 → MM/DD
+                            if re.match(r"^\d{3,4}$", s):
+                                s = s.zfill(4)
+                                return f"{s[:2]}/{s[2:]}"
+                            return s
+                        person_df["日期"] = person_df["週次"].apply(_fmt_week)
+                        show_cols = ["日期", "狀態"]
+                        if "治療日" in person_df.columns and person_df["治療日"].str.strip().ne("").any():
                             show_cols.append("治療日")
-                        disp = person_df[show_cols].sort_values("週次").reset_index(drop=True)
+                        disp = person_df[show_cols].sort_values("日期").reset_index(drop=True)
                         def _color_row(row):
                             color = "#d4edda" if row["狀態"] == "印" else "#fff3cd"
                             return [f"background-color:{color}"] * len(row)
