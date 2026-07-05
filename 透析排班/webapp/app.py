@@ -642,7 +642,7 @@ def _build_line_txt(rows, disp_df=None):
 
 
 # ── 💬 意見回饋：借用稽核歷史（特殊鍵「意見-時間」）存放，不動 LINE 程式 ──
-APP_VER = "v3.15"
+APP_VER = "v3.16"
 FEEDBACK_PREFIX = "意見-"
 
 def push_feedback(step, detail, expect, urgency, who):
@@ -885,7 +885,7 @@ if TEST_MODE:
 
 st.title("💊 透析藥水排班")
 st.caption("上傳班表 Excel → 出名單(表格)。可直接點格子改人名。跨區標 🔺。")
-st.caption("🟢 版本 v3.15（抓班表不再清除定案；送雲端前顯示確認人員）· 2026-07-05")
+st.caption("🟢 版本 v3.16（送雲端後保留草稿，重開 app 仍可看到定案版）· 2026-07-05")
 
 with st.expander("📖 第一次用？點我看「3 步驟」（給玉繡）", expanded=False):
     st.markdown("""
@@ -1283,7 +1283,7 @@ if mode.startswith("🟦"):
                             ok2 = push_history("setScheduleHistory", corrected, sheet0)
                             if ok2: st.caption("✅ 排班歷史已同步（依玉繡實際定案），下週公平輪序更準確。")
                             _clear_week_draft()         # 清除本機草稿
-                            clear_week_draft_cloud()    # 清除雲端草稿（小巫偵測會消失）
+                            # 雲端草稿保留：讓小巫或玉繡重開 app 還能看到定案版
                             st.session_state.pop("week_draft_auto", None)
                         else:
                             st.error(f"送出失敗（{resp.status_code}）：{resp.text[:200]}")
