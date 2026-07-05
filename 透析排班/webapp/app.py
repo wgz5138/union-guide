@@ -642,7 +642,7 @@ def _build_line_txt(rows, disp_df=None):
 
 
 # ── 💬 意見回饋：借用稽核歷史（特殊鍵「意見-時間」）存放，不動 LINE 程式 ──
-APP_VER = "v3.14"
+APP_VER = "v3.15"
 FEEDBACK_PREFIX = "意見-"
 
 def push_feedback(step, detail, expect, urgency, who):
@@ -885,7 +885,7 @@ if TEST_MODE:
 
 st.title("💊 透析藥水排班")
 st.caption("上傳班表 Excel → 出名單(表格)。可直接點格子改人名。跨區標 🔺。")
-st.caption("🟢 版本 v3.14（重按排印藥水後自動套回定案名字和🔺）· 2026-07-05")
+st.caption("🟢 版本 v3.15（抓班表不再清除定案；送雲端前顯示確認人員）· 2026-07-05")
 
 with st.expander("📖 第一次用？點我看「3 步驟」（給玉繡）", expanded=False):
     st.markdown("""
@@ -1043,8 +1043,9 @@ elif mode.startswith("🟦") and week_cloud:
             st.error("抓不到雲端班表：" + _info + "（你也可以改選『自己上傳』）")
         else:
             st.session_state["cloud_banbiao"] = (_b, _info)
-            for k in ["yao", "cloud_rows", "cloud_disp", "cloud_sheet0"]:
-                st.session_state.pop(k, None)
+            # 只清排班輸出，保留上次定案（cloud_rows/disp），auto-apply 才能套回
+            st.session_state.pop("yao", None)
+            st.session_state.pop("yao_edit", None)
     if "cloud_banbiao" in st.session_state:
         data, _info = st.session_state["cloud_banbiao"]
         st.success("✅ 已載入雲端班表：" + _info)
@@ -1262,6 +1263,9 @@ if mode.startswith("🟦"):
                 st.info(f"🧪 測試模式：模擬送出 {len(rows)} 筆，但實際上**沒有**寫到雲端，也沒有送 LINE 通知。")
                 st.balloons()
         elif APPS_SCRIPT_URL and WRITE_SECRET:
+            # 提示目前要送的是哪個版本（確認是定案版，不是機器版）
+            _names_in_rows = "、".join(sorted({r[2] for r in rows if r[2]}))
+            st.caption(f"⚠️ 送出前確認：本次定案人員 → {_names_in_rows}")
             if st.button("🚀 送到雲端（自動排提醒）", type="primary"):
                 with st.spinner("送出中，請稍候…"):
                     try:
