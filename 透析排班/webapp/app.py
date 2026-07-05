@@ -642,7 +642,7 @@ def _build_line_txt(rows, disp_df=None):
 
 
 # ── 💬 意見回饋：借用稽核歷史（特殊鍵「意見-時間」）存放，不動 LINE 程式 ──
-APP_VER = "v3.13"
+APP_VER = "v3.14"
 FEEDBACK_PREFIX = "意見-"
 
 def push_feedback(step, detail, expect, urgency, who):
@@ -885,7 +885,7 @@ if TEST_MODE:
 
 st.title("💊 透析藥水排班")
 st.caption("上傳班表 Excel → 出名單(表格)。可直接點格子改人名。跨區標 🔺。")
-st.caption("🟢 版本 v3.13（🔺跟著editor改動、LINE訊息同步）· 2026-07-05")
+st.caption("🟢 版本 v3.14（重按排印藥水後自動套回定案名字和🔺）· 2026-07-05")
 
 with st.expander("📖 第一次用？點我看「3 步驟」（給玉繡）", expanded=False):
     st.markdown("""
@@ -1146,6 +1146,7 @@ if mode.startswith("🟦"):
             override_names = names.copy()
             _prev_rows  = st.session_state.get("cloud_rows", [])
             _prev_sheet = st.session_state.get("cloud_sheet0", "")
+            _prev_disp  = st.session_state.get("cloud_disp")
             if _prev_rows and _prev_sheet == sheet0:
                 for _cr in _prev_rows:
                     try:
@@ -1158,6 +1159,12 @@ if mode.startswith("🟦"):
                                 break
                     except Exception:
                         pass
+                # 也套回上次定案的 🔺（以 cloud_disp 為準，不用原始班表位置）
+                if _prev_disp is not None and not _prev_disp.empty:
+                    for _r in marks.index:
+                        for _c in marks.columns:
+                            if _r in _prev_disp.index and _c in _prev_disp.columns:
+                                marks.loc[_r, _c] = "🔺" if "🔺" in str(_prev_disp.loc[_r, _c]) else ""
 
             st.subheader(f"印藥水名單（{sheet0}）")
             st.caption("👇 想換人就直接點格子改名字（日期自動沿用）。改好再按「產生定案」。🔺 = 跨區借人")
