@@ -577,7 +577,7 @@ def _build_line_txt(rows, disp_df=None):
 
     def fmt(d_str):
         d = _dt.strptime(d_str, "%Y-%m-%d")
-        return f"{DOW[d.weekday()]} {d.month}/{d.day:02d}"  # 日補零：7/06，確保等寬
+        return f"{DOW[d.weekday()]} {d.month:02d}/{d.day:02d}"  # 月日補零：07/06，確保等寬
 
     # treats: list of {t: 治療日str, p: 印藥水日str, a: {area: name}}
     treats = []
