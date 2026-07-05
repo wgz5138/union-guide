@@ -596,7 +596,7 @@ def _build_line_txt(rows, disp_df=None):
                 if not v or v in ("nan","None","❌排不出"): continue
                 nm_m = CELL_RE.match(v)
                 if nm_m:
-                    nm = nm_m.group(1).strip()
+                    nm = nm_m.group(1).strip() + nm_m.group(4).strip()  # 保留 🔺
                     p_mo, p_dy = int(nm_m.group(2)), int(nm_m.group(3))
                     if print_str is None:
                         print_str = _dstr(t_yr, p_mo, p_dy)
@@ -1184,10 +1184,13 @@ if mode.startswith("🟦"):
                 disp = edited.copy(); rows = []
                 for r in edited.index:
                     for c in edited.columns:
-                        nm = re.sub(r'🔺', '', str(edited.loc[r,c])).strip()  # 去掉顯示用標記
-                        dt = dates.loc[r,c]; mk = marks.loc[r,c]
+                        raw_val = str(edited.loc[r,c])
+                        nm = re.sub(r'🔺', '', raw_val).strip()  # 去掉顯示用標記
+                        # 以 editor 內容為準：用戶有加 🔺 就保留，有去掉就不補
+                        mk = "🔺" if "🔺" in raw_val else ""
+                        dt = dates.loc[r,c]
                         if nm and nm != "❌排不出":
-                            disp.loc[r,c] = f"{nm}({dt}印){mk}" if dt else nm
+                            disp.loc[r,c] = f"{nm}({dt}印){mk}" if dt else f"{nm}{mk}"
                             if dt:
                                 mo,dy = dt.split("/")
                                 rows.append([f"{yr}-{int(mo):02d}-{int(dy):02d}", r, nm])
