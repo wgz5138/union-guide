@@ -577,7 +577,7 @@ def _build_line_txt(rows, disp_df=None):
 
     def fmt(d_str):
         d = _dt.strptime(d_str, "%Y-%m-%d")
-        return f"{DOW[d.weekday()]} {d.month}/{d.day}"
+        return f"{DOW[d.weekday()]} {d.month}/{d.day:02d}"  # 日補零：7/06，確保等寬
 
     # treats: list of {t: 治療日str, p: 印藥水日str, a: {area: name}}
     treats = []
@@ -642,7 +642,7 @@ def _build_line_txt(rows, disp_df=None):
 
 
 # ── 💬 意見回饋：借用稽核歷史（特殊鍵「意見-時間」）存放，不動 LINE 程式 ──
-APP_VER = "v3.16"
+APP_VER = "v3.17"
 FEEDBACK_PREFIX = "意見-"
 
 def push_feedback(step, detail, expect, urgency, who):
@@ -885,7 +885,7 @@ if TEST_MODE:
 
 st.title("💊 透析藥水排班")
 st.caption("上傳班表 Excel → 出名單(表格)。可直接點格子改人名。跨區標 🔺。")
-st.caption("🟢 版本 v3.16（送雲端後保留草稿，重開 app 仍可看到定案版）· 2026-07-05")
+st.caption("🟢 版本 v3.17（LINE 格式修正：日期補零對齊）· 2026-07-05")
 
 with st.expander("📖 第一次用？點我看「3 步驟」（給玉繡）", expanded=False):
     st.markdown("""
