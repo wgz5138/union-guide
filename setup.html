@@ -1,0 +1,491 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>成立排雷檢核表 — 高榮企業工會</title>
+<style>
+  :root{
+    --green:#1A7A4A;--green-mid:#2E9E63;--green-light:#E8F5EE;--green-deep:#0F5C35;
+    --gold:#B8860B;--gold-light:#FFF8E7;
+    --ink:#1C1C1C;--ink-mid:#4A5568;--ink-soft:#718096;
+    --bg:#FAFAF7;--border:#D4D0C8;--red:#C0392B;--red-light:#FEF2F0;
+    --card:#FFFFFF;--radius:12px;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;}
+  body{font-family:'Noto Serif TC',serif,sans-serif;background:var(--bg);color:var(--ink);min-height:100vh;}
+  a{color:inherit;text-decoration:none;}
+
+  /* ── top bar ── */
+  .topbar{background:var(--green);color:#fff;padding:.6rem 1rem;display:flex;align-items:center;gap:.6rem;position:sticky;top:0;z-index:100;}
+  .topbar .back{background:rgba(255,255,255,.18);border:none;color:#fff;padding:.35rem .7rem;border-radius:8px;font-family:inherit;font-size:13px;cursor:pointer;white-space:nowrap;}
+  .topbar .back:active{opacity:.75;}
+  .topbar .title{flex:1;text-align:center;font-size:15px;font-weight:700;line-height:1.3;}
+  .topbar .sub{font-size:11px;opacity:.8;font-weight:400;}
+  .topbar .home{background:rgba(255,255,255,.18);border:none;color:#fff;padding:.35rem .7rem;border-radius:8px;font-family:inherit;font-size:13px;cursor:pointer;white-space:nowrap;}
+  .ver-tag{position:absolute;right:1rem;top:50%;transform:translateY(-50%);font-size:10px;opacity:.6;pointer-events:none;}
+
+  /* ── content ── */
+  .wrap{max-width:680px;margin:0 auto;padding:1rem;}
+
+  /* ── progress ── */
+  .prog-wrap{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:.8rem 1rem;margin-bottom:1rem;}
+  .prog-label{display:flex;justify-content:space-between;font-size:12px;color:var(--ink-mid);margin-bottom:.4rem;}
+  .prog-bar{height:8px;background:#E2E8F0;border-radius:4px;overflow:hidden;}
+  .prog-fill{height:100%;background:var(--green);border-radius:4px;transition:width .4s;}
+  .prog-done{color:var(--green);font-weight:700;}
+
+  /* ── date card ── */
+  .date-card{background:var(--gold-light);border:1px solid #D4A017;border-radius:var(--radius);padding:1rem;margin-bottom:1rem;}
+  .date-card label{display:block;font-size:13px;color:var(--gold);font-weight:700;margin-bottom:.4rem;}
+  .date-card input[type=date]{font-family:inherit;font-size:15px;padding:.4rem .6rem;border:1px solid #D4A017;border-radius:8px;background:#fff;color:var(--ink);width:auto;}
+  .deadline-row{margin-top:.6rem;font-size:14px;font-weight:700;color:var(--red);}
+  .deadline-row .dl-ok{color:var(--green);}
+  .deadline-hint{font-size:12px;color:var(--ink-soft);margin-top:.25rem;}
+
+  /* ── section ── */
+  .section{margin-bottom:1.25rem;}
+  .section-hd{display:flex;align-items:center;gap:.6rem;margin-bottom:.6rem;}
+  .section-num{width:28px;height:28px;border-radius:50%;background:var(--green);color:#fff;font-size:13px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+  .section-title{font-size:15px;font-weight:700;color:var(--green-deep);}
+
+  /* ── checklist item ── */
+  .cl-item{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:.75rem 1rem;margin-bottom:.5rem;cursor:pointer;transition:border-color .15s,background .15s;}
+  .cl-item:active{opacity:.9;}
+  .cl-item.done{background:var(--green-light);border-color:var(--green-mid);}
+  .cl-item-row{display:flex;align-items:flex-start;gap:.75rem;}
+  .cl-cb{width:22px;height:22px;border:2px solid var(--border);border-radius:5px;flex-shrink:0;display:flex;align-items:center;justify-content:center;margin-top:1px;transition:background .15s,border-color .15s;}
+  .cl-item.done .cl-cb{background:var(--green);border-color:var(--green);}
+  .cl-cb svg{display:none;}
+  .cl-item.done .cl-cb svg{display:block;}
+  .cl-body{flex:1;}
+  .cl-text{font-size:14px;line-height:1.55;color:var(--ink);}
+  .cl-item.done .cl-text{color:var(--ink-soft);text-decoration:line-through;text-decoration-color:var(--green-mid);}
+  .cl-note{font-size:12px;color:var(--ink-soft);margin-top:.3rem;line-height:1.5;background:#F7F7F4;border-left:3px solid var(--border);padding:.25rem .5rem;border-radius:0 4px 4px 0;}
+  .cl-note b{color:var(--red);}
+  .cl-note .law{color:var(--green-deep);font-weight:600;}
+
+  /* ── action bar ── */
+  .action-bar{display:flex;gap:.6rem;flex-wrap:wrap;margin-top:1.25rem;padding-bottom:2rem;}
+  .btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;padding:.6rem 1.1rem;border:none;border-radius:9px;font-family:inherit;font-size:14px;font-weight:600;cursor:pointer;}
+  .btn-green{background:var(--green);color:#fff;}
+  .btn-ghost{background:#fff;color:var(--green-deep);border:1px solid var(--green-mid);}
+  .btn-red{background:#fff;color:var(--red);border:1px solid var(--red);}
+  .btn:active{opacity:.8;}
+
+  /* ── toast ── */
+  #toast{position:fixed;bottom:1.2rem;left:50%;transform:translateX(-50%) translateY(4rem);background:rgba(15,30,20,.9);color:#fff;padding:.55rem 1.2rem;border-radius:20px;font-size:13.5px;transition:transform .25s;pointer-events:none;white-space:nowrap;z-index:999;}
+  #toast.show{transform:translateX(-50%) translateY(0);}
+
+  @media(max-width:480px){
+    .topbar .title{font-size:13.5px;}
+    .cl-text{font-size:13.5px;}
+  }
+</style>
+</head>
+<body>
+
+<div class="topbar" id="topbar">
+  <button class="back" onclick="history.back()">← 返回</button>
+  <div class="title">
+    高榮企業工會 ✦ 成立排雷檢核表
+    <div class="sub">依《工合法》一步步排雷｜勾選會自動存進度（這台裝置）</div>
+  </div>
+  <button class="home" onclick="location.href='gaorong.html'">🏠 工會首頁</button>
+  <span class="ver-tag">v26.07.06</span>
+</div>
+
+<div class="wrap">
+
+  <!-- 進度 -->
+  <div class="prog-wrap">
+    <div class="prog-label">
+      <span>完成度</span>
+      <span id="progTxt">0 / 23</span>
+    </div>
+    <div class="prog-bar"><div class="prog-fill" id="progFill" style="width:0%"></div></div>
+  </div>
+
+  <!-- 成立日期 -->
+  <div class="date-card">
+    <label>📅 成立大會日期（＝30 日登記倒數起點）：</label>
+    <input type="date" id="formDate" onchange="saveDate();calcDeadline()">
+    <div class="deadline-row" id="deadlineRow"></div>
+    <div class="deadline-hint">《工合法》§11：成立大會後 30 日內，務必送件高雄市勞工局並確認收件</div>
+  </div>
+
+  <!-- Section 0 -->
+  <div class="section">
+    <div class="section-hd">
+      <div class="section-num">0</div>
+      <div class="section-title">資格與身分（最早、最致命，先排）</div>
+    </div>
+    <div class="cl-item" data-id="0" onclick="toggle(this)">
+      <div class="cl-item-row">
+        <div class="cl-cb"><svg width="13" height="10" viewBox="0 0 13 10"><polyline points="1.5,5 5,8.5 11.5,1.5" stroke="#fff" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+        <div class="cl-body">
+          <div class="cl-text">連署／會員只收「勞工身分」（約用、契約、派遣等非公職受僱者），逐一確認身分別欄</div>
+          <div class="cl-note">備：<b>公職人員混入→資格不符、登記被退。</b>公職要走《公務人員協會法》。</div>
+        </div>
+      </div>
+    </div>
+    <div class="cl-item" data-id="1" onclick="toggle(this)">
+      <div class="cl-item-row">
+        <div class="cl-cb"><svg width="13" height="10" viewBox="0 0 13 10"><polyline points="1.5,5 5,8.5 11.5,1.5" stroke="#fff" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+        <div class="cl-body">
+          <div class="cl-text">發起人名單排除「代表雇主行使管理權之主管」</div>
+          <div class="cl-note">備：<b>這類主管不得當企業工會發起人</b>（<span class="law">工合法§14</span>、官方流程）。職級界定打 #122～#125 問承辦確認。</div>
+        </div>
+      </div>
+    </div>
+    <div class="cl-item" data-id="2" onclick="toggle(this)">
+      <div class="cl-item-row">
+        <div class="cl-cb"><svg width="13" height="10" viewBox="0 0 13 10"><polyline points="1.5,5 5,8.5 11.5,1.5" stroke="#fff" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+        <div class="cl-body">
+          <div class="cl-text">連署書核閱「是否只有本院企業工會籍」，確認無重複加入同性質工會</div>
+          <div class="cl-note">備：<b>同一事業單位同性質工會只能一個</b>（<span class="law">§6</span>）。已有同性質工會即不得再成立，事先到高市勞工局查詢。</div>
+        </div>
+      </div>
+    </div>
+    <div class="cl-item" data-id="3" onclick="toggle(this)">
+      <div class="cl-item-row">
+        <div class="cl-cb"><svg width="13" height="10" viewBox="0 0 13 10"><polyline points="1.5,5 5,8.5 11.5,1.5" stroke="#fff" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+        <div class="cl-body">
+          <div class="cl-text">確認發起人人數達 30 人以上</div>
+          <div class="cl-note">備：<span class="law">工合法§11</span>：企業工會發起人不得少於 30 人；事業單位勞工人數未滿 30 人者，須有全體勞工二分之一以上連署。</div>
+        </div>
+      </div>
+    </div>
+    <div class="cl-item" data-id="4" onclick="toggle(this)">
+      <div class="cl-item-row">
+        <div class="cl-cb"><svg width="13" height="10" viewBox="0 0 13 10"><polyline points="1.5,5 5,8.5 11.5,1.5" stroke="#fff" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+        <div class="cl-body">
+          <div class="cl-text">確認高榮目前尚無同性質企業工會存在</div>
+          <div class="cl-note">備：到高市勞工局工會查詢系統確認。若有，須研究是否性質不同（如：科技類 vs 護理類）再決定策略。</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Section 1 -->
+  <div class="section">
+    <div class="section-hd">
+      <div class="section-num">1</div>
+      <div class="section-title">籌備程序</div>
+    </div>
+    <div class="cl-item" data-id="5" onclick="toggle(this)">
+      <div class="cl-item-row">
+        <div class="cl-cb"><svg width="13" height="10" viewBox="0 0 13 10"><polyline points="1.5,5 5,8.5 11.5,1.5" stroke="#fff" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+        <div class="cl-body">
+          <div class="cl-text">召開籌備會議，保留議事紀錄與出席名單</div>
+          <div class="cl-note">備：雖非法律強制，主管機關審查時常要求提供。建議全程留書面紀錄。</div>
+        </div>
+      </div>
+    </div>
+    <div class="cl-item" data-id="6" onclick="toggle(this)">
+      <div class="cl-item-row">
+        <div class="cl-cb"><svg width="13" height="10" viewBox="0 0 13 10"><polyline points="1.5,5 5,8.5 11.5,1.5" stroke="#fff" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+        <div class="cl-body">
+          <div class="cl-text">章程草案擬定，確認必要記載事項完整</div>
+          <div class="cl-note">備：<span class="law">§12</span> 必要記載：名稱、宗旨、主事務所地址、組織架構、入退會條件、任期、會費、財務、理監事選任方式。漏任何一項→審查退件。</div>
+        </div>
+      </div>
+    </div>
+    <div class="cl-item" data-id="7" onclick="toggle(this)">
+      <div class="cl-item-row">
+        <div class="cl-cb"><svg width="13" height="10" viewBox="0 0 13 10"><polyline points="1.5,5 5,8.5 11.5,1.5" stroke="#fff" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+        <div class="cl-body">
+          <div class="cl-text">確認工會名稱不與既有工會重複（§8）</div>
+          <div class="cl-note">備：建議名稱：「高雄榮民總醫院企業工會」。到高市勞工局電話詢問確認。</div>
+        </div>
+      </div>
+    </div>
+    <div class="cl-item" data-id="8" onclick="toggle(this)">
+      <div class="cl-item-row">
+        <div class="cl-cb"><svg width="13" height="10" viewBox="0 0 13 10"><polyline points="1.5,5 5,8.5 11.5,1.5" stroke="#fff" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+        <div class="cl-body">
+          <div class="cl-text">確認主事務所地址（影響主管機關管轄）</div>
+          <div class="cl-note">備：主事務所在高雄市→主管機關為高雄市政府勞工局。地址建議借用院內某會議室，需先確認院方同意使用。</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Section 2 -->
+  <div class="section">
+    <div class="section-hd">
+      <div class="section-num">2</div>
+      <div class="section-title">成立大會</div>
+    </div>
+    <div class="cl-item" data-id="9" onclick="toggle(this)">
+      <div class="cl-item-row">
+        <div class="cl-cb"><svg width="13" height="10" viewBox="0 0 13 10"><polyline points="1.5,5 5,8.5 11.5,1.5" stroke="#fff" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+        <div class="cl-body">
+          <div class="cl-text">大會通知至少 7 日前發出</div>
+          <div class="cl-note">備：<span class="law">§11</span>：應於成立大會 7 日前通知所有連署人。通知須告知日期、時間、地點、議程。建議電子通知留存紀錄。</div>
+        </div>
+      </div>
+    </div>
+    <div class="cl-item" data-id="10" onclick="toggle(this)">
+      <div class="cl-item-row">
+        <div class="cl-cb"><svg width="13" height="10" viewBox="0 0 13 10"><polyline points="1.5,5 5,8.5 11.5,1.5" stroke="#fff" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+        <div class="cl-body">
+          <div class="cl-text">出席人數達法定門檻（發起人二分之一以上）</div>
+          <div class="cl-note">備：<b>不足半數即不得召開、決議無效</b>（<span class="law">§11</span>）。正式開會前先點名確認。</div>
+        </div>
+      </div>
+    </div>
+    <div class="cl-item" data-id="11" onclick="toggle(this)">
+      <div class="cl-item-row">
+        <div class="cl-cb"><svg width="13" height="10" viewBox="0 0 13 10"><polyline points="1.5,5 5,8.5 11.5,1.5" stroke="#fff" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+        <div class="cl-body">
+          <div class="cl-text">依法通過工會章程（出席過半數同意）</div>
+          <div class="cl-note">備：建議逐條宣讀、逐條表決，確保程序完整且紀錄明確。</div>
+        </div>
+      </div>
+    </div>
+    <div class="cl-item" data-id="12" onclick="toggle(this)">
+      <div class="cl-item-row">
+        <div class="cl-cb"><svg width="13" height="10" viewBox="0 0 13 10"><polyline points="1.5,5 5,8.5 11.5,1.5" stroke="#fff" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+        <div class="cl-body">
+          <div class="cl-text">選出理事會（§17，至少 3 位理事，互選理事長）</div>
+          <div class="cl-note">備：理事名額由章程定之。任期最長 4 年（<span class="law">§17</span>）。理事長代表工會對外行使職權。</div>
+        </div>
+      </div>
+    </div>
+    <div class="cl-item" data-id="13" onclick="toggle(this)">
+      <div class="cl-item-row">
+        <div class="cl-cb"><svg width="13" height="10" viewBox="0 0 13 10"><polyline points="1.5,5 5,8.5 11.5,1.5" stroke="#fff" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+        <div class="cl-body">
+          <div class="cl-text">選出監事會（§26，至少 1 位監事）</div>
+          <div class="cl-note">備：<b>監事不得兼任理事</b>（<span class="law">§26</span>），職務相互監督。任期最長 4 年。</div>
+        </div>
+      </div>
+    </div>
+    <div class="cl-item" data-id="14" onclick="toggle(this)">
+      <div class="cl-item-row">
+        <div class="cl-cb"><svg width="13" height="10" viewBox="0 0 13 10"><polyline points="1.5,5 5,8.5 11.5,1.5" stroke="#fff" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+        <div class="cl-body">
+          <div class="cl-text">會議紀錄詳實記載（議程、出席清冊、決議、選舉結果）</div>
+          <div class="cl-note">備：<b>這份紀錄是申請登記核心附件，主管機關嚴查。</b>至少含：出席人數、通過章程日期、理監事名單與得票數。</div>
+        </div>
+      </div>
+    </div>
+    <div class="cl-item" data-id="15" onclick="toggle(this)">
+      <div class="cl-item-row">
+        <div class="cl-cb"><svg width="13" height="10" viewBox="0 0 13 10"><polyline points="1.5,5 5,8.5 11.5,1.5" stroke="#fff" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+        <div class="cl-body">
+          <div class="cl-text">出席者簽到，簽到表留存原件</div>
+          <div class="cl-note">備：簽到表須附於申請文件送主管機關。建議多印一份自留影本。</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Section 3 -->
+  <div class="section">
+    <div class="section-hd">
+      <div class="section-num">3</div>
+      <div class="section-title">登記申請（成立大會後 30 日內送件）</div>
+    </div>
+    <div class="cl-item" data-id="16" onclick="toggle(this)">
+      <div class="cl-item-row">
+        <div class="cl-cb"><svg width="13" height="10" viewBox="0 0 13 10"><polyline points="1.5,5 5,8.5 11.5,1.5" stroke="#fff" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+        <div class="cl-body">
+          <div class="cl-text">確認送件期限（<b>大會後 30 日內</b>），排定送件日</div>
+          <div class="cl-note">備：<span class="law">工合法§11</span>：逾期需補說明或重新來過。送件前致電高市勞工局確認窗口。勞動關係科電話：07-336-8333。</div>
+        </div>
+      </div>
+    </div>
+    <div class="cl-item" data-id="17" onclick="toggle(this)">
+      <div class="cl-item-row">
+        <div class="cl-cb"><svg width="13" height="10" viewBox="0 0 13 10"><polyline points="1.5,5 5,8.5 11.5,1.5" stroke="#fff" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+        <div class="cl-body">
+          <div class="cl-text">填寫工會登記申請書（§13 格式）</div>
+          <div class="cl-note">備：至高雄市政府勞工局官網下載最新申請書格式（稱謂：「高雄市政府勞工局」）。</div>
+        </div>
+      </div>
+    </div>
+    <div class="cl-item" data-id="18" onclick="toggle(this)">
+      <div class="cl-item-row">
+        <div class="cl-cb"><svg width="13" height="10" viewBox="0 0 13 10"><polyline points="1.5,5 5,8.5 11.5,1.5" stroke="#fff" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+        <div class="cl-body">
+          <div class="cl-text">準備附件①：工會章程（加蓋發起人代表印章），至少 2 份</div>
+          <div class="cl-note">備：正本送官、自留影本。通常需 2 份正本（主管機關存檔 1 份、核准蓋章退還 1 份）。</div>
+        </div>
+      </div>
+    </div>
+    <div class="cl-item" data-id="19" onclick="toggle(this)">
+      <div class="cl-item-row">
+        <div class="cl-cb"><svg width="13" height="10" viewBox="0 0 13 10"><polyline points="1.5,5 5,8.5 11.5,1.5" stroke="#fff" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+        <div class="cl-body">
+          <div class="cl-text">準備附件②：發起人名冊（含姓名、出生年月日、職稱、聯絡方式）</div>
+          <div class="cl-note">備：確認個資蒐集符合個資法（已告知目的、有書面同意）。</div>
+        </div>
+      </div>
+    </div>
+    <div class="cl-item" data-id="20" onclick="toggle(this)">
+      <div class="cl-item-row">
+        <div class="cl-cb"><svg width="13" height="10" viewBox="0 0 13 10"><polyline points="1.5,5 5,8.5 11.5,1.5" stroke="#fff" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+        <div class="cl-body">
+          <div class="cl-text">準備附件③：成立大會會議紀錄 ＋ 出席簽到表正本</div>
+          <div class="cl-note">備：會議紀錄需有主席（臨時主席）及記錄人員簽名。送正本，自留影本。</div>
+        </div>
+      </div>
+    </div>
+    <div class="cl-item" data-id="21" onclick="toggle(this)">
+      <div class="cl-item-row">
+        <div class="cl-cb"><svg width="13" height="10" viewBox="0 0 13 10"><polyline points="1.5,5 5,8.5 11.5,1.5" stroke="#fff" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+        <div class="cl-body">
+          <div class="cl-text">準備附件④：理事、監事名冊 ＋ 就任同意書（含個人資料）</div>
+          <div class="cl-note">備：理事長、監事長就任同意書須本人簽名。主管機關常要求附身分證影本正反面。</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Section 4 -->
+  <div class="section">
+    <div class="section-hd">
+      <div class="section-num">4</div>
+      <div class="section-title">成立後立即要做的事</div>
+    </div>
+    <div class="cl-item" data-id="22" onclick="toggle(this)">
+      <div class="cl-item-row">
+        <div class="cl-cb"><svg width="13" height="10" viewBox="0 0 13 10"><polyline points="1.5,5 5,8.5 11.5,1.5" stroke="#fff" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+        <div class="cl-body">
+          <div class="cl-text">以書面通知雇主（院方）工會成立</div>
+          <div class="cl-note">備：<span class="law">§11</span> 要求通知雇主。<b>雇主不得因此解僱或不利處分勞工</b>（<span class="law">§35</span>）。保留送達回執。</div>
+        </div>
+      </div>
+    </div>
+    <div class="cl-item" data-id="23" onclick="toggle(this)">
+      <div class="cl-item-row">
+        <div class="cl-cb"><svg width="13" height="10" viewBox="0 0 13 10"><polyline points="1.5,5 5,8.5 11.5,1.5" stroke="#fff" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+        <div class="cl-body">
+          <div class="cl-text">開設工會專用銀行帳戶，與任何個人帳戶完全分離</div>
+          <div class="cl-note">備：<span class="law">§30</span>：工會財務獨立存管。主管機關及監事日後查帳的基本要件。建議選有網路銀行功能，方便財務管理。</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Actions -->
+  <div class="action-bar">
+    <button class="btn btn-green" onclick="exportTxt()">📋 複製完成清單</button>
+    <button class="btn btn-ghost" onclick="scrollToFirst()">⬆ 跳到第一個未完成</button>
+    <button class="btn btn-red" onclick="resetAll()">🗑 清除全部進度</button>
+  </div>
+
+</div>
+
+<div id="toast"></div>
+
+<script>
+const TOTAL = 24; // items 0~23
+const SK = 'union_setup_checklist';
+
+// ── init ──
+function init(){
+  const d = load();
+  if(d.date){ document.getElementById('formDate').value = d.date; calcDeadline(); }
+  (d.done||[]).forEach(id => {
+    const el = document.querySelector('[data-id="'+id+'"]');
+    if(el) el.classList.add('done');
+  });
+  updateProgress();
+}
+
+function load(){
+  try{ return JSON.parse(localStorage.getItem(SK)||'{}'); }catch(e){ return {}; }
+}
+function save2(d){ try{ localStorage.setItem(SK, JSON.stringify(d)); }catch(e){} }
+
+// ── toggle item ──
+function toggle(el){
+  el.classList.toggle('done');
+  const d = load();
+  const done = new Set(d.done||[]);
+  const id = el.dataset.id;
+  if(el.classList.contains('done')) done.add(id); else done.delete(id);
+  d.done = [...done];
+  save2(d);
+  updateProgress();
+  toast(el.classList.contains('done') ? '✓ 已完成' : '↩ 取消勾選');
+}
+
+// ── date ──
+function saveDate(){
+  const v = document.getElementById('formDate').value;
+  const d = load(); d.date = v; save2(d);
+}
+function calcDeadline(){
+  const v = document.getElementById('formDate').value;
+  const row = document.getElementById('deadlineRow');
+  if(!v){ row.innerHTML=''; return; }
+  const base = new Date(v);
+  const dl = new Date(base); dl.setDate(dl.getDate()+30);
+  const today = new Date(); today.setHours(0,0,0,0);
+  const diff = Math.ceil((dl-today)/86400000);
+  const dlStr = (dl.getFullYear())+'/'+String(dl.getMonth()+1).padStart(2,'0')+'/'+String(dl.getDate()).padStart(2,'0');
+  if(diff < 0){
+    row.innerHTML = `⏰ 登記送件最後期限：<b>${dlStr}</b> <span style="color:var(--red)">已逾期 ${-diff} 天！</span>`;
+  } else if(diff === 0){
+    row.innerHTML = `⏰ 登記送件最後期限：<b>${dlStr}</b> <span style="color:var(--red)">今天截止！</span>`;
+  } else {
+    const cls = diff <= 7 ? 'style="color:var(--red)"' : 'class="dl-ok"';
+    row.innerHTML = `⏰ 登記送件最後期限：<b>${dlStr}</b> <span ${cls}>還有 ${diff} 天</span>`;
+  }
+}
+
+// ── progress ──
+function updateProgress(){
+  const done = document.querySelectorAll('.cl-item.done').length;
+  document.getElementById('progTxt').textContent = done+' / '+TOTAL;
+  document.getElementById('progFill').style.width = (done/TOTAL*100).toFixed(1)+'%';
+  if(done===TOTAL) toast('🎉 23 項全部完成！可以送件了！');
+}
+
+// ── actions ──
+function exportTxt(){
+  const items = document.querySelectorAll('.cl-item');
+  let lines = ['高榮企業工會 成立排雷檢核表', '========================'];
+  items.forEach(el=>{
+    const ok = el.classList.contains('done');
+    const txt = el.querySelector('.cl-text').textContent.trim();
+    lines.push((ok?'☑ ':'☐ ')+txt);
+  });
+  const date = document.getElementById('formDate').value;
+  if(date) lines.push('\n成立大會日期：'+date);
+  lines.push('\n產生時間：'+new Date().toLocaleString('zh-TW'));
+  try{
+    navigator.clipboard.writeText(lines.join('\n')).then(()=>toast('已複製到剪貼簿'));
+  }catch(e){
+    const ta=document.createElement('textarea');ta.value=lines.join('\n');document.body.appendChild(ta);ta.select();document.execCommand('copy');document.body.removeChild(ta);toast('已複製到剪貼簿');
+  }
+}
+function scrollToFirst(){
+  const first = document.querySelector('.cl-item:not(.done)');
+  if(!first){ toast('所有項目已完成！'); return; }
+  first.scrollIntoView({behavior:'smooth',block:'center'});
+}
+function resetAll(){
+  if(!confirm('確定清除所有勾選進度？（日期會保留）')) return;
+  document.querySelectorAll('.cl-item.done').forEach(el=>el.classList.remove('done'));
+  const d = load(); d.done = []; save2(d);
+  updateProgress();
+  toast('已清除進度');
+}
+
+// ── toast ──
+let _tid;
+function toast(msg){
+  const el=document.getElementById('toast');
+  el.textContent=msg; el.classList.add('show');
+  clearTimeout(_tid); _tid=setTimeout(()=>el.classList.remove('show'),1800);
+}
+
+init();
+</script>
+</body>
+</html>

@@ -54,6 +54,9 @@
   input,select,textarea{width:100%;font-family:inherit;font-size:14px;padding:.55rem .6rem;border:1px solid var(--border);border-radius:8px;background:#fff;color:var(--ink);}
   input:focus,select:focus,textarea:focus{outline:none;border-color:var(--green-mid);}
   textarea{resize:vertical;min-height:44px;}
+  #catChips{display:none;margin:4px 0;gap:6px;flex-wrap:wrap;}
+  .chip{display:inline-flex;align-items:center;padding:.3rem .75rem;border:1px solid var(--green-mid);border-radius:20px;background:#F0F8F3;color:var(--green-deep);font-size:13px;cursor:pointer;white-space:nowrap;font-family:inherit;}
+  .chip:active{background:var(--green-mid);color:#fff;}
   .seg{display:flex;gap:6px;}
   .seg button{flex:1;padding:.5rem;border:1px solid var(--border);background:#fff;border-radius:8px;font-family:inherit;font-size:14px;cursor:pointer;color:var(--ink-mid);}
   .seg button.on-in{background:var(--green);border-color:var(--green);color:#fff;}
@@ -206,6 +209,11 @@
       </div>
       <label>會計科目 <span class="badge-q">附表 · §7</span></label>
       <select id="fCat"></select>
+      <div id="catChips"></div>
+      <div id="catNoteWrap" style="display:none">
+        <label>其他支出說明</label>
+        <textarea id="fNote" rows="2" placeholder="請說明此筆無法歸入其他科目的原因或用途"></textarea>
+      </div>
       <label>摘要</label>
       <input id="fSum" placeholder="例：5月會費收入 / 勞工教育講師費">
       <div class="row">
@@ -433,7 +441,7 @@ const ACCOUNTS = {
     "代辦收入","孳息收入","服務收入","銷售收入","其他收入"
   ],
   out: [ // 支出類
-    "人事費","辦公費","事業費","雜項購置","特別費","退休撫恤費","預備金","其他支出"
+    "人事費","辦公費","事業費","雜項購置","特別費","退休撫恤費","預備金","場地租借費","其他支出"
   ]
 };
 // §21：事業費＋辦公費 須 ≥ 總支出 40%
@@ -710,9 +718,21 @@ function setType(t){
   const sel=document.getElementById('fCat'); sel.innerHTML='';
   ACCOUNTS[t].forEach(a=>{ const o=document.createElement('option'); o.value=a; o.textContent=a; sel.appendChild(o); });
   document.getElementById('fSealWrap').style.display = t==='out'?'flex':'none';
-  liveCheck();
+  liveCheck(); updateCatExtras();
 }
 document.addEventListener('input',e=>{ if(['fAmt','fCash','fCat','fSeal'].includes(e.target.id)) liveCheck(); });
+document.addEventListener('change',e=>{ if(e.target.id==='fCat'){ liveCheck(); updateCatExtras(); } });
+
+const CAT_CHIPS={'場地租借費':['一樓會議室 1000元/3小時']};
+function updateCatExtras(){
+  const cat=document.getElementById('fCat').value;
+  const chips=CAT_CHIPS[cat]||[];
+  const cd=document.getElementById('catChips');
+  cd.style.display=chips.length?'flex':'none';
+  cd.innerHTML=chips.map(c=>`<button type="button" class="chip" onclick="fillChip(this.getAttribute('data-v'))" data-v="${esc(c)}">${esc(c)}</button>`).join('');
+  document.getElementById('catNoteWrap').style.display=(cat==='其他支出')?'block':'none';
+}
+function fillChip(val){ document.getElementById('fSum').value=val; }
 
 function pettyBalance(){ // 現存零用金 = 現金收入 - 現金支出（粗估，提醒用）
   let bal=0; DB.entries.forEach(e=>{ if(e.cash){ bal += e.type==='in'? e.amt : -e.amt; } });
@@ -752,10 +772,12 @@ function addEntry(){
     handler:document.getElementById('fHandler').value.trim(),
     reviewer:document.getElementById('fReviewer').value.trim(),
     cash, gov:document.getElementById('fGov').checked,
-    seal:document.getElementById('fSeal')?.checked||false
+    seal:document.getElementById('fSeal')?.checked||false,
+    note:document.getElementById('fNote')?.value.trim()||''
   });
   save();
   ['fSum','fAmt','fVno'].forEach(id=>document.getElementById(id).value='');
+  if(document.getElementById('fNote')) document.getElementById('fNote').value='';
   document.getElementById('fCash').checked=false; document.getElementById('fGov').checked=false;
   if(document.getElementById('fSeal')) document.getElementById('fSeal').checked=false;
   document.getElementById('formAlerts').innerHTML='';
@@ -781,6 +803,7 @@ function renderEntries(){
           ${e.cash?'<span class="e-tag cash">零用金</span>':''}
           ${e.gov?'<span class="e-tag gov">政府補助</span>':''}
           ${e.date}　${e.vno?'憑證'+esc(e.vno)+'　':''}${e.handler?'經辦'+esc(e.handler)+'　':''}${e.reviewer?'審核'+esc(e.reviewer):''}
+          ${e.note?`<br>備註：${esc(e.note)}`:''}
           <br>憑證保存至 ${retY} 年（§27 至少5年）
         </div>
       </div>
