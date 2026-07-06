@@ -636,7 +636,7 @@ def _build_line_txt(rows, disp_df=None):
         line = fmt(e["p"])   # 左欄 = 印藥水日期
         for area in ["一區","二區","三區"]:
             nm = e["a"].get(area, "")
-            if nm: line += f"\t{area}:{nm}"
+            if nm: line += f"  {area}：{nm}"
         lines.append(line)
 
     roster = _load_roster_full()
@@ -895,7 +895,7 @@ if TEST_MODE:
 
 st.title("💊 透析藥水排班")
 st.caption("上傳班表 Excel → 出名單(表格)。可直接點格子改人名。跨區標 🔺。")
-st.caption("🟢 版本 v3.21（草稿改用列表顯示，消除空白欄位）· 2026-07-06")
+st.caption("🟢 版本 v3.22（LINE 公告改等寬字型、草稿欄位寬度優化）· 2026-07-06")
 
 with st.expander("📖 第一次用？點我看「3 步驟」（給玉繡）", expanded=False):
     st.markdown("""
@@ -1244,7 +1244,12 @@ if mode.startswith("🟦"):
                 [[_clean_dt_disp(r[0]), str(r[1]), str(r[2])] for r in rows],
                 columns=["印藥水日", "區", "姓名"]
             ).sort_values("印藥水日").reset_index(drop=True)
-            st.dataframe(_flat, use_container_width=True, hide_index=True)
+            st.dataframe(_flat, use_container_width=True, hide_index=True,
+                         column_config={
+                             "印藥水日": st.column_config.TextColumn("印藥水日", width="medium"),
+                             "區":      st.column_config.TextColumn("區",      width="small"),
+                             "姓名":    st.column_config.TextColumn("姓名",    width="medium"),
+                         })
         else:
             st.dataframe(disp.T, use_container_width=True)   # 直式：日期當列，區當欄
 
@@ -1279,8 +1284,8 @@ if mode.startswith("🟦"):
         _line_txt = _build_line_txt(rows, disp_df=disp)
         if _line_txt:
             st.markdown("**📋 LINE 群組公告格式**")
-            st.text_area("長按複製，或按下方按鈕下載 txt 傳 LINE",
-                         _line_txt, height=220, key="line_txt_box")
+            st.caption("長按複製，或按下方按鈕下載 txt 傳 LINE")
+            st.code(_line_txt, language=None)
             st.download_button("⬇️ 下載 txt 傳 LINE 群組",
                                _line_txt.encode("utf-8"),
                                file_name=f"印藥水名單_{sheet0}.txt",
