@@ -273,7 +273,11 @@ def fetch_week_draft():
         rows_raw = d["rows"]
         if len(rows_raw) < 2: return None, None
         sheet0 = str(rows_raw[1][0])
-        rows = [r[1:] for r in rows_raw[1:]]
+        # GAS 回傳日期可能是 "2026-07-05T16:00:00.000Z"，只取 YYYY-MM-DD
+        def _clean_dt(s):
+            m = re.match(r'(\d{4}-\d{2}-\d{2})', str(s).strip())
+            return m.group(1) if m else str(s).strip()
+        rows = [[_clean_dt(r[1])] + [str(x) for x in r[2:]] for r in rows_raw[1:]]
         return rows, sheet0
     except Exception:
         return None, None
@@ -509,7 +513,11 @@ def _reconstruct_disp_from_rows(rows):
     """從 cloud_rows 重建簡化版 disp DataFrame（日期×區 的 pivot，供草稿檢視）。"""
     if not rows: return pd.DataFrame()
     try:
-        df = pd.DataFrame([[str(v) for v in r] for r in rows], columns=["印日期","區","姓名"])
+        def _clean_dt(s):
+            m = re.match(r'(\d{4}-\d{2}-\d{2})', str(s).strip())
+            return m.group(1) if m else str(s).strip()
+        cleaned = [[_clean_dt(r[0])] + [str(x) for x in r[1:]] for r in rows]
+        df = pd.DataFrame(cleaned, columns=["印日期","區","姓名"])
         pivot = df.pivot_table(index="區", columns="印日期", values="姓名", aggfunc="first").fillna("")
         pivot.index.name = None; pivot.columns.name = None
         return pivot
@@ -644,7 +652,7 @@ def _build_line_txt(rows, disp_df=None):
 
 
 # ── 💬 意見回饋：借用稽核歷史（特殊鍵「意見-時間」）存放，不動 LINE 程式 ──
-APP_VER = "v3.19"
+APP_VER = "v3.20"
 FEEDBACK_PREFIX = "意見-"
 
 def push_feedback(step, detail, expect, urgency, who):
@@ -887,7 +895,7 @@ if TEST_MODE:
 
 st.title("💊 透析藥水排班")
 st.caption("上傳班表 Excel → 出名單(表格)。可直接點格子改人名。跨區標 🔺。")
-st.caption("🟢 版本 v3.19（修正休息名單：有🔺的人不再重複出現在休息欄）· 2026-07-06")
+st.caption("🟢 版本 v3.20（修正載入草稿：日期不再跑版、載入草稿≠定案完成）· 2026-07-06")
 
 with st.expander("📖 第一次用？點我看「3 步驟」（給玉繡）", expanded=False):
     st.markdown("""
@@ -1093,6 +1101,7 @@ if mode.startswith("🟦"):
                 st.session_state["cloud_rows"]   = _ar
                 st.session_state["cloud_disp"]   = _reconstruct_disp_from_rows(_ar)
                 st.session_state["cloud_sheet0"] = _as
+                st.session_state["cloud_rows_source"] = "draft"
                 st.session_state.pop("week_draft_auto", None)
                 st.rerun()
             if _dc2.button("✕ 略過", key="auto_draft_skip"):
@@ -1105,13 +1114,14 @@ if mode.startswith("🟦"):
         if _wd:
             st.info(f"📂 找到上次的定案（{_wd.get('sheet0','')}），要恢復嗎？")
             _cy, _cn = st.columns(2)
-            if _cy.button("✅ 恢復，直接送雲端"):
+            if _cy.button("📋 載入草稿（確認後再送雲端）"):
                 try:
                     _d = _wd["disp"]
                     st.session_state["cloud_rows"]   = _wd["rows"]
                     st.session_state["cloud_disp"]   = pd.DataFrame(
                         _d["data"], index=_d["index"], columns=_d["columns"])
                     st.session_state["cloud_sheet0"] = _wd["sheet0"]
+                    st.session_state["cloud_rows_source"] = "draft"
                     st.rerun()
                 except Exception as _e:
                     st.error(f"恢復失敗：{_e}")
@@ -1210,6 +1220,7 @@ if mode.startswith("🟦"):
                 st.session_state["cloud_rows"]   = rows
                 st.session_state["cloud_disp"]   = disp
                 st.session_state["cloud_sheet0"] = sheet0
+                st.session_state["cloud_rows_source"] = "finalized"
                 _save_week_draft(rows, sheet0, disp)   # 自動存本機
                 if not TEST_MODE and APPS_SCRIPT_URL and WRITE_SECRET:
                     push_week_draft(rows, sheet0)      # 自動存雲端草稿（含手動修改）
@@ -1219,7 +1230,11 @@ if mode.startswith("🟦"):
         rows   = st.session_state["cloud_rows"]
         disp   = st.session_state["cloud_disp"]
         sheet0 = st.session_state["cloud_sheet0"]
-        st.success("✅ 定案完成！")
+        _src = st.session_state.get("cloud_rows_source", "finalized")
+        if _src == "draft":
+            st.info("📋 已載入草稿（僅供確認，尚未送雲端）")
+        else:
+            st.success("✅ 定案完成！")
         st.dataframe(disp.T, use_container_width=True)   # 直式：日期當列，區當欄
 
         # 定案後顯示實際休息人員（依玉繡最終調整，非演算法原始結果）
