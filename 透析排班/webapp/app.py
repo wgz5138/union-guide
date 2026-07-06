@@ -652,7 +652,7 @@ def _build_line_txt(rows, disp_df=None):
 
 
 # ── 💬 意見回饋：借用稽核歷史（特殊鍵「意見-時間」）存放，不動 LINE 程式 ──
-APP_VER = "v3.20"
+APP_VER = "v3.21"
 FEEDBACK_PREFIX = "意見-"
 
 def push_feedback(step, detail, expect, urgency, who):
@@ -895,7 +895,7 @@ if TEST_MODE:
 
 st.title("💊 透析藥水排班")
 st.caption("上傳班表 Excel → 出名單(表格)。可直接點格子改人名。跨區標 🔺。")
-st.caption("🟢 版本 v3.20（修正載入草稿：日期不再跑版、載入草稿≠定案完成）· 2026-07-06")
+st.caption("🟢 版本 v3.21（草稿改用列表顯示，消除空白欄位）· 2026-07-06")
 
 with st.expander("📖 第一次用？點我看「3 步驟」（給玉繡）", expanded=False):
     st.markdown("""
@@ -1235,7 +1235,18 @@ if mode.startswith("🟦"):
             st.info("📋 已載入草稿（僅供確認，尚未送雲端）")
         else:
             st.success("✅ 定案完成！")
-        st.dataframe(disp.T, use_container_width=True)   # 直式：日期當列，區當欄
+        if _src == "draft":
+            # 草稿來源：用平鋪列表顯示，避免 pivot 因印日期不同而出現空白欄
+            def _clean_dt_disp(s):
+                m = re.match(r'(\d{4}-\d{2}-\d{2})', str(s).strip())
+                return m.group(1) if m else str(s).strip()
+            _flat = pd.DataFrame(
+                [[_clean_dt_disp(r[0]), str(r[1]), str(r[2])] for r in rows],
+                columns=["印藥水日", "區", "姓名"]
+            ).sort_values("印藥水日").reset_index(drop=True)
+            st.dataframe(_flat, use_container_width=True, hide_index=True)
+        else:
+            st.dataframe(disp.T, use_container_width=True)   # 直式：日期當列，區當欄
 
         # 定案後顯示實際休息人員（依玉繡最終調整，非演算法原始結果）
         _roster_all = _load_roster_full()
