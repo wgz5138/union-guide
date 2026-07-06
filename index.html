@@ -587,7 +587,11 @@ document.querySelectorAll('.faq-q').forEach(q => {
     const item = q.parentElement;
     const was = item.classList.contains('open');
     document.querySelectorAll('.faq-item').forEach(i => i.classList.remove('open'));
-    if (!was) item.classList.add('open');
+    if (!was) {
+      item.classList.add('open');
+      // 等 display:block 生效後再捲動（Android 需要這一 tick）
+      setTimeout(() => item.scrollIntoView({ behavior: 'smooth', block: 'nearest' }), 50);
+    }
   });
 });
 </script>
