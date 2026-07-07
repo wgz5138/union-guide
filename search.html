@@ -436,7 +436,7 @@ document.getElementById("man-tour").addEventListener("click",()=>{ closeManual()
 /* ===== 小工具 ===== */
 function cleanAbs(t){ return String(t||"").replace(/<h[1-6][^>]*>/gi,"\n").replace(/<\/h[1-6]>/gi,"：").replace(/<[^>]+>/g," ").replace(/[ \t]{2,}/g," ").replace(/\s*\n\s*/g,"\n").trim(); }
 // 🔄 自動偵測新版本
-const BUILD="2026070701";
+const BUILD="2026070702";
 const CHANGELOG=[
   "每篇文獻新增「🌐 翻譯中文」：有 API 金鑰用 Claude 翻（醫學術語更準），沒有則自動用 MyMemory 免費翻，不需跳頁",
   "新增「⚖️ AI 律師」工具（勞動法主場，引法條／判斷對方說法／列證據；法規用全國法規資料庫官方真資料；上方可進）",
@@ -742,6 +742,18 @@ document.getElementById("pay-toggle").addEventListener("click",()=>{ const d=doc
 ["q-desc","q-query"].forEach(id=>{ const el=document.getElementById(id);
   const s=localStorage.getItem("ebnq_"+id); if(s)el.value=s;
   el.addEventListener("input",()=>localStorage.setItem("ebnq_"+id,el.value)); });
+
+/* 偵測：貼進搜尋框的內容含 QUERY1/2/3 → 自動解析到三格 */
+document.getElementById("q-query").addEventListener("paste",e=>{
+  const pasted=(e.clipboardData||window.clipboardData).getData("text")||"" ;
+  if(!/QUERY\s*[123]\s*[:：]/i.test(pasted)) return;
+  e.preventDefault();
+  const [q1,q2,q3]=parseQueryReply(pasted);
+  if(!q1&&!q2&&!q3) return;
+  showQueryBoxes(q1,q2,q3);
+  document.getElementById("q-boxes").scrollIntoView({behavior:"smooth",block:"center"});
+  toast("已自動拆成三格，點格子旁「🔎 搜這個」");
+});
 
 /* ===== 🌐 翻譯中文 ===== */
 async function translateCard(btn, i){
