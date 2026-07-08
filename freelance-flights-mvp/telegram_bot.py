@@ -108,33 +108,49 @@ def main():
     print("🤖 機票 bot 啟動，去 Telegram 傳訊息給它吧～（這個視窗按 Ctrl+C 可停止）")
     offset = None
     while True:
+        # 取得新訊息：連線錯、或回應不是 JSON，都自我恢復，絕不讓 bot 整支掛掉
         try:
             r = requests.get(f"{API}/getUpdates",
                              params={"timeout": 30, "offset": offset}, timeout=40)
-            updates = r.json().get("result", [])
-        except requests.RequestException as e:
-            print("連線問題，5 秒後重試：", e)
+            data = r.json()
+        except (requests.RequestException, ValueError) as e:
+            print("連線/回應問題，5 秒後重試：", e)
             time.sleep(5)
             continue
 
-        for upd in updates:
-            offset = upd["update_id"] + 1
-            msg = upd.get("message") or {}
-            chat_id = (msg.get("chat") or {}).get("id")
-            text = (msg.get("text") or "").strip()
-            if not chat_id or not text:
-                continue
-            if OWNER and str(chat_id) != str(OWNER):
-                continue  # 只回應本人
-            if text in ("/start", "help", "說明", "?", "？"):
-                send(chat_id, 說明)
-                continue
-            print("收到：", text)
+        if not data.get("ok", False):
+            if data.get("error_code") == 409:
+                print("⚠ 偵測到另一個 bot 也在收訊息（409 衝突）。"
+                      "請只留一個：先點『停止機器人.bat』再重開一個。10 秒後重試…")
+                time.sleep(10)
+            else:
+                print("Telegram 回報異常，5 秒後重試：", data)
+                time.sleep(5)
+            continue
+
+        for upd in data.get("result", []):
             try:
-                reply = handle(text)
+                offset = upd["update_id"] + 1
+                msg = upd.get("message") or {}
+                chat_id = (msg.get("chat") or {}).get("id")
+                text = (msg.get("text") or "").strip()
+                if not chat_id or not text:
+                    continue
+                if OWNER and str(chat_id) != str(OWNER):
+                    continue  # 只回應本人
+                if text in ("/start", "help", "說明", "?", "？"):
+                    send(chat_id, 說明)
+                    continue
+                print("收到：", text)
+                try:
+                    reply = handle(text)
+                except Exception as e:
+                    reply = f"查詢出錯：{e}"
+                send(chat_id, reply)
             except Exception as e:
-                reply = f"查詢出錯：{e}"
-            send(chat_id, reply)
+                # 單則訊息出錯只略過該則，bot 繼續活著
+                print("處理某則訊息出錯（略過）：", e)
+                continue
 
 
 if __name__ == "__main__":
