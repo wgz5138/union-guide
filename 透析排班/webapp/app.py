@@ -616,15 +616,15 @@ def _build_line_txt(rows, disp_df=None):
             if assigns:
                 treats.append({"t": t_str, "p": print_str or t_str, "a": assigns})
     else:
-        # fallback：印藥水日分組（可能碰撞，舊行為）
+        # fallback：印藥水日分組，同一區同一天可能有多人，用 list 累積
         tmp = {}
         for r in rows:
             p_str, area, name = str(r[0]), str(r[1]), str(r[2])
             if not name or name in ("","❌排不出"): continue
-            if p_str not in tmp: tmp[p_str] = {}
-            tmp[p_str][area] = name
+            tmp.setdefault(p_str, {}).setdefault(area, []).append(name)
         for p_str in sorted(tmp):
-            treats.append({"t": p_str, "p": p_str, "a": tmp[p_str]})
+            a = {area: "、".join(names) for area, names in tmp[p_str].items()}
+            treats.append({"t": p_str, "p": p_str, "a": a})
 
     if not treats: return ""
     treats.sort(key=lambda x: x["t"])   # 依治療日排序
@@ -643,8 +643,10 @@ def _build_line_txt(rows, disp_df=None):
     if roster:
         printing = set()
         for e in treats:
-            # 去掉 🔺 再比對，否則 "王乃君🔺" 對不上名冊的 "王乃君"
-            printing.update(re.sub(r'🔺', '', nm).strip() for nm in e["a"].values())
+            # 去掉 🔺 再比對；同一格可能有多人用「、」串接，拆開各別加入
+            for nm_joined in e["a"].values():
+                for nm_single in nm_joined.split("、"):
+                    printing.add(re.sub(r'🔺', '', nm_single).strip())
         resting = [m["姓名"] for m in roster if m["姓名"] not in printing]
         if resting:
             lines += ["", "休息：" + "、".join(resting)]
@@ -895,7 +897,7 @@ if TEST_MODE:
 
 st.title("💊 透析藥水排班")
 st.caption("上傳班表 Excel → 出名單(表格)。可直接點格子改人名。跨區標 🔺。")
-st.caption("🟢 版本 v3.22（LINE 公告改等寬字型、草稿欄位寬度優化）· 2026-07-06")
+st.caption("🟢 版本 v3.23（修正：同區同日多人時休息名單統計錯誤）· 2026-07-09")
 
 with st.expander("📖 第一次用？點我看「3 步驟」（給玉繡）", expanded=False):
     st.markdown("""
@@ -1281,7 +1283,8 @@ if mode.startswith("🟦"):
                     st.error("清除失敗。")
 
         # LINE 群組公告文字
-        _line_txt = _build_line_txt(rows, disp_df=disp)
+        # 草稿來源不能傳 disp（pivot 用 aggfunc="first" 會丟失同區多人），直接走 rows fallback
+        _line_txt = _build_line_txt(rows, disp_df=(None if _src == "draft" else disp))
         if _line_txt:
             st.markdown("**📋 LINE 群組公告格式**")
             st.caption("長按複製，或按下方按鈕下載 txt 傳 LINE")
