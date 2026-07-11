@@ -510,19 +510,24 @@ def sync_audit_history_from_csv():
         return False, 0, str(e)
 
 def _reconstruct_disp_from_rows(rows):
-    """從 cloud_rows 重建簡化版 disp DataFrame（日期×區 的 pivot，供草稿檢視）。"""
+    """從 cloud_rows 重建簡化版 disp DataFrame（日期×區 的 pivot，供草稿檢視）。
+    rows 格式：[印日期, 區, 姓名] 或新格式 [印日期, 區, 姓名, 🔺, 治療欄]，只取前三欄。
+    同區同印日多人時用「、」串接，不再只留第一個。
+    """
     if not rows: return pd.DataFrame()
     try:
         def _clean_dt(s):
             m = re.match(r'(\d{4}-\d{2}-\d{2})', str(s).strip())
             return m.group(1) if m else str(s).strip()
-        cleaned = [[_clean_dt(r[0])] + [str(x) for x in r[1:]] for r in rows]
+        cleaned = [[_clean_dt(r[0]), str(r[1]), str(r[2])] for r in rows]
         df = pd.DataFrame(cleaned, columns=["印日期","區","姓名"])
-        pivot = df.pivot_table(index="區", columns="印日期", values="姓名", aggfunc="first").fillna("")
+        pivot = df.pivot_table(index="區", columns="印日期", values="姓名",
+                               aggfunc=lambda x: "、".join(x.dropna())).fillna("")
         pivot.index.name = None; pivot.columns.name = None
         return pivot
     except Exception:
-        return pd.DataFrame(rows, columns=["印日期","區","姓名"])
+        return pd.DataFrame([[str(r[0]), str(r[1]), str(r[2])] for r in rows],
+                             columns=["印日期","區","姓名"])
 
 # ── 印藥水定案本機草稿（app 重開可恢復）────────────────────
 WEEK_DRAFT_PATH = os.path.join(HERE, "last_week_draft.json")
@@ -897,7 +902,7 @@ if TEST_MODE:
 
 st.title("💊 透析藥水排班")
 st.caption("上傳班表 Excel → 出名單(表格)。可直接點格子改人名。跨區標 🔺。")
-st.caption("🟢 版本 v3.23（修正：同區同日多人時休息名單統計錯誤）· 2026-07-09")
+st.caption("🟢 版本 v3.24（四項系統修正：草稿掉名/自動套回碰撞/🔺草稿失效/暫存失敗提示）· 2026-07-11")
 
 with st.expander("📖 第一次用？點我看「3 步驟」（給玉繡）", expanded=False):
     st.markdown("""
@@ -1165,17 +1170,39 @@ if mode.startswith("🟦"):
             if _prev_rows and _prev_sheet == sheet0:
                 for _cr in _prev_rows:
                     try:
-                        _dstr, _area, _nm = _cr[0], _cr[1], _cr[2]
-                        _mo = int(_dstr.split('-')[1]); _dy = int(_dstr.split('-')[2])
-                        _tgt = f"{_mo}/{_dy}"
-                        for _col in dates.columns:
-                            if str(dates.loc[_area, _col]).strip() == _tgt:
-                                override_names.loc[_area, _col] = _nm
-                                break
+                        _area = str(_cr[1]); _nm = str(_cr[2])
+                        if not _nm or _nm in ("", "❌排不出"): continue
+                        if (len(_cr) >= 5 and str(_cr[4])
+                                and _area in override_names.index
+                                and str(_cr[4]) in override_names.columns):
+                            # 新格式：直接用存好的治療欄 key，不靠印日期推算，零碰撞
+                            override_names.loc[_area, str(_cr[4])] = _nm
+                        else:
+                            # 舊格式（3欄）：向下相容，用印日期比對（同日多人時仍可能偏差）
+                            _dstr = str(_cr[0])
+                            _mo = int(_dstr.split('-')[1]); _dy = int(_dstr.split('-')[2])
+                            _tgt = f"{_mo}/{_dy}"
+                            for _col in dates.columns:
+                                if str(dates.loc[_area, _col]).strip() == _tgt:
+                                    override_names.loc[_area, _col] = _nm
+                                    break
                     except Exception:
                         pass
-                # 也套回上次定案的 🔺（以 cloud_disp 為準，不用原始班表位置）
-                if _prev_disp is not None and not _prev_disp.empty:
+
+                # 套回 🔺 標記：新格式從 rows[3]+rows[4] 讀，舊格式從 cloud_disp 讀
+                _new_fmt = [cr for cr in _prev_rows if len(cr) >= 5]
+                if _new_fmt:
+                    for _area in marks.index:
+                        for _col in marks.columns:
+                            marks.loc[_area, _col] = ""
+                    for _cr in _new_fmt:
+                        try:
+                            _area, _mk, _col = str(_cr[1]), str(_cr[3]), str(_cr[4])
+                            if _area in marks.index and _col in marks.columns:
+                                marks.loc[_area, _col] = _mk
+                        except Exception:
+                            pass
+                elif _prev_disp is not None and not _prev_disp.empty:
                     for _r in marks.index:
                         for _c in marks.columns:
                             if _r in _prev_disp.index and _c in _prev_disp.columns:
@@ -1215,7 +1242,8 @@ if mode.startswith("🟦"):
                             disp.loc[r,c] = f"{nm}({dt}印){mk}" if dt else f"{nm}{mk}"
                             if dt:
                                 mo,dy = dt.split("/")
-                                rows.append([f"{yr}-{int(mo):02d}-{int(dy):02d}", r, nm])
+                                # 格式：[印日期, 區, 姓名, 🔺標記, 治療欄key]
+                                rows.append([f"{yr}-{int(mo):02d}-{int(dy):02d}", r, nm, mk, str(c)])
                         else:
                             disp.loc[r,c] = nm
                 rows.sort(key=lambda x:(x[0],x[1]))
@@ -1225,7 +1253,9 @@ if mode.startswith("🟦"):
                 st.session_state["cloud_rows_source"] = "finalized"
                 _save_week_draft(rows, sheet0, disp)   # 自動存本機
                 if not TEST_MODE and APPS_SCRIPT_URL and WRITE_SECRET:
-                    push_week_draft(rows, sheet0)      # 自動存雲端草稿（含手動修改）
+                    _draft_ok = push_week_draft(rows, sheet0)
+                    if not _draft_ok:
+                        st.warning("⚠️ 雲端草稿暫存失敗（網路問題？），請稍後按「💾 備份草稿」手動重試。")
 
     # 定案顯示（有定案就顯示，不管是否剛排班）
     if "cloud_rows" in st.session_state:
@@ -1308,7 +1338,8 @@ if mode.startswith("🟦"):
                         resp = requests.post(
                             APPS_SCRIPT_URL,
                             json={"action":"setWeek","secret":WRITE_SECRET,
-                                  "rows":[[str(x) for x in r] for r in rows]},
+                                  # 只送前3欄（印日期/區/姓名）給GAS，多餘的治療欄/🔺欄不外送
+                                  "rows":[[str(r[0]), str(r[1]), str(r[2])] for r in rows]},
                             timeout=45)
                         if resp.ok and '"ok":true' in resp.text:
                             st.success(f"🎉 已送到雲端！共 {len(rows)} 筆。系統會自動 LINE 提醒，你不用再做任何事。")
