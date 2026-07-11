@@ -902,7 +902,7 @@ if TEST_MODE:
 
 st.title("💊 透析藥水排班")
 st.caption("上傳班表 Excel → 出名單(表格)。可直接點格子改人名。跨區標 🔺。")
-st.caption("🟢 版本 v3.24（四項系統修正：草稿掉名/自動套回碰撞/🔺草稿失效/暫存失敗提示）· 2026-07-11")
+st.caption("🟢 版本 v3.25（+修正：手動備援 CSV 因 rows 新格式而炸裂）· 2026-07-11")
 
 with st.expander("📖 第一次用？點我看「3 步驟」（給玉繡）", expanded=False):
     st.markdown("""
@@ -1360,7 +1360,8 @@ if mode.startswith("🟦"):
             st.warning("雲端直送尚未設定（請在 Streamlit Secrets 填 APPS_SCRIPT_URL 與 WRITE_SECRET）。")
 
         with st.expander("📋 手動備援（複製貼到試算表 / 下載 CSV）"):
-            cloud = pd.DataFrame(rows, columns=["印日期","區","姓名"])
+            # 只取前3欄（rows 可能是新格式5欄），避免 DataFrame 欄數不符
+            cloud = pd.DataFrame([[r[0], r[1], r[2]] for r in rows], columns=["印日期","區","姓名"])
             tsv = cloud.to_csv(index=False, sep="\t")
             st.markdown("① 按右上角複製鈕　→　② 開試算表「本週名單」　→　③ 點 A1 貼上")
             st.code(tsv, language=None)
