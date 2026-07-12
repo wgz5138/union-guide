@@ -76,6 +76,10 @@
 
   .prompt-area{width:100%;min-height:150px;background:#0A111C;border:1px solid var(--line);border-radius:10px;padding:.85rem;font-family:'JetBrains Mono',monospace;font-size:12px;line-height:1.6;color:var(--txt2);white-space:pre-wrap;resize:vertical}
   .ai-links{display:flex;gap:8px;margin-top:10px;flex-wrap:wrap}.ai-links a{flex:1;min-width:130px;text-align:center;text-decoration:none}
+  .q-box-row{display:grid;grid-template-columns:auto 1fr auto;align-items:center;gap:8px;margin-bottom:8px}
+  .q-label{font-size:12px;font-weight:700;color:var(--acc);white-space:nowrap;min-width:80px}
+  .q-label small{font-weight:400;color:var(--muted);margin-left:4px}
+  .q-search-btn{white-space:nowrap;flex:0 0 auto}
 
   #status{font-size:13px;color:var(--muted);margin:14px 0 6px;min-height:18px}
   .res{border:1px solid var(--line);border-radius:12px;padding:14px;margin-bottom:10px;background:#0F18260f;transition:border-color .15s}
@@ -90,11 +94,9 @@
   .b.rct{background:rgba(79,157,255,.14);color:var(--blue);border:1px solid rgba(79,157,255,.3)}
   .b.oa{background:rgba(46,213,160,.14);color:var(--green);border:1px solid rgba(46,213,160,.3)}
   .b.coch{background:rgba(183,155,255,.14);color:var(--violet);border:1px solid rgba(183,155,255,.3)}
-  .tr-title{font-size:14px;font-weight:600;color:#2ed5a0;line-height:1.5;margin-top:5px;display:none}
-  .tr-title.show{display:block}
-  .tr-title.loading{color:var(--muted);font-style:italic;font-weight:400}
-  .tr-abs{font-size:13px;color:#a8e8c8;line-height:1.8;margin:8px 0 0 27px;padding:10px 14px;background:rgba(46,213,160,.07);border-left:3px solid rgba(46,213,160,.45);border-radius:0 8px 8px 0;display:none}
-  .tr-abs.show{display:block}
+  .res-tr{font-size:13px;color:#a8e8c8;line-height:1.8;background:rgba(46,213,160,.06);border:1px solid rgba(46,213,160,.22);border-radius:10px;padding:10px 12px;white-space:pre-wrap}
+  .res-tr .tr-title{font-weight:700;color:#2ed5a0;margin-bottom:6px}
+  .res-tr .tr-loading{color:var(--muted);font-style:italic}
   .res-abs{font-size:13px;color:var(--txt2);line-height:1.7;margin:10px 0 0 27px;max-height:84px;overflow:hidden;position:relative;transition:max-height .25s}
   .res-abs.open{max-height:1500px}
   .res-abs::after{content:'';position:absolute;left:0;right:0;bottom:0;height:30px;background:linear-gradient(transparent,#0c1320)}
@@ -113,11 +115,6 @@
   .relay-toggle{font-size:12.5px;color:var(--blue);cursor:pointer;user-select:none;display:inline-block;margin:14px 0 4px}
   @keyframes dots{0%{content:''}33%{content:'.'}66%{content:'..'}100%{content:'...'}}
   .dots::after{content:'';animation:dots 1.2s infinite}
-  .refine-row{display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin-bottom:8px}
-  .refine-label{font-size:11px;color:var(--muted);min-width:72px;flex-shrink:0}
-  .rchip{font-size:12px;padding:4px 11px;border-radius:20px;border:1px solid var(--line);color:var(--txt2);cursor:pointer;user-select:none;transition:.12s;background:#0F1622}
-  .rchip:hover{border-color:var(--amber);color:var(--amber)}
-  .rchip.on{background:rgba(255,177,61,.15);border-color:var(--amber);color:var(--amber);font-weight:600}
   footer{text-align:center;padding:24px 16px 40px;font-size:11.5px;color:var(--muted);line-height:1.8;max-width:720px;margin:0 auto}
 
   /* 操作手冊 */
@@ -233,10 +230,7 @@
     <!-- ① 中文描述 → 關鍵字 -->
     <div class="label"><span class="n">1</span>不會下關鍵字？用中文描述你的問題<button id="clear-btn" type="button" style="margin-left:auto;font-size:11px;text-transform:none;letter-spacing:0;background:rgba(255,122,122,.12);color:#ff9a9a;border:1px solid rgba(255,122,122,.35);border-radius:16px;padding:5px 12px;cursor:pointer;font-family:inherit">🗑 清除換下一題</button></div>
     <div class="card">
-      <div style="position:relative">
-        <textarea class="txt" id="q-desc" rows="3" placeholder="例：糖尿病長期洗腎病人，洗腎中嚴重低血壓、水脫不掉，有什麼處理方式？" style="padding-right:48px"></textarea>
-        <button id="mic-btn" type="button" title="語音輸入（繁體中文）" style="position:absolute;right:8px;top:8px;width:34px;height:34px;border-radius:50%;border:1px solid var(--line);background:#0F1622;color:var(--txt2);font-size:17px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:.15s">🎤</button>
-      </div>
+      <textarea class="txt" id="q-desc" rows="3" placeholder="例：糖尿病長期洗腎病人，洗腎中嚴重低血壓、水脫不掉，有什麼處理方式？"></textarea>
       <div class="btn-row">
         <button class="btn btn-ghost" id="q-prompt-btn">🧠 免費：複製貼給 AI</button>
         <button class="btn btn-ghost" id="q-auto-btn">⚡ 付費：直接生成查詢</button>
@@ -248,7 +242,15 @@
           <a class="btn btn-ghost btn-sm" href="https://chatgpt.com/" target="_blank" rel="noopener">↗ ChatGPT</a>
           <a class="btn btn-ghost btn-sm" href="https://claude.ai/new" target="_blank" rel="noopener">↗ Claude</a>
         </div>
-        <div class="hint">AI 會回你兩行查詢（精準版＋寬鬆版）。先把 <b>QUERY1（精準）</b> 貼到下面第②步搜尋；沒結果就改貼 <b>QUERY2（寬鬆）</b>。記得開新分頁、別按上一頁，AI 對話才不會消失。</div>
+        <div class="hint" style="margin-bottom:6px">把 AI 回覆整段貼下方 → 自動拆出三組查詢字串</div>
+        <textarea class="prompt-area" id="q-reply-in" rows="4" placeholder="把 AI 回給你的整段文字（含 QUERY1: … QUERY2: … QUERY3: …）貼在這裡"></textarea>
+        <button class="btn btn-ghost" id="parse-reply-btn" style="width:100%;margin-top:6px">⚡ 解析 → 產生三個查詢格</button>
+      </div>
+      <!-- 三個查詢格（AI 產生後顯示） -->
+      <div id="q-boxes" style="display:none;margin-top:10px">
+        <div class="q-box-row"><span class="q-label">QUERY1 <small>精準 10~50 篇</small></span><input class="txt" id="qb1" autocapitalize="off" autocorrect="off" spellcheck="false" placeholder="（等 AI 生成）"><button class="btn btn-primary q-search-btn" data-qb="qb1">🔎 搜這個</button></div>
+        <div class="q-box-row"><span class="q-label">QUERY2 <small>寬鬆 50~150 篇</small></span><input class="txt" id="qb2" autocapitalize="off" autocorrect="off" spellcheck="false" placeholder="（等 AI 生成）"><button class="btn btn-ghost q-search-btn" data-qb="qb2">🔎 搜這個</button></div>
+        <div class="q-box-row"><span class="q-label">QUERY3 <small>超寬鬆</small></span><input class="txt" id="qb3" autocapitalize="off" autocorrect="off" spellcheck="false" placeholder="（等 AI 生成）"><button class="btn btn-ghost q-search-btn" data-qb="qb3">🔎 搜這個</button></div>
       </div>
     </div>
 
@@ -277,43 +279,6 @@
 
     <div id="status"></div>
 
-    <!-- 精準化面板：結果 ≥50 時自動出現 -->
-    <div id="refine-panel" style="display:none;margin:4px 0 10px">
-      <div class="card" style="border-color:rgba(255,177,61,.3);background:rgba(255,177,61,.04)">
-        <div style="font-size:13px;color:var(--amber);font-weight:600;margin-bottom:10px">🎯 結果太多？點選條件精準化，自動加進查詢重搜：</div>
-        <div class="refine-row"><span class="refine-label">👤 病人</span>
-          <span class="rchip" data-q='AND (adult OR adults)'>成人</span>
-          <span class="rchip" data-q='AND (elderly OR "older adults" OR aged)'>老年 ≥65歲</span>
-          <span class="rchip" data-q='AND (children OR pediatric OR paediatric)'>兒童</span>
-          <span class="rchip" data-q='AND (ICU OR "intensive care" OR critically ill)'>重症/ICU</span>
-          <span class="rchip" data-q='AND (chronic kidney disease OR dialysis OR hemodialysis)'>洗腎/慢腎</span>
-          <span class="rchip" data-q='AND (diabetes OR diabetic)'>糖尿病</span>
-        </div>
-        <div class="refine-row"><span class="refine-label">💊 介入</span>
-          <span class="rchip" data-q='AND (drug OR pharmacological OR medication OR pharmacotherapy)'>藥物治療</span>
-          <span class="rchip" data-q='AND (non-pharmacological OR lifestyle OR behavioral)'>非藥物/行為</span>
-          <span class="rchip" data-q='AND (surgery OR surgical OR procedure OR operation)'>手術/處置</span>
-          <span class="rchip" data-q='AND (monitoring OR surveillance OR management)'>監測/管理</span>
-        </div>
-        <div class="refine-row"><span class="refine-label">📊 結果</span>
-          <span class="rchip" data-q='AND (mortality OR survival OR death)'>死亡率/存活</span>
-          <span class="rchip" data-q='AND (hospitalization OR readmission OR "hospital stay")'>住院/再入院</span>
-          <span class="rchip" data-q='AND ("quality of life" OR QOL OR wellbeing)'>生活品質</span>
-          <span class="rchip" data-q='AND (adverse OR complication OR "side effect")'>副作用/併發症</span>
-          <span class="rchip" data-q='AND (diagnosis OR diagnostic OR sensitivity OR specificity)'>診斷</span>
-        </div>
-        <div class="refine-row"><span class="refine-label">🕐 時程</span>
-          <span class="rchip" data-q='AND (acute OR immediate OR short-term)'>急性/短期</span>
-          <span class="rchip" data-q='AND (chronic OR long-term OR longitudinal)'>慢性/長期</span>
-        </div>
-        <div id="refine-preview" style="margin-top:10px;font-size:12px;color:var(--muted);min-height:16px;word-break:break-all"></div>
-        <div class="btn-row" style="margin-top:8px">
-          <button class="btn btn-ghost btn-sm" id="refine-clear">✕ 清除所有選項</button>
-          <button class="btn btn-primary" id="refine-go" style="flex:1" disabled>🔎 套用精準條件，重新搜尋</button>
-        </div>
-      </div>
-    </div>
-
     <div class="fallback" id="fallback">
       <p>⚠ 直接搜尋被擋住了（可能是網路或防火牆）。沒關係，幫你一鍵開好「已填關鍵字」的搜尋頁：</p>
       <div class="btn-row">
@@ -323,11 +288,7 @@
       </div>
     </div>
 
-    <div id="translate-all-row" style="display:none;margin:10px 0 4px">
-      <button class="btn btn-ghost" id="translate-all-btn" style="width:100%;border-color:rgba(46,213,160,.4);color:#2ed5a0;font-size:15px;padding:.8rem">🌐 開啟 Chrome 翻譯（翻譯全部文獻）</button>
-      <div id="translate-all-status" style="font-size:12px;color:var(--muted);margin-top:6px;text-align:center;line-height:1.7"></div>
-    </div>
-    <div id="results" lang="en"></div>
+    <div id="results"></div>
 
     <!-- ③ AI 綜合 -->
     <div id="synth-wrap" style="display:none">
@@ -399,14 +360,13 @@
     <p>幫你<b>快速找醫學文獻的「標題＋摘要」</b>。你認出對的那篇，再用<b>醫院網路</b>點連結拿全文。它不抓全文（標題＋摘要就夠你認出來）。</p>
 
     <h3>不會下英文關鍵字？沒關係</h3>
-    <div class="tip">第①步用<b>中文</b>描述你的問題（或按 <b>🎤</b> 直接說）→ 按「🧠 幫我想英文關鍵字」→ 貼給 ChatGPT/Claude → 拿到英文查詢 → 貼到第②步搜尋。</div>
+    <div class="tip">第①步用<b>中文</b>描述你的問題 → 按「🧠 幫我想英文關鍵字」→ 把提示詞貼給 ChatGPT/Claude → 它回你一行英文查詢 → 貼到第②步搜尋。</div>
 
-    <h3>四步驟</h3>
+    <h3>三步驟</h3>
     <ol>
-      <li>（選）中文描述問題（可語音輸入🎤）→ 產生查詢 → 貼給 AI → 拿到英文查詢</li>
+      <li>（選）中文描述問題 → 產生查詢 → 貼給 AI → 拿到英文查詢</li>
       <li>把英文查詢貼進搜尋框 → 可篩「系統回顧／RCT、年份、只看 Cochrane」→ 按搜尋</li>
-      <li>結果太多？→ <b>精準化面板</b>自動出現，點選病人／介入／結果條件一鍵縮範圍</li>
-      <li>跑出清單 → 每篇可：<b>🌐 翻譯中文</b>、看全文、🔗 複製連結存 LINE、📋 帶去評讀</li>
+      <li>跑出清單（標題＋摘要）→ 每篇可：看 PubMed／出版社全文、🔗 複製連結存 LINE、📋 帶去評讀</li>
     </ol>
 
     <h3>全文去哪拿？</h3>
@@ -440,17 +400,14 @@ document.getElementById("wel-more").addEventListener("click",()=>{ document.getE
 document.getElementById("wel-tour").addEventListener("click",()=>{ document.getElementById("welcome").classList.remove("show"); startTour(); });
 /* ===== 互動導覽 ===== */
 const TOUR=[
-  {sel:"#q-desc", t:"① <b>用中文描述你的臨床問題</b>——或按右側 <b>🎤</b> 直接說，自動轉成文字。"},
-  {sel:"#q-query", t:"② AI 或你自己給的英文查詢，貼到這裡按 <b>🔎 搜尋</b>；可篩研究類型、年份、Cochrane。"},
-  {sel:"#demo-btn", t:"③ 第一次用？按 <b>「🧪 一鍵試範例」</b> 直接看搜尋效果，不用打字。"},
-  {sel:"#refine-panel", t:"④ 搜到太多篇？<b>精準化面板</b>會自動出現——點選病人／介入／結果條件，一鍵重搜縮範圍。", lazy:true},
-  {sel:"#translate-all-row", t:"⑤ 看到英文頭痛？<b>一鍵翻譯全部</b>，中文標題＋摘要直接顯示在卡片裡。", lazy:true},
-  {sel:"#synth-wrap", t:"⑥ 最後：勾選幾篇 → <b>AI 綜合</b> 幫你整理成實證結論附出處。走完囉 🎉", lazy:true}
+  {sel:"#q-desc", t:"① 用<b>中文</b>描述臨床問題即可。"},
+  {sel:"#demo-btn", t:"② 不想打字？點 <b>🧪 試範例</b> 直接看效果。"},
+  {sel:"#q-query", t:"③ 有英文查詢直接貼這貼；換題先按 <b>✕ 清空</b>。"},
+  {sel:"#status", t:"④ 結果點標題開全文，或 <b>📋 帶去評讀</b>。完成 🎉"}
 ];
 let _ti=0;
 function tourStep(){ document.querySelectorAll(".tour-hi").forEach(e=>e.classList.remove("tour-hi"));
-  const s=TOUR[_ti]; let el=document.querySelector(s.sel);
-  if(s.lazy&&(!el||el.style.display==="none")){ document.getElementById("tour-text").innerHTML="（"+(_ti+1)+"/"+TOUR.length+"）"+s.t+'<br><span style="font-size:12px;color:var(--muted)">（請先搜尋後才會顯示此功能）</span>'; document.getElementById("tour-next").textContent=_ti===TOUR.length-1?"完成 ✓":"下一步 →"; return; }
+  const s=TOUR[_ti], el=document.querySelector(s.sel);
   if(el){ el.classList.add("tour-hi"); el.scrollIntoView({behavior:"smooth",block:"center"}); }
   document.getElementById("tour-text").innerHTML="（"+(_ti+1)+"/"+TOUR.length+"）"+s.t;
   document.getElementById("tour-next").textContent=_ti===TOUR.length-1?"完成 ✓":"下一步 →"; }
@@ -479,7 +436,7 @@ document.getElementById("man-tour").addEventListener("click",()=>{ closeManual()
 /* ===== 小工具 ===== */
 function cleanAbs(t){ return String(t||"").replace(/<h[1-6][^>]*>/gi,"\n").replace(/<\/h[1-6]>/gi,"：").replace(/<[^>]+>/g," ").replace(/[ \t]{2,}/g," ").replace(/\s*\n\s*/g,"\n").trim(); }
 // 🔄 自動偵測新版本
-const BUILD="2026062709";
+const BUILD="2026070702";
 const CHANGELOG=[
   "每篇文獻新增「🌐 翻譯中文」：有 API 金鑰用 Claude 翻（醫學術語更準），沒有則自動用 MyMemory 免費翻，不需跳頁",
   "新增「⚖️ AI 律師」工具（勞動法主場，引法條／判斷對方說法／列證據；法規用全國法規資料庫官方真資料；上方可進）",
@@ -501,7 +458,6 @@ function clearSearch(){
   const st=document.getElementById("status"); if(st) st.innerHTML="";
   const sc=document.getElementById("sel-count"); if(sc) sc.textContent="";
   const cr=document.getElementById("copy-synth-result-row"); if(cr) cr.style.display="none";
-  const tar=document.getElementById("translate-all-row"); if(tar) tar.style.display="none";
   window.scrollTo({top:0,behavior:"smooth"});
   toast("已清除，可以查下一題 👍");
 }
@@ -527,12 +483,25 @@ function clearSearch(){
 document.getElementById("q-prompt-btn").addEventListener("click",()=>{
   const desc=val("q-desc"); if(!desc){ toast("先用中文描述你的問題"); return; }
   const L=[];
-  L.push("你是醫學文獻檢索專家。我會用中文描述一個臨床問題，請幫我：");
-  L.push("1. 用一句話點出核心 PICO（對象/介入/比較/結果）。");
-  L.push("2. 給我【兩行】英文查詢字串，給 Europe PMC 用（用 AND/OR 大寫、片語加引號、同義詞；**絕對不要用 PubMed 欄位標籤 [tiab]/[Mesh]/[Title/Abstract]**，這個搜尋框不吃、會找不到）：");
-  L.push("   - 第一行用 `QUERY1:` 開頭 = 精準版");
-  L.push("   - 第二行用 `QUERY2:` 開頭 = 寬鬆版（少幾個 AND 條件、命中率更高）");
-  L.push("這樣我精準版若沒結果，可直接改貼寬鬆版，不用再回來問你。兩行各自單獨一行方便我複製。");
+  L.push("你是醫學文獻檢索專家。我會用中文描述一個臨床問題，請依序完成：");
+  L.push("");
+  L.push("【步驟一】分析 PICO");
+  L.push("用一句話點出：P（病人特徵，含疾病＋情境＋時間點）、I（介入或暴露）、C（比較，若無請略）、O（最關鍵的結果）。");
+  L.push("⚠️ 特別注意時間點與情境（例：洗腎「中」vs「後回家」、「住院中」vs「出院後」是完全不同的問題，直接影響關鍵字）。");
+  L.push("");
+  L.push("【步驟二】給我【三行】英文查詢字串，給 Europe PMC 搜尋用");
+  L.push("規則（嚴格遵守）：");
+  L.push("  ・AND/OR 大寫、片語加引號");
+  L.push("  ・每個 OR 括號內最多 3 個同義詞，避免過度展開導致結果爆量");
+  L.push("  ・QUERY1 可加 NOT 排除明顯不相關情境（如 NOT animal）");
+  L.push("  ・絕對不用 PubMed 欄位標籤 [tiab][Mesh]");
+  L.push("目標篇數：精準版 10~50 篇、寬鬆版 50~150 篇、超寬鬆版不限。");
+  L.push("");
+  L.push("   QUERY1:（精準版）三個 AND，每括號 ≤3 個同義詞，可加 NOT");
+  L.push("   QUERY2:（寬鬆版）只保留最核心 1~2 個 AND 條件");
+  L.push("   QUERY3:（超寬鬆版）只留單一最核心概念");
+  L.push("");
+  L.push("每行各自單獨一行，方便我直接複製貼上。");
   L.push("");
   L.push("我的臨床問題：");
   L.push(desc);
@@ -540,6 +509,38 @@ document.getElementById("q-prompt-btn").addEventListener("click",()=>{
   document.getElementById("q-prompt-box").style.display="block";
 });
 document.getElementById("copy-qprompt").addEventListener("click",()=>copyEl("q-prompt-out","已複製，貼給 AI 拿查詢字串"));
+
+/* ── 解析 AI 回覆 → 三個查詢格 ── */
+function showQueryBoxes(q1,q2,q3){
+  const ids=["qb1","qb2","qb3"]; const qs=[q1,q2,q3];
+  ids.forEach((id,i)=>{ const el=document.getElementById(id); if(el) el.value=qs[i]||""; });
+  document.getElementById("q-boxes").style.display="block";
+}
+function parseQueryReply(text){
+  const clean=s=>(s||"").replace(/^\s*QUERY\s*\d*\s*[:：（(]\s*/i,"").replace(/[）)]\s*$/,"").replace(/\[[^\]]*\]/g," ").trim();
+  const lines=text.split(/\n/).map(l=>l.trim()).filter(Boolean);
+  const pick=(n)=>{
+    const re=new RegExp("QUERY\\s*"+n+"\\s*[:：]","i");
+    const l=lines.find(l=>re.test(l)); return l?clean(l):"";
+  };
+  return [pick(1),pick(2),pick(3)];
+}
+document.getElementById("parse-reply-btn").addEventListener("click",()=>{
+  const text=document.getElementById("q-reply-in").value;
+  if(!text.trim()){ toast("請先貼入 AI 回覆"); return; }
+  const [q1,q2,q3]=parseQueryReply(text);
+  if(!q1&&!q2&&!q3){ toast("找不到 QUERY1/2/3，確認 AI 有回三行查詢"); return; }
+  showQueryBoxes(q1,q2,q3);
+});
+document.querySelectorAll(".q-search-btn").forEach(btn=>{
+  btn.addEventListener("click",()=>{
+    const q=document.getElementById(btn.dataset.qb).value.trim();
+    if(!q){ toast("這格是空的"); return; }
+    document.getElementById("q-query").value=q;
+    localStorage.setItem("ebnq_q-query",q);
+    document.getElementById("search-btn").click();
+  });
+});
 
 /* ===== ② 搜尋（Europe PMC API） ===== */
 const EPMC="https://www.ebi.ac.uk/europepmc/webservices/rest/search";
@@ -574,7 +575,6 @@ async function doSearch(isRetry, overrideQ){
   if(!q){ toast("請先輸入查詢關鍵字"); return; }
   document.getElementById("status").innerHTML='搜尋中<span class="dots"></span>';
   document.getElementById("results").innerHTML="";
-  if(window._hideRefinePanel) window._hideRefinePanel();
   document.getElementById("synth-wrap").style.display="none";
   try{
     const url=`${EPMC}?query=${encodeURIComponent(q)}&format=json&resultType=core&pageSize=25&sort=`;
@@ -595,11 +595,6 @@ async function doSearch(isRetry, overrideQ){
     }
     document.getElementById("status").textContent=`找到約 ${data.hitCount} 篇，顯示前 ${RESULTS.length} 篇（標題＋摘要）：`;
     renderResults(); updateSelCount();
-    if(window._showRefinePanel) window._showRefinePanel(data.hitCount||0);
-    document.getElementById("translate-all-row").style.display="block";
-    document.getElementById("translate-all-status").textContent="";
-    document.getElementById("translate-all-btn").textContent="🌐 一鍵翻譯全部文章標題＋摘要";
-    document.getElementById("translate-all-btn").disabled=false;
     document.getElementById("synth-wrap").style.display="block";
   }catch(err){
     document.getElementById("status").textContent="";
@@ -631,15 +626,11 @@ function renderResults(){
     return `<div class="res">
       <div class="res-top">
         <input type="checkbox" class="res-chk" data-i="${i}">
-        <div style="flex:1">
-          <div class="res-title">${esc(r.title||"(無標題)")}</div>
-          <div class="tr-title" id="trt-${i}"></div>
-        </div>
+        <div class="res-title">${esc(r.title||"(無標題)")}</div>
       </div>
       <div class="res-meta">${esc(meta)}</div>
       <div class="res-badges">${typeBadge(r)}${oa}</div>
       <div class="res-abs" id="abs-${i}">${abs}</div>
-      <div class="tr-abs" id="tra-${i}"></div>
       <div class="res-more" data-i="${i}">展開摘要 ▾</div>
       <div class="res-src">📍 全文在這幾個地方找（到醫院網路點開）：</div>
       <div class="res-actions">
@@ -648,8 +639,9 @@ function renderResults(){
         <a class="btn btn-ghost btn-sm" href="https://scholar.google.com/scholar?q=${encodeURIComponent(r.title||"")}" target="_blank" rel="noopener">🔍 Google 學術</a>
         <button class="btn btn-ghost btn-sm" data-link="${i}">🔗 複製連結（存 LINE）</button>
         <button class="btn btn-ghost btn-sm" data-eval="${i}">📋 帶去評讀</button>
-        <button class="btn btn-ghost btn-sm tr-btn" data-tr="${i}">🌐 翻譯中文</button>
+        <button class="btn btn-ghost btn-sm" data-tr="${i}">🌐 翻譯中文</button>
       </div>
+      <div class="res-tr" id="tr-${i}" style="display:none;margin:10px 0 0 27px"></div>
     </div>`;
   }).join("");
   box.querySelectorAll(".res-more").forEach(el=>el.addEventListener("click",()=>{
@@ -658,7 +650,7 @@ function renderResults(){
   }));
   box.querySelectorAll("[data-eval]").forEach(b=>b.addEventListener("click",()=>toEval(RESULTS[+b.dataset.eval])));
   box.querySelectorAll("[data-link]").forEach(b=>b.addEventListener("click",()=>copyLink(RESULTS[+b.dataset.link])));
-  box.querySelectorAll(".tr-btn").forEach(b=>b.addEventListener("click",()=>translateOne(b,+b.dataset.tr)));
+  box.querySelectorAll("[data-tr]").forEach(b=>b.addEventListener("click",()=>translateCard(b,+b.dataset.tr)));
 }
 function bestUrl(r){ return r.doi?("https://doi.org/"+r.doi) : r.pmid?("https://pubmed.ncbi.nlm.nih.gov/"+r.pmid+"/") : ("https://scholar.google.com/scholar?q="+encodeURIComponent(r.title||"")); }
 function copyLink(r){ const meta=[r.journalTitle,r.pubYear].filter(Boolean).join(", "); copy((r.title||"")+(meta?("（"+meta+"）"):"")+"\n"+bestUrl(r),"已複製『標題＋連結』，可貼到 LINE 存檔"); }
@@ -709,13 +701,26 @@ async function callClaude(promptText,maxTok){
 document.getElementById("q-auto-btn").addEventListener("click",async()=>{
   const desc=val("q-desc"); if(!desc){ toast("先用中文描述你的問題"); return; }
   if(!apiKey()){ toast("先在上面貼你的 API 金鑰"); return; }
-  const st=document.getElementById("status"); st.textContent="⚡ 生成查詢中⋯⋯";
+  const st=document.getElementById("status"); st.textContent="⚡ 生成三組查詢中⋯⋯";
   try{
-    const {text,usage}=await callClaude("把以下臨床問題轉成一行英文查詢字串（給 Europe PMC 搜尋用）。用 AND/OR（大寫）、片語加引號、納入同義詞；不要用 PubMed 欄位標籤（[tiab]、[Mesh] 等）。只回那一行查詢字串本身，不要任何其他文字、不要 QUERY: 前綴。\n\n臨床問題："+desc, 300);
-    const q=text.trim().replace(/^QUERY[:：]\s*/i,"").split("\n")[0].trim();
-    document.getElementById("q-query").value=q; localStorage.setItem("ebnq_q-query",q);
-    st.textContent="⚡ 已生成查詢（花約 "+costOf(usage)+"），搜尋中⋯⋯";
-    doSearch();
+    const prompt=[
+      "你是醫學文獻檢索專家。將以下臨床問題轉成三行英文查詢字串（給 Europe PMC 搜尋用）。",
+      "規則：AND/OR 大寫、片語加引號；每個 OR 括號 ≤3 個同義詞；不要 PubMed 欄位標籤。",
+      "⚠️ 務必抓準時間點與情境（如「洗腎後回家」≠「洗腎中」）。",
+      "⚠️ QUERY1 可加 NOT 排除不相關情境（如 NOT animal NOT review）讓結果更精準。",
+      "請只回覆三行，格式完全照以下，不加任何說明：",
+      "QUERY1: （精準版：三個 AND 各一括號，每括號 ≤3 個同義詞，可加 NOT，目標 10~50 篇）",
+      "QUERY2: （寬鬆版：1~2 個 AND，目標 50~150 篇）",
+      "QUERY3: （超寬鬆版：單一概念，篇數不限）",
+      "",
+      "臨床問題："+desc
+    ].join("\n");
+    const {text,usage}=await callClaude(prompt, 600);
+    const [q1,q2,q3]=parseQueryReply(text);
+    showQueryBoxes(q1,q2,q3);
+    document.getElementById("q-boxes").scrollIntoView({behavior:"smooth",block:"center"});
+    st.textContent="⚡ 已生成三組查詢（花約 "+costOf(usage)+"），點格子旁「🔎 搜這個」即可";
+    document.getElementById("q-prompt-box").style.display="none";
   }catch(err){ st.textContent="⚡ "+apiErr(err); }
 });
 document.getElementById("synth-auto-btn").addEventListener("click",async()=>{
@@ -738,158 +743,58 @@ document.getElementById("pay-toggle").addEventListener("click",()=>{ const d=doc
   const s=localStorage.getItem("ebnq_"+id); if(s)el.value=s;
   el.addEventListener("input",()=>localStorage.setItem("ebnq_"+id,el.value)); });
 
-/* ===== 🌐 Google Translate 內嵌翻譯核心 ===== */
-async function gtr(text){
-  if(!text) return "";
-  const MAX=4800, parts=[];
-  for(let s=0;s<text.length;s+=MAX) parts.push(text.slice(s,s+MAX));
-  const out=[];
-  for(const chunk of parts){
-    const url=`https://translate.googleapis.com/translate_a/single?client=gtx&sl=en&tl=zh-TW&dt=t&q=${encodeURIComponent(chunk)}`;
-    const r=await fetch(url); if(!r.ok) throw new Error("HTTP "+r.status);
-    const d=await r.json();
-    out.push((d[0]||[]).map(x=>x[0]||"").join(""));
-  }
-  return out.join("");
-}
+/* 偵測：貼進搜尋框的內容含 QUERY1/2/3 → 自動解析到三格 */
+document.getElementById("q-query").addEventListener("paste",e=>{
+  const pasted=(e.clipboardData||window.clipboardData).getData("text")||"" ;
+  if(!/QUERY\s*[123]\s*[:：]/i.test(pasted)) return;
+  e.preventDefault();
+  const [q1,q2,q3]=parseQueryReply(pasted);
+  if(!q1&&!q2&&!q3) return;
+  showQueryBoxes(q1,q2,q3);
+  document.getElementById("q-boxes").scrollIntoView({behavior:"smooth",block:"center"});
+  toast("已自動拆成三格，點格子旁「🔎 搜這個」");
+});
 
-async function translateOne(btn, i){
-  const trt=document.getElementById("trt-"+i);
-  const tra=document.getElementById("tra-"+i);
-  // 已翻過：切換顯示/隱藏
-  if(trt.dataset.done){
-    const show=!trt.classList.contains("show");
-    trt.classList.toggle("show",show);
-    if(tra) tra.classList.toggle("show",show);
-    btn.textContent=show?"🌐 隱藏翻譯":"🌐 翻譯中文";
-    return;
-  }
-  btn.disabled=true; btn.textContent="翻譯中⋯";
-  trt.className="tr-title loading show"; trt.textContent="翻譯中⋯⋯";
+/* ===== 🌐 翻譯中文 ===== */
+async function translateCard(btn, i){
+  const r=RESULTS[i];
+  const box=document.getElementById("tr-"+i);
+  if(!box) return;
+  // 已翻譯過：切換顯示/隱藏
+  if(box.dataset.done==="1"){ box.style.display=box.style.display==="none"?"block":"none"; btn.textContent=box.style.display==="none"?"🌐 翻譯中文":"🌐 隱藏翻譯"; return; }
+  box.style.display="block";
+  box.innerHTML='<span class="tr-loading">翻譯中，請稍候⋯⋯</span>';
+  btn.disabled=true;
+  const title=r.title||"";
+  const abstract=cleanAbs(r.abstractText||"");
   try{
-    const r=RESULTS[i];
-    const [titleZh, absZh]=await Promise.all([
-      gtr(r.title||""),
-      r.abstractText?gtr(cleanAbs(r.abstractText)):Promise.resolve("")
-    ]);
-    trt.className="tr-title show"; trt.textContent=titleZh;
-    trt.dataset.done="1";
-    if(tra&&absZh){ tra.textContent=absZh; tra.className="tr-abs show"; }
+    if(apiKey()){
+      // 有金鑰：用 Claude 翻譯（醫學術語更準）
+      const prompt=`請將以下醫學文獻的【標題】和【摘要】翻譯成繁體中文。保留專有名詞的英文原文在括號內（例：洗腎中低血壓（intradialytic hypotension））。格式：
+【標題】翻譯結果
+【摘要】翻譯結果
+
+標題：${title}
+摘要：${abstract||"（無摘要）"}`;
+      const {text}=await callClaude(prompt, 1500);
+      box.innerHTML=`<div>${esc(text).replace(/\n/g,"<br>")}</div>`;
+    } else {
+      // 無金鑰：用 MyMemory 免費 API（英→繁中）
+      const toTranslate=(title+(abstract?"\n\n"+abstract:"")).slice(0,4800);
+      const resp=await fetch(`https://api.mymemory.translated.net/get?q=${encodeURIComponent(toTranslate)}&langpair=en|zh-TW`);
+      if(!resp.ok) throw new Error("HTTP "+resp.status);
+      const data=await resp.json();
+      if(data.responseStatus!==200) throw new Error(data.responseDetails||"翻譯失敗");
+      box.innerHTML=`<div>${esc(data.responseData.translatedText).replace(/\n/g,"<br>")}</div>
+        <div style="margin-top:8px;font-size:11.5px;color:var(--muted)">由 MyMemory 免費翻譯・貼你的 API 金鑰可改用 Claude（醫學術語更準）</div>`;
+    }
+    box.dataset.done="1";
     btn.textContent="🌐 隱藏翻譯";
   }catch(e){
-    trt.className="tr-title show"; trt.style.color="var(--red)"; trt.textContent="翻譯失敗，請再試";
+    box.innerHTML=`<span style="color:var(--red)">翻譯失敗：${esc(e.message)}。請稍後再試。</span>`;
     btn.textContent="🌐 翻譯中文";
-  } finally{ btn.disabled=false; }
+  } finally { btn.disabled=false; }
 }
-
-/* ===== 🌐 一鍵翻譯全部 ===== */
-(function(){
-  const btn=document.getElementById("translate-all-btn");
-  const sta=document.getElementById("translate-all-status");
-  if(!btn) return;
-  btn.addEventListener("click", async ()=>{
-    if(!RESULTS.length){ toast("請先搜尋"); return; }
-    btn.disabled=true;
-    const total=RESULTS.length; let done=0,fail=0;
-    sta.textContent=`翻譯中 0 / ${total}⋯`;
-    for(let i=0;i<total;i++){
-      const trt=document.getElementById("trt-"+i);
-      if(trt&&trt.dataset.done){ trt.classList.add("show"); const a=document.getElementById("tra-"+i); if(a)a.classList.add("show"); done++; }
-      else{
-        const b=document.querySelector(`.tr-btn[data-tr="${i}"]`);
-        if(b){ await translateOne(b,i); (document.getElementById("trt-"+i)||{}).dataset.done?done++:fail++; }
-      }
-      sta.textContent=`翻譯中 ${done+fail} / ${total}⋯`;
-      if(i<total-1) await new Promise(r=>setTimeout(r,120));
-    }
-    btn.disabled=false;
-    sta.textContent=`完成！${done} 篇${fail?`，${fail} 篇失敗（再按一次重試）`:"✓"}`;
-    btn.textContent="🌐 一鍵翻譯全部文章標題＋摘要";
-  });
-})();
-
-/* ===== 🎯 精準化面板 ===== */
-(function(){
-  const panel=document.getElementById("refine-panel");
-  const preview=document.getElementById("refine-preview");
-  const goBtn=document.getElementById("refine-go");
-  const clearBtn=document.getElementById("refine-clear");
-  if(!panel) return;
-
-  function selectedChips(){ return [...document.querySelectorAll(".rchip.on")]; }
-  function updatePreview(){
-    const chips=selectedChips();
-    if(!chips.length){ preview.textContent=""; goBtn.disabled=true; return; }
-    const extra=chips.map(c=>c.dataset.q).join(" ");
-    const base=val("q-query");
-    preview.innerHTML=`<b style="color:var(--amber)">加入條件：</b>${esc(extra)}`;
-    goBtn.disabled=false;
-  }
-
-  document.querySelectorAll(".rchip").forEach(chip=>{
-    chip.addEventListener("click",()=>{ chip.classList.toggle("on"); updatePreview(); });
-  });
-
-  clearBtn.addEventListener("click",()=>{
-    document.querySelectorAll(".rchip.on").forEach(c=>c.classList.remove("on"));
-    updatePreview();
-  });
-
-  goBtn.addEventListener("click",()=>{
-    const chips=selectedChips();
-    if(!chips.length) return;
-    const extra=chips.map(c=>c.dataset.q).join(" ");
-    const base=val("q-query");
-    const refined=base+" "+extra;
-    document.getElementById("q-query").value=refined;
-    localStorage.setItem("ebnq_q-query",refined);
-    doSearch();
-  });
-
-  // 結果 ≥50 時顯示面板（由 doSearch 呼叫）
-  window._showRefinePanel=function(hitCount){
-    if(hitCount>=50){
-      panel.style.display="block";
-    } else {
-      panel.style.display="none";
-    }
-  };
-  window._hideRefinePanel=function(){ panel.style.display="none"; };
-})();
-
-/* ===== 🎤 語音輸入（Web Speech API，繁體中文） ===== */
-(function(){
-  const btn=document.getElementById("mic-btn");
-  const ta=document.getElementById("q-desc");
-  if(!btn||!ta) return;
-  const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
-  if(!SR){ btn.title="此瀏覽器不支援語音輸入（請用 Chrome）"; btn.style.opacity=".35"; btn.disabled=true; return; }
-  let rec=null, listening=false;
-  btn.addEventListener("click",()=>{
-    if(listening){ rec&&rec.stop(); return; }
-    rec=new SR();
-    rec.lang="zh-TW";
-    rec.continuous=false;
-    rec.interimResults=true;
-    rec.maxAlternatives=1;
-    let interim="";
-    const base=ta.value;
-    rec.onstart=()=>{ listening=true; btn.textContent="🔴"; btn.style.color="var(--red)"; btn.style.borderColor="var(--red)"; toast("🎤 說話中，放開說完會自動停"); };
-    rec.onresult=e=>{
-      interim="";
-      let final="";
-      for(let i=e.resultIndex;i<e.results.length;i++){
-        if(e.results[i].isFinal) final+=e.results[i][0].transcript;
-        else interim+=e.results[i][0].transcript;
-      }
-      ta.value=(base?base+"\n":"")+final+interim;
-      localStorage.setItem("ebnq_q-desc",ta.value);
-    };
-    rec.onerror=e=>{ toast("語音錯誤："+e.error); };
-    rec.onend=()=>{ listening=false; btn.textContent="🎤"; btn.style.color=""; btn.style.borderColor=""; };
-    rec.start();
-  });
-})();
 
 /* ===== 手機折疊選單 ===== */
 (function(){

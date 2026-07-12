@@ -437,8 +437,8 @@
 <script>
 /* ===== 密碼（與其他工具獨立，以雜湊儲存，原始碼看不到真密碼）。預設 = qqq11111111（3個q＋8個一）。
    🚨 趕人／重設名單：把 ACCESS_VERSION +1、並換下面 PW_HASH，舊密碼全失效。 */
-const ACCESS_VERSION="2";
-const PW_HASH="8115766841624482", PW_KEY="law_pw_v"+ACCESS_VERSION, UNLOCK_KEY="law_unlocked_v"+ACCESS_VERSION;
+const ACCESS_VERSION="1";
+const PW_HASH="2716985802763051", PW_KEY="law_pw_v"+ACCESS_VERSION, UNLOCK_KEY="law_unlocked_v"+ACCESS_VERSION;
 function pwOk(v){ return cyrb53(v)===(localStorage.getItem(PW_KEY)||PW_HASH); }
 function unlock(){ document.body.classList.remove("locked"); document.body.classList.add("unlocked"); if(!localStorage.getItem("law_seen_manual")) setTimeout(()=>document.getElementById("welcome").classList.add("show"),350); }
 function closeManual(){ document.getElementById("manual").classList.remove("show"); localStorage.setItem("law_seen_manual","1"); }
