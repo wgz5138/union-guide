@@ -532,9 +532,10 @@ document.getElementById("man-close2").addEventListener("click",closeManual);
 
 /* ===== 小工具 ===== */
 /* 🔄 自動偵測新版本 */
-const BUILD="2026070204";
+const BUILD="2026070205";
 const CHANGELOG=[
-  "新增 6 張醫院職場記憶卡（勞基法§10-1跨科調動五原則／§32-1補休負時數／§34換班間距11小時／§32加班月上限46/54小時；職安法§19特殊危害縮工時／§21健檢異常工作調整）；全部 18 張卡新增🔎查判決按鈕直連司法院裁判書搜尋；新增📻連續播放（Radio 模式）＋ MediaSession API 支援 iOS 鎖屏控制",
+  "TTS 引擎升級為 Google TTS 真實音訊（<audio> 元素）：連續播放切去其他 App 或鎖屏後依然繼續，等同 Radio.tw 體驗；iOS 控制中心顯示播放器、可暫停/上下張；Google TTS 不通時自動退回 Web Speech API",
+  "新增 6 張醫院職場記憶卡（勞基法§10-1跨科調動五原則／§32-1補休負時數／§34換班間距11小時／§32加班月上限46/54小時；職安法§19特殊危害縮工時／§21健檢異常工作調整）；全部 18 張卡新增🔎查判決按鈕直連司法院裁判書搜尋",
   "修正進場密碼雜湊值（PW_HASH 再次確認為 cyrb53('lawyer2026')=8115766841624482）；ACCESS_VERSION 升為 2",
   "新增「📖 記憶訓練」區（第6區）：12張核心法條情境卡（工會法§35/§36/§26/§30、勞基法§24/§38/§14/§2、勞動事件法§38、勞資爭議處理法§6/§8、民法§126），每張含白話說明、典型情境故事、記憶口訣；語音朗讀（Web Speech API）；AI 即時生成任意條號情境卡；法規庫每條文旁新增🔊朗讀按鈕",
   "新增「📋 申辦 / 程序指引」用途：切換後 AI 改為程序顧問角色，逐步說明申辦流程、文件、費用、時程與常見陷阱；同步新增「個人申請發明專利」範例按鈕，一鍵帶入情境直接問",
@@ -840,9 +841,67 @@ function renderMemCards(){
 }
 renderMemCats(); renderMemCards();
 
-/* ===== 📻 Radio 連續播放模式 ===== */
-let _radioIdx=0, _radioPaused=false, _radioList=[];
-function _radioList_now(){ return MEM_CAT==="全部"?MEMO_CARDS:MEMO_CARDS.filter(c=>c.tag===MEM_CAT); }
+/* ===== 🎵 TTS 引擎：Google TTS 真實音訊（支援 iOS 切 App 繼續播）＋ speechSynthesis 備援 ===== */
+let _curAudio=null, _ttsBtn=null;
+
+// 把長文切成 ≤180 字小段（Google TTS 有長度限制）
+function _ttsChunks(text, max=180){
+  const segs=text.split(/(?<=[。！？；\n])/);
+  const out=[]; let buf='';
+  for(const s of segs){
+    if(!s.trim()) continue;
+    if((buf+s).length>max){ if(buf) out.push(buf.trim()); buf=s; }
+    else buf+=s;
+  }
+  if(buf.trim()) out.push(buf.trim());
+  return out.length?out:[text.slice(0,max)];
+}
+
+// Google TTS URL（同域 translate.googleapis.com，iOS 當真實音訊，切 App 不停）
+function _gttsUrl(text){ return "https://translate.googleapis.com/translate_tts?ie=UTF-8&tl=zh-TW&client=tw-ob&ttsspeed=0.85&q="+encodeURIComponent(text); }
+
+// 播一段文字（chunks 鏈式播放），回傳 cancel 函式
+function playTTS(text, onEnd, onCancel){
+  const chunks=_ttsChunks(text);
+  let idx=0, cancelled=false, curAudio=null;
+  function next(){
+    if(cancelled||idx>=chunks.length){ if(!cancelled && onEnd) onEnd(); return; }
+    const a=new Audio(_gttsUrl(chunks[idx++]));
+    curAudio=a; _curAudio=a;
+    a.onended=next;
+    a.onerror=()=>{ next(); }; // 某段失敗就跳過
+    a.play().catch(()=>{
+      // Google TTS 不通時退回 speechSynthesis
+      if(window.speechSynthesis){
+        const u=new SpeechSynthesisUtterance(chunks.slice(idx-1).join(''));
+        u.lang='zh-TW'; u.rate=0.88;
+        u.onend=()=>{ if(!cancelled && onEnd) onEnd(); };
+        u.onerror=()=>{ if(!cancelled && onEnd) onEnd(); };
+        speechSynthesis.speak(u);
+        idx=chunks.length; // 讓 next() 知道已交給 speechSynthesis
+      } else next();
+    });
+  }
+  next();
+  return ()=>{ cancelled=true; if(curAudio){ curAudio.pause(); curAudio.src=''; } if(window.speechSynthesis) speechSynthesis.cancel(); if(onCancel) onCancel(); };
+}
+
+// 單張卡🔊朗讀按鈕
+let _ttsCancelFn=null;
+function ttsSpeak(text, btn){
+  if(_ttsCancelFn && _ttsBtn===btn){
+    _ttsCancelFn(); _ttsCancelFn=null; btn.classList.remove("playing"); _ttsBtn=null; return;
+  }
+  if(_ttsCancelFn){ _ttsCancelFn(); _ttsCancelFn=null; }
+  if(_ttsBtn) _ttsBtn.classList.remove("playing");
+  if(window.speechSynthesis) speechSynthesis.cancel();
+  btn.classList.add("playing"); _ttsBtn=btn;
+  _ttsCancelFn=playTTS(text, ()=>{ btn.classList.remove("playing"); if(_ttsBtn===btn) _ttsBtn=null; _ttsCancelFn=null; });
+}
+
+/* ===== 📻 Radio 連續播放模式（切 App 繼續播，等同 Radio.tw 體驗）===== */
+let _radioIdx=0, _radioPaused=false, _radioCancelFn=null;
+function _radioListNow(){ return MEM_CAT==="全部"?MEMO_CARDS:MEMO_CARDS.filter(c=>c.tag===MEM_CAT); }
 function _radioSetMedia(c){
   if(!("mediaSession" in navigator)) return;
   try{
@@ -851,59 +910,60 @@ function _radioSetMedia(c){
     navigator.mediaSession.setActionHandler("pause",()=>radioPause());
     navigator.mediaSession.setActionHandler("nexttrack",()=>radioNext());
     navigator.mediaSession.setActionHandler("previoustrack",()=>radioPrev());
+    navigator.mediaSession.playbackState="playing";
   }catch(e){}
 }
 function radioPlayCurrent(){
-  const list=_radioList_now();
+  if(_radioCancelFn){ _radioCancelFn(); _radioCancelFn=null; }
+  const list=_radioListNow();
   if(_radioIdx>=list.length){ radioStop(); toast("✅ 全部播完！"); return; }
   const c=list[_radioIdx];
   document.getElementById("radio-title").textContent=((_radioIdx+1)+"/"+list.length+"　"+c.ref+"　"+c.title);
+  document.getElementById("radio-pp").textContent="⏸";
   _radioSetMedia(c);
-  // 捲動到對應卡片（若可見）
   const allCards=document.getElementById("mem-list").querySelectorAll(".mc");
   if(allCards[_radioIdx]) allCards[_radioIdx].scrollIntoView({behavior:"smooth",block:"nearest"});
-  // 朗讀：白話說明 + 口訣（不讀情境場景，保持節奏）
-  if(!window.speechSynthesis){ toast("此瀏覽器不支援語音朗讀（建議用 Chrome）"); return; }
-  speechSynthesis.cancel();
   const text=c.ref+"，"+c.title+"。"+c.plain+"。記憶口訣："+c.tip;
-  const u=new SpeechSynthesisUtterance(text);
-  u.lang="zh-TW"; u.rate=0.88; u.pitch=1;
-  u.onend=()=>{ if(!_radioPaused){ _radioIdx++; setTimeout(radioPlayCurrent,1000); } };
-  u.onerror=()=>{ _radioIdx++; setTimeout(radioPlayCurrent,1000); };
-  speechSynthesis.speak(u);
-  document.getElementById("radio-pp").textContent="⏸";
+  _radioCancelFn=playTTS(text, ()=>{
+    if(!_radioPaused){ _radioIdx++; setTimeout(radioPlayCurrent,900); }
+  });
 }
 function radioStart(idx){
   _radioIdx=idx||0; _radioPaused=false;
   document.getElementById("radio-bar").style.display="block";
-  // 確保記憶訓練區展開
   const mc=document.getElementById("mem-card"), a=document.getElementById("mem-sec-arrow");
   if(mc.style.display==="none"){ mc.style.display="block"; if(a) a.textContent="收合 ▴"; }
   radioPlayCurrent();
 }
 function radioPause(){
   _radioPaused=true;
-  if(window.speechSynthesis) speechSynthesis.pause();
+  if(_curAudio){ _curAudio.pause(); }
+  else if(window.speechSynthesis) speechSynthesis.pause();
   document.getElementById("radio-pp").textContent="▶";
   if("mediaSession" in navigator) navigator.mediaSession.playbackState="paused";
 }
 function radioResume(){
   _radioPaused=false;
-  if(window.speechSynthesis && speechSynthesis.paused){ speechSynthesis.resume(); document.getElementById("radio-pp").textContent="⏸"; }
+  if(_curAudio && _curAudio.paused && _curAudio.src){ _curAudio.play().catch(()=>radioPlayCurrent()); document.getElementById("radio-pp").textContent="⏸"; }
+  else if(window.speechSynthesis && speechSynthesis.paused){ speechSynthesis.resume(); document.getElementById("radio-pp").textContent="⏸"; }
   else radioPlayCurrent();
   if("mediaSession" in navigator) navigator.mediaSession.playbackState="playing";
 }
-function radioNext(){ _radioIdx++; _radioPaused=false; if(window.speechSynthesis) speechSynthesis.cancel(); radioPlayCurrent(); }
-function radioPrev(){ _radioIdx=Math.max(0,_radioIdx-1); _radioPaused=false; if(window.speechSynthesis) speechSynthesis.cancel(); radioPlayCurrent(); }
-function radioStop(){ if(window.speechSynthesis) speechSynthesis.cancel(); _radioPaused=false; document.getElementById("radio-bar").style.display="none"; }
+function radioNext(){ if(_radioCancelFn){ _radioCancelFn(); _radioCancelFn=null; } _radioIdx++; _radioPaused=false; radioPlayCurrent(); }
+function radioPrev(){ if(_radioCancelFn){ _radioCancelFn(); _radioCancelFn=null; } _radioIdx=Math.max(0,_radioIdx-1); _radioPaused=false; radioPlayCurrent(); }
+function radioStop(){
+  if(_radioCancelFn){ _radioCancelFn(); _radioCancelFn=null; }
+  _radioPaused=false;
+  document.getElementById("radio-bar").style.display="none";
+  if("mediaSession" in navigator) navigator.mediaSession.playbackState="none";
+}
 
 document.getElementById("radio-pp").addEventListener("click",()=>{ if(_radioPaused) radioResume(); else radioPause(); });
 document.getElementById("radio-next").addEventListener("click",()=>radioNext());
 document.getElementById("radio-prev").addEventListener("click",()=>radioPrev());
 document.getElementById("radio-stop").addEventListener("click",()=>radioStop());
 document.getElementById("mem-radio-btn").addEventListener("click",()=>{
-  if(!window.speechSynthesis){ toast("此瀏覽器不支援語音朗讀（建議用 Chrome）"); return; }
-  toast("📻 開始連續播放，按下方鎖屏控制鍵也能暫停/跳張");
+  toast("📻 開始！切去其他 App 或鎖屏都會繼續播，控制中心可暫停/跳張");
   radioStart(0);
 });
 
