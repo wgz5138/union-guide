@@ -483,8 +483,8 @@
 <script>
 /* ===== 密碼（與其他工具獨立，以雜湊儲存，原始碼看不到真密碼）。預設 = qqq11111111（3個q＋8個一）。
    🚨 趕人／重設名單：把 ACCESS_VERSION +1、並換下面 PW_HASH，舊密碼全失效。 */
-const ACCESS_VERSION="2";
-const PW_HASH="8115766841624482", PW_KEY="law_pw_v"+ACCESS_VERSION, UNLOCK_KEY="law_unlocked_v"+ACCESS_VERSION;
+const ACCESS_VERSION="3";
+const PW_HASH="2716985802763051", PW_KEY="law_pw_v"+ACCESS_VERSION, UNLOCK_KEY="law_unlocked_v"+ACCESS_VERSION;
 function pwOk(v){ return cyrb53(v)===(localStorage.getItem(PW_KEY)||PW_HASH); }
 function unlock(){ document.body.classList.remove("locked"); document.body.classList.add("unlocked"); if(!localStorage.getItem("law_seen_manual")) setTimeout(()=>document.getElementById("welcome").classList.add("show"),350); }
 function closeManual(){ document.getElementById("manual").classList.remove("show"); localStorage.setItem("law_seen_manual","1"); }
@@ -530,8 +530,9 @@ document.getElementById("man-close2").addEventListener("click",closeManual);
 
 /* ===== 小工具 ===== */
 /* 🔄 自動偵測新版本 */
-const BUILD="2026070207";
+const BUILD="2026070208";
 const CHANGELOG=[
+  "進場密碼統一為與臨床快查相同的通行碼（ACCESS_VERSION 升至 3，舊 session 自動失效）",
   "新增 6 張法條卡至 32 張：勞基法§11（法定資遣六原因）、§13（特殊期間不得解僱）、§30（法定工時8小時/40小時）；性別平等工作法§15（產假8週全薪）、§12（職場性騷擾防制）；就業保險法§11（失業給付60%×最多6個月）；移除智財領域選項，申辦指引模式改為勞動行政程序顧問",
   "新增 8 張法條卡至 26 張：勞基法§59（職業災害無過失補償）、§37（國定假日出勤工資加倍）、§17（資遣費計算）、§9（不定期契約拒絕一年一簽）；性別平等工作法§14（生理假）、§16（育嬰留停津貼）；勞退條例§6（6%提撥義務）；職安法§6（職場霸凌申訴義務）",
   "TTS 引擎升級為 Google TTS 真實音訊（<audio> 元素）：連續播放切去其他 App 或鎖屏後依然繼續，等同 Radio.tw 體驗；iOS 控制中心顯示播放器、可暫停/上下張；Google TTS 不通時自動退回 Web Speech API",
