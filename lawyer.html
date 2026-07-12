@@ -437,8 +437,8 @@
 <script>
 /* ===== 密碼（與其他工具獨立，以雜湊儲存，原始碼看不到真密碼）。預設 = qqq11111111（3個q＋8個一）。
    🚨 趕人／重設名單：把 ACCESS_VERSION +1、並換下面 PW_HASH，舊密碼全失效。 */
-const ACCESS_VERSION="1";
-const PW_HASH="2716985802763051", PW_KEY="law_pw_v"+ACCESS_VERSION, UNLOCK_KEY="law_unlocked_v"+ACCESS_VERSION;
+const ACCESS_VERSION="2";
+const PW_HASH="8115766841624482", PW_KEY="law_pw_v"+ACCESS_VERSION, UNLOCK_KEY="law_unlocked_v"+ACCESS_VERSION;
 function pwOk(v){ return cyrb53(v)===(localStorage.getItem(PW_KEY)||PW_HASH); }
 function unlock(){ document.body.classList.remove("locked"); document.body.classList.add("unlocked"); if(!localStorage.getItem("law_seen_manual")) setTimeout(()=>document.getElementById("welcome").classList.add("show"),350); }
 function closeManual(){ document.getElementById("manual").classList.remove("show"); localStorage.setItem("law_seen_manual","1"); }
@@ -484,8 +484,9 @@ document.getElementById("man-close2").addEventListener("click",closeManual);
 
 /* ===== 小工具 ===== */
 /* 🔄 自動偵測新版本 */
-const BUILD="2026070201";
+const BUILD="2026070202";
 const CHANGELOG=[
+  "修正進場密碼雜湊值（PW_HASH 填錯導致 lawyer2026 無法登入）；ACCESS_VERSION 升為 2 清除舊快取",
   "新增「📋 申辦 / 程序指引」用途：切換後 AI 改為程序顧問角色，逐步說明申辦流程、文件、費用、時程與常見陷阱；同步新增「個人申請發明專利」範例按鈕，一鍵帶入情境直接問",
   "新增智慧財產領域：專利法（12條核心條文）、商標法（5條）、著作權法（6條）、營業秘密法（4條）、智慧財產案件審理法（1條）放進法規快照；法律領域下拉新增「智財」選項；AI 律師針對智財案件自動注入相關核心條文",
   "法規庫12小時節流：本機有快取時不再每次重抓 1.8MB，手機流量大減；手動「重新抓」按鈕不受節流限制",
