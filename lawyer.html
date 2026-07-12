@@ -103,6 +103,23 @@
   .law-row.open .law-b{display:block}
   .badge-seed{font-size:10px;background:rgba(230,201,122,.14);color:var(--gold);border:1px solid rgba(230,201,122,.35);border-radius:20px;padding:1px 7px;white-space:nowrap}
   .badge-official{font-size:10px;background:rgba(46,213,160,.14);color:var(--green);border:1px solid rgba(46,213,160,.4);border-radius:20px;padding:1px 7px;white-space:nowrap}
+  .law-tts{background:none;border:none;cursor:pointer;font-size:13px;padding:2px 4px;border-radius:6px;flex-shrink:0;opacity:.6;line-height:1}
+  .law-tts:hover,.law-tts.playing{opacity:1;background:rgba(63,214,208,.12);color:var(--cyan)}
+
+  /* 記憶訓練 */
+  .mc{background:linear-gradient(135deg,rgba(63,214,208,.05),rgba(79,157,255,.05));border:1px solid rgba(63,214,208,.22);border-radius:12px;padding:14px;margin-bottom:10px}
+  .mc-hd{display:flex;align-items:center;gap:8px;margin-bottom:6px;flex-wrap:wrap}
+  .mc-ref{font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--cyan);font-weight:600;white-space:nowrap}
+  .mc-tag{font-size:10px;padding:2px 8px;border-radius:20px;background:rgba(183,155,255,.14);color:var(--violet);border:1px solid rgba(183,155,255,.3);white-space:nowrap}
+  .mc-plain{font-size:13.5px;color:var(--head);line-height:1.75;margin:6px 0 8px}
+  .mc-scene{font-size:13px;color:var(--txt2);line-height:1.85;border-left:3px solid rgba(63,214,208,.35);padding-left:10px;margin:8px 0;display:none}
+  .mc.open .mc-scene{display:block}
+  .mc-tip{font-size:12px;color:var(--amber);background:rgba(255,177,61,.08);border-radius:8px;padding:6px 10px;margin-top:6px;line-height:1.7}
+  .mc-btns{display:flex;gap:6px;margin-top:10px;flex-wrap:wrap}
+  .mc-btn{background:#0C131F;border:1px solid var(--line);color:var(--txt2);border-radius:8px;padding:5px 10px;font-size:12px;cursor:pointer;font-family:inherit}
+  .mc-btn:hover{border-color:var(--blue-d);color:var(--blue)}
+  .mc-tts{background:rgba(63,214,208,.1);border:1px solid rgba(63,214,208,.28);color:var(--cyan);border-radius:8px;padding:5px 10px;font-size:12px;cursor:pointer;font-family:inherit}
+  .mc-tts.playing{background:rgba(255,177,61,.14);border-color:var(--amber);color:var(--amber)}
   .cat-pill{font-size:11px;padding:5px 11px;border-radius:20px;background:#0C131F;border:1px solid var(--line);color:var(--txt2);cursor:pointer}
   .cat-pill.on{background:rgba(79,157,255,.14);border-color:var(--blue-d);color:var(--blue);font-weight:700}
 
@@ -361,6 +378,22 @@
       </div>
     </div>
 
+    <!-- 記憶訓練 -->
+    <div class="label" id="mem-sec-toggle" style="cursor:pointer;margin-top:6px"><span class="n">6</span>📖 記憶訓練（情境卡 + 語音）<span id="mem-sec-arrow" style="margin-left:auto;text-transform:none;letter-spacing:0;color:var(--violet);font-weight:600">點開 ▾</span></div>
+    <div class="card" id="mem-card" style="display:none">
+      <div class="hint" style="margin-bottom:10px">幹部必知的 12 條核心法律——每張卡有<b>白話說明、真實情境故事、記憶口訣</b>，點「🔊 朗讀」用語音導覽；點「📖 情境」展開案例故事。</div>
+      <div id="mem-cats" style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px"></div>
+      <div id="mem-list"></div>
+      <div style="margin-top:14px;border-top:1px solid var(--line);padding-top:12px">
+        <div style="font-size:12px;color:var(--muted);margin-bottom:8px">🤖 AI 即時幫我出任意條號的情境故事</div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          <input class="txt" id="mem-ai-input" placeholder="輸入條號，例：工會法第35條、勞基法第14條" style="flex:1;min-width:180px">
+          <button class="btn btn-ghost" id="mem-ai-btn" style="white-space:nowrap">⚡ 生成</button>
+        </div>
+        <div id="mem-ai-out" style="margin-top:10px;display:none"></div>
+      </div>
+    </div>
+
     <div class="note warn" style="margin-top:18px">⚠️ 本工具是 AI 輔助、不是正式法律意見，也不能取代律師。重大爭議、開庭、簽和解書前，請洽<b>勞工局 1955</b>（24h 免費）、法律扶助基金會或委任律師。AI 可能出錯，引用的條號／金額請務必自己核對。</div>
   </main>
 
@@ -484,8 +517,9 @@ document.getElementById("man-close2").addEventListener("click",closeManual);
 
 /* ===== 小工具 ===== */
 /* 🔄 自動偵測新版本 */
-const BUILD="2026070202";
+const BUILD="2026070203";
 const CHANGELOG=[
+  "新增「📖 記憶訓練」區（第6區）：12張核心法條情境卡（工會法§35/§36/§26/§30、勞基法§24/§38/§14/§2、勞動事件法§38、勞資爭議處理法§6/§8、民法§126），每張含白話說明、真實情境故事、記憶口訣；語音朗讀（Web Speech API）；AI 即時生成任意條號情境卡；法規庫每條文旁新增🔊朗讀按鈕",
   "修正進場密碼雜湊值（PW_HASH 填錯導致 lawyer2026 無法登入）；ACCESS_VERSION 升為 2 清除舊快取",
   "新增「📋 申辦 / 程序指引」用途：切換後 AI 改為程序顧問角色，逐步說明申辦流程、文件、費用、時程與常見陷阱；同步新增「個人申請發明專利」範例按鈕，一鍵帶入情境直接問",
   "新增智慧財產領域：專利法（12條核心條文）、商標法（5條）、著作權法（6條）、營業秘密法（4條）、智慧財產案件審理法（1條）放進法規快照；法律領域下拉新增「智財」選項；AI 律師針對智財案件自動注入相關核心條文",
@@ -628,11 +662,20 @@ function renderLaws(){
   if(!list.length){ box.innerHTML='<div class="hint">沒有符合的法條。可按「➕ 匯入 / 貼上法條」加入，或換關鍵字。</div>'; return; }
   const CAP=60, total=list.length, more=total-CAP;
   if(total>CAP) list=list.slice(0,CAP);
-  box.innerHTML=list.map((l,i)=>`<div class="law-row" data-i="${i}">
-    <div class="law-h"><span class="nm">${esc(l.law)}</span><span class="ar">${esc(l.art)}</span><span class="tt">${esc(l.title||"")}</span>${l.official?'<span class="badge-official">✅官方</span>':l.seed?'<span class="badge-seed">📌快照</span>':''}</div>
+  box.innerHTML=list.map((l,i)=>`<div class="law-row" data-law="${esc(l.law)}" data-art="${esc(l.art)}">
+    <div class="law-h"><span class="nm">${esc(l.law)}</span><span class="ar">${esc(l.art)}</span><span class="tt">${esc(l.title||"")}</span>${l.official?'<span class="badge-official">✅官方</span>':l.seed?'<span class="badge-seed">📌快照</span>':''}<button class="law-tts" title="朗讀此條文">🔊</button></div>
     <div class="law-b">${esc(l.text)}</div></div>`).join("")
     + (total>CAP?('<div class="hint">只顯示前 '+CAP+' 條，還有 '+more+' 條——請<b>輸入更精確的關鍵字</b>縮小範圍。</div>'):"");
-  box.querySelectorAll(".law-h").forEach(h=>h.addEventListener("click",()=>h.parentElement.classList.toggle("open")));
+  box.querySelectorAll(".law-h").forEach(h=>h.addEventListener("click",e=>{
+    if(e.target.classList.contains("law-tts")) return;
+    h.parentElement.classList.toggle("open");
+  }));
+  box.querySelectorAll(".law-tts").forEach(btn=>btn.addEventListener("click",e=>{
+    e.stopPropagation();
+    const row=btn.closest(".law-row");
+    const hit=LAWS.find(l=>l.law===row.dataset.law&&l.art===row.dataset.art);
+    if(hit) ttsSpeak(hit.law+" "+hit.art+"。"+hit.text, btn);
+  }));
 }
 document.getElementById("law-search").addEventListener("input",renderLaws);
 /* 法規庫整段預設摺疊，手機才不會被洗很長；點標題展開／收合 */
@@ -642,6 +685,152 @@ document.getElementById("law-sec-toggle").addEventListener("click",()=>{
   if(a) a.textContent=open?"點開查詢 ▾":"收合 ▴";
 });
 renderCats(); renderLaws();
+
+/* ===================== TTS（語音朗讀） ===================== */
+let _ttsBtn=null;
+function ttsSpeak(text, btn){
+  if(!window.speechSynthesis){ toast("此瀏覽器不支援語音朗讀（建議用 Chrome）"); return; }
+  // 切換：再按同一顆就停止
+  if(_ttsBtn===btn && speechSynthesis.speaking){ speechSynthesis.cancel(); _ttsBtn=null; btn.classList.remove("playing"); return; }
+  speechSynthesis.cancel();
+  if(_ttsBtn){ _ttsBtn.classList.remove("playing"); }
+  const u=new SpeechSynthesisUtterance(text);
+  u.lang="zh-TW"; u.rate=0.88; u.pitch=1;
+  u.onend=()=>{ if(_ttsBtn)_ttsBtn.classList.remove("playing"); _ttsBtn=null; };
+  u.onerror=()=>{ if(_ttsBtn)_ttsBtn.classList.remove("playing"); _ttsBtn=null; };
+  speechSynthesis.speak(u);
+  _ttsBtn=btn; btn.classList.add("playing");
+}
+
+/* ===================== 記憶訓練 ===================== */
+const MEMO_CARDS=[
+  { ref:"工會法 §35", title:"不當勞動行為禁止", tag:"工會保護",
+    plain:"雇主不能因為你加入工會、擔任幹部、參加工會活動，就對你解僱、降職、減薪或任何不利對待。違者由主管機關裁罰十萬至五十萬元，並公布名稱。",
+    scene:"小華申請加入工會後第五天，主管突然說他「工作態度不積極」，要調到最差的夜班。工會查到：調動通知時間點與入工會僅隔三天、主管說不出具體績效依據。工會提起不當勞動行為裁決，裁決委員會認定因果關係成立：雇主須撤銷調動、道歉，並罰款。\n→ 關鍵證據：時間點（入會 vs. 不利措施）+雇主說不出其他原因。",
+    tip:"口訣「三要素」：①我做了工會活動 ②雇主對我不利 ③時間點吻合有因果。三個都到，就是不當勞動行為。" },
+  { ref:"工會法 §36", title:"會務公假", tag:"會務行政",
+    plain:"理事長每次可請半日或全日公假辦會務；其他理事、監事每月上限 50 小時公假。這段時間照常給薪，雇主不得拒絕。",
+    scene:"院方說理事長去開勞資協商要「自請事假、自扣薪」。工會搬出 §36 第2項：沒有另行約定時，理事長依法有半日/全日公假的法定權利。院方當場改口。\n→ 記住：有另行協議從協議；沒有協議就用法定最低保障。",
+    tip:"「長可全天，其他五十小時」——理事長：半日或全日。其他理事/監事：每月50小時。" },
+  { ref:"工會法 §26", title:"會員大會必要議決事項", tag:"會務行政",
+    plain:"改章程、處分財產、合併/解散、選/罷免幹部、停會員權——這五類一定要開大會投票，理事會無法自己決定。",
+    scene:"理事長想把工會帳戶一百萬移到新帳號「統一管理」，說理事會開會決定就好。監事搬出 §26 第2款：財產處分必須會員大會議決，不是理事會。這件事就此打住。\n→ 理事會管日常事務；大事要問全體會員。",
+    tip:"「改選罰停解」——章程改 / 幹部選罷 / 財產處分 / 會員停權 / 解散合併——這五件事，一定開全體大會。" },
+  { ref:"工會法 §30", title:"財務稽核義務", tag:"財務透明",
+    plain:"工會必須建立財務收支、稽核機制。每年年度決算後 30 天內將財務狀況報主管機關備查；監事有權隨時查帳。",
+    scene:"某工會每月收支一筆都不出帳，三年沒讓監事看帳本。主管機關介入查核，援引 §44 要求限期改善，並罰行為人三萬至十五萬元。\n→ 幹部記住：監事查帳是權利也是義務；帳目拒查等於違法。",
+    tip:"「財務三要：定期報、監事查、公開透」——沒做到，行為人被罰錢。" },
+  { ref:"勞動基準法 §24", title:"延長工時加班費計算", tag:"薪資福利",
+    plain:"平日加班前2小時→時薪×1.33；再延長2小時→時薪×1.67。休假日出勤→時薪×2。",
+    scene:"小美月薪 35,000，時薪約 175元。週一加班4小時：前2小時各拿 175×1.33≈233元（合計466元），再2小時各拿 175×1.67≈292元（合計584元），共 1050元。院方只給 175×4=700元，少給 350元，屬違法短付。\n→ 每次發薪可自己用「前兩小時加三分之一、再兩小時加三分之二」核算。",
+    tip:"「前兩加三分之一，後兩加三分之二，假日加倍」——1.33 / 1.67 / 2，三個數字背起來！" },
+  { ref:"勞動基準法 §38", title:"特別休假天數", tag:"薪資福利",
+    plain:"年資6個月→3天 / 1年→7天 / 2年→10天 / 3年→14天 / 5年→15天 / 10年後每年+1天（最高30天）。",
+    scene:"小花年資3年5個月，院方說「只給10天（2年以上）」。工會指出 §38 第4款：3年以上未滿5年就是14天。院方少給4天，全數補足並補工資。\n→ 院方常犯的錯：年資跨門檻當天就升等，不是等到下一個整數年才算。",
+    tip:"「6月3 / 1年7 / 2年10 / 3年14 / 5年15」——依次增加，熟背這五個數字就夠用。" },
+  { ref:"勞動基準法 §14", title:"勞工得不預告終止契約", tag:"權利保護",
+    plain:"雇主有六種重大違法（欺騙、暴力、積欠薪資、危害健康、違反法令等），勞工可不預告直接離職，並向雇主請求資遣費，且不喪失任何離職金。",
+    scene:"護理師A長期被主管言語霸凌、連續三個月薪資短付。A引用 §14 第5、6款，書面聲明即時離職。不需預告、不算自請離職，可要求資遣費並申請調解。\n→ 重點：要即時、要書面，超過30天才提可能被認為已默認。",
+    tip:"「雇主違法我先走，資遣費照拿不客氣」——和自願離職最大差別：自願離職沒資遣費，§14離職有。" },
+  { ref:"勞動事件法 §38", title:"出勤時間舉證責任反轉", tag:"舉證策略",
+    plain:"打卡紀錄顯示你在，就「推定」你在工作——雇主要自己舉證說你沒在做事，不是你去舉證你有在做事。",
+    scene:"院方說「打卡不代表有加班，要員工自己證明真的在做事」。工會反駁：勞動事件法 §38 明文，出勤紀錄記載的時間推定為執行職務，舉證責任在雇主。院方要拿出具體證明說員工只是來休息，否則假定員工都在工作。\n→ 打卡紀錄、班表是你最強的護身符，務必保存截圖。",
+    tip:"「有打卡=推定有工作——舉證責任推給雇主！」這條是加班費案件的核心武器。" },
+  { ref:"勞資爭議處理法 §6", title:"申請調解", tag:"爭議處理",
+    plain:"薪資、資遣費、加班費等「權利爭議」可到勞工局申請調解，完全免費，通常二至四週有結果，中央主管機關還可提供法律扶助。",
+    scene:"加班費談不攏，工會指導成員到縣市勞工局填「勞資爭議調解申請書」。局方安排調解委員，雇主不出席還會被裁定視同調解不成立（可直接提訴訟），所以雇主通常不敢不出現。整個過程費用零元。\n→ 「打官司」之前先調解：快、免費、不傷和氣，贏面也高。",
+    tip:"「調解免費快又省——先調再打最划算」。申請地點：縣市政府勞工局（或勞動部線上申請）。" },
+  { ref:"勞資爭議處理法 §8", title:"調解期間保護傘", tag:"爭議處理",
+    plain:"調解、仲裁或裁決期間，雇主不得因該爭議解僱你、停工或為任何不利對待；同樣地，勞方也不能因此罷工。",
+    scene:"小陳申請加班費調解後第二天，主管突然通知解僱。工會立刻寄存證信函引用 §8：調解中解僱屬違法，須立即撤銷。雇主隔天撤回解僱通知。\n→ 申請調解 = 打開保護傘。任何報復行為都違法，且可另外提不當勞動行為申訴。",
+    tip:"「申請調解→保護傘打開→期間解僱違法」——三步驟連在一起背，用的時候才不會忘。" },
+  { ref:"民法 §126", title:"工資五年消滅時效", tag:"時效追溯",
+    plain:"工資（含加班費、獎金）每期請求權五年未主張就消滅——從每次本來應付薪日起算，每筆分開算。",
+    scene:"2019年積欠的加班費，從那筆應發日（如2019/7/31）起算五年，到2024/7/30最後一天，2024/8/1才提告就過時效了。工會提醒幹部：現在就幫會員算清楚每筆時效截止日，優先追最快到期的。\n→ 時效主動消滅，不是法院自動提醒，要自己盯緊。",
+    tip:"「每筆各自算5年，從那筆應發日起算」——不是從離職日算，是從每次應發薪日算。越早的越快到期！" },
+  { ref:"勞動基準法 §2", title:"什麼叫「工資」", tag:"薪資福利",
+    plain:"勞工「因工作而獲得的報酬」都算工資（含加班費、各類津貼、經常性獎金）。雇主不能用「福利費」「恩給」名義規避加班費計算基準。",
+    scene:"院方說「值班費是津貼，不是工資，不計入加班費基礎」。工會引用 §2 第3款：因工作給的報酬就是工資，經常性的值班補貼應計入「平均工資」，否則加班費被壓低。法院實務多認定經常性給付屬工資。\n→ 名稱不重要，「因工作而給」才是判斷標準。",
+    tip:"「因工作而給的錢=工資，福利包裝也是工資」——雇主喜歡切割名目壓低基數，看穿這招！" }
+];
+
+let MEM_CAT="全部";
+function renderMemCats(){
+  const tags=["全部",...new Set(MEMO_CARDS.map(c=>c.tag))];
+  const box=document.getElementById("mem-cats");
+  box.innerHTML=tags.map(t=>`<span class="cat-pill${t===MEM_CAT?" on":""}" data-t="${esc(t)}">${esc(t)}</span>`).join("");
+  box.querySelectorAll(".cat-pill").forEach(p=>p.addEventListener("click",()=>{ MEM_CAT=p.dataset.t; renderMemCats(); renderMemCards(); }));
+}
+function renderMemCards(){
+  const list=MEM_CAT==="全部"?MEMO_CARDS:MEMO_CARDS.filter(c=>c.tag===MEM_CAT);
+  document.getElementById("mem-list").innerHTML=list.map((c,i)=>`
+<div class="mc" id="mc${i}">
+  <div class="mc-hd"><span class="mc-ref">${esc(c.ref)}</span><span class="mc-tag">${esc(c.tag)}</span><span style="flex:1;font-size:13px;color:var(--txt2);font-weight:600">${esc(c.title)}</span></div>
+  <div class="mc-plain">${esc(c.plain)}</div>
+  <div class="mc-scene">${esc(c.scene)}</div>
+  <div class="mc-tip">🔑 ${esc(c.tip)}</div>
+  <div class="mc-btns">
+    <button class="mc-btn mc-scene-btn" data-i="${i}">📖 情境故事</button>
+    <button class="mc-tts mc-tts-btn" data-i="${i}">🔊 朗讀</button>
+  </div>
+</div>`).join("");
+  document.getElementById("mem-list").querySelectorAll(".mc-scene-btn").forEach(btn=>{
+    btn.addEventListener("click",()=>{
+      const card=document.getElementById("mc"+btn.dataset.i);
+      const open=card.classList.toggle("open");
+      btn.textContent=open?"📖 收合情境":"📖 情境故事";
+    });
+  });
+  document.getElementById("mem-list").querySelectorAll(".mc-tts-btn").forEach(btn=>{
+    btn.addEventListener("click",()=>{
+      const c=list[+btn.dataset.i];
+      const text=c.ref+"，"+c.title+"。"+c.plain+"。情境案例："+c.scene+"。記憶口訣："+c.tip;
+      ttsSpeak(text, btn);
+    });
+  });
+}
+renderMemCats(); renderMemCards();
+document.getElementById("mem-sec-toggle").addEventListener("click",()=>{
+  const c=document.getElementById("mem-card"), a=document.getElementById("mem-sec-arrow");
+  const open=c.style.display!=="none"; c.style.display=open?"none":"block";
+  if(a) a.textContent=open?"點開 ▾":"收合 ▴";
+});
+
+/* AI 即時生成情境 */
+document.getElementById("mem-ai-btn").addEventListener("click",async()=>{
+  const q=document.getElementById("mem-ai-input").value.trim();
+  if(!q){ toast("請輸入條號，例：工會法第35條"); return; }
+  const key=apiKey(); if(!key){ toast("需要 API 金鑰才能 AI 生成（或用法規庫手動查）"); return; }
+  const btn=document.getElementById("mem-ai-btn");
+  btn.textContent="⏳ 生成中…"; btn.disabled=true;
+  const out=document.getElementById("mem-ai-out");
+  const lctx=lawContext(q+" "+q);
+  const prompt=`請針對「${q}」這條法律，用以下固定格式輸出一張記憶卡（繁體中文，不加 markdown 符號）：
+
+【白話說明】（一到兩句，白話翻譯這條在說什麼，幹部能直接聽懂）
+【情境故事】（一個台灣工會/護理職場的真實感情境，100到150字，說明這條如何用在實際案例，包含結果）
+【記憶口訣】（一句話，讓幹部在壓力下也記得住的口訣）
+
+相關法條原文（供參考）：
+${lctx}`;
+  try{
+    const {text}=await callClaude([{role:"user",content:[{type:"text",text:prompt}]}],800,"你是台灣勞動法專家，擅長用白話幫工會幹部記憶法條。");
+    out.style.display="block";
+    // Parse sections
+    const plain=(text.match(/【白話說明】([^【]*)/)||["",""])[1].trim();
+    const scene=(text.match(/【情境故事】([^【]*)/)||["",""])[1].trim();
+    const tip=(text.match(/【記憶口訣】([^【]*)/)||["",""])[1].trim();
+    out.innerHTML=`<div class="mc">
+      <div class="mc-hd"><span class="mc-ref">${esc(q)}</span><span class="mc-tag">AI 生成</span></div>
+      <div class="mc-plain">${esc(plain||text)}</div>
+      ${scene?`<div class="mc-scene" style="display:block">${esc(scene)}</div>`:""}
+      ${tip?`<div class="mc-tip">🔑 ${esc(tip)}</div>`:""}
+      <div class="mc-btns"><button class="mc-tts" id="ai-card-tts">🔊 朗讀</button></div>
+    </div>`;
+    document.getElementById("ai-card-tts").addEventListener("click",function(){ ttsSpeak((plain||text)+"。"+scene+"。口訣："+tip, this); });
+  }catch(e){ toast("AI 生成失敗："+apiErr(e)); }
+  finally{ btn.textContent="⚡ 生成"; btn.disabled=false; }
+});
 
 /* 載入官方 laws.json（GitHub Action 由全國法規資料庫官方 API 產生）。
    使用者自己匯入過（law_db）就尊重其客製、不自動覆蓋。 */
