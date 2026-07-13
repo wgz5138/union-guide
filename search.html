@@ -177,7 +177,6 @@
   </div>
   <button id="gate-go">進入</button>
   <div class="err" id="gate-err"></div>
-  <p style="margin-top:16px;font-size:12px;color:var(--muted)">提示：3個英文小寫 q ＋ 8個數字 1</p>
 </div>
 
 <div id="app">
@@ -420,8 +419,7 @@ function startTour(){ _ti=0; document.getElementById("tour-dim").classList.add("
 function endTour(){ document.querySelectorAll(".tour-hi").forEach(e=>e.classList.remove("tour-hi")); document.getElementById("tour-dim").classList.remove("show"); document.getElementById("tour-bar").classList.remove("show"); localStorage.setItem("ebnq_seen_manual","1"); window.scrollTo({top:0,behavior:"smooth"}); }
 document.getElementById("tour-next").addEventListener("click",()=>{ if(_ti<TOUR.length-1){_ti++;tourStep();}else endTour(); });
 document.getElementById("tour-skip").addEventListener("click",endTour);
-const LOCK=false; // 改 true 重新啟用密碼
-if(!LOCK || sessionStorage.getItem(UNLOCK_KEY)==="1") unlock();
+if(sessionStorage.getItem(UNLOCK_KEY)==="1") unlock();
 function tryUnlock(){ const v=document.getElementById("gate-pw").value;
   if(pwOk(v)){ sessionStorage.setItem(UNLOCK_KEY,"1"); unlock(); }
   else{ document.getElementById("gate-err").textContent="密碼不對"; document.getElementById("gate-pw").value=""; } }

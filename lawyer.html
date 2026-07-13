@@ -34,8 +34,8 @@
   #gate input:focus{outline:none;border-color:var(--cyan);box-shadow:0 0 0 3px rgba(63,214,208,.15)}
   #gate button{margin-top:12px;width:240px;max-width:80vw;background:var(--cyan);color:#06231f;border:none;border-radius:10px;padding:.7rem;font-weight:700;font-size:15px;cursor:pointer;font-family:inherit}
   #gate .err{color:var(--red);font-size:12px;height:16px;margin-top:10px}
-  body.locked{overflow:hidden} body.locked #app{display:none}
-  #gate{display:none} body.unlocked #app{display:block} body.unlocked #gate{display:none}
+  body.locked{overflow:hidden} #app{display:none}
+  body.unlocked #app{display:block} body.unlocked #gate{display:none}
 
   .topbar{display:flex;align-items:center;gap:10px;max-width:760px;margin:0 auto;padding:16px 16px 0}
   .topbar .logo{width:36px;height:36px;border-radius:9px;display:flex;align-items:center;justify-content:center;font-size:18px;background:rgba(63,214,208,.12);color:var(--cyan);border:1px solid rgba(63,214,208,.35);box-shadow:0 0 16px rgba(63,214,208,.18)}
@@ -176,11 +176,11 @@
   #updbanner .x{position:absolute;top:4px;right:9px;font-size:20px;line-height:1;cursor:pointer;font-weight:700;color:#062b25}
 </style>
 </head>
-<body>
+<body class="locked">
 <div id="appbanner"><span class="x" id="appbanner-x">✕</span>⚠️ 你好像是從 App（如 LINE）內建瀏覽器開的，這種視窗常<b>不能複製、按鈕卡卡</b>。建議用真瀏覽器開：<b>iPhone</b> 點下方分享圖示→「用 Safari 開啟」；<b>Android</b> 點右上「⋮」→「用瀏覽器開啟」。</div>
 <div id="updbanner"><span>🔄 有<b>新版本</b>了！點一下換到最新（不用刪圖示重加）</span><button id="updbtn">立即更新</button><span class="x" id="updbanner-x">✕</span></div>
 
-<div id="ver-badge" style="position:fixed;bottom:8px;right:10px;font-size:11px;color:#5E6E85;z-index:9999;pointer-events:none">v2026071302</div>
+<div id="ver-badge" style="position:fixed;bottom:8px;right:10px;font-size:11px;color:#5E6E85;z-index:9999;pointer-events:none">v2026071303</div>
 
 <div id="gate">
   <div class="lock">⚖️</div>
@@ -192,7 +192,6 @@
   </div>
   <button id="gate-go">進入</button>
   <div class="err" id="gate-err"></div>
-  <p style="margin-top:16px;font-size:12px;color:var(--muted)">提示：3個英文小寫 q ＋ 8個數字 1</p>
 </div>
 
 <div id="app">
@@ -517,8 +516,7 @@ document.getElementById("tour-next").addEventListener("click",()=>{ if(_ti<TOUR.
 document.getElementById("tour-skip").addEventListener("click",endTour);
 document.getElementById("wel-tour").addEventListener("click",startTour);
 document.getElementById("man-tour").addEventListener("click",startTour);
-const LOCK=false; // 改 true 重新啟用密碼
-if(!LOCK || sessionStorage.getItem(UNLOCK_KEY)==="1") unlock();
+if(sessionStorage.getItem(UNLOCK_KEY)==="1") unlock();
 function tryUnlock(){ const v=document.getElementById("gate-pw").value;
   if(pwOk(v)){ sessionStorage.setItem(UNLOCK_KEY,"1"); unlock(); }
   else{ document.getElementById("gate-err").textContent="密碼不對"; document.getElementById("gate-pw").value=""; } }
@@ -537,7 +535,7 @@ document.getElementById("man-close2").addEventListener("click",closeManual);
 
 /* ===== 小工具 ===== */
 /* 🔄 自動偵測新版本 */
-const BUILD="2026071302";
+const BUILD="2026071303";
 const CHANGELOG=[
   "新增 2 張記憶卡至 40 張：醫療法§99/§83（醫療糾紛先走縣市醫事審議委員會調解，護理師遇糾紛四步驟）；刑法§309/§304/§305（職場霸凌可刑告：公然侮辱＋強制＋恐嚇，加民法§195精神賠償）",
   "新增 6 張醫院職場記憶卡至 38 張：醫療法§24（醫療暴力加重刑責）、§82（醫事責任門檻）；護理人員法§24（護理業務四範圍）、§26（危急先救授權）；勞基法§36（例假7天必給）、§49（大夜班工會同意）",
