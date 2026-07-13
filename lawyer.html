@@ -184,9 +184,9 @@
   <div class="lock">⚖️</div>
   <h2>AI 律師</h2>
   <p>請輸入通行密碼</p>
-  <div style="position:relative;width:240px;max-width:80vw">
-    <input id="gate-pw" type="password" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" placeholder="••••••" style="width:100%;padding-right:44px">
-    <button type="button" id="gate-eye" onclick="var i=document.getElementById('gate-pw');i.type=i.type==='password'?'text':'password';this.textContent=i.type==='password'?'👁':'🙈'" style="position:absolute;right:10px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;font-size:18px;color:var(--muted)">👁</button>
+  <div style="position:relative;width:240px;max-width:80vw;display:flex;align-items:center">
+    <input id="gate-pw" type="password" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" placeholder="••••••" style="width:100%;padding-right:42px;box-sizing:border-box">
+    <button type="button" id="gate-eye" onclick="var i=document.getElementById('gate-pw');i.type=i.type==='password'?'text':'password';this.textContent=i.type==='password'?'👁':'🙈'" style="position:absolute;right:12px;background:none;border:none;cursor:pointer;font-size:18px;line-height:1;padding:0">👁</button>
   </div>
   <button id="gate-go">進入</button>
   <div class="err" id="gate-err"></div>
@@ -536,7 +536,7 @@ document.getElementById("man-close2").addEventListener("click",closeManual);
 
 /* ===== 小工具 ===== */
 /* 🔄 自動偵測新版本 */
-const BUILD="2026070213";
+const BUILD="2026070214";
 const CHANGELOG=[
   "新增 2 張記憶卡至 40 張：醫療法§99/§83（醫療糾紛先走縣市醫事審議委員會調解，護理師遇糾紛四步驟）；刑法§309/§304/§305（職場霸凌可刑告：公然侮辱＋強制＋恐嚇，加民法§195精神賠償）",
   "新增 6 張醫院職場記憶卡至 38 張：醫療法§24（醫療暴力加重刑責）、§82（醫事責任門檻）；護理人員法§24（護理業務四範圍）、§26（危急先救授權）；勞基法§36（例假7天必給）、§49（大夜班工會同意）",

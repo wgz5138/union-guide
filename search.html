@@ -171,9 +171,9 @@
   <div class="lock">🔒</div>
   <h2>臨床快查</h2>
   <p>請輸入通行密碼</p>
-  <div style="position:relative;width:240px;max-width:80vw">
-    <input id="gate-pw" type="password" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" placeholder="••••••" style="width:100%;padding-right:44px">
-    <button type="button" id="gate-eye" onclick="var i=document.getElementById('gate-pw');i.type=i.type==='password'?'text':'password';this.textContent=i.type==='password'?'👁':'🙈'" style="position:absolute;right:10px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;font-size:18px;color:var(--muted)">👁</button>
+  <div style="position:relative;width:240px;max-width:80vw;display:flex;align-items:center">
+    <input id="gate-pw" type="password" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" placeholder="••••••" style="width:100%;padding-right:42px;box-sizing:border-box">
+    <button type="button" id="gate-eye" onclick="var i=document.getElementById('gate-pw');i.type=i.type==='password'?'text':'password';this.textContent=i.type==='password'?'👁':'🙈'" style="position:absolute;right:12px;background:none;border:none;cursor:pointer;font-size:18px;line-height:1;padding:0">👁</button>
   </div>
   <button id="gate-go">進入</button>
   <div class="err" id="gate-err"></div>
