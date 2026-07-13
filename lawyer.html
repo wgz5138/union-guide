@@ -180,16 +180,13 @@
 <div id="appbanner"><span class="x" id="appbanner-x">✕</span>⚠️ 你好像是從 App（如 LINE）內建瀏覽器開的，這種視窗常<b>不能複製、按鈕卡卡</b>。建議用真瀏覽器開：<b>iPhone</b> 點下方分享圖示→「用 Safari 開啟」；<b>Android</b> 點右上「⋮」→「用瀏覽器開啟」。</div>
 <div id="updbanner"><span>🔄 有<b>新版本</b>了！點一下換到最新（不用刪圖示重加）</span><button id="updbtn">立即更新</button><span class="x" id="updbanner-x">✕</span></div>
 
-<div id="ver-badge" style="position:fixed;bottom:8px;right:10px;font-size:11px;color:#5E6E85;z-index:9999;pointer-events:none">v2026071304</div>
+<div id="ver-badge" style="position:fixed;bottom:8px;right:10px;font-size:11px;color:#5E6E85;z-index:9999;pointer-events:none">v2026071305</div>
 
 <div id="gate">
   <div class="lock">⚖️</div>
   <h2>AI 律師</h2>
   <p>請輸入通行密碼</p>
-  <div style="display:flex;align-items:center;gap:8px;width:240px;max-width:80vw">
-    <input id="gate-pw" type="password" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" placeholder="••••••" style="flex:1;min-width:0">
-    <button type="button" id="gate-eye" onclick="var i=document.getElementById('gate-pw');i.type=i.type==='password'?'text':'password';this.textContent=i.type==='password'?'👁':'🙈'" style="flex-shrink:0;background:none;border:none;cursor:pointer;font-size:20px;padding:4px;color:var(--muted)">👁</button>
-  </div>
+  <input id="gate-pw" type="password" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" placeholder="••••••">
   <button id="gate-go">進入</button>
   <div class="err" id="gate-err"></div>
 </div>
@@ -197,7 +194,7 @@
 <div id="app">
   <div class="topbar">
     <div class="logo">⚖️</div>
-    <div><div class="ttl">AI 律師</div><div class="sub mono">Legal Assistant · 勞動法主場 · v2026071304</div></div>
+    <div><div class="ttl">AI 律師</div><div class="sub mono">Legal Assistant · 勞動法主場 · v2026071305</div></div>
     <div class="right">
       <button class="link" id="manual-btn" type="button">❓ 怎麼用</button>
       <button class="link" id="chpw-btn" type="button">🔑 改密碼</button>
@@ -535,8 +532,9 @@ document.getElementById("man-close2").addEventListener("click",closeManual);
 
 /* ===== 小工具 ===== */
 /* 🔄 自動偵測新版本 */
-const BUILD="2026071304";
+const BUILD="2026071305";
 const CHANGELOG=[
+  "修正進場密碼輸入欄版面（移除導致欄位過窄的眼睛按鈕，恢復正常寬度）",
   "新增 2 張記憶卡至 40 張：醫療法§99/§83（醫療糾紛先走縣市醫事審議委員會調解，護理師遇糾紛四步驟）；刑法§309/§304/§305（職場霸凌可刑告：公然侮辱＋強制＋恐嚇，加民法§195精神賠償）",
   "新增 6 張醫院職場記憶卡至 38 張：醫療法§24（醫療暴力加重刑責）、§82（醫事責任門檻）；護理人員法§24（護理業務四範圍）、§26（危急先救授權）；勞基法§36（例假7天必給）、§49（大夜班工會同意）",
   "進場密碼統一為與臨床快查相同的通行碼（ACCESS_VERSION 升至 3，舊 session 自動失效）",
