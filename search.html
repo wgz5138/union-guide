@@ -440,8 +440,9 @@ document.getElementById("man-tour").addEventListener("click",()=>{ closeManual()
 /* ===== 小工具 ===== */
 function cleanAbs(t){ return String(t||"").replace(/<h[1-6][^>]*>/gi,"\n").replace(/<\/h[1-6]>/gi,"：").replace(/<[^>]+>/g," ").replace(/[ \t]{2,}/g," ").replace(/\s*\n\s*/g,"\n").trim(); }
 // 🔄 自動偵測新版本
-const BUILD="2026071306";
+const BUILD="2026071307";
 const CHANGELOG=[
+  "版本號同步（lawyer.html 修掉密碼永遠打不開的致命 bug，三工具版號一起校正）",
   "修正密碼驗證：改密碼功能若曾誤存壞值到本機，預設通行密碼會永久失效且無法復原；現在預設密碼永遠有效（當備用鑰匙），不會被本機自訂密碼卡死；SW 也修正網路優先抓 HTML 時可能被瀏覽器 HTTP 快取蓋掉的問題",
   "每篇文獻新增「🌐 翻譯中文」：有 API 金鑰用 Claude 翻（醫學術語更準），沒有則自動用 MyMemory 免費翻，不需跳頁",
   "新增「⚖️ AI 律師」工具（勞動法主場，引法條／判斷對方說法／列證據；法規用全國法規資料庫官方真資料；上方可進）",

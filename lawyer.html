@@ -532,8 +532,9 @@ document.getElementById("man-close2").addEventListener("click",closeManual);
 
 /* ===== 小工具 ===== */
 /* 🔄 自動偵測新版本 */
-const BUILD="2026071306";
+const BUILD="2026071307";
 const CHANGELOG=[
+  "🚨 修正密碼永遠打不開的致命錯誤：先前升級朗讀功能時，新舊兩套 TTS 程式碼重複宣告同一個變數（let _ttsBtn），導致整支 <script> 直接 SyntaxError 中斷、完全不執行——密碼欄位的「進入」按鈕從頭到尾沒有綁上任何事件，不管打對打錯都沒反應。已移除舊版重複程式碼，並實際用瀏覽器自動化測試過解鎖成功",
   "修正密碼驗證：改密碼功能若曾誤存壞值到本機，預設通行密碼會永久失效且無法復原；現在預設密碼永遠有效（當備用鑰匙），不會被本機自訂密碼卡死；SW 也修正網路優先抓 HTML 時可能被瀏覽器 HTTP 快取蓋掉的問題",
   "修正進場密碼輸入欄版面（移除導致欄位過窄的眼睛按鈕，恢復正常寬度）",
   "新增 2 張記憶卡至 40 張：醫療法§99/§83（醫療糾紛先走縣市醫事審議委員會調解，護理師遇糾紛四步驟）；刑法§309/§304/§305（職場霸凌可刑告：公然侮辱＋強制＋恐嚇，加民法§195精神賠償）",
@@ -709,22 +710,6 @@ document.getElementById("law-sec-toggle").addEventListener("click",()=>{
   if(a) a.textContent=open?"點開查詢 ▾":"收合 ▴";
 });
 renderCats(); renderLaws();
-
-/* ===================== TTS（語音朗讀） ===================== */
-let _ttsBtn=null;
-function ttsSpeak(text, btn){
-  if(!window.speechSynthesis){ toast("此瀏覽器不支援語音朗讀（建議用 Chrome）"); return; }
-  // 切換：再按同一顆就停止
-  if(_ttsBtn===btn && speechSynthesis.speaking){ speechSynthesis.cancel(); _ttsBtn=null; btn.classList.remove("playing"); return; }
-  speechSynthesis.cancel();
-  if(_ttsBtn){ _ttsBtn.classList.remove("playing"); }
-  const u=new SpeechSynthesisUtterance(text);
-  u.lang="zh-TW"; u.rate=0.88; u.pitch=1;
-  u.onend=()=>{ if(_ttsBtn)_ttsBtn.classList.remove("playing"); _ttsBtn=null; };
-  u.onerror=()=>{ if(_ttsBtn)_ttsBtn.classList.remove("playing"); _ttsBtn=null; };
-  speechSynthesis.speak(u);
-  _ttsBtn=btn; btn.classList.add("playing");
-}
 
 /* ===================== 記憶訓練 ===================== */
 const MEMO_CARDS=[
