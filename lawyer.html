@@ -532,8 +532,9 @@ document.getElementById("man-close2").addEventListener("click",closeManual);
 
 /* ===== 小工具 ===== */
 /* 🔄 自動偵測新版本 */
-const BUILD="2026071308";
+const BUILD="2026071309";
 const CHANGELOG=[
+  "🔊 記憶訓練 40 張卡改用預先錄好的真人語音檔（mem-audio/），不再即時連 Google 翻譯 TTS 合成：徹底解決朗讀連不上、📻連續播放暴衝跳卡的問題（原因是外部服務不穩定），聽起來也更自然；語音檔會在播過一次後自動離線快取。AI 即時生成的情境卡（內容每次不同、無法預錄）改用手機內建語音朗讀",
   "修正朗讀卡住/📻連續播放暴衝亂跳：Google TTS 連不上時原本沒有逾時保護，單張朗讀會卡在「播放中」按鈕永遠不放（沒聲音也不解除）；連續播放模式則會每張都瞬間判定失敗、瘋狂跳下一張（畫面狂閃但完全沒聲音）。已加 4.5 秒逾時防呆，連不上就自動退回手機內建語音朗讀，不再卡住也不再暴衝",
   "🚨 修正密碼永遠打不開的致命錯誤：先前升級朗讀功能時，新舊兩套 TTS 程式碼重複宣告同一個變數（let _ttsBtn），導致整支 <script> 直接 SyntaxError 中斷、完全不執行——密碼欄位的「進入」按鈕從頭到尾沒有綁上任何事件，不管打對打錯都沒反應。已移除舊版重複程式碼，並實際用瀏覽器自動化測試過解鎖成功",
   "修正密碼驗證：改密碼功能若曾誤存壞值到本機，預設通行密碼會永久失效且無法復原；現在預設密碼永遠有效（當備用鑰匙），不會被本機自訂密碼卡死；SW 也修正網路優先抓 HTML 時可能被瀏覽器 HTTP 快取蓋掉的問題",
@@ -916,7 +917,7 @@ function renderMemCards(){
     btn.addEventListener("click",()=>{
       const c=list[+btn.dataset.i];
       const text=c.ref+"，"+c.title+"。"+c.plain+"。記憶口訣："+c.tip;
-      ttsSpeak(text, btn);
+      ttsSpeak(text, btn, memAudioUrl(c));
     });
   });
   document.getElementById("mem-list").querySelectorAll(".mc-court-btn").forEach(btn=>{
@@ -928,59 +929,52 @@ function renderMemCards(){
 }
 renderMemCats(); renderMemCards();
 
-/* ===== 🎵 TTS 引擎：Google TTS 真實音訊（支援 iOS 切 App 繼續播）＋ speechSynthesis 備援 ===== */
+/* ===== 🎵 TTS 引擎：40張固定卡用預先錄好的真人語音檔（mem-audio/，離線可快取、不必連網即時合成）；
+   AI 即時生成的內容（文字每次都不同，無法預錄）才用手機內建語音 speechSynthesis，不再現場呼叫任何外部 TTS API ===== */
 let _curAudio=null, _ttsBtn=null;
 
-// 把長文切成 ≤180 字小段（Google TTS 有長度限制）
-function _ttsChunks(text, max=180){
-  const segs=text.split(/(?<=[。！？；\n])/);
-  const out=[]; let buf='';
-  for(const s of segs){
-    if(!s.trim()) continue;
-    if((buf+s).length>max){ if(buf) out.push(buf.trim()); buf=s; }
-    else buf+=s;
-  }
-  if(buf.trim()) out.push(buf.trim());
-  return out.length?out:[text.slice(0,max)];
+function memAudioUrl(c){ const gi=MEMO_CARDS.indexOf(c); return gi<0?null:"mem-audio/"+String(gi).padStart(2,"0")+".mp3"; }
+
+function _speakLocal(text, onEnd){
+  _curAudio=null;
+  if(!window.speechSynthesis){ toast("此瀏覽器不支援語音朗讀（建議用 Chrome）"); if(onEnd) onEnd(); return ()=>{}; }
+  speechSynthesis.cancel();
+  const u=new SpeechSynthesisUtterance(text);
+  u.lang="zh-TW"; u.rate=0.88; u.pitch=1;
+  let done=false;
+  u.onend=()=>{ if(done)return; done=true; if(onEnd) onEnd(); };
+  u.onerror=()=>{ if(done)return; done=true; if(onEnd) onEnd(); };
+  speechSynthesis.speak(u);
+  return ()=>{ done=true; speechSynthesis.cancel(); };
 }
 
-// Google TTS URL（同域 translate.googleapis.com，iOS 當真實音訊，切 App 不停）
-function _gttsUrl(text){ return "https://translate.googleapis.com/translate_tts?ie=UTF-8&tl=zh-TW&client=tw-ob&ttsspeed=0.85&q="+encodeURIComponent(text); }
-
-// 播一段文字（chunks 鏈式播放），回傳 cancel 函式
-function playTTS(text, onEnd, onCancel){
-  const chunks=_ttsChunks(text);
-  let idx=0, cancelled=false, curAudio=null;
-  // Google TTS 連不上/卡住（常見於防火牆擋 translate.googleapis.com）：一失敗就整段改用瀏覽器內建語音，不再逐段重試卡住畫面
-  function fallbackToSpeech(fromIdx){
-    if(cancelled) return;
-    if(window.speechSynthesis){
-      const u=new SpeechSynthesisUtterance(chunks.slice(fromIdx).join(''));
-      u.lang='zh-TW'; u.rate=0.88;
-      u.onend=()=>{ if(!cancelled && onEnd) onEnd(); };
-      u.onerror=()=>{ if(!cancelled && onEnd) onEnd(); };
-      speechSynthesis.speak(u);
-    } else if(!cancelled && onEnd) onEnd();
+// 播放：有預錄音檔（audioUrl）就播檔案；沒有或播不出來才退回手機內建語音。回傳 cancel 函式
+function playTTS(text, onEnd, onCancel, audioUrl){
+  let cancelled=false, settled=false, speechCancel=null;
+  function useSpeech(){ if(cancelled)return; speechCancel=_speakLocal(text, ()=>{ if(!cancelled && onEnd) onEnd(); }); }
+  if(audioUrl){
+    const a=new Audio(audioUrl);
+    _curAudio=a;
+    // 防呆逾時：音檔本機同源理論上很快，3 秒內沒動靜就當作載入失敗，退回本機語音，避免卡在「播放中」不放
+    const watchdog=setTimeout(()=>{ if(settled||cancelled)return; settled=true; try{a.pause();a.src='';}catch(e){} useSpeech(); }, 3000);
+    // settled/cancelled 都要擋：cancel() 主動清 a.src 也會非同步觸發這裡的 onerror，沒擋住的話會把「上一張」的內容錯誤地當成「這一張」播出來
+    a.onended=()=>{ if(settled||cancelled)return; settled=true; clearTimeout(watchdog); if(onEnd) onEnd(); };
+    a.onerror=()=>{ if(settled||cancelled)return; settled=true; clearTimeout(watchdog); useSpeech(); };
+    a.play().catch(()=>{ if(settled||cancelled)return; settled=true; clearTimeout(watchdog); useSpeech(); });
+  } else {
+    useSpeech();
   }
-  function next(){
-    if(cancelled||idx>=chunks.length){ if(!cancelled && onEnd) onEnd(); return; }
-    const myIdx=idx;
-    const a=new Audio(_gttsUrl(chunks[idx++]));
-    curAudio=a; _curAudio=a;
-    let settled=false;
-    // 防呆逾時：4.5 秒內沒播完/沒出錯（網路卡住不出聲也不報錯）就直接退回本機語音，避免按鈕卡在「播放中」不放
-    const watchdog=setTimeout(()=>{ if(settled)return; settled=true; try{a.pause();a.src='';}catch(e){} fallbackToSpeech(myIdx); }, 4500);
-    a.onended=()=>{ if(settled)return; settled=true; clearTimeout(watchdog); next(); };
-    a.onerror=()=>{ if(settled)return; settled=true; clearTimeout(watchdog); fallbackToSpeech(myIdx); };
-    a.play().catch(()=>{ if(settled)return; settled=true; clearTimeout(watchdog); fallbackToSpeech(myIdx); });
-  }
-  next();
-  return ()=>{ cancelled=true; if(curAudio){ curAudio.pause(); curAudio.src=''; } if(window.speechSynthesis) speechSynthesis.cancel(); if(onCancel) onCancel(); };
+  return ()=>{
+    cancelled=true; settled=true;
+    if(_curAudio){ _curAudio.pause(); _curAudio.src=''; _curAudio=null; }
+    if(speechCancel) speechCancel(); else if(window.speechSynthesis) speechSynthesis.cancel();
+    if(onCancel) onCancel();
+  };
 }
 
 // 單張卡🔊朗讀按鈕
 let _ttsCancelFn=null;
-function ttsSpeak(text, btn){
+function ttsSpeak(text, btn, audioUrl){
   if(_ttsCancelFn && _ttsBtn===btn){
     _ttsCancelFn(); _ttsCancelFn=null; btn.classList.remove("playing"); _ttsBtn=null; return;
   }
@@ -988,7 +982,7 @@ function ttsSpeak(text, btn){
   if(_ttsBtn) _ttsBtn.classList.remove("playing");
   if(window.speechSynthesis) speechSynthesis.cancel();
   btn.classList.add("playing"); _ttsBtn=btn;
-  _ttsCancelFn=playTTS(text, ()=>{ btn.classList.remove("playing"); if(_ttsBtn===btn) _ttsBtn=null; _ttsCancelFn=null; });
+  _ttsCancelFn=playTTS(text, ()=>{ btn.classList.remove("playing"); if(_ttsBtn===btn) _ttsBtn=null; _ttsCancelFn=null; }, null, audioUrl);
 }
 
 /* ===== 📻 Radio 連續播放模式（切 App 繼續播，等同 Radio.tw 體驗）===== */
@@ -1018,7 +1012,7 @@ function radioPlayCurrent(){
   const text=c.ref+"，"+c.title+"。"+c.plain+"。記憶口訣："+c.tip;
   _radioCancelFn=playTTS(text, ()=>{
     if(!_radioPaused){ _radioIdx++; setTimeout(radioPlayCurrent,900); }
-  });
+  }, null, memAudioUrl(c));
 }
 function radioStart(idx){
   _radioIdx=idx||0; _radioPaused=false;
