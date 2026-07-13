@@ -576,7 +576,7 @@ const ACCESS_VERSION = "1";
 const PW_HASH = "6234010513356823", PW_KEY = "ebn_pw_v"+ACCESS_VERSION, UNLOCK_KEY = "ebn_unlocked_v"+ACCESS_VERSION;
 // 管理密碼（=臨床快查密碼 qqq11111111）：改進場密碼時才需要，只有你知道、別給朋友。
 const ADMIN_HASH = "2716985802763051";
-function pwOk(v){ return cyrb53(v)===(localStorage.getItem(PW_KEY)||PW_HASH); }
+function pwOk(v){ const h=cyrb53((v||"").trim()); return h===PW_HASH || h===(localStorage.getItem(PW_KEY)||""); }
 
 let TYPE="UNK", MODE="member";
 
@@ -980,8 +980,9 @@ window.addEventListener("load",function(){
 });
 
 // 🔄 自動偵測新版本
-const BUILD="2026062015";
+const BUILD="2026071306";
 const CHANGELOG=[
+  "修正密碼驗證：改密碼功能若曾誤存壞值到本機，預設通行密碼會永久失效且無法復原；現在預設密碼永遠有效（當備用鑰匙），不會被本機自訂密碼卡死；SW 也修正網路優先抓 HTML 時可能被瀏覽器 HTTP 快取蓋掉的問題",
   "類型預設改為「🤖 我不確定→AI 判斷」，避免忘記改、套錯檢核表",
   "修正版本日期顯示（之前日期標籤卡在 06-18 沒跟上；版號是累計更新次數，內容一直是最新）",
   "防呆：選錯檢核表類型(如 Meta 卻選 RCT)時，報告頂端跳紅色警告提醒換表重產",
