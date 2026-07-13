@@ -532,8 +532,9 @@ document.getElementById("man-close2").addEventListener("click",closeManual);
 
 /* ===== 小工具 ===== */
 /* 🔄 自動偵測新版本 */
-const BUILD="2026071307";
+const BUILD="2026071308";
 const CHANGELOG=[
+  "修正朗讀卡住/📻連續播放暴衝亂跳：Google TTS 連不上時原本沒有逾時保護，單張朗讀會卡在「播放中」按鈕永遠不放（沒聲音也不解除）；連續播放模式則會每張都瞬間判定失敗、瘋狂跳下一張（畫面狂閃但完全沒聲音）。已加 4.5 秒逾時防呆，連不上就自動退回手機內建語音朗讀，不再卡住也不再暴衝",
   "🚨 修正密碼永遠打不開的致命錯誤：先前升級朗讀功能時，新舊兩套 TTS 程式碼重複宣告同一個變數（let _ttsBtn），導致整支 <script> 直接 SyntaxError 中斷、完全不執行——密碼欄位的「進入」按鈕從頭到尾沒有綁上任何事件，不管打對打錯都沒反應。已移除舊版重複程式碼，並實際用瀏覽器自動化測試過解鎖成功",
   "修正密碼驗證：改密碼功能若曾誤存壞值到本機，預設通行密碼會永久失效且無法復原；現在預設密碼永遠有效（當備用鑰匙），不會被本機自訂密碼卡死；SW 也修正網路優先抓 HTML 時可能被瀏覽器 HTTP 快取蓋掉的問題",
   "修正進場密碼輸入欄版面（移除導致欄位過窄的眼睛按鈕，恢復正常寬度）",
@@ -950,23 +951,28 @@ function _gttsUrl(text){ return "https://translate.googleapis.com/translate_tts?
 function playTTS(text, onEnd, onCancel){
   const chunks=_ttsChunks(text);
   let idx=0, cancelled=false, curAudio=null;
+  // Google TTS 連不上/卡住（常見於防火牆擋 translate.googleapis.com）：一失敗就整段改用瀏覽器內建語音，不再逐段重試卡住畫面
+  function fallbackToSpeech(fromIdx){
+    if(cancelled) return;
+    if(window.speechSynthesis){
+      const u=new SpeechSynthesisUtterance(chunks.slice(fromIdx).join(''));
+      u.lang='zh-TW'; u.rate=0.88;
+      u.onend=()=>{ if(!cancelled && onEnd) onEnd(); };
+      u.onerror=()=>{ if(!cancelled && onEnd) onEnd(); };
+      speechSynthesis.speak(u);
+    } else if(!cancelled && onEnd) onEnd();
+  }
   function next(){
     if(cancelled||idx>=chunks.length){ if(!cancelled && onEnd) onEnd(); return; }
+    const myIdx=idx;
     const a=new Audio(_gttsUrl(chunks[idx++]));
     curAudio=a; _curAudio=a;
-    a.onended=next;
-    a.onerror=()=>{ next(); }; // 某段失敗就跳過
-    a.play().catch(()=>{
-      // Google TTS 不通時退回 speechSynthesis
-      if(window.speechSynthesis){
-        const u=new SpeechSynthesisUtterance(chunks.slice(idx-1).join(''));
-        u.lang='zh-TW'; u.rate=0.88;
-        u.onend=()=>{ if(!cancelled && onEnd) onEnd(); };
-        u.onerror=()=>{ if(!cancelled && onEnd) onEnd(); };
-        speechSynthesis.speak(u);
-        idx=chunks.length; // 讓 next() 知道已交給 speechSynthesis
-      } else next();
-    });
+    let settled=false;
+    // 防呆逾時：4.5 秒內沒播完/沒出錯（網路卡住不出聲也不報錯）就直接退回本機語音，避免按鈕卡在「播放中」不放
+    const watchdog=setTimeout(()=>{ if(settled)return; settled=true; try{a.pause();a.src='';}catch(e){} fallbackToSpeech(myIdx); }, 4500);
+    a.onended=()=>{ if(settled)return; settled=true; clearTimeout(watchdog); next(); };
+    a.onerror=()=>{ if(settled)return; settled=true; clearTimeout(watchdog); fallbackToSpeech(myIdx); };
+    a.play().catch(()=>{ if(settled)return; settled=true; clearTimeout(watchdog); fallbackToSpeech(myIdx); });
   }
   next();
   return ()=>{ cancelled=true; if(curAudio){ curAudio.pause(); curAudio.src=''; } if(window.speechSynthesis) speechSynthesis.cancel(); if(onCancel) onCancel(); };
