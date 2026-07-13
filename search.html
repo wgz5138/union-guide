@@ -174,6 +174,7 @@
   <input id="gate-pw" type="password" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" placeholder="••••••">
   <button id="gate-go">進入</button>
   <div class="err" id="gate-err"></div>
+  <p style="margin-top:16px;font-size:12px;color:var(--muted)">提示：3個英文小寫 q ＋ 8個數字 1</p>
 </div>
 
 <div id="app">
@@ -390,6 +391,7 @@
 <script>
 /* ===== 密碼（與評讀工具獨立，以雜湊儲存，原始碼看不到真密碼）。預設 = qqq11111111（3個q＋8個一）。 =====
    🚨 趕人／重設名單：把 ACCESS_VERSION +1、並換下面 PW_HASH，所有人被踢出、舊密碼全失效，只有新密碼能再進。 */
+if(typeof cyrb53==="undefined"){ var cyrb53=function(s,seed){seed=seed||0;s=s||"";var h1=0xdeadbeef^seed,h2=0x41c6ce57^seed;for(var i=0,c;i<s.length;i++){c=s.charCodeAt(i);h1=Math.imul(h1^c,2654435761);h2=Math.imul(h2^c,1597334677);}h1=Math.imul(h1^(h1>>>16),2246822507);h1^=Math.imul(h2^(h2>>>13),3266489909);h2=Math.imul(h2^(h2>>>16),2246822507);h2^=Math.imul(h1^(h1>>>13),3266489909);return""+(4294967296*(2097151&h2)+(h1>>>0));}; }
 const ACCESS_VERSION="1";
 const PW_HASH="2716985802763051", PW_KEY="ebnq_pw_v"+ACCESS_VERSION, UNLOCK_KEY="ebnq_unlocked_v"+ACCESS_VERSION;
 function pwOk(v){ return cyrb53(v)===(localStorage.getItem(PW_KEY)||PW_HASH); }
