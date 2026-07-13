@@ -516,7 +516,8 @@ document.getElementById("tour-next").addEventListener("click",()=>{ if(_ti<TOUR.
 document.getElementById("tour-skip").addEventListener("click",endTour);
 document.getElementById("wel-tour").addEventListener("click",startTour);
 document.getElementById("man-tour").addEventListener("click",startTour);
-if(sessionStorage.getItem(UNLOCK_KEY)==="1") unlock();
+const LOCK=false; // 改 true 重新啟用密碼
+if(!LOCK || sessionStorage.getItem(UNLOCK_KEY)==="1") unlock();
 function tryUnlock(){ const v=document.getElementById("gate-pw").value;
   if(pwOk(v)){ sessionStorage.setItem(UNLOCK_KEY,"1"); unlock(); }
   else{ document.getElementById("gate-err").textContent="密碼不對"; document.getElementById("gate-pw").value=""; } }
@@ -535,7 +536,7 @@ document.getElementById("man-close2").addEventListener("click",closeManual);
 
 /* ===== 小工具 ===== */
 /* 🔄 自動偵測新版本 */
-const BUILD="2026070212";
+const BUILD="2026070213";
 const CHANGELOG=[
   "新增 2 張記憶卡至 40 張：醫療法§99/§83（醫療糾紛先走縣市醫事審議委員會調解，護理師遇糾紛四步驟）；刑法§309/§304/§305（職場霸凌可刑告：公然侮辱＋強制＋恐嚇，加民法§195精神賠償）",
   "新增 6 張醫院職場記憶卡至 38 張：醫療法§24（醫療暴力加重刑責）、§82（醫事責任門檻）；護理人員法§24（護理業務四範圍）、§26（危急先救授權）；勞基法§36（例假7天必給）、§49（大夜班工會同意）",
