@@ -1,4 +1,4 @@
-@echo off
+﻿@echo off
 chcp 65001 >nul
 rem 停止背景執行的 bot，結束所有 pythonw 程序。
 taskkill /im pythonw.exe /f >nul 2>&1
