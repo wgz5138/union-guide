@@ -39,11 +39,21 @@ API = f"https://api.telegram.org/bot{TOKEN}"
 )
 
 
+MAX_MSG_LEN = 4000   # Telegram 訊息上限 4096 字，留一點安全margin
+
+
 def send(chat_id, text):
+    if len(text) > MAX_MSG_LEN:
+        text = text[:MAX_MSG_LEN] + "\n…（內容過長，已截斷）"
     try:
-        requests.post(f"{API}/sendMessage",
-                      data={"chat_id": chat_id, "text": text}, timeout=15)
-    except requests.RequestException as e:
+        resp = requests.post(f"{API}/sendMessage",
+                             data={"chat_id": chat_id, "text": text}, timeout=15)
+        data = resp.json()
+        if not data.get("ok", False):
+            # 網路層沒出錯，但 Telegram 拒絕了這則訊息（例如格式問題）
+            # ——一定要印出來，不能讓查詢結果無聲無息消失。
+            print("送出失敗（Telegram 拒絕）：", data)
+    except (requests.RequestException, ValueError) as e:
         print("送出失敗：", e)
 
 
