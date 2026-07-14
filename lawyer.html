@@ -532,8 +532,9 @@ document.getElementById("man-close2").addEventListener("click",closeManual);
 
 /* ===== 小工具 ===== */
 /* 🔄 自動偵測新版本 */
-const BUILD="2026071310";
+const BUILD="2026071311";
 const CHANGELOG=[
+  "📻 連續播放三項改善：①修正鎖屏/切到背景時播完一張就卡住要手動重點的 bug（原本靠 setTimeout 排程下一張，背景會被瀏覽器凍結；改成在 onEnded 內直接同步接下一張，不依賴計時器）②新增「上次聽到哪裡」記憶：關掉再打開，按📻會自動從上次的那張接著播，不用從頭找③記憶卡新增5張到45張：國定假日調移出勤的舉證責任在雇主（§39）、特休屆期或離職未休要算錢（§38）、產檢假陪產假全薪另計（性平法§15）、育嬰留停復職保障（性平法§17）、職災醫療期間工資照給不得解僱（§59／§13）",
   "🚨 修正朗讀播幾秒就被腰斬的 bug：昨晚加的逾時防呆寫錯了——不管音檔有沒有正常在播，時間一到就強制打斷、改播別的內容，導致每張卡都只聽到開頭幾個字就沒了。已改成只在「真的完全沒開始播放」時才觸發，一旦偵測到音框確實在輸出（playing 事件）就解除逾時，不會再打斷正常播放中的音檔。用瀏覽器自動化實測 42 秒的卡片，確認全程 currentTime 順利跑完、不再中途被砍",
   "🔊 記憶訓練 40 張卡改用預先錄好的真人語音檔（mem-audio/），不再即時連 Google 翻譯 TTS 合成：徹底解決朗讀連不上、📻連續播放暴衝跳卡的問題（原因是外部服務不穩定），聽起來也更自然；語音檔會在播過一次後自動離線快取。AI 即時生成的情境卡（內容每次不同、無法預錄）改用手機內建語音朗讀",
   "修正朗讀卡住/📻連續播放暴衝亂跳：Google TTS 連不上時原本沒有逾時保護，單張朗讀會卡在「播放中」按鈕永遠不放（沒聲音也不解除）；連續播放模式則會每張都瞬間判定失敗、瘋狂跳下一張（畫面狂閃但完全沒聲音）。已加 4.5 秒逾時防呆，連不上就自動退回手機內建語音朗讀，不再卡住也不再暴衝",
@@ -883,7 +884,27 @@ const MEMO_CARDS=[
   { ref:"刑法 §309 / §304 / §305", title:"被霸凌可刑告（侮辱＋強制＋恐嚇是犯罪）", tag:"職場霸凌", searchKw:"公然侮辱 強制罪 職場霸凌 主管 刑事告訴 護理",
     plain:"職場霸凌不只是「人際問題」，達到一定程度就是刑事犯罪：公然侮辱（§309，貶損人格尊嚴）、強制罪（§304，以威脅強迫他人做或不做某事）、恐嚇罪（§305，揚言傷害讓人心生恐懼）。加上民法§195，精神損害可求償。重點：從現在起保存每一條訊息、每一個見證人、每一次事件的日期時間地點。工會§6（職安法）要求雇主預防霸凌；刑法讓加害人親自承擔法律責任。",
     scene:"護理師小玲的組長在護理站當眾罵她「這麼笨怎麼會通過執照」，又私訊威脅「再申訴我讓你調到最遠的病房」。工會說明：當眾貶損≈公然侮辱§309；威脅調動≈強制罪§304；兩者均可提刑事告訴（告訴乃論，6個月內提出）。同時向院方申訴啟動職安法霸凌調查；如組長在調查期間持續威脅，再加恐嚇§305。工會協助小玲整理聊天截圖＋見證同事聯絡資料，陪同到地檢署按鈴申告。\n→ 先存證（截圖＋日誌）、再申訴（院方＋勞工局）、必要時刑告（工會陪同）。\n⚠ 此為典型情境供練習，請點「🔎 查判決」找真實裁判。",
-    tip:"「霸凌三刑法：罵人§309、逼人§304、嚇人§305——都可以告」——加上民法195精神賠償，讓加害人負個人責任，不只是公司道歉。" }
+    tip:"「霸凌三刑法：罵人§309、逼人§304、嚇人§305——都可以告」——加上民法195精神賠償，讓加害人負個人責任，不只是公司道歉。" },
+  { ref:"勞動基準法 §39", title:"國定假日『挪移』出勤，加倍工資的舉證責任在雇主", tag:"舉證策略", searchKw:"國定假日 調移 加班費 出勤紀錄 舉證責任 護理",
+    plain:"國定假日是勞基法§37應放假之日，雇主經徵得勞工同意於休假日工作，工資應依§39加倍發給。政府每年公告的『調移』（國定假日剛好遇到六日，行政院統一公告與其他工作日對調）是全國一致的行事曆調整；如果雇主是要求你在原本的國定假日照常出勤、事後只用調移後的補假日打發，並沒有依法加倍發給工資，不能用『反正你有休到』規避加倍工資的義務。勞基法規定雇主須備置勞工出勤紀錄並保存五年，實務上勞工只要能證明「當天有出勤」與「當天是法定應休之日」，雇主若主張已合法調整、已足額給付，應由雇主提出出勤紀錄與調整依據自行舉證，而非要勞工自證清白。",
+    scene:"護理師小美排班表上原本國定假日休假，醫院卻把該假日『調移』到平日，要求小美當天照常上12小時班，事後只給補休、沒加倍發薪水。工會提醒：①先調出勤紀錄（刷卡、排班表）②確認當天是不是法定應休日③若雇主主張已合法調移，要它拿出調移的法源依據（行政院公告或勞資會議紀錄）④沒有加倍發給、只用補休打發，可以向勞動局申訴。工會協助小美申請勞動檢查，調出排班系統紀錄佐證。\n→ 舉證重點：勞工只要證明『有上班』＋『那天是應休日』，加倍工資有沒有依法給，換雇主自己舉證。\n⚠ 此為典型情境供練習，實際個案的調移是否合法需視公告依據而定，請點「🔎 查判決」找真實裁判。",
+    tip:"「有上班就要加倍領，調移不是免死金牌」——雇主想用『反正你有休到』賴掉加班費，先問它拿得出調移的法源嗎？" },
+  { ref:"勞動基準法 §38", title:"特休沒休完不會不見，離職或屆期未休要算錢", tag:"薪資福利", searchKw:"特別休假 特休 遞延 折算工資 離職",
+    plain:"特別休假（特休）排定後如果因為單位排班需求沒休完，經勞雇雙方協商可以遞延一年；遞延後仍沒休完的天數、或是離職時尚未休完的特休，雇主都要按未休日數折算工資發給，不能用『不休就是你自己放棄』一句話帶過。",
+    scene:"小蓁工作滿三年有特休14天，但單位人力吃緊，全年只排到休6天。年底小蓁問剩下8天怎麼辦，護理長說『沒休完就是你的損失』。工會提醒：依法未休完的特休，除非勞雇雙方合意遞延，否則雇主必須把未休日數折算工資發給，不是『自動作廢』。工會協助小蓁調出排班紀錄，向人資確認未休天數與工資折算金額。\n→ 特休三選一：休掉、合意遞延一年、或雇主折算工資給付——沒有第四種『自動消失』。\n⚠ 此為典型情境供練習，請點「🔎 查判決」找真實裁判。",
+    tip:"「特休不休三選一：休、延、算錢」——沒有第四種『自動消失』。" },
+  { ref:"性別平等工作法 §15", title:"產檢假7天、陪產檢及陪產假7天，都是全薪另計", tag:"性別保護", searchKw:"產檢假 陪產假 性別工作平等法 全薪 護理",
+    plain:"懷孕的受僱者，雇主應給予產檢假7天；受僱者的配偶待產或陪伴產檢，雇主應給予陪產檢及陪產假7天。這些假別工資照給，是另外給的假別，不得要求用特休或事假抵充，也不得因此扣全勤獎金或做不利處分。",
+    scene:"護理師阿潔懷孕後，護理長要她用『特休』請產檢假，不然就要用『事假』扣薪。工會查§15說明：產檢假、陪產檢及陪產假是法定假別，工資應照給，不能要求員工用特休或事假抵充，也不能因此扣全勤獎金。工會協助阿潔向護理長更正假別登記，並提醒同單位其他準爸媽同事一併適用。\n→ 產檢假、陪產假都是『另外給』，不是從特休或事假裡面扣。\n⚠ 此為典型情境供練習，請點「🔎 查判決」找真實裁判。",
+    tip:"「產檢陪產都7天，工資照給不能扣」——別讓雇主偷換成特休或事假。" },
+  { ref:"性別平等工作法 §17", title:"育嬰留停期滿要復職，雇主拒絕要負舉證責任", tag:"留停復職", searchKw:"育嬰留職停薪 復職 性別工作平等法 拒絕復職 護理",
+    plain:"受僱者依性別工作平等法申請育嬰留職停薪期滿後申請復職，雇主原則上不得拒絕。除非有法定正當理由（例如業務緊縮、雇主歇業或依法解散、不可抗力暫停工作一個月以上等），且經主管機關同意，才能拒絕，否則須負損害賠償責任，並可能被主管機關限期令其回復原職。",
+    scene:"護理師小柔育嬰留停一年後申請復職，護理長卻說『你的職缺已經有人了，先去別的單位』。工會說明：性平法§17規定復職是原則、拒絕是例外，且雇主要負舉證有法定正當理由並經主管機關同意才能拒絕。工會協助小柔向勞工局申訴，要求限期回復原職。\n→ 復職是原則，拒絕要有法定理由＋主管機關同意，不是護理長一句話就能打發。\n⚠ 此為典型情境供練習，請點「🔎 查判決」找真實裁判。",
+    tip:"「留停回來要復職，拒絕要有法定理由過主管機關關卡」——不是一句話就能打發。" },
+  { ref:"勞動基準法 §59／§13", title:"職災醫療期間工資照給，且不得任意終止契約", tag:"職業災害", searchKw:"職業災害 醫療期間 工資補償 不得解僱 護理",
+    plain:"勞工因執行職務發生職業災害而受傷或生病，在醫療中不能工作時，雇主應按原領工資數額予以補償；且依§13，勞工在職業災害醫療期間，雇主不得終止勞動契約（除非天災事變或其他不可抗力導致事業不能繼續，並經主管機關核定）。",
+    scene:"護理師阿翔在照護病人時被扎針感染，醫師開立需休養治療2個月。單位主管卻說『休那麼久乾脆離職』暗示施壓。工會提醒：職業災害醫療期間，雇主既要按原領工資補償，也不能任意終止契約。工會協助阿翔申請職災補償，並提醒單位強迫離職或不當解僱將違反§13。\n→ 職災醫療期間：工資照給＋不能被解僱，兩個保障是一起的。\n⚠ 此為典型情境供練習，請點「🔎 查判決」找真實裁判。",
+    tip:"「職災醫療期，錢照領、工作不能丟」——想逼退是違法的。" }
 ];
 
 let MEM_CAT="全部";
@@ -1002,11 +1023,18 @@ function _radioSetMedia(c){
     navigator.mediaSession.playbackState="playing";
   }catch(e){}
 }
+// 記住播到哪張：存 MEMO_CARDS 的全域索引（跟分類篩選無關），下次開連續播放可以接著播
+const RADIO_PROGRESS_KEY="law_radio_progress";
+function _radioSaveProgress(gi){ try{ localStorage.setItem(RADIO_PROGRESS_KEY, String(gi)); }catch(e){} }
+function _radioClearProgress(){ try{ localStorage.removeItem(RADIO_PROGRESS_KEY); }catch(e){} }
+function _radioLoadProgress(){ try{ const v=localStorage.getItem(RADIO_PROGRESS_KEY); return v==null?null:parseInt(v,10); }catch(e){ return null; } }
 function radioPlayCurrent(){
   if(_radioCancelFn){ _radioCancelFn(); _radioCancelFn=null; }
   const list=_radioListNow();
-  if(_radioIdx>=list.length){ radioStop(); toast("✅ 全部播完！"); return; }
+  if(_radioIdx>=list.length){ radioStop(); toast("✅ 全部播完！"); _radioClearProgress(); return; }
   const c=list[_radioIdx];
+  const gi=MEMO_CARDS.indexOf(c);
+  if(gi>=0) _radioSaveProgress(gi);
   document.getElementById("radio-title").textContent=((_radioIdx+1)+"/"+list.length+"　"+c.ref+"　"+c.title);
   document.getElementById("radio-pp").textContent="⏸";
   _radioSetMedia(c);
@@ -1014,7 +1042,10 @@ function radioPlayCurrent(){
   if(allCards[_radioIdx]) allCards[_radioIdx].scrollIntoView({behavior:"smooth",block:"nearest"});
   const text=c.ref+"，"+c.title+"。"+c.plain+"。記憶口訣："+c.tip;
   _radioCancelFn=playTTS(text, ()=>{
-    if(!_radioPaused){ _radioIdx++; setTimeout(radioPlayCurrent,900); }
+    // 鎖屏/切到背景時 setTimeout 會被瀏覽器整個凍結、遲遲不觸發（音檔本身靠 MediaSession 還能播，
+    // 但排程下一張的計時器不會跑），導致播完一張就卡住要手動重點。改成在 onEnded 內直接同步呼叫，
+    // 不依賴計時器，鎖屏狀態下也能自動接下一張
+    if(!_radioPaused){ _radioIdx++; radioPlayCurrent(); }
   }, null, memAudioUrl(c));
 }
 function radioStart(idx){
@@ -1052,8 +1083,16 @@ document.getElementById("radio-next").addEventListener("click",()=>radioNext());
 document.getElementById("radio-prev").addEventListener("click",()=>radioPrev());
 document.getElementById("radio-stop").addEventListener("click",()=>radioStop());
 document.getElementById("mem-radio-btn").addEventListener("click",()=>{
-  toast("📻 開始！切去其他 App 或鎖屏都會繼續播，控制中心可暫停/跳張");
-  radioStart(0);
+  const savedGi=_radioLoadProgress();
+  if(savedGi!=null && savedGi>0 && savedGi<MEMO_CARDS.length){
+    if(MEM_CAT!=="全部"){ MEM_CAT="全部"; renderMemCats(); renderMemCards(); }
+    const c=MEMO_CARDS[savedGi];
+    toast("📻 接續上次播到："+c.ref+" "+c.title);
+    radioStart(savedGi);
+  } else {
+    toast("📻 開始！切去其他 App 或鎖屏都會繼續播，控制中心可暫停/跳張");
+    radioStart(0);
+  }
 });
 
 document.getElementById("mem-sec-toggle").addEventListener("click",()=>{
