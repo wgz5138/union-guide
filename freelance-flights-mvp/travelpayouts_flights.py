@@ -320,8 +320,12 @@ def main():
     log.info("=== 開始查 %d 條航線 ===", len(ROUTES))
     state = load_state()   # 上次各航線的價格
     deals = 0              # 這次有幾條值得通知
-    try:
-        for i, route in enumerate(ROUTES):
+    failed = 0             # 這次有幾條查詢失敗（不中斷其他航線）
+    for i, route in enumerate(ROUTES):
+        # 每條航線獨立包例外：單一航線失敗（如 API 連續逾時）只略過該條，
+        # 不能讓後面的航線都不查、也不能讓已查到的價格記憶跟著遺失
+        # （save_state 在迴圈外，若整個迴圈被例外中斷，之前查到的都不會存檔）。
+        try:
             trip = "來回" if "return" in route else "單程"
             log.info("[%d/%d] 查 %s→%s（%s，%s）",
                      i + 1, len(ROUTES), route["origin"],
@@ -349,12 +353,16 @@ def main():
                          f"{上次:.0f}" if 上次 is not None else "無紀錄")
 
             state[row["route"]] = 價格   # 更新這條的最新價
+        except Exception as e:
+            failed += 1
+            log.exception("　%s→%s：查詢失敗，略過（不影響其他航線）：%s",
+                          route["origin"], route["dest"], e)
+        finally:
             time.sleep(1)  # 禮貌性間隔，別把人家 API 打太兇
-        save_state(state)
-        log.info("=== 完成：%d 條航線，%d 條值得通知 ===", len(ROUTES), deals)
-    except Exception as e:
-        log.exception("執行失敗：%s", e)
-        raise
+
+    save_state(state)   # 不管中途有沒有航線失敗，已查到的價格記憶都要存下來
+    log.info("=== 完成：%d 條航線，%d 條值得通知，%d 條失敗 ===",
+             len(ROUTES), deals, failed)
 
 
 if __name__ == "__main__":
