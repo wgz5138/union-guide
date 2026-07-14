@@ -1,8 +1,9 @@
 # -*- coding: utf-8 -*-
-"""透析藥水排班 — 手機網頁版（Streamlit）v2.3
+"""透析藥水排班 — 手機網頁版（Streamlit）v3.26
   • Fix1：公平歷史學玉繡實際決定，而非程式原排
   • Fix2：稽核送出後 LINE 通知每位稽核者責任班次
   • Fix3：自動選最接近今天的班表分頁
+  • v3.26：排班 Round3 跨區優先於同區印第二次（病房/ICU/休假限制下盡可能不讓同區人一週兩次）
 """
 import os, io, re, csv, json, base64, hashlib, tempfile, shutil, subprocess, sys
 from datetime import date, datetime
