@@ -314,20 +314,24 @@ def assign(members, status, window, hist_cnt):
             assign_slot[(T,A)]=c; member_days.setdefault(c,[]).append(T)
             slot_info[(T,A)]=(kind,src,True,av)
             warn(f"※ {lab(T)} {A} 沒有本區的人 → 從「{za}」借「{name_of_g.get(c,c)}」過來印"); break
-    # 回合3:還是空 → 某人印第二次(盡量間隔久;同日一+二也允許)
+    # 回合3:還是空 → 某人印第二次(跨區優先於同區；盡量間隔久；同日一+二也允許)
+    # 鐵律：有任何跨區候選人可印第二次時，絕不先動同區候選人印第二次
     for (T,A) in slots:
         if (T,A) in assign_slot: continue
         merged=dict(cross[(T,A)]); merged.update(same[(T,A)])
         def gap(c):
             ds=member_days.get(c,[]); return min((abs((T-d).days) for d in ds), default=99)
         cand=[c for c in merged if len(member_days.get(c,[]))<2]
-        cand.sort(key=lambda c:(merged[c][4], -gap(c), cost[c], idx[c]))
+        cand.sort(key=lambda c:(merged[c][4],
+                                0 if c not in same[(T,A)] else 1,  # 跨區(0)優先於同區(1)
+                                -gap(c), cost[c], idx[c]))
         if cand:
             c=cand[0]; g=gap(c); kind,src,za,z,av=merged[c]; isc=(c not in same[(T,A)])
             assign_slot[(T,A)]=c; member_days.setdefault(c,[]).append(T)
             slot_info[(T,A)]=(kind,src,isc,av)
             note="(同日一+二)" if g==0 else ""
-            warn(f"※ {lab(T)} {A} 人手不足 → 安排「{name_of_g.get(c,c)}」印第二次{note}(替代方案)")
+            cross_note="跨區" if isc else "同區"
+            warn(f"※ {lab(T)} {A} 人手不足 → 安排「{name_of_g.get(c,c)}」{cross_note}印第二次{note}(替代方案)")
     # 仍排不出
     for (T,A) in slots:
         if (T,A) not in assign_slot:

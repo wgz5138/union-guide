@@ -1,12 +1,16 @@
 @echo off
-chcp 65001 >nul
-rem åœæ­¢èƒŒæ™¯åŸ·è¡Œçš„ botï¼ˆçµæŸæ‰€æœ‰ pythonw ç¨‹åºï¼‰ã€‚
+chcp 950 >nul
+rem °±¤î­I´º°õ¦æªº bot¡Aµ²§ô©Ò¦³ pythonw µ{§Ç¡C
 taskkill /im pythonw.exe /f >nul 2>&1
-if %errorlevel%==0 (
-  echo å·²åœæ­¢èƒŒæ™¯æ©Ÿå™¨äººã€‚
-) else (
-  echo ç›®å‰æ²’æœ‰åœ¨èƒŒæ™¯è·‘çš„æ©Ÿå™¨äººï¼ˆæˆ–å·²ç¶“åœäº†ï¼‰ã€‚
-)
-echo ï¼ˆè¨»ï¼šé€™æœƒçµæŸæ‰€æœ‰ pythonw èƒŒæ™¯ç¨‹å¼ï¼›ä½ é›»è…¦é€šå¸¸åªæœ‰é€™æ”¯åœ¨ç”¨ pythonwã€‚ï¼‰
+if not %errorlevel%==0 goto notrunning
+
+echo ¤w°±¤î­I´º¾÷¾¹¤H¡C
+goto end
+
+:notrunning
+echo ¥Ø«e¨S¦³¦b­I´º¶]ªº¾÷¾¹¤H¡A©Î¬O¤w¸g°±¤F¡C
+
+:end
+echo µù¡G³o·|µ²§ô©Ò¦³ pythonw ­I´ºµ{¦¡¡A§A¹q¸£³q±`¥u¦³³o¤ä¦b¥Î pythonw¡C
 echo.
 pause

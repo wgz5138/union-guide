@@ -1,20 +1,24 @@
 @echo off
-chcp 65001 >nul
+chcp 950 >nul
 echo ============================================
-echo   è¨­å®šã€Œæ¯å¤©è‡ªå‹•æŠ“ Google æ©Ÿç¥¨ã€
+echo   ³]©w¡u¨C¤Ñ¦Û°Ê§ì Google ¾÷²¼¡v
 echo ============================================
 echo.
 set TASKTIME=08:00
-set /p TASKTIME=è¦æ¯å¤©å¹¾é»žè‡ªå‹•æŠ“ï¼Ÿï¼ˆ24å°æ™‚åˆ¶ï¼Œä¾‹ 08:00ï¼›ç›´æŽ¥ Enter ç”¨ 08:00ï¼‰ï¼š
+set /p TASKTIME=­n¨C¤Ñ´XÂI¦Û°Ê§ì¡H24¤p®É¨î¡A¨Ò 08:00¡Aª½±µ Enter ¥Î 08:00¡G
 echo.
-schtasks /create /tn "Googleæ©Ÿç¥¨æ¯æ—¥æŠ“å–" /tr "\"%~dp0_Googleæ©Ÿç¥¨æŽ’ç¨‹åŸ·è¡Œ.bat\"" /sc daily /st %TASKTIME% /f
+schtasks /create /tn "Google¾÷²¼¨C¤é§ì¨ú" /tr "\"%~dp0_Google¾÷²¼±Æµ{°õ¦æ.bat\"" /sc daily /st %TASKTIME% /f
 echo.
-if %errorlevel%==0 (
-  echo [æˆåŠŸ] æ¯å¤© %TASKTIME% æœƒè‡ªå‹•æŠ“ Google æ©Ÿç¥¨ä¸¦å­˜é€² data\gflights.csvã€‚
-  echo         æ³¨æ„ï¼šGoogle éœ€ã€Œéžç„¡é ­æ¨¡å¼ã€ï¼Œåˆ°æ™‚æœƒè‡ªå‹•å½ˆå‡ºç€è¦½å™¨è¦–çª—ï¼ˆæ­£å¸¸ï¼‰ã€‚
-  echo         é›»è…¦é—œæ©Ÿ/ç¡çœ æ™‚ä¸æœƒè·‘ï¼›å–æ¶ˆè«‹é»žã€Œå–æ¶ˆGoogleæ©Ÿç¥¨æŽ’ç¨‹.batã€ã€‚
-) else (
-  echo [å¤±æ•—] è‹¥é¡¯ç¤ºã€Œå­˜å–è¢«æ‹’ã€ï¼Œè«‹å°æœ¬æª”å³éµâ†’ä»¥ç³»çµ±ç®¡ç†å“¡èº«åˆ†åŸ·è¡Œå†è©¦ã€‚
-)
+if not %errorlevel%==0 goto fail
+
+echo [¦¨¥\] ¨C¤Ñ %TASKTIME% ·|¦Û°Ê§ì Google ¾÷²¼¨Ã¦s¶i data\gflights.csv¡C
+echo         ª`·N¡GGoogle »Ý­n¯uªº¶}ÂsÄý¾¹µøµ¡¤~Ã­¡A¨ì®É·|¦Û°Ê¼u¥XÂsÄý¾¹µøµ¡¡AÄÝ¥¿±`²{¶H¡C
+echo         ¹q¸£Ãö¾÷©ÎºÎ¯v®É¤£·|°õ¦æ¡F·Q¨ú®ø½ÐÂI¡u¨ú®øGoogle¾÷²¼±Æµ{.bat¡v¡C
+goto end
+
+:fail
+echo [¥¢±Ñ] ­Y¤W¤èÅã¥Ü¡u¦s¨ú³Q©Ú¡v¡A½Ð¹ï¥»ÀÉ«ö¥kÁä¡A¿ï¡u¥H¨t²ÎºÞ²z­û¨­¤À°õ¦æ¡v¦A¸Õ¤@¦¸¡C
+
+:end
 echo.
 pause

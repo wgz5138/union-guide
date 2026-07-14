@@ -51,6 +51,7 @@ PROFILE = os.path.join(HERE, "data", ".gf_profile")   # 持久設定檔（gitign
 OUTPUT_CSV = os.path.join(HERE, "data", "gflights.csv")
 OUTPUT_JSON = os.path.join(HERE, "data", "gflights.json")
 LOG_FILE = os.path.join(HERE, "logs", "gflights.log")
+STATS_FILE = os.path.join(HERE, "data", "gflights_stats.json")  # 每次執行的成功率統計（累積成穩定測試報告）
 
 UA = ("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
       "(KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36")
@@ -127,22 +128,26 @@ def parse(text, route):
 
 
 def load_with_retry(page, route):
-    """重試到結果載出為止；回傳 True/False。這就是『高穩定性』的核心。"""
+    """重試到結果載出為止；回傳 (成功與否, 用掉的嘗試次數, 失敗原因或None)。
+    這就是『高穩定性』的核心，也是每日成功率統計的資料來源。"""
     url = build_url(route)
     for attempt in range(1, MAX_TRIES + 1):
         log.info("　載入嘗試 %d/%d：%s→%s", attempt, MAX_TRIES,
                  route["origin"], route["dest"])
-        page.goto(url, timeout=60_000)
-        page.wait_for_timeout(WAIT_MS)
-        for label in ["全部接受", "我同意", "接受全部", "Accept all"]:
-            try:
-                page.get_by_text(label, exact=False).first.click(timeout=1500)
-            except Exception:
-                pass
-        if has_results(page.inner_text("body")):
-            return True
+        try:
+            page.goto(url, timeout=60_000)
+            page.wait_for_timeout(WAIT_MS)
+            for label in ["全部接受", "我同意", "接受全部", "Accept all"]:
+                try:
+                    page.get_by_text(label, exact=False).first.click(timeout=1500)
+                except Exception:
+                    pass
+            if has_results(page.inner_text("body")):
+                return True, attempt, None
+        except Exception as e:
+            log.warning("　載入嘗試 %d/%d 發生例外：%s", attempt, MAX_TRIES, e)
         page.wait_for_timeout(2500)
-    return False
+    return False, MAX_TRIES, f"重試 {MAX_TRIES} 次仍未載出（疑似間歇性反爬阻擋，見故障排除SOP故障1）"
 
 
 def parse_baggage(text):
@@ -262,32 +267,131 @@ def save(rows):
     log.info("已存 %d 筆 → %s（與 .json）", len(rows), OUTPUT_CSV)
 
 
+def append_stats(run_record):
+    """把這次執行的成功率記錄追加進 STATS_FILE。
+    對應交付物 C『每日執行日誌，記錄時間/成功率/失敗原因』；
+    長期累積即為交付物 B 驗收所需的『連續穩定測試報告』原始資料。"""
+    history = []
+    if os.path.exists(STATS_FILE):
+        try:
+            with open(STATS_FILE, encoding="utf-8") as f:
+                history = json.load(f)
+        except (OSError, ValueError):
+            history = []
+    history.append(run_record)
+    try:
+        with open(STATS_FILE, "w", encoding="utf-8") as f:
+            json.dump(history, f, ensure_ascii=False, indent=2)
+    except OSError as e:
+        log.warning("成功率統計存檔失敗（不影響本次抓取結果）：%s", e)
+
+    total_runs = len(history)
+    avg_rate = sum(r["success_rate_pct"] for r in history) / total_runs
+    log.info("　累計 %d 次執行，歷史平均成功率 %.1f%%（見 %s）",
+             total_runs, avg_rate, STATS_FILE)
+
+
 def main():
     log.info("=== Google Flights 抓取開始（%d 條航線）===", len(ROUTES))
     os.makedirs(os.path.dirname(PROFILE), exist_ok=True)
     all_rows = []
-    with sync_playwright() as p:
-        ctx = p.chromium.launch_persistent_context(
-            PROFILE, headless=HEADLESS,
-            args=["--disable-blink-features=AutomationControlled",
-                  "--disable-infobars"],
-            ignore_default_args=["--enable-automation"],
-            user_agent=UA, locale="zh-TW", timezone_id="Asia/Taipei",
-            viewport={"width": 1366, "height": 850})
-        ctx.add_init_script(STEALTH_JS)
-        page = ctx.pages[0] if ctx.pages else ctx.new_page()
+    route_results = []   # 每條航線的成功/失敗紀錄，用來算這次執行的成功率
+    started_at = datetime.now()
+    try:
+        with sync_playwright() as p:
+            ctx = p.chromium.launch_persistent_context(
+                PROFILE, headless=HEADLESS,
+                args=["--disable-blink-features=AutomationControlled",
+                      "--disable-infobars"],
+                ignore_default_args=["--enable-automation"],
+                user_agent=UA, locale="zh-TW", timezone_id="Asia/Taipei",
+                viewport={"width": 1366, "height": 850})
+            ctx.add_init_script(STEALTH_JS)
+            page = ctx.pages[0] if ctx.pages else ctx.new_page()
+            _run_all_routes(page, ROUTES, all_rows, route_results)
+            ctx.close()
+    except Exception as e:
+        # 連瀏覽器本身都開不起來（profile 損毀、Playwright 未安裝完整等）：
+        # 仍要把「這次完全失敗」記進 stats，不能讓日誌憑空消失（呼應交付物C）。
+        log.exception("瀏覽器初始化或執行過程發生嚴重錯誤：%s", e)
         for route in ROUTES:
-            if load_with_retry(page, route):
-                rows = extract(page, route)
-                log.info("　%s→%s：抓到 %d 班", route["origin"], route["dest"],
-                         len(rows))
-                all_rows.extend(rows)
-            else:
-                log.warning("　%s→%s：重試 %d 次仍未載出，略過。",
-                            route["origin"], route["dest"], MAX_TRIES)
-        ctx.close()
+            if not any(r["origin"] == route["origin"] and r["dest"] == route["dest"]
+                       and r["date"] == route["date"] for r in route_results):
+                route_results.append({
+                    "origin": route["origin"], "dest": route["dest"],
+                    "date": route["date"], "success": False,
+                    "attempts_used": None, "flights_found": 0,
+                    "reason": f"瀏覽器初始化或執行過程發生嚴重錯誤：{e}",
+                })
+
     save(all_rows)
-    log.info("=== 完成，共 %d 班 ===", len(all_rows))
+
+    # 成功率統計（交付物 C：每日執行日誌需含時間/成功率/失敗原因）
+    total = len(route_results)
+    succeeded = sum(1 for r in route_results if r["success"])
+    rate = (succeeded / total * 100) if total else 0.0
+    run_record = {
+        "run_at": started_at.strftime("%Y-%m-%d %H:%M:%S"),
+        "total_routes": total,
+        "succeeded_routes": succeeded,
+        "failed_routes": total - succeeded,
+        "success_rate_pct": round(rate, 1),
+        "total_flights_found": len(all_rows),
+        "routes": route_results,
+    }
+    append_stats(run_record)
+    log.info("=== 完成：共 %d 班；本次航線成功率 %.1f%%（%d/%d）===",
+             len(all_rows), rate, succeeded, total)
+
+
+def _run_all_routes(page, routes, all_rows, route_results):
+    """依序處理每條航線；單一航線出任何錯都只記為該航線失敗，不影響其他航線。"""
+    for route in routes:
+        try:
+            ok, attempts, reason = load_with_retry(page, route)
+            if not ok:
+                log.warning("　%s→%s：%s", route["origin"], route["dest"], reason)
+                route_results.append({
+                    "origin": route["origin"], "dest": route["dest"],
+                    "date": route["date"], "success": False,
+                    "attempts_used": attempts, "flights_found": 0,
+                    "reason": reason,
+                })
+                continue
+
+            rows = extract(page, route)
+            if not rows:
+                # 頁面顯示已載出，但沒擷取到任何航班 → 視為「數據不完整」，
+                # 不能算成功（呼應交付物B「成功率（未遭封鎖且數據完整）」的定義）。
+                reason = ("頁面顯示已載出但未擷取到任何航班資料"
+                          "（可能版面比對邏輯需更新，見故障排除SOP故障3）")
+                log.warning("　%s→%s：%s", route["origin"], route["dest"], reason)
+                route_results.append({
+                    "origin": route["origin"], "dest": route["dest"],
+                    "date": route["date"], "success": False,
+                    "attempts_used": attempts, "flights_found": 0,
+                    "reason": reason,
+                })
+                continue
+
+            log.info("　%s→%s：抓到 %d 班（第 %d 次嘗試成功）",
+                     route["origin"], route["dest"], len(rows), attempts)
+            all_rows.extend(rows)
+            route_results.append({
+                "origin": route["origin"], "dest": route["dest"],
+                "date": route["date"], "success": True,
+                "attempts_used": attempts, "flights_found": len(rows),
+                "reason": None,
+            })
+        except Exception as e:
+            reason = f"未預期例外（不影響其他航線）：{e}"
+            log.exception("　%s→%s：%s", route["origin"], route["dest"], reason)
+            route_results.append({
+                "origin": route["origin"], "dest": route["dest"],
+                "date": route["date"], "success": False,
+                "attempts_used": None, "flights_found": 0,
+                "reason": reason,
+            })
 
 
 if __name__ == "__main__":
