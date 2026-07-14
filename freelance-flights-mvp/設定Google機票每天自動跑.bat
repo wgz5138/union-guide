@@ -1,23 +1,23 @@
-﻿@echo off
-chcp 65001 >nul
+@echo off
+chcp 950 >nul
 echo ============================================
-echo   設定「每天自動抓 Google 機票」
+echo   �]�w�u�C�Ѧ۰ʧ� Google �����v
 echo ============================================
 echo.
 set TASKTIME=08:00
-set /p TASKTIME=要每天幾點自動抓？24小時制，例 08:00，直接 Enter 用 08:00：
+set /p TASKTIME=�n�C�ѴX�I�۰ʧ�H24�p�ɨ�A�� 08:00�A���� Enter �� 08:00�G
 echo.
-schtasks /create /tn "Google機票每日抓取" /tr "\"%~dp0_Google機票排程執行.bat\"" /sc daily /st %TASKTIME% /f
+schtasks /create /tn "Google�����C����" /tr "\"%~dp0_Google�����Ƶ{����.bat\"" /sc daily /st %TASKTIME% /f
 echo.
 if not %errorlevel%==0 goto fail
 
-echo [成功] 每天 %TASKTIME% 會自動抓 Google 機票並存進 data\gflights.csv。
-echo         注意：Google 需要真的開瀏覽器視窗才穩，到時會自動彈出瀏覽器視窗，屬正常現象。
-echo         電腦關機或睡眠時不會執行；想取消請點「取消Google機票排程.bat」。
+echo [���\] �C�� %TASKTIME% �|�۰ʧ� Google �����æs�i data\gflights.csv�C
+echo         �`�N�GGoogle �ݭn�u���}�s���������~í�A��ɷ|�۰ʼu�X�s���������A�ݥ��`�{�H�C
+echo         �q�������κίv�ɤ��|����F�Q�������I�u����Google�����Ƶ{.bat�v�C
 goto end
 
 :fail
-echo [失敗] 若上方顯示「存取被拒」，請對本檔按右鍵，選「以系統管理員身分執行」再試一次。
+echo [����] �Y�W����ܡu�s���Q�ڡv�A�й糧�ɫ��k��A��u�H�t�κ޲z����������v�A�դ@���C
 
 :end
 echo.

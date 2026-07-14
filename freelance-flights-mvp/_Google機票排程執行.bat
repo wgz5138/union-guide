@@ -1,6 +1,6 @@
-ï»¿@echo off
-rem çµ¦ã€Œå·¥ä½œæŽ’ç¨‹å™¨ã€è‡ªå‹•è·‘ç”¨ï¼ˆç„¡ pauseï¼Œè·‘å®Œè‡ªå‹•é—œï¼‰ã€‚å¹³å¸¸è«‹ç”¨ã€ŒæŸ¥Googleæ©Ÿç¥¨.batã€ã€‚
-chcp 65001 >nul
+@echo off
+rem µ¹¡u¤u§@±Æµ{¾¹¡v¦Û°Ê¶]¥Î¡]µL pause¡A¶]§¹¦Û°ÊÃö¡^¡C¥­±`½Ð¥Î¡u¬dGoogle¾÷²¼.bat¡v¡C
+chcp 950 >nul
 cd /d "%~dp0"
 set PYTHONUTF8=1
 python gflights_scraper.py

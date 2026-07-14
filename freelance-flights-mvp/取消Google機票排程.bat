@@ -1,7 +1,7 @@
-ï»¿@echo off
-chcp 65001 >nul
-schtasks /delete /tn "Googleæ©Ÿç¥¨æ¯æ—¥æŠ“å–" /f
+@echo off
+chcp 950 >nul
+schtasks /delete /tn "Google¾÷²¼¨C¤é§ì¨ú" /f
 echo.
-echo å·²å–æ¶ˆã€ŒGoogle æ©Ÿç¥¨æ¯æ—¥æŠ“å–ã€ã€‚æƒ³å†é–‹å•Ÿå°±é»žã€Œè¨­å®šGoogleæ©Ÿç¥¨æ¯å¤©è‡ªå‹•è·‘.batã€ã€‚
+echo ¤w¨ú®ø¡uGoogle ¾÷²¼¨C¤é§ì¨ú¡v¡C·Q¦A¶}±Ò´NÂI¡u³]©wGoogle¾÷²¼¨C¤Ñ¦Û°Ê¶].bat¡v¡C
 echo.
 pause
