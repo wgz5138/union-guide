@@ -297,38 +297,33 @@ def main():
     all_rows = []
     route_results = []   # 每條航線的成功/失敗紀錄，用來算這次執行的成功率
     started_at = datetime.now()
-    with sync_playwright() as p:
-        ctx = p.chromium.launch_persistent_context(
-            PROFILE, headless=HEADLESS,
-            args=["--disable-blink-features=AutomationControlled",
-                  "--disable-infobars"],
-            ignore_default_args=["--enable-automation"],
-            user_agent=UA, locale="zh-TW", timezone_id="Asia/Taipei",
-            viewport={"width": 1366, "height": 850})
-        ctx.add_init_script(STEALTH_JS)
-        page = ctx.pages[0] if ctx.pages else ctx.new_page()
+    try:
+        with sync_playwright() as p:
+            ctx = p.chromium.launch_persistent_context(
+                PROFILE, headless=HEADLESS,
+                args=["--disable-blink-features=AutomationControlled",
+                      "--disable-infobars"],
+                ignore_default_args=["--enable-automation"],
+                user_agent=UA, locale="zh-TW", timezone_id="Asia/Taipei",
+                viewport={"width": 1366, "height": 850})
+            ctx.add_init_script(STEALTH_JS)
+            page = ctx.pages[0] if ctx.pages else ctx.new_page()
+            _run_all_routes(page, ROUTES, all_rows, route_results)
+            ctx.close()
+    except Exception as e:
+        # 連瀏覽器本身都開不起來（profile 損毀、Playwright 未安裝完整等）：
+        # 仍要把「這次完全失敗」記進 stats，不能讓日誌憑空消失（呼應交付物C）。
+        log.exception("瀏覽器初始化或執行過程發生嚴重錯誤：%s", e)
         for route in ROUTES:
-            ok, attempts, reason = load_with_retry(page, route)
-            if ok:
-                rows = extract(page, route)
-                log.info("　%s→%s：抓到 %d 班（第 %d 次嘗試成功）",
-                         route["origin"], route["dest"], len(rows), attempts)
-                all_rows.extend(rows)
-                route_results.append({
-                    "origin": route["origin"], "dest": route["dest"],
-                    "date": route["date"], "success": True,
-                    "attempts_used": attempts, "flights_found": len(rows),
-                    "reason": None,
-                })
-            else:
-                log.warning("　%s→%s：%s", route["origin"], route["dest"], reason)
+            if not any(r["origin"] == route["origin"] and r["dest"] == route["dest"]
+                       and r["date"] == route["date"] for r in route_results):
                 route_results.append({
                     "origin": route["origin"], "dest": route["dest"],
                     "date": route["date"], "success": False,
-                    "attempts_used": attempts, "flights_found": 0,
-                    "reason": reason,
+                    "attempts_used": None, "flights_found": 0,
+                    "reason": f"瀏覽器初始化或執行過程發生嚴重錯誤：{e}",
                 })
-        ctx.close()
+
     save(all_rows)
 
     # 成功率統計（交付物 C：每日執行日誌需含時間/成功率/失敗原因）
@@ -347,6 +342,56 @@ def main():
     append_stats(run_record)
     log.info("=== 完成：共 %d 班；本次航線成功率 %.1f%%（%d/%d）===",
              len(all_rows), rate, succeeded, total)
+
+
+def _run_all_routes(page, routes, all_rows, route_results):
+    """依序處理每條航線；單一航線出任何錯都只記為該航線失敗，不影響其他航線。"""
+    for route in routes:
+        try:
+            ok, attempts, reason = load_with_retry(page, route)
+            if not ok:
+                log.warning("　%s→%s：%s", route["origin"], route["dest"], reason)
+                route_results.append({
+                    "origin": route["origin"], "dest": route["dest"],
+                    "date": route["date"], "success": False,
+                    "attempts_used": attempts, "flights_found": 0,
+                    "reason": reason,
+                })
+                continue
+
+            rows = extract(page, route)
+            if not rows:
+                # 頁面顯示已載出，但沒擷取到任何航班 → 視為「數據不完整」，
+                # 不能算成功（呼應交付物B「成功率（未遭封鎖且數據完整）」的定義）。
+                reason = ("頁面顯示已載出但未擷取到任何航班資料"
+                          "（可能版面比對邏輯需更新，見故障排除SOP故障3）")
+                log.warning("　%s→%s：%s", route["origin"], route["dest"], reason)
+                route_results.append({
+                    "origin": route["origin"], "dest": route["dest"],
+                    "date": route["date"], "success": False,
+                    "attempts_used": attempts, "flights_found": 0,
+                    "reason": reason,
+                })
+                continue
+
+            log.info("　%s→%s：抓到 %d 班（第 %d 次嘗試成功）",
+                     route["origin"], route["dest"], len(rows), attempts)
+            all_rows.extend(rows)
+            route_results.append({
+                "origin": route["origin"], "dest": route["dest"],
+                "date": route["date"], "success": True,
+                "attempts_used": attempts, "flights_found": len(rows),
+                "reason": None,
+            })
+        except Exception as e:
+            reason = f"未預期例外（不影響其他航線）：{e}"
+            log.exception("　%s→%s：%s", route["origin"], route["dest"], reason)
+            route_results.append({
+                "origin": route["origin"], "dest": route["dest"],
+                "date": route["date"], "success": False,
+                "attempts_used": None, "flights_found": 0,
+                "reason": reason,
+            })
 
 
 if __name__ == "__main__":
