@@ -1,4 +1,4 @@
-@echo off
+﻿@echo off
 chcp 65001 >nul
 echo ============================================
 echo   設定「每天自動查機票 + 推 Telegram」

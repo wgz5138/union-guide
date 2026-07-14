@@ -1,4 +1,4 @@
-@echo off
+﻿@echo off
 chcp 65001 >nul
 schtasks /delete /tn "機票每日查價" /f
 echo.

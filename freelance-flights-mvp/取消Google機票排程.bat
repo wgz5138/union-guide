@@ -1,4 +1,4 @@
-@echo off
+﻿@echo off
 chcp 65001 >nul
 schtasks /delete /tn "Google機票每日抓取" /f
 echo.
