@@ -146,7 +146,11 @@ def load_with_retry(page, route):
                 return True, attempt, None
         except Exception as e:
             log.warning("　載入嘗試 %d/%d 發生例外：%s", attempt, MAX_TRIES, e)
-        page.wait_for_timeout(2500)
+        try:
+            page.wait_for_timeout(2500)
+        except Exception:
+            pass  # 頁面可能已經不可用（例如剛剛例外就是頁面掛了），
+                  # 這次等待失敗就算了，讓下一次嘗試的 page.goto() 自己去判斷
     return False, MAX_TRIES, f"重試 {MAX_TRIES} 次仍未載出（疑似間歇性反爬阻擋，見故障排除SOP故障1）"
 
 
@@ -270,20 +274,29 @@ def save(rows):
 def append_stats(run_record):
     """把這次執行的成功率記錄追加進 STATS_FILE。
     對應交付物 C『每日執行日誌，記錄時間/成功率/失敗原因』；
-    長期累積即為交付物 B 驗收所需的『連續穩定測試報告』原始資料。"""
+    長期累積即為交付物 B 驗收所需的『連續穩定測試報告』原始資料——
+    這份歷史很珍貴，讀取失敗時絕不能默默清空重來，只有「確定內容真的壞了」
+    （JSON 解析失敗）才視為需要重建；「暫時讀不到」（檔案被鎖住、磁碟忙碌等）
+    寧可跳過這次記錄，也不要覆蓋掉既有的累積歷史。"""
     history = []
     if os.path.exists(STATS_FILE):
         try:
             with open(STATS_FILE, encoding="utf-8") as f:
                 history = json.load(f)
-        except (OSError, ValueError):
+        except ValueError:
+            log.warning("　%s 內容無法解析（可能損毀），將重新開始記錄歷史。", STATS_FILE)
             history = []
+        except OSError as e:
+            log.warning("　%s 暫時無法讀取（%s），本次先跳過統計記錄，"
+                        "避免覆蓋既有歷史。", STATS_FILE, e)
+            return
     history.append(run_record)
     try:
         with open(STATS_FILE, "w", encoding="utf-8") as f:
             json.dump(history, f, ensure_ascii=False, indent=2)
     except OSError as e:
         log.warning("成功率統計存檔失敗（不影響本次抓取結果）：%s", e)
+        return
 
     total_runs = len(history)
     avg_rate = sum(r["success_rate_pct"] for r in history) / total_runs
@@ -314,15 +327,11 @@ def main():
         # 連瀏覽器本身都開不起來（profile 損毀、Playwright 未安裝完整等）：
         # 仍要把「這次完全失敗」記進 stats，不能讓日誌憑空消失（呼應交付物C）。
         log.exception("瀏覽器初始化或執行過程發生嚴重錯誤：%s", e)
-        for route in ROUTES:
-            if not any(r["origin"] == route["origin"] and r["dest"] == route["dest"]
-                       and r["date"] == route["date"] for r in route_results):
-                route_results.append({
-                    "origin": route["origin"], "dest": route["dest"],
-                    "date": route["date"], "success": False,
-                    "attempts_used": None, "flights_found": 0,
-                    "reason": f"瀏覽器初始化或執行過程發生嚴重錯誤：{e}",
-                })
+        # 補記錄尚未被 _run_all_routes 記過的航線（依 index 判斷，而非內容比對，
+        # 避免 ROUTES 裡若有重複航線設定時，用內容比對誤判成「已記錄」而漏記）。
+        for route in ROUTES[len(route_results):]:
+            _record(route_results, route, False, None, 0,
+                    f"瀏覽器初始化或執行過程發生嚴重錯誤：{e}")
 
     save(all_rows)
 
@@ -343,6 +352,21 @@ def main():
     log.info("=== 完成：共 %d 班；本次航線成功率 %.1f%%（%d/%d）===",
              len(all_rows), rate, succeeded, total)
 
+    if total > 0 and succeeded == 0:
+        # 全部航線都失敗（含瀏覽器根本開不起來的情況）：失敗原因已記進
+        # log／stats，但仍要讓程式以非零結束碼收尾，排程監控才不會把
+        # 「整批全滅」誤判成一切正常（見開發筆記／SOP手冊教訓）。
+        raise RuntimeError(f"{total} 條航線全部失敗，詳見上方 log 與 {STATS_FILE}")
+
+
+def _record(route_results, route, success, attempts, flights_found, reason):
+    """組一筆航線的成功/失敗紀錄，統一欄位形狀（避免 4 處各自手刻、日後改欄位漏改）。"""
+    route_results.append({
+        "origin": route["origin"], "dest": route["dest"], "date": route["date"],
+        "success": success, "attempts_used": attempts,
+        "flights_found": flights_found, "reason": reason,
+    })
+
 
 def _run_all_routes(page, routes, all_rows, route_results):
     """依序處理每條航線；單一航線出任何錯都只記為該航線失敗，不影響其他航線。"""
@@ -351,12 +375,7 @@ def _run_all_routes(page, routes, all_rows, route_results):
             ok, attempts, reason = load_with_retry(page, route)
             if not ok:
                 log.warning("　%s→%s：%s", route["origin"], route["dest"], reason)
-                route_results.append({
-                    "origin": route["origin"], "dest": route["dest"],
-                    "date": route["date"], "success": False,
-                    "attempts_used": attempts, "flights_found": 0,
-                    "reason": reason,
-                })
+                _record(route_results, route, False, attempts, 0, reason)
                 continue
 
             rows = extract(page, route)
@@ -366,32 +385,17 @@ def _run_all_routes(page, routes, all_rows, route_results):
                 reason = ("頁面顯示已載出但未擷取到任何航班資料"
                           "（可能版面比對邏輯需更新，見故障排除SOP故障3）")
                 log.warning("　%s→%s：%s", route["origin"], route["dest"], reason)
-                route_results.append({
-                    "origin": route["origin"], "dest": route["dest"],
-                    "date": route["date"], "success": False,
-                    "attempts_used": attempts, "flights_found": 0,
-                    "reason": reason,
-                })
+                _record(route_results, route, False, attempts, 0, reason)
                 continue
 
             log.info("　%s→%s：抓到 %d 班（第 %d 次嘗試成功）",
                      route["origin"], route["dest"], len(rows), attempts)
             all_rows.extend(rows)
-            route_results.append({
-                "origin": route["origin"], "dest": route["dest"],
-                "date": route["date"], "success": True,
-                "attempts_used": attempts, "flights_found": len(rows),
-                "reason": None,
-            })
+            _record(route_results, route, True, attempts, len(rows), None)
         except Exception as e:
             reason = f"未預期例外（不影響其他航線）：{e}"
             log.exception("　%s→%s：%s", route["origin"], route["dest"], reason)
-            route_results.append({
-                "origin": route["origin"], "dest": route["dest"],
-                "date": route["date"], "success": False,
-                "attempts_used": None, "flights_found": 0,
-                "reason": reason,
-            })
+            _record(route_results, route, False, None, 0, reason)
 
 
 if __name__ == "__main__":

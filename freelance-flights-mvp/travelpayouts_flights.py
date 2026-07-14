@@ -364,6 +364,12 @@ def main():
     log.info("=== 完成：%d 條航線，%d 條值得通知，%d 條失敗 ===",
              len(ROUTES), deals, failed)
 
+    if ROUTES and failed == len(ROUTES):
+        # 全部航線都失敗，很可能是系統性問題（例如 TOKEN 沒設定、API 整個掛掉），
+        # 已查到的（本例中為 0 筆）都已存檔；但仍要讓程式以非零結束碼收尾，
+        # 排程／GitHub Actions 才不會把「整批全滅」誤判成一切正常而悄悄過關。
+        raise RuntimeError(f"全部 {len(ROUTES)} 條航線都查詢失敗，詳見上方 log。")
+
 
 if __name__ == "__main__":
     main()
