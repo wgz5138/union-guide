@@ -191,12 +191,14 @@ function sendReminders() {
   }
 
   // ★防重複：載入「提醒紀錄」裡今天已發過的 key
+  // 注意：Sheets 會把「2026-07-14」字串自動轉成 Date 物件存回，讀出來也是 Date，
+  // 所以必須用 normDate_() 統一格式，不能直接 String() 比較，否則 dedup 永遠失效。
   var logSh = ensureSheet_(ss, "提醒紀錄", ["日期","類型","姓名","印日","時間"]);
   var sentKeys = {};
   var logRows = logSh.getDataRange().getValues();
   for (var li = 1; li < logRows.length; li++) {
-    if (String(logRows[li][0]).trim() === todayStr) {
-      sentKeys[ logRows[li][1] + "|" + logRows[li][2] + "|" + logRows[li][3] ] = true;
+    if (normDate_(logRows[li][0], tz) === todayStr) {
+      sentKeys[ logRows[li][1] + "|" + logRows[li][2] + "|" + normDate_(logRows[li][3], tz) ] = true;
     }
   }
 
