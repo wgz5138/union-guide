@@ -8,6 +8,7 @@
   • v3.28：強制可印雙效升級 — ①玉繡指定的人優先於公平排序（不再被成本低的人搶掉）②班表空白當天也能被納入候選（從本週其他班別推出所在區域）
   • v3.29：修正 v3.28 補漏邏輯造成印藥水日錯算（把 7/17 的人算成 7/16）；改為只靠優先排序，班表有記錄才納入候選；kind_area 調整讓特休/副值等排除班別也能被玉繡強制指定
   • v3.30：還原 kind_area() — 強制可印只做優先排序，不改資格判斷（放假/大夜/空白 → 一律不能印）
+  • v3.31：修正 Round1 排序 bug — 治療日由早到晚順序處理，早的治療日先搶到同區候選人，避免顏凰任被晚治療日搶走
 """
 import os, io, re, csv, json, base64, hashlib, tempfile, shutil, subprocess, sys
 from datetime import date, datetime
@@ -664,7 +665,7 @@ def _build_line_txt(rows, disp_df=None):
 
 
 # ── 💬 意見回饋：借用稽核歷史（特殊鍵「意見-時間」）存放，不動 LINE 程式 ──
-APP_VER = "v3.30"
+APP_VER = "v3.31"
 FEEDBACK_PREFIX = "意見-"
 
 def push_feedback(step, detail, expect, urgency, who):
@@ -907,7 +908,7 @@ if TEST_MODE:
 
 st.title("💊 透析藥水排班")
 st.caption("上傳班表 Excel → 出名單(表格)。可直接點格子改人名。跨區標 🔺。")
-st.caption("🟢 版本 v3.30（強制可印 = 只做優先排序；放假/大夜/空白依然不能印）· 2026-07-16")
+st.caption("🟢 版本 v3.31（修正：治療日由早到晚排，確保早的治療日先搶到人，顏凰任 7/16 印 7/18 問題修正）· 2026-07-15")
 
 with st.expander("📖 第一次用？點我看「3 步驟」（給玉繡）", expanded=False):
     st.markdown("""
