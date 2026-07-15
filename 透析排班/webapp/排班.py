@@ -287,6 +287,8 @@ def assign(members, status, window, hist_cnt, hist_rest=None):
     cost={m["card"]: hist_cnt.get(m["card"],0) - hist_rest.get(m["card"],0) for m in members}
     p1={T:prev_treat(T) for T in window}
     p2={T:prev_treat(p1[T]) if p1[T] else None for T in window}
+    # 強制可印：玉繡手動指定的人，優先於公平排序（卡號或姓名）
+    def is_force(c): return c in FORCE_PRINT or name_of_g.get(c,"") in FORCE_PRINT
 
     def cands(T, areas):
         res={}
@@ -298,6 +300,15 @@ def assign(members, status, window, hist_cnt, hist_rest=None):
             k2,a2=kind_area(status,c,p2[T],nm)
             if k2=="夜" and a2 in areas and c not in res:
                 z=status[c][p2[T]][2]; res[c]=("夜",p2[T],a2,z, z.strip() in AVOID)
+            # 強制可印補漏：班表當天空白（純休假）→ 從本週其他有效班別推出所在區域
+            if c not in res and is_force(c):
+                pd_=p1.get(T) or T
+                for _d in sorted(status.get(c,{}).keys()):
+                    _a=zone_area(status[c][_d][2])
+                    if _a in areas:
+                        z=status[c][_d][2]
+                        res[c]=("白",pd_,_a,z, z.strip() in AVOID)
+                        break
         return res
 
     slots=[(T,A) for T in window for A in PRINT_AREAS]
@@ -309,9 +320,10 @@ def assign(members, status, window, hist_cnt, hist_rest=None):
     area_avail={(T,A):len(same[(T,A)]) for (T,A) in slots}
     def used_day(c,T): return T in member_days.get(c,[])
     def order_same(pool):
-        return sorted(pool, key=lambda c:(pool[c][4], cost[c], len(member_days.get(c,[])), idx[c]))
+        # 強制可印最優先，其次公平排序
+        return sorted(pool, key=lambda c:(0 if is_force(c) else 1, pool[c][4], cost[c], len(member_days.get(c,[])), idx[c]))
     def order_cross(pool, T):
-        return sorted(pool, key=lambda c:(-area_avail.get((T,pool[c][2]),0), pool[c][4],
+        return sorted(pool, key=lambda c:(0 if is_force(c) else 1, -area_avail.get((T,pool[c][2]),0), pool[c][4],
                                           cost[c], len(member_days.get(c,[])), idx[c]))
 
     # 回合1:同區、一人一週一次
@@ -338,7 +350,8 @@ def assign(members, status, window, hist_cnt, hist_rest=None):
         def gap(c):
             ds=member_days.get(c,[]); return min((abs((T-d).days) for d in ds), default=99)
         cand=[c for c in merged if len(member_days.get(c,[]))<2]
-        cand.sort(key=lambda c:(merged[c][4],
+        cand.sort(key=lambda c:(0 if is_force(c) else 1,  # 強制可印最優先
+                                merged[c][4],
                                 0 if c not in same[(T,A)] else 1,  # 跨區(0)優先於同區(1)
                                 -gap(c), cost[c], idx[c]))
         if cand:
