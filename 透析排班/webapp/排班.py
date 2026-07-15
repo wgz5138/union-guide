@@ -315,22 +315,39 @@ def assign(members, status, window, hist_cnt, hist_rest=None):
         return sorted(pool, key=lambda c:(0 if is_force(c) else 1, -area_avail.get((T,pool[c][2]),0), pool[c][4],
                                           cost[c], len(member_days.get(c,[])), idx[c]))
 
-    # 回合1:同區、一人一週一次
-    for (T,A) in sorted(slots, key=lambda s: len(same[s])):
-        for c in order_same(same[(T,A)]):
-            if member_days.get(c) or used_day(c,T): continue
-            kind,src,za,z,av=same[(T,A)][c]
-            assign_slot[(T,A)]=c; member_days.setdefault(c,[]).append(T)
-            slot_info[(T,A)]=(kind,src,False,av); break
-    # 回合2:跨區支援(從組員較多的區借)
-    for (T,A) in slots:
-        if (T,A) in assign_slot: continue
-        for c in order_cross(cross[(T,A)], T):
-            if member_days.get(c) or used_day(c,T): continue
-            kind,src,za,z,av=cross[(T,A)][c]
-            assign_slot[(T,A)]=c; member_days.setdefault(c,[]).append(T)
-            slot_info[(T,A)]=(kind,src,True,av)
-            warn(f"※ {lab(T)} {A} 沒有本區的人 → 從「{za}」借「{name_of_g.get(c,c)}」過來印"); break
+    # 回合1+2 合併:全域最佳化配對(同區+跨區一起解，取代舊版「先貪心用光同區、剩的才給跨區」)
+    # 原本 Round1 用貪心逐格搶人，換個處理順序就會搶錯人、逼別人印第二次(v3.31 bug)。
+    # 改用整體最佳指派(scipy linear_sum_assignment)：把「同區」「跨區」候選人一起放進同一個
+    # 配對問題解，直接算出「本回合能填滿最多格子、且雙印人數最少」的那組解，不受格子處理順序影響。
+    # 優先序不變：強制可印 > 同區優先於跨區 > 盡量避開床 > 公平cost > 名單順序。
+    import numpy as _np
+    from scipy.optimize import linear_sum_assignment as _lsa
+    _people=[m["card"] for m in members]; _pidx={c:i for i,c in enumerate(_people)}
+    _BIG=10**13   # 遠大於任何合法組合的總分，確保「填滿格子」永遠優先於「排序偏好」
+    _mat=_np.full((len(slots), len(_people)), _BIG, dtype=_np.int64)
+    _iscross={}
+    for _si,(T,A) in enumerate(slots):
+        for c,info in same[(T,A)].items():
+            _av=info[4]
+            _rank=(0)*10**10 + (0 if is_force(c) else 1)*10**8 + (1 if _av else 0)*10**6 + (cost[c]+1000)*100 + idx[c]
+            if _rank < _mat[_si,_pidx[c]]:
+                _mat[_si,_pidx[c]]=_rank; _iscross[(_si,_pidx[c])]=False
+        for c,info in cross[(T,A)].items():
+            _av=info[4]
+            _rank=(1)*10**10 + (0 if is_force(c) else 1)*10**8 + (1 if _av else 0)*10**6 + (cost[c]+1000)*100 + idx[c]
+            if _rank < _mat[_si,_pidx[c]]:
+                _mat[_si,_pidx[c]]=_rank; _iscross[(_si,_pidx[c])]=True
+    _rows,_cols=_lsa(_mat)
+    for _si,_pi in zip(_rows,_cols):
+        if _mat[_si,_pi] >= _BIG: continue   # 這格真的沒有合法候選人，留給回合3
+        T,A=slots[_si]; c=_people[_pi]
+        _isc=_iscross[(_si,_pi)]
+        pool = cross[(T,A)] if _isc else same[(T,A)]
+        kind,src,za,z,av=pool[c]
+        assign_slot[(T,A)]=c; member_days.setdefault(c,[]).append(T)
+        slot_info[(T,A)]=(kind,src,_isc,av)
+        if _isc:
+            warn(f"※ {lab(T)} {A} 沒有本區的人 → 從「{za}」借「{name_of_g.get(c,c)}」過來印")
     # 回合3:還是空 → 某人印第二次(跨區優先於同區；盡量間隔久；同日一+二也允許)
     # 鐵律：有任何跨區候選人可印第二次時，絕不先動同區候選人印第二次
     for (T,A) in slots:
