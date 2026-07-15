@@ -255,18 +255,17 @@ def match_members(roster, status, name_of, by_name):
 def kind_area(status, card, d, name=""):
     if d is None: return (None,None)
     rec=status.get(card,{}).get(d)
-    if not rec: return (None,None)
+    if not rec: return (None,None)          # 班表空白（不在院）→ 強制可印也不算
     cat,shift,zone=rec; s=shift.strip()
-    if is_excluded_shift(s): return (None,None)
+    force=(card in FORCE_PRINT or name in FORCE_PRINT)
+    if is_excluded_shift(s) and not force: return (None,None)   # 玉繡指定者可突破班別限制
     a=zone_area(zone)
     if a=="未知" and zone.strip():
         UNKNOWN_BEDS.setdefault(zone.strip(),set()).add((name,d)); return (None,None)
     if a in PRINT_AREAS:
         if s.startswith("D"): return ("白",a)
         if s.startswith("E"): return ("夜",a)
-        # 強制可印：放假但玉繡說可以印（以白班處理）
-        if card in FORCE_PRINT or name in FORCE_PRINT:
-            return ("白",a)
+        if force: return ("白",a)           # 有班表記錄但非D/E（特休/公假等）→ 白班處理
     return (None,None)
 
 # ===================== 公平:歷史累計 =====================
@@ -300,15 +299,6 @@ def assign(members, status, window, hist_cnt, hist_rest=None):
             k2,a2=kind_area(status,c,p2[T],nm)
             if k2=="夜" and a2 in areas and c not in res:
                 z=status[c][p2[T]][2]; res[c]=("夜",p2[T],a2,z, z.strip() in AVOID)
-            # 強制可印補漏：班表當天空白（純休假）→ 從本週其他有效班別推出所在區域
-            if c not in res and is_force(c):
-                pd_=p1.get(T) or T
-                for _d in sorted(status.get(c,{}).keys()):
-                    _a=zone_area(status[c][_d][2])
-                    if _a in areas:
-                        z=status[c][_d][2]
-                        res[c]=("白",pd_,_a,z, z.strip() in AVOID)
-                        break
         return res
 
     slots=[(T,A) for T in window for A in PRINT_AREAS]
