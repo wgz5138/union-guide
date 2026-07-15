@@ -298,8 +298,8 @@ def assign(members, status, window, hist_cnt):
         return sorted(pool, key=lambda c:(-area_avail.get((T,pool[c][2]),0), pool[c][4],
                                           cost[c], len(member_days.get(c,[])), idx[c]))
 
-    # 回合1:同區、一人一週一次(依治療日由早到晚自然順序,確保早的治療日先確保拿到本區候選人)
-    for (T,A) in slots:
+    # 回合1:同區、一人一週一次
+    for (T,A) in sorted(slots, key=lambda s: len(same[s])):
         for c in order_same(same[(T,A)]):
             if member_days.get(c) or used_day(c,T): continue
             kind,src,za,z,av=same[(T,A)][c]
