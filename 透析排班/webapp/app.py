@@ -4,6 +4,7 @@
   • Fix2：稽核送出後 LINE 通知每位稽核者責任班次
   • Fix3：自動選最接近今天的班表分頁
   • v3.26：排班 Round3 跨區優先於同區印第二次（病房/ICU/休假限制下盡可能不讓同區人一週兩次）
+  • v3.27：本週放假但可印藥水的人可在 UI 手動指定（強制可印.csv），系統視為白班候選人
 """
 import os, io, re, csv, json, base64, hashlib, tempfile, shutil, subprocess, sys
 from datetime import date, datetime
@@ -660,7 +661,7 @@ def _build_line_txt(rows, disp_df=None):
 
 
 # ── 💬 意見回饋：借用稽核歷史（特殊鍵「意見-時間」）存放，不動 LINE 程式 ──
-APP_VER = "v3.26"
+APP_VER = "v3.27"
 FEEDBACK_PREFIX = "意見-"
 
 def push_feedback(step, detail, expect, urgency, who):
@@ -903,7 +904,7 @@ if TEST_MODE:
 
 st.title("💊 透析藥水排班")
 st.caption("上傳班表 Excel → 出名單(表格)。可直接點格子改人名。跨區標 🔺。")
-st.caption("🟢 版本 v3.26（+排班：人手不足時跨區印第二次優先於同區）· 2026-07-14")
+st.caption("🟢 版本 v3.27（+本週強制可印：放假但可印的人可手動指定）· 2026-07-15")
 
 with st.expander("📖 第一次用？點我看「3 步驟」（給玉繡）", expanded=False):
     st.markdown("""
@@ -1142,6 +1143,15 @@ if mode.startswith("🟦"):
         best = _best_sheet_index(sheets)
         sheet = st.selectbox("選「這一週」的分頁", sheets, index=best)
 
+        with st.expander("⚙️ 本週特殊設定（選填）"):
+            force_names_raw = st.text_area(
+                "本週放假但可印藥水的人（一行一個姓名，不填則照班別自動判斷）",
+                value=st.session_state.get("force_print_names",""),
+                placeholder="例：\n怡璇\n冠秀",
+                help="班別看起來是假（特休/公假等）但玉繡確認可以印的人，填在這裡就會被排入候選。"
+            )
+            st.session_state["force_print_names"] = force_names_raw
+
         if st.button("➡️ 排印藥水", type="primary"):
             with st.spinner("讀取雲端歷史 + 排班中…"):
                 config_overrides = {}
@@ -1150,6 +1160,13 @@ if mode.startswith("🟦"):
                     if hist_csv: config_overrides["排班紀錄.csv"] = hist_csv
                     mem_csv = fetch_members_as_csv()
                     if mem_csv: config_overrides["組員名單.csv"] = mem_csv
+                # 強制可印人員
+                force_names = [n.strip() for n in force_names_raw.splitlines() if n.strip()]
+                if force_names:
+                    import io as _io
+                    _fc = _io.StringIO(); _fc.write("姓名\n")
+                    for _n in force_names: _fc.write(_n+"\n")
+                    config_overrides["強制可印.csv"] = _fc.getvalue().encode("utf-8-sig")
                 out, files, updated_hist = run_tool("排班.py", data, [sheet], config_overrides)
                 st.session_state["yao"] = (out, files, sheet, updated_hist)
                 st.session_state.pop("yao_edit", None)   # 清掉舊 editor 狀態，讓下面重新套定案

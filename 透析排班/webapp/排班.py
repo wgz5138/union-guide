@@ -28,6 +28,7 @@ F_SHIFTS  = os.path.join(BASE, "不可印班別.csv")
 F_HOLIDAY = os.path.join(BASE, "休診日.csv")
 F_HISTORY = os.path.join(BASE, "排班紀錄.csv")
 F_README  = os.path.join(BASE, "設定說明.txt")
+F_FORCE   = os.path.join(BASE, "強制可印.csv")   # 本週放假但仍可印藥水的人（玉繡手動指定）
 OUT_DIR   = os.path.join(BASE, "輸出")
 os.makedirs(OUT_DIR, exist_ok=True)
 
@@ -128,6 +129,15 @@ def load_shifts():
     lst=[s for s in lst if s]
     return lst or list(DEF_SHIFTS)
 
+def load_force_print():
+    """讀取「強制可印.csv」，欄位:姓名（或卡號），回傳 set。"""
+    if not os.path.exists(F_FORCE): return set()
+    rows=_read_rows(F_FORCE); out=set()
+    for r in rows:
+        v=(r.get("姓名") or r.get("卡號") or "").strip()
+        if v: out.add(v)
+    return out
+
 def load_holidays():
     rows=_read_rows(F_HOLIDAY); hs=set()
     for r in rows:
@@ -153,6 +163,7 @@ def save_roster(roster):
 
 # ===================== 全域設定容器 =====================
 ZONE2AREA={}; AVOID=set(); PRINT_AREAS=[]; SHIFT_EXCLUDE=[]; HOLIDAYS=set()
+FORCE_PRINT=set()   # 本週強制可印人員（放假仍可印），存姓名或卡號
 UNKNOWN_BEDS={}     # 床號字串 -> set((姓名,日期))
 
 def is_excluded_shift(s):
@@ -253,6 +264,9 @@ def kind_area(status, card, d, name=""):
     if a in PRINT_AREAS:
         if s.startswith("D"): return ("白",a)
         if s.startswith("E"): return ("夜",a)
+        # 強制可印：放假但玉繡說可以印（以白班處理）
+        if card in FORCE_PRINT or name in FORCE_PRINT:
+            return ("白",a)
     return (None,None)
 
 # ===================== 公平:歷史累計 =====================
@@ -356,9 +370,12 @@ def run():
         print("（分頁不填=自動用最後一個分頁／最新一週）"); return
 
     ensure_configs()
-    global ZONE2AREA, AVOID, PRINT_AREAS, SHIFT_EXCLUDE, HOLIDAYS, name_of_g
+    global ZONE2AREA, AVOID, PRINT_AREAS, SHIFT_EXCLUDE, HOLIDAYS, FORCE_PRINT, name_of_g
     ZONE2AREA, AVOID, PRINT_AREAS = load_beds()
     SHIFT_EXCLUDE = load_shifts(); HOLIDAYS = load_holidays()
+    FORCE_PRINT = load_force_print()
+    if FORCE_PRINT:
+        warn("ℹ 強制可印人員（放假仍排入候選）：" + "、".join(sorted(FORCE_PRINT)))
     if not PRINT_AREAS:
         print("❌ 床號分區.csv 裡沒有任何『可印區域』,請檢查設定檔"); return
 
