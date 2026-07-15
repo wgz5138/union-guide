@@ -252,20 +252,19 @@ def match_members(roster, status, name_of, by_name):
     return members
 
 # 某人某天 →('白'/'夜', 區域);不可印回 (None,None)
+# 強制可印（FORCE_PRINT）只影響排序優先權，不改變這裡的資格判斷
 def kind_area(status, card, d, name=""):
     if d is None: return (None,None)
     rec=status.get(card,{}).get(d)
-    if not rec: return (None,None)          # 班表空白（不在院）→ 強制可印也不算
+    if not rec: return (None,None)          # 班表空白（放假不在院）→ 不能印
     cat,shift,zone=rec; s=shift.strip()
-    force=(card in FORCE_PRINT or name in FORCE_PRINT)
-    if is_excluded_shift(s) and not force: return (None,None)   # 玉繡指定者可突破班別限制
+    if is_excluded_shift(s): return (None,None)   # 大夜/副值等排除班別 → 不能印
     a=zone_area(zone)
     if a=="未知" and zone.strip():
         UNKNOWN_BEDS.setdefault(zone.strip(),set()).add((name,d)); return (None,None)
     if a in PRINT_AREAS:
         if s.startswith("D"): return ("白",a)
         if s.startswith("E"): return ("夜",a)
-        if force: return ("白",a)           # 有班表記錄但非D/E（特休/公假等）→ 白班處理
     return (None,None)
 
 # ===================== 公平:歷史累計 =====================
