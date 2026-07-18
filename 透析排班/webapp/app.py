@@ -1373,7 +1373,13 @@ if mode.startswith("🟦"):
                             corrected = build_corrected_history(
                                 rows, sheet0, (updated_hist or {}).get("排班紀錄.csv"))
                             ok2 = push_history("setScheduleHistory", corrected, sheet0)
-                            if ok2: st.caption("✅ 排班歷史已同步（依玉繡實際定案），下週公平輪序更準確。")
+                            if ok2:
+                                st.caption("✅ 排班歷史已同步（依玉繡實際定案），下週公平輪序更準確。")
+                            else:
+                                st.error("⚠️ 本週名單已送出、LINE會照常提醒，但「排班歷史」同步失敗！"
+                                          "統計管理頁面的印次/休次不會更新這週，公平輪序會算錯。"
+                                          "請到「📊 統計管理 → 印藥水統計」按「🔄 讀取」確認，"
+                                          "如果這週真的沒出現，回來這裡重新按一次「🚀 送到雲端」重試。")
                             _clear_week_draft()         # 清除本機草稿
                             # 雲端草稿保留：讓小巫或玉繡重開 app 還能看到定案版
                             st.session_state.pop("week_draft_auto", None)
