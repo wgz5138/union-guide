@@ -18,6 +18,11 @@
   • v3.34：v3.33 上線後重送仍不跳錯誤、統計卻還是沒更新 — 因為 GAS 端 setScheduleHistory_()
     不管收到幾筆都一律回 {ok:true}，即使實際送出 0 筆也算「成功」。push_history() 改回傳
     (ok, 實際筆數, 失敗原因)，成功也會顯示送了幾筆，這樣才看得出「回報成功但其實0筆」這種狀況。
+  • v3.35：找到 7月資料消失的真正原因 — 不是同步失敗，是「統計管理→印藥水統計」分頁可以
+    直接改印次/休次數字、按「存回雲端」，這個功能會呼叫 setAllScheduleHistory（GAS端整份
+    clearContents 再重建），把全部人的每週真實明細換成「統計-印01」這種沒有日期的假列，
+    26週374筆真實歷史因此消失，只剩總數字。已加防呆：這顆按鈕現在要先勾選「我知道會清空
+    每週明細」才能按，並在上方加醒目警告說明用途，避免下次又不小心整份洗掉。
 """
 import os, io, re, csv, json, base64, hashlib, tempfile, shutil, subprocess, sys
 from datetime import date, datetime
@@ -674,7 +679,7 @@ def _build_line_txt(rows, disp_df=None):
 
 
 # ── 💬 意見回饋：借用稽核歷史（特殊鍵「意見-時間」）存放，不動 LINE 程式 ──
-APP_VER = "v3.34"
+APP_VER = "v3.35"
 FEEDBACK_PREFIX = "意見-"
 
 def push_feedback(step, detail, expect, urgency, who):
@@ -924,7 +929,7 @@ if TEST_MODE:
 
 st.title("💊 透析藥水排班")
 st.caption("上傳班表 Excel → 出名單(表格)。可直接點格子改人名。跨區標 🔺。")
-st.caption("🟢 版本 v3.34（排班歷史同步改回傳實際筆數，成功也看得到送了幾筆，方便抓「回報成功但其實0筆」的問題）· 2026-07-15")
+st.caption("🟢 版本 v3.35（統計管理「存回雲端」加防呆：會清空每週明細，需勾選確認才能按）· 2026-07-15")
 
 with st.expander("📖 第一次用？點我看「3 步驟」（給玉繡）", expanded=False):
     st.markdown("""
@@ -1673,11 +1678,18 @@ if mode.startswith("📊"):
                 edited_st["淨值(印-休)"] = edited_st["印次"] - edited_st["休次"]
                 st.download_button("⬇️ 下載統計 CSV", edited_st.to_csv(index=False).encode("utf-8-sig"),
                                    file_name="印藥水統計.csv", mime="text/csv", key="stats_dl")
+                st.warning("⚠️ 這個「存回雲端」會把「排班歷史」整份清空重建，只留這裡的總數字，"
+                            "**每一週實際印哪一天、哪週的明細會全部消失**（變成「統計-印01」這種"
+                            "沒有日期的假列）。只有在你確定要「整批重設」所有人的累計數字時才用這個，"
+                            "平常要修正某一週的資料，請用「每週印藥水」重新排那一週、送到雲端就好，"
+                            "不要在這裡改數字存檔。")
                 if TEST_MODE:
                     if st.button("🧪 存回雲端（模擬）", key="stats_save_test"):
                         st.info("🧪 測試模式：模擬儲存成功，沒有真的寫到雲端。")
                 elif APPS_SCRIPT_URL and WRITE_SECRET:
-                    if st.button("💾 存回雲端", type="primary", key="stats_save"):
+                    _confirm_wipe = st.checkbox(
+                        "我知道這樣會清空所有人的每週明細、只留總數字，仍要繼續", key="stats_save_confirm")
+                    if st.button("💾 存回雲端", type="primary", key="stats_save", disabled=not _confirm_wipe):
                         with st.spinner("儲存中…"):
                             ok = save_schedule_stats(edited_st)
                         if ok:
