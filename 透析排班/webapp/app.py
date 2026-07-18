@@ -15,6 +15,9 @@
   • v3.33：修正「送到雲端」的靜默失敗 — 排班歷史(setScheduleHistory)同步失敗時，先前完全不會
     提示，畫面只顯示「已送到雲端」成功訊息，導致統計管理讀不到那一週卻沒人發現。現在失敗會
     跳出明確錯誤訊息並提示重試。
+  • v3.34：v3.33 上線後重送仍不跳錯誤、統計卻還是沒更新 — 因為 GAS 端 setScheduleHistory_()
+    不管收到幾筆都一律回 {ok:true}，即使實際送出 0 筆也算「成功」。push_history() 改回傳
+    (ok, 實際筆數, 失敗原因)，成功也會顯示送了幾筆，這樣才看得出「回報成功但其實0筆」這種狀況。
 """
 import os, io, re, csv, json, base64, hashlib, tempfile, shutil, subprocess, sys
 from datetime import date, datetime
@@ -671,7 +674,7 @@ def _build_line_txt(rows, disp_df=None):
 
 
 # ── 💬 意見回饋：借用稽核歷史（特殊鍵「意見-時間」）存放，不動 LINE 程式 ──
-APP_VER = "v3.33"
+APP_VER = "v3.34"
 FEEDBACK_PREFIX = "意見-"
 
 def push_feedback(step, detail, expect, urgency, who):
@@ -794,17 +797,24 @@ def fetch_history_csv(action):
     return None
 
 def push_history(action, hist_bytes, key):
-    if not APPS_SCRIPT_URL or not WRITE_SECRET or not hist_bytes: return False
+    """回傳 (ok, n_rows, detail)：n_rows 是實際送出的筆數，detail 是失敗時的原因，
+    方便診斷「回報成功但其實沒送資料」這種 GAS 端不驗證空陣列的狀況。"""
+    if not APPS_SCRIPT_URL or not WRITE_SECRET: return False, 0, "未設定 APPS_SCRIPT_URL/WRITE_SECRET"
+    if not hist_bytes: return False, 0, "hist_bytes 是空的(build_corrected_history 沒有產生資料，可能組員名單讀取失敗)"
     try:
         df = pd.read_csv(io.BytesIO(hist_bytes), encoding="utf-8-sig")
         key_col = df.columns[0]
         week_rows = df[df[key_col].astype(str) == str(key)].values.tolist()
+        if not week_rows:
+            return False, 0, f"key='{key}' 在資料裡完全比對不到任何列（key_col='{key_col}'），送出前就已經是 0 筆"
         resp = requests.post(APPS_SCRIPT_URL,
                              json={"action": action, "secret": WRITE_SECRET,
                                    "key": key, "rows": week_rows},
                              timeout=20)
-        return resp.ok and resp.json().get("ok", False)
-    except Exception: return False
+        ok = resp.ok and resp.json().get("ok", False)
+        return ok, len(week_rows), ("" if ok else f"HTTP {resp.status_code}: {resp.text[:200]}")
+    except Exception as e:
+        return False, 0, f"例外：{e}"
 
 # Fix2：稽核送出後 LINE 通知稽核者
 def send_audit_notices(month_key, audit_df):
@@ -914,7 +924,7 @@ if TEST_MODE:
 
 st.title("💊 透析藥水排班")
 st.caption("上傳班表 Excel → 出名單(表格)。可直接點格子改人名。跨區標 🔺。")
-st.caption("🟢 版本 v3.33（修正「送到雲端」排班歷史同步失敗會靜默無提示的問題）· 2026-07-15")
+st.caption("🟢 版本 v3.34（排班歷史同步改回傳實際筆數，成功也看得到送了幾筆，方便抓「回報成功但其實0筆」的問題）· 2026-07-15")
 
 with st.expander("📖 第一次用？點我看「3 步驟」（給玉繡）", expanded=False):
     st.markdown("""
@@ -1375,11 +1385,12 @@ if mode.startswith("🟦"):
                             _, _, _, updated_hist = st.session_state.get("yao",(None,None,None,{}))
                             corrected = build_corrected_history(
                                 rows, sheet0, (updated_hist or {}).get("排班紀錄.csv"))
-                            ok2 = push_history("setScheduleHistory", corrected, sheet0)
+                            ok2, n2, detail2 = push_history("setScheduleHistory", corrected, sheet0)
                             if ok2:
-                                st.caption("✅ 排班歷史已同步（依玉繡實際定案），下週公平輪序更準確。")
+                                st.caption(f"✅ 排班歷史已同步（{n2} 筆，依玉繡實際定案），下週公平輪序更準確。")
                             else:
-                                st.error("⚠️ 本週名單已送出、LINE會照常提醒，但「排班歷史」同步失敗！"
+                                st.error(f"⚠️ 本週名單已送出、LINE會照常提醒，但「排班歷史」同步失敗！"
+                                          f"原因：{detail2}\n\n"
                                           "統計管理頁面的印次/休次不會更新這週，公平輪序會算錯。"
                                           "請到「📊 統計管理 → 印藥水統計」按「🔄 讀取」確認，"
                                           "如果這週真的沒出現，回來這裡重新按一次「🚀 送到雲端」重試。")
@@ -1585,22 +1596,22 @@ else:
             if st.button("🚀 送稽核結果到雲端", type="primary"):
                 with st.spinner("送出中，請稍候…"):
                     ak_hist_b = files.get("稽核紀錄_輸出.csv")
-                    ok_hist = False
+                    ok_hist, n_hist, detail_hist = False, 0, "沒有稽核紀錄檔案可送"
                     if ak_hist_b:
-                        ok_hist = push_history("setAuditResult", ak_hist_b, month_key)
+                        ok_hist, n_hist, detail_hist = push_history("setAuditResult", ak_hist_b, month_key)
 
                     # Fix2：LINE 通知每位稽核者
                     sent, miss = send_audit_notices(month_key, edited_ak)
 
                     if ok_hist:
-                        st.success(f"🎉 稽核歷史已送到雲端（{month_key}），下個月公平輪序更準確。")
+                        st.success(f"🎉 稽核歷史已送到雲端（{month_key}，{n_hist} 筆），下個月公平輪序更準確。")
+                    else:
+                        st.error(f"⚠️ 稽核歷史同步失敗：{detail_hist}")
                     if sent > 0:
                         st.success(f"📱 已 LINE 通知 {sent} 位稽核者各自的責任班次。")
                         st.balloons()
                     if miss > 0:
                         st.warning(f"⚠️ {miss} 人缺 userId，無法 LINE 通知（請確認「對照」分頁）。")
-                    if not ok_hist and sent == 0:
-                        st.error("送出失敗，請稍後再試或下載備用。")
 
         st.download_button("⬇️ 下載稽核名單（已套用修改）",
                            edited_ak.to_csv(index=False).encode("utf-8-sig"),
