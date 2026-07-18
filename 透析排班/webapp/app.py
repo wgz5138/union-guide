@@ -12,6 +12,9 @@
   • v3.32：排班 Round1+2 改為全域最佳化配對(scipy)，取代貪心逐格搶人，解決「換處理順序就搶錯人、
     逼別人印第二次」的結構性問題；拿 3 週真實班表驗證：不劣於 v3.30、其中 1 週（本次爭議週）
     從「1人雙印」改善為「0人雙印」，且與玉繡當面確認過的規則(顏凰任 7/16 印 7/18)吻合
+  • v3.33：修正「送到雲端」的靜默失敗 — 排班歷史(setScheduleHistory)同步失敗時，先前完全不會
+    提示，畫面只顯示「已送到雲端」成功訊息，導致統計管理讀不到那一週卻沒人發現。現在失敗會
+    跳出明確錯誤訊息並提示重試。
 """
 import os, io, re, csv, json, base64, hashlib, tempfile, shutil, subprocess, sys
 from datetime import date, datetime
@@ -668,7 +671,7 @@ def _build_line_txt(rows, disp_df=None):
 
 
 # ── 💬 意見回饋：借用稽核歷史（特殊鍵「意見-時間」）存放，不動 LINE 程式 ──
-APP_VER = "v3.32"
+APP_VER = "v3.33"
 FEEDBACK_PREFIX = "意見-"
 
 def push_feedback(step, detail, expect, urgency, who):
@@ -911,7 +914,7 @@ if TEST_MODE:
 
 st.title("💊 透析藥水排班")
 st.caption("上傳班表 Excel → 出名單(表格)。可直接點格子改人名。跨區標 🔺。")
-st.caption("🟢 版本 v3.32（排班 Round1+2 改為全域最佳化配對，解決貪心排序搶錯人、逼人雙印的問題）· 2026-07-15")
+st.caption("🟢 版本 v3.33（修正「送到雲端」排班歷史同步失敗會靜默無提示的問題）· 2026-07-15")
 
 with st.expander("📖 第一次用？點我看「3 步驟」（給玉繡）", expanded=False):
     st.markdown("""
