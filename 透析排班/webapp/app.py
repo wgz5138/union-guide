@@ -23,6 +23,11 @@
     clearContents 再重建），把全部人的每週真實明細換成「統計-印01」這種沒有日期的假列，
     26週374筆真實歷史因此消失，只剩總數字。已加防呆：這顆按鈕現在要先勾選「我知道會清空
     每週明細」才能按，並在上方加醒目警告說明用途，避免下次又不小心整份洗掉。
+  • v3.36：v3.35上線後第一次真的送出，跳出新錯誤「Out of range float values are not JSON
+    compliant: nan」— build_corrected_history()/push_history() 讀 CSV 時沒指定 dtype=str，
+    pandas 把「休」狀態那些空白的治療日欄位讀成 float NaN，requests 送 JSON 時嚴格檢查
+    NaN 不合法直接拋例外。改成 pd.read_csv(..., dtype=str, keep_default_na=False)，空白
+    保留為空字串，不再被轉成 NaN。已用實際資料重現問題、驗證修法有效才上線。
 """
 import os, io, re, csv, json, base64, hashlib, tempfile, shutil, subprocess, sys
 from datetime import date, datetime
@@ -679,7 +684,7 @@ def _build_line_txt(rows, disp_df=None):
 
 
 # ── 💬 意見回饋：借用稽核歷史（特殊鍵「意見-時間」）存放，不動 LINE 程式 ──
-APP_VER = "v3.35"
+APP_VER = "v3.36"
 FEEDBACK_PREFIX = "意見-"
 
 def push_feedback(step, detail, expect, urgency, who):
@@ -769,7 +774,8 @@ def build_corrected_history(cloud_rows, sheet_name, prev_hist_bytes):
     existing = []
     if prev_hist_bytes:
         try:
-            df_h = pd.read_csv(io.BytesIO(prev_hist_bytes), encoding="utf-8-sig")
+            df_h = pd.read_csv(io.BytesIO(prev_hist_bytes), encoding="utf-8-sig",
+                               dtype=str, keep_default_na=False)
             existing = df_h[df_h["週次"].astype(str) != str(sheet_name)].values.tolist()
         except Exception: pass
 
@@ -807,7 +813,8 @@ def push_history(action, hist_bytes, key):
     if not APPS_SCRIPT_URL or not WRITE_SECRET: return False, 0, "未設定 APPS_SCRIPT_URL/WRITE_SECRET"
     if not hist_bytes: return False, 0, "hist_bytes 是空的(build_corrected_history 沒有產生資料，可能組員名單讀取失敗)"
     try:
-        df = pd.read_csv(io.BytesIO(hist_bytes), encoding="utf-8-sig")
+        df = pd.read_csv(io.BytesIO(hist_bytes), encoding="utf-8-sig",
+                          dtype=str, keep_default_na=False)
         key_col = df.columns[0]
         week_rows = df[df[key_col].astype(str) == str(key)].values.tolist()
         if not week_rows:
@@ -929,7 +936,7 @@ if TEST_MODE:
 
 st.title("💊 透析藥水排班")
 st.caption("上傳班表 Excel → 出名單(表格)。可直接點格子改人名。跨區標 🔺。")
-st.caption("🟢 版本 v3.35（統計管理「存回雲端」加防呆：會清空每週明細，需勾選確認才能按）· 2026-07-15")
+st.caption("🟢 版本 v3.36（修正「排班歷史同步失敗：Out of range float values...nan」— 讀CSV空白治療日被pandas當NaN，改成保留空字串）· 2026-07-15")
 
 with st.expander("📖 第一次用？點我看「3 步驟」（給玉繡）", expanded=False):
     st.markdown("""
