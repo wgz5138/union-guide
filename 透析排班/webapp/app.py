@@ -42,6 +42,11 @@
     7/20），會各自變成一行、同一天看起來印了兩批人共四人，容易被誤會排錯（2026-07-19、
     07-20兩週都有人反映看不懂）。改成依「印藥水日」分組合併輸出，同一天的人（不論來自
     哪個治療日）合併成一行，各區用「、」串接多人。
+  • v3.40：全面盤點後發現「組員名單」分頁的「📤 從本機CSV同步到雲端」跟排班/稽核歷史
+    是同一類地雷——本機 組員名單.csv 落後時按下去一樣整批覆蓋雲端。但組員名單跟排班/
+    稽核歷史不同：真的會有人被移除（離職/退組），不能沿用v3.38「只補missing」的合併
+    邏輯（會把雲端正確移除的人誤救回來）。改成更嚴格：只有雲端目前是空的（真正的初始化）
+    才允許這顆按鈕動作，雲端已有名單一律拒絕並提示改用下方表格編輯＋存回雲端。
 """
 import os, io, re, csv, json, base64, hashlib, tempfile, shutil, subprocess, sys
 from datetime import date, datetime
@@ -757,7 +762,7 @@ def _build_line_txt(rows, disp_df=None):
 
 
 # ── 💬 意見回饋：借用稽核歷史（特殊鍵「意見-時間」）存放，不動 LINE 程式 ──
-APP_VER = "v3.39"
+APP_VER = "v3.40"
 FEEDBACK_PREFIX = "意見-"
 
 def push_feedback(step, detail, expect, urgency, who):
@@ -1020,7 +1025,7 @@ if TEST_MODE:
 
 st.title("💊 透析藥水排班")
 st.caption("上傳班表 Excel → 出名單(表格)。可直接點格子改人名。跨區標 🔺。")
-st.caption("🟢 版本 v3.39（① 統計管理「同步本機CSV→雲端」改為只補雲端沒有的週次/月份 ② 首頁新增顯眼統計數字＋本機備份落後提醒 ③ 傳LINE群組文字改依印藥水日合併，同一天不再拆成兩行）· 2026-07-20")
+st.caption("🟢 版本 v3.40（① 統計管理「同步本機CSV→雲端」改為只補雲端沒有的週次/月份 ② 首頁新增顯眼統計數字＋本機備份落後提醒 ③ 傳LINE群組文字改依印藥水日合併 ④ 組員名單同步按鈕改為雲端有名單就拒絕覆蓋）· 2026-07-20")
 
 # ── 📊 首頁顯眼統計＋本機備份落後提醒（2026-07-20加，v3.38）─────────────
 # 目的：2026-07-19~20那次「7/20資料被同步按鈕蓋掉」事件，玉繡是三週後才發現雲端資料
@@ -1994,20 +1999,32 @@ if mode.startswith("📊"):
                 _mem = fetch_members_cloud()
             st.session_state["members_cloud"] = _mem if _mem is not None else "empty"
         if _m2.button("📤 從本機 CSV 同步到雲端", key="members_sync_local",
-                      help="第一次使用：把 repo 裡的 組員名單.csv 上傳到雲端，之後就以雲端為主。"):
-            _local_csv = os.path.join(HERE, "組員名單.csv")
-            if os.path.exists(_local_csv):
-                try:
-                    _ldf = pd.read_csv(_local_csv, encoding="utf-8-sig")
-                    if save_members_cloud(_ldf[["卡號","姓名"]]):
-                        st.session_state["members_cloud"] = _ldf[["卡號","姓名"]].reset_index(drop=True)
-                        st.success(f"✅ 已同步 {len(_ldf)} 人到雲端！")
-                    else:
-                        st.error("同步失敗，請稍後再試。")
-                except Exception as _e:
-                    st.error(f"讀取本機 CSV 失敗：{_e}")
+                      help="只在雲端還沒有組員名單時可用（初始化）。雲端已經有名單後，"
+                           "這顆按鈕不會再覆蓋，請直接在下方表格編輯後按「存回雲端」。"):
+            # 組員名單跟排班/稽核歷史不同：真的會有人被移除（離職/退組），不能比照
+            # v3.38 那種「只補雲端沒有的」合併邏輯——如果雲端上正確地移除了某人、
+            # 但本機CSV還留著舊名字，合併邏輯會把這個人誤救回來。所以這裡改成更嚴格
+            # 的作法：只有雲端目前完全是空的（真的是第一次初始化）才允許這顆按鈕動作，
+            # 雲端已有名單就一律拒絕，逼大家改用下方表格（會先讀到雲端現況再編輯）。
+            _cloud_check = fetch_members_cloud()
+            if _cloud_check is not None and not _cloud_check.empty:
+                st.error(f"雲端已經有組員名單（{len(_cloud_check)}人），為避免蓋掉雲端現況，"
+                         f"這顆按鈕已停用。請按上面「🔄 讀取」載入雲端名單，在下方表格直接"
+                         f"新增/刪除/改名字，再按「💾 存回雲端」。")
             else:
-                st.error("找不到本機 組員名單.csv，請確認 repo 裡有這個檔。")
+                _local_csv = os.path.join(HERE, "組員名單.csv")
+                if os.path.exists(_local_csv):
+                    try:
+                        _ldf = pd.read_csv(_local_csv, encoding="utf-8-sig")
+                        if save_members_cloud(_ldf[["卡號","姓名"]]):
+                            st.session_state["members_cloud"] = _ldf[["卡號","姓名"]].reset_index(drop=True)
+                            st.success(f"✅ 已同步 {len(_ldf)} 人到雲端！")
+                        else:
+                            st.error("同步失敗，請稍後再試。")
+                    except Exception as _e:
+                        st.error(f"讀取本機 CSV 失敗：{_e}")
+                else:
+                    st.error("找不到本機 組員名單.csv，請確認 repo 裡有這個檔。")
         if "members_cloud" not in st.session_state:
             st.info("按「🔄 讀取」載入雲端組員名單；若第一次使用，按「📤 從本機 CSV 同步到雲端」初始化。")
         elif isinstance(st.session_state["members_cloud"], str):
