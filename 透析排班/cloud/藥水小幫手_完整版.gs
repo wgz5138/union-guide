@@ -53,9 +53,7 @@ function doPost(e) {
 
     if (action === "setWeek") {
       var sh2 = ensureSheet_(ss, "本週名單", ["印日期","區","姓名"]);
-      sh2.clearContents();
-      sh2.appendRow(["印日期","區","姓名"]);
-      (body.rows || []).forEach(function(r) { sh2.appendRow(r); });
+      writeAllRowsFast_(sh2, ["印日期","區","姓名"], body.rows || []);
       return jsonOut_({ok: true, count: (body.rows || []).length});
     }
 
@@ -71,9 +69,7 @@ function doPost(e) {
 
     if (action === "setAllScheduleHistory") {
       var shAll = ensureSheet_(ss, "排班歷史", ["週次","卡號","姓名","狀態","治療日"]);
-      shAll.clearContents();
-      shAll.appendRow(["週次","卡號","姓名","狀態","治療日"]);
-      (body.rows || []).forEach(function(r) { shAll.appendRow(r); });
+      writeAllRowsFast_(shAll, ["週次","卡號","姓名","狀態","治療日"], body.rows || []);
       return jsonOut_({ok: true});
     }
 
@@ -88,18 +84,16 @@ function doPost(e) {
     }
 
     if (action === "setAllAuditHistory") {
-      var shAudAll = ensureSheet_(ss, "稽核歷史", ["月份","卡號","姓名","狀態","位置"]);
-      var dataAud = shAudAll.getDataRange().getValues();
-      var headerAud = dataAud[0];
+      var headersAud = ["月份","卡號","姓名","狀態","位置"];
+      var shAudAll = ensureSheet_(ss, "稽核歷史", headersAud);
+      var dataAud = shAudAll.getLastRow() > 0 ? shAudAll.getDataRange().getValues() : [headersAud];
       // 保留草稿與意見回饋，清除正常月份和統計重建記錄
-      var keptAud = [headerAud];
+      var keptAud = [];
       for (var iAud = 1; iAud < dataAud.length; iAud++) {
         var mAud = String(dataAud[iAud][0]).trim();
         if (mAud === "草稿" || mAud.indexOf("意見-") === 0) keptAud.push(dataAud[iAud]);
       }
-      shAudAll.clearContents();
-      keptAud.forEach(function(r) { shAudAll.appendRow(r); });
-      (body.rows || []).forEach(function(r) { shAudAll.appendRow(r); });
+      writeAllRowsFast_(shAudAll, headersAud, keptAud.concat(body.rows || []));
       return jsonOut_({ok: true});
     }
 
@@ -110,9 +104,7 @@ function doPost(e) {
 
     if (action === "setMembers") {
       var shMem2 = ensureSheet_(ss, "組員名單", ["卡號","姓名"]);
-      shMem2.clearContents();
-      shMem2.appendRow(["卡號","姓名"]);
-      (body.rows || []).forEach(function(r) { shMem2.appendRow(r); });
+      writeAllRowsFast_(shMem2, ["卡號","姓名"], body.rows || []);
       return jsonOut_({ok: true});
     }
 
@@ -123,9 +115,7 @@ function doPost(e) {
 
     if (action === "setWeekDraft") {
       var shDraft2 = ensureSheet_(ss, "排班草稿", ["週次","印日期","區","姓名"]);
-      shDraft2.clearContents();
-      shDraft2.appendRow(["週次","印日期","區","姓名"]);
-      (body.rows || []).forEach(function(r) { shDraft2.appendRow(r); });
+      writeAllRowsFast_(shDraft2, ["週次","印日期","區","姓名"], body.rows || []);
       return jsonOut_({ok: true});
     }
 
@@ -338,6 +328,15 @@ function sheetToArray_(ss, name) {
   if (!sh || sh.getLastRow() < 1) return [];
   return sh.getDataRange().getValues();
 }
+/* 一次寫入整批列（setValues 只有 1 次 API 呼叫），取代逐列 appendRow()（N 次 API 呼叫）。
+ * 逐列寫入在資料量大（例如整年 300~400 列歷史）時很容易逾時，這是 2026-07-19 發現的效能問題。 */
+function writeAllRowsFast_(sh, headers, rows) {
+  sh.clearContents();
+  var allRows = [headers].concat(rows);
+  if (allRows.length > 0) {
+    sh.getRange(1, 1, allRows.length, headers.length).setValues(allRows);
+  }
+}
 function writeHistory_(ss, sheetName, headers, key, newRows) {
   if (!key && newRows.length === 0) return;
   var sh = ensureSheet_(ss, sheetName, headers);
@@ -345,9 +344,7 @@ function writeHistory_(ss, sheetName, headers, key, newRows) {
   var kept = vals.filter(function(r, i) {
     return i === 0 || String(r[0]) !== String(key);
   });
-  sh.clearContents();
-  kept.forEach(function(r) { sh.appendRow(r); });
-  newRows.forEach(function(r) { sh.appendRow(r); });
+  writeAllRowsFast_(sh, headers, kept.slice(1).concat(newRows));
 }
 function buildUserMap_(ss) {
   var map = {}, sh = ss.getSheetByName("對照");
