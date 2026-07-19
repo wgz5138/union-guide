@@ -1,5 +1,5 @@
 /**
- * 透析印藥水 LINE 小幫手 v5.4 — Apps Script
+ * 透析印藥水 LINE 小幫手 v5.5 — Apps Script
  * ════════════════════════════════════════════════════════
  *  功能①：自動收 userId（LINE webhook）
  *  功能②：每天自動發提醒 ★名單日期=上班日，印藥水日=上班日的前一個上班日（跳週日/休診日）；提前一則+當天一則；含防重複
@@ -14,6 +14,11 @@
  *  setAllScheduleHistory/getMembers/setMembers/setAllAuditHistory），導致這幾個功能
  *  呼叫時 GAS 回「unknown action」。已從舊版本補回這 6 個函式，v5.3 原本的提醒邏輯
  *  （二階段提醒＋防重複）完全沒動。
+ *
+ *  v5.5（2026-07-19）：整批資料（例如全年389筆排班歷史）用逐列 appendRow() 寫入太慢，
+ *  實測連續逾時。改用 writeAllRowsFast_()（Range.setValues() 一次寫入整批），
+ *  setWeek/setAllScheduleHistory/setAllAuditHistory/setMembers/setWeekDraft/
+ *  writeHistory_ 全部套用，行為不變、只是變快。
  */
 
 var LINE_TOKEN  = "zeJ2uTt7yRF4EQZ1nN0tgQqZqfzkScfWxTmEtGjPDbByEtjEKkQucms/SYc9uYiEyHbODMrsqlB2L+z0Xl1EPpe4/w/nIR9AT6xb+7gBUgsPlqjEsj4Hp907Zr/gMkpiJWlSWaU20t4vI6au33BKbAdB04t89/1O/w1cDnyilFU=";   // ← Channel access token（不要按 Reissue！）
