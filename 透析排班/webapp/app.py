@@ -947,7 +947,7 @@ if TEST_MODE:
 
 st.title("💊 透析藥水排班")
 st.caption("上傳班表 Excel → 出名單(表格)。可直接點格子改人名。跨區標 🔺。")
-st.caption("🟢 版本 v3.36（修正「排班歷史同步失敗：Out of range float values...nan」— 讀CSV空白治療日被pandas當NaN，改成保留空字串）· 2026-07-19")
+st.caption("🟢 版本 v3.37（送到雲端成功後，畫面會多顯示「🔍 診斷」— GAS實際收到幾筆/寫入哪份試算表/寫入前後列數，不用再靠Apps Script記錄檔）· 2026-07-19")
 
 with st.expander("📖 第一次用？點我看「3 步驟」（給玉繡）", expanded=False):
     st.markdown("""
