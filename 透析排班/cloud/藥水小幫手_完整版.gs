@@ -1,10 +1,10 @@
 /**
- * 透析印藥水 LINE 小幫手 v5.6 — Apps Script
+ * 透析印藥水 LINE 小幫手 v5.7 — Apps Script
  * ════════════════════════════════════════════════════════
- *  v5.6（2026-07-19）：setScheduleHistory 一直回報成功，但 Google Sheets 上實際查核完全
- *  沒有新資料，執行紀錄也顯示 doPost 正常完成、沒有拋出例外——問題無法從外部行為判斷，
- *  加了 Logger.log 直接記錄收到的 key/rows/寫入前後列數，還有最關鍵的
- *  ss.getId()/ss.getName()，用來確認這個部署綁定的到底是不是使用者在看的那份 Sheets。
+ *  v5.7（2026-07-19）：v5.6 加的 Logger.log 使用者在「執行項目」畫面點不開看不到內容，
+ *  改成直接把 ss.getId()/ss.getName()/寫入前後列數/收到的rows筆數/key 塞進回傳的 JSON，
+ *  這樣 app.py 收到回應時就能直接把診斷資訊顯示在 Streamlit 畫面上，不必再靠 Apps Script
+ *  的記錄檔 UI。Logger.log 保留，當作備援。
  *  功能①：自動收 userId（LINE webhook）
  *  功能②：每天自動發提醒 ★名單日期=上班日，印藥水日=上班日的前一個上班日（跳週日/休診日）；提前一則+當天一則；含防重複
  *  功能③：接收網頁送來的名單（setWeek）
@@ -81,7 +81,9 @@ function doPost(e) {
                     body.key, body.rows || []);
       var afterCount = sheetToArray_(ss, "排班歷史").length;
       Logger.log("setScheduleHistory 寫入前列數=" + beforeCount + " 寫入後列數=" + afterCount);
-      return jsonOut_({ok: true, before: beforeCount, after: afterCount});
+      return jsonOut_({ok: true, before: beforeCount, after: afterCount,
+                        ssId: ss.getId(), ssName: ss.getName(),
+                        gotRows: (body.rows || []).length, gotKey: String(body.key)});
     }
 
     if (action === "setAllScheduleHistory") {

@@ -826,9 +826,14 @@ def push_history(action, hist_bytes, key):
         rj = resp.json()
         ok = resp.ok and rj.get("ok", False)
         if ok:
-            _detail = ""
+            _parts = []
             if "before" in rj or "after" in rj:
-                _detail = f"GAS回報：寫入前{rj.get('before','?')}列→寫入後{rj.get('after','?')}列"
+                _parts.append(f"寫入前{rj.get('before','?')}列→寫入後{rj.get('after','?')}列")
+            if "gotRows" in rj:
+                _parts.append(f"GAS收到{rj.get('gotRows')}筆(送出{len(week_rows)}筆) key='{rj.get('gotKey','?')}'")
+            if "ssId" in rj:
+                _parts.append(f"寫入試算表: {rj.get('ssName','?')} (ID尾碼…{str(rj.get('ssId',''))[-8:]})")
+            _detail = "GAS回報：" + "；".join(_parts) if _parts else ""
             return ok, len(week_rows), _detail
         return False, 0, f"HTTP {resp.status_code}: {resp.text[:200]}"
     except Exception as e:
@@ -1406,6 +1411,8 @@ if mode.startswith("🟦"):
                             ok2, n2, detail2 = push_history("setScheduleHistory", corrected, sheet0)
                             if ok2:
                                 st.caption(f"✅ 排班歷史已同步（{n2} 筆，依玉繡實際定案），下週公平輪序更準確。")
+                                if detail2:
+                                    st.caption(f"🔍 診斷：{detail2}")
                             else:
                                 st.error(f"⚠️ 本週名單已送出、LINE會照常提醒，但「排班歷史」同步失敗！"
                                           f"原因：{detail2}\n\n"
