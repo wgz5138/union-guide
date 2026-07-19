@@ -28,6 +28,11 @@
     pandas 把「休」狀態那些空白的治療日欄位讀成 float NaN，requests 送 JSON 時嚴格檢查
     NaN 不合法直接拋例外。改成 pd.read_csv(..., dtype=str, keep_default_na=False)，空白
     保留為空字串，不再被轉成 NaN。已用實際資料重現問題、驗證修法有效才上線。
+  • v3.38：修掉「統計管理→同步本機CSV→雲端」這顆按鈕的洗資料地雷——2026-07-20凌晨實際
+    發生：本機備份CSV還停在舊週次，按下去把雲端剛送出、比CSV新的一週資料整批蓋掉了。
+    原本 sync_schedule_history_from_csv()/sync_audit_history_from_csv() 是「本機整批覆蓋
+    雲端」；改成「先讀雲端現況，只把本機有、雲端沒有的週次/月份補上去，雲端既有資料原封
+    不動」——不是加警告字樣，是讓這顆按鈕在設計上就不可能再覆蓋掉雲端較新的資料。
 """
 import os, io, re, csv, json, base64, hashlib, tempfile, shutil, subprocess, sys
 from datetime import date, datetime
@@ -511,26 +516,71 @@ def _sync_to_gs(action, rows, timeout=30, retries=2):
     return False, 0, last_err
 
 def sync_schedule_history_from_csv():
-    """把本機排班紀錄.csv 整批上傳到 GS 排班歷史（覆蓋，初始化用）。"""
+    """把本機排班紀錄.csv 裡「雲端目前沒有的週次」補進雲端排班歷史。
+
+    v3.38 前：整批覆蓋雲端（setAllScheduleHistory 是 clearContents 重建），若本機 CSV
+    落後（雲端有、CSV 沒有的新週次），一按就會把雲端較新的資料蓋掉——2026-07-20 凌晨
+    實際發生過一次，蓋掉了剛送出的 0720~0726 那 15 筆。
+    v3.38 起：先讀雲端現況，只把「本機有、雲端沒有」的週次補上去，雲端既有的週次原封
+    不動地保留、一起送回去（GAS 端仍是整批 setAllScheduleHistory，但送出的內容已經是
+    「雲端原有 + 本機獨有」的合併結果，不會遺失雲端較新的資料）。
+    回傳 (ok, 新補上的筆數, err)。
+    """
     if not APPS_SCRIPT_URL or not WRITE_SECRET: return False, 0, "未設定 URL/Secret"
     csv_path = os.path.join(HERE, "排班紀錄.csv")
     if not os.path.exists(csv_path): return False, 0, "找不到排班紀錄.csv"
     try:
-        df = pd.read_csv(csv_path, encoding="utf-8-sig", dtype=str).fillna("")
-        rows = [list(r) for _, r in df.iterrows()]
-        return _sync_to_gs("setAllScheduleHistory", rows)
+        df_local = pd.read_csv(csv_path, encoding="utf-8-sig", dtype=str, keep_default_na=False)
+        cloud_df = fetch_schedule_history_raw()
+        if isinstance(cloud_df, str):
+            return False, 0, f"讀取雲端現況失敗，為安全起見取消同步：{cloud_df}"
+        cloud_weeks = set(cloud_df["週次"].astype(str)) if cloud_df is not None else set()
+        missing = df_local[~df_local["週次"].astype(str).isin(cloud_weeks)]
+        if missing.empty:
+            return True, 0, ""
+        combined = (pd.concat([cloud_df, missing], ignore_index=True)
+                    if cloud_df is not None and not cloud_df.empty else missing)
+        rows = [list(r) for _, r in combined.iterrows()]
+        ok, _, err = _sync_to_gs("setAllScheduleHistory", rows)
+        return ok, (len(missing) if ok else 0), err
     except Exception as e:
         return False, 0, str(e)
 
+def fetch_audit_history_full_raw():
+    """從雲端稽核歷史取得完整明細（含草稿/意見等特殊列，不篩選）→ DataFrame，或 None/錯誤字串。"""
+    if not APPS_SCRIPT_URL or not WRITE_SECRET: return None
+    try:
+        resp = requests.post(APPS_SCRIPT_URL,
+                             json={"action": "getAuditHistory", "secret": WRITE_SECRET},
+                             timeout=30)
+        d = resp.json()
+        if not d.get("ok"): return None
+        rows = d.get("rows") or []
+        if len(rows) < 2: return pd.DataFrame(columns=["月份","卡號","姓名","狀態","位置"])
+        return pd.DataFrame([[str(c) for c in r] for r in rows[1:]], columns=[str(x) for x in rows[0]])
+    except Exception as e:
+        return str(e)
+
 def sync_audit_history_from_csv():
-    """把本機稽核紀錄.csv 整批上傳到 GS 稽核歷史（覆蓋，初始化用）。"""
+    """把本機稽核紀錄.csv 裡「雲端目前沒有的月份」補進雲端稽核歷史（同 v3.38 排班版邏輯，
+    不覆蓋雲端既有資料，見 sync_schedule_history_from_csv 說明）。回傳 (ok, 新補上的筆數, err)。"""
     if not APPS_SCRIPT_URL or not WRITE_SECRET: return False, 0, "未設定 URL/Secret"
     csv_path = os.path.join(HERE, "稽核紀錄.csv")
     if not os.path.exists(csv_path): return False, 0, "找不到稽核紀錄.csv"
     try:
-        df = pd.read_csv(csv_path, encoding="utf-8-sig", dtype=str).fillna("")
-        rows = [list(r) for _, r in df.iterrows()]
-        return _sync_to_gs("setAllAuditHistory", rows)
+        df_local = pd.read_csv(csv_path, encoding="utf-8-sig", dtype=str, keep_default_na=False)
+        cloud_df = fetch_audit_history_full_raw()
+        if isinstance(cloud_df, str):
+            return False, 0, f"讀取雲端現況失敗，為安全起見取消同步：{cloud_df}"
+        cloud_months = set(cloud_df["月份"].astype(str)) if cloud_df is not None else set()
+        missing = df_local[~df_local["月份"].astype(str).isin(cloud_months)]
+        if missing.empty:
+            return True, 0, ""
+        combined = (pd.concat([cloud_df, missing], ignore_index=True)
+                    if cloud_df is not None and not cloud_df.empty else missing)
+        rows = [list(r) for _, r in combined.iterrows()]
+        ok, _, err = _sync_to_gs("setAllAuditHistory", rows)
+        return ok, (len(missing) if ok else 0), err
     except Exception as e:
         return False, 0, str(e)
 
@@ -684,7 +734,7 @@ def _build_line_txt(rows, disp_df=None):
 
 
 # ── 💬 意見回饋：借用稽核歷史（特殊鍵「意見-時間」）存放，不動 LINE 程式 ──
-APP_VER = "v3.36"
+APP_VER = "v3.38"
 FEEDBACK_PREFIX = "意見-"
 
 def push_feedback(step, detail, expect, urgency, who):
@@ -947,7 +997,7 @@ if TEST_MODE:
 
 st.title("💊 透析藥水排班")
 st.caption("上傳班表 Excel → 出名單(表格)。可直接點格子改人名。跨區標 🔺。")
-st.caption("🟢 版本 v3.37（送到雲端成功後，畫面會多顯示「🔍 診斷」— GAS實際收到幾筆/寫入哪份試算表/寫入前後列數，不用再靠Apps Script記錄檔）· 2026-07-19")
+st.caption("🟢 版本 v3.38（統計管理「同步本機CSV→雲端」改為只補雲端沒有的週次/月份，不再整批覆蓋——避免本機備份落後時誤蓋掉雲端較新的資料）· 2026-07-20")
 
 with st.expander("📖 第一次用？點我看「3 步驟」（給玉繡）", expanded=False):
     st.markdown("""
@@ -1670,11 +1720,14 @@ if mode.startswith("📊"):
             st.session_state["schedule_stats"] = _st if _st is not None else "empty"
         if not TEST_MODE and APPS_SCRIPT_URL and WRITE_SECRET:
             if _sc2.button("📤 同步本機CSV→雲端", key="stats_sync_local",
-                           help="把 repo 裡的排班紀錄.csv（含今年全年歷史）整批上傳到雲端，覆蓋現有資料。"):
-                with st.spinner("上傳中，請稍候…"):
+                           help="把 repo 裡排班紀錄.csv「雲端還沒有的週次」補進雲端，"
+                                "雲端既有的週次不會被覆蓋或刪除（v3.38起，只補不蓋）。"):
+                with st.spinner("讀取雲端現況並比對中…"):
                     _sok, _sn, _serr = sync_schedule_history_from_csv()
-                if _sok:
-                    st.success(f"✅ 已同步 {_sn} 筆排班歷史到雲端！按「🔄 讀取」確認。")
+                if _sok and _sn == 0:
+                    st.info("雲端已經有本機CSV全部的週次，沒有需要補的資料（沒有動到任何一筆）。")
+                elif _sok:
+                    st.success(f"✅ 已把本機獨有的 {_sn} 筆（雲端原本沒有的週次）補進雲端！按「🔄 讀取」確認。")
                     st.session_state.pop("schedule_stats", None)
                 else:
                     _hint = "（Google 伺服器較慢，已自動重試，請再按一次）" if "逾時" in (_serr or "") else ""
@@ -1780,11 +1833,14 @@ if mode.startswith("📊"):
             st.session_state["audit_stats"] = _ast if _ast is not None else "empty"
         if not TEST_MODE and APPS_SCRIPT_URL and WRITE_SECRET:
             if _ac2.button("📤 同步本機CSV→雲端", key="audit_sync_local",
-                           help="把 repo 裡的稽核紀錄.csv（含今年全年歷史）整批上傳到雲端，覆蓋現有資料。"):
-                with st.spinner("上傳中，請稍候…"):
+                           help="把 repo 裡稽核紀錄.csv「雲端還沒有的月份」補進雲端，"
+                                "雲端既有的月份不會被覆蓋或刪除（v3.38起，只補不蓋）。"):
+                with st.spinner("讀取雲端現況並比對中…"):
                     _aok, _an, _aerr = sync_audit_history_from_csv()
-                if _aok:
-                    st.success(f"✅ 已同步 {_an} 筆稽核歷史到雲端！按「🔄 讀取」確認。")
+                if _aok and _an == 0:
+                    st.info("雲端已經有本機CSV全部的月份，沒有需要補的資料（沒有動到任何一筆）。")
+                elif _aok:
+                    st.success(f"✅ 已把本機獨有的 {_an} 筆（雲端原本沒有的月份）補進雲端！按「🔄 讀取」確認。")
                     st.session_state.pop("audit_stats", None)
                 else:
                     _hint = "（Google 伺服器較慢，已自動重試，請再按一次）" if "逾時" in (_aerr or "") else ""
