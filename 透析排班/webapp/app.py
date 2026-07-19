@@ -37,6 +37,11 @@
     每次打開網頁都看得到，平常掃一眼就能發現「數字很久沒變/忽然變小」這種異常，不用等
     查統計才發現（這次事件玉繡是三週後才發現）；並主動比對本機git備份CSV是否落後於雲端，
     落後就直接顯示警告，不用等有人誤按同步按鈕才知道備份是舊的。
+  • v3.39：修正「傳LINE群組用」文字（_build_line_txt）原本依「治療日」分組輸出，導致不同
+    治療日往前推剛好同一天印藥水時（例如白班7/21治療日、小夜7/22治療日，往前推都是
+    7/20），會各自變成一行、同一天看起來印了兩批人共四人，容易被誤會排錯（2026-07-19、
+    07-20兩週都有人反映看不懂）。改成依「印藥水日」分組合併輸出，同一天的人（不論來自
+    哪個治療日）合併成一行，各區用「、」串接多人。
 """
 import os, io, re, csv, json, base64, hashlib, tempfile, shutil, subprocess, sys
 from datetime import date, datetime
@@ -716,11 +721,25 @@ def _build_line_txt(rows, disp_df=None):
     # 標題用治療日範圍（說明這週涵蓋哪幾天）
     lines = [f"印藥水名單 (治療日 {fmt(treats[0]['t'])}~ {fmt(treats[-1]['t'])})", ""]
 
+    # 依「印藥水日」合併輸出（不是依治療日）——不同治療日往前推剛好同一天印藥水時
+    # （例如白班7/21治療日、小夜7/22治療日，往前推都是7/20），原本會各自出現一行、
+    # 看起來像同一天印了兩次、容易誤會（2026-07-19、07-20兩次都有人反映看不懂），
+    # 這裡先按印藥水日分組、同一天的人合併成一行。
+    by_print = {}
     for e in treats:
-        line = fmt(e["p"])   # 左欄 = 印藥水日期
+        slot = by_print.setdefault(e["p"], {})
+        for area, nm in e["a"].items():
+            names = slot.setdefault(area, [])
+            for nm_single in nm.split("、"):
+                nm_single = nm_single.strip()
+                if nm_single and nm_single not in names:
+                    names.append(nm_single)
+
+    for p_str in sorted(by_print):
+        line = fmt(p_str)   # 左欄 = 印藥水日期
         for area in ["一區","二區","三區"]:
-            nm = e["a"].get(area, "")
-            if nm: line += f"  {area}：{nm}"
+            names = by_print[p_str].get(area, [])
+            if names: line += f"  {area}：{'、'.join(names)}"
         lines.append(line)
 
     roster = _load_roster_full()
@@ -738,7 +757,7 @@ def _build_line_txt(rows, disp_df=None):
 
 
 # ── 💬 意見回饋：借用稽核歷史（特殊鍵「意見-時間」）存放，不動 LINE 程式 ──
-APP_VER = "v3.38"
+APP_VER = "v3.39"
 FEEDBACK_PREFIX = "意見-"
 
 def push_feedback(step, detail, expect, urgency, who):
@@ -1001,7 +1020,7 @@ if TEST_MODE:
 
 st.title("💊 透析藥水排班")
 st.caption("上傳班表 Excel → 出名單(表格)。可直接點格子改人名。跨區標 🔺。")
-st.caption("🟢 版本 v3.38（① 統計管理「同步本機CSV→雲端」改為只補雲端沒有的週次/月份，不再整批覆蓋 ② 首頁新增顯眼統計數字＋本機備份落後提醒）· 2026-07-20")
+st.caption("🟢 版本 v3.39（① 統計管理「同步本機CSV→雲端」改為只補雲端沒有的週次/月份 ② 首頁新增顯眼統計數字＋本機備份落後提醒 ③ 傳LINE群組文字改依印藥水日合併，同一天不再拆成兩行）· 2026-07-20")
 
 # ── 📊 首頁顯眼統計＋本機備份落後提醒（2026-07-20加，v3.38）─────────────
 # 目的：2026-07-19~20那次「7/20資料被同步按鈕蓋掉」事件，玉繡是三週後才發現雲端資料
