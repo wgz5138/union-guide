@@ -31,9 +31,11 @@ API = f"https://api.telegram.org/bot{TOKEN}"
 
 說明 = (
     "✈️ 機票查詢小幫手\n"
-    "傳給我：出發 目的地 去程月份 [回程月份]\n"
+    "傳給我：出發 目的地 [去程月份] [回程月份]\n"
+    "月份可以不打，不打就自動幫你查未來幾個月最便宜的！\n"
     "例：\n"
-    "　查 高雄 東京 2026-09　（單程）\n"
+    "　查 高雄 東京　（不打月份，自動查未來幾個月）\n"
+    "　查 高雄 東京 2026-09　（單程，指定月份）\n"
     "　查 高雄 東京 2026-09 2026-10　（來回）\n"
     "地名可打中文（高雄、日本、首爾…）或英文代碼。"
 )
@@ -76,10 +78,11 @@ def handle(text):
     if len(places) < 2:
         places = [w for w in rest.split() if w]
 
-    if len(places) < 2 or len(months) < 1:
+    # 沒打年月也可以查：不強制要求月份，自動查未來幾個月（見下方 route 組裝）
+    if len(places) < 2:
         return "看不太懂耶 😅\n\n" + 說明
 
-    origin, dest, month = places[0], places[1], months[0]
+    origin, dest = places[0], places[1]
 
     # 如果地名是「中文但不在對照表」，API 會看不懂 → 先友善提醒，別吐錯誤
     未知 = [p for p in (origin, dest)
@@ -89,14 +92,18 @@ def handle(text):
                 "請改用機場代碼（例：重慶 CKG、成都 CTU），或用清單上的中文地名：\n"
                 + "、".join(tp.地名對照表))
 
-    route = {"origin": origin, "dest": dest, "month": month}
+    route = {"origin": origin, "dest": dest}
+    月份說明 = f"未來{tp.FLEX_MONTHS_AHEAD}個月"
+    if len(months) >= 1:
+        route["month"] = months[0]
+        月份說明 = months[0]
     if len(months) >= 2:
         route["return"] = months[1]
 
     # 列出多張便宜的票讓你挑（查整個國家時會看到不同城市；優先直飛）
     rows = tp.search_offers(route, top=5, direct_first=True)
     if not rows:
-        return f"「{origin}→{dest} {month}」最近查無票價，換個月份或目的地試試。"
+        return f"「{origin}→{dest}」（{月份說明}）最近查無票價，換個目的地試試。"
 
     trip = rows[0]["trip"]
     lines = [f"✈️ {origin}→{dest}（{trip}）便宜的幾個（點連結看/訂）："]
