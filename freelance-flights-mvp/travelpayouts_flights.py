@@ -39,15 +39,18 @@ import requests
 # ─────────────────────────────────────────────────────────────
 # ★ 好消息：origin / dest 可以直接寫「中文地名」，程式會自動翻成代碼！★
 #   （下面 地名對照表 有的就能用中文；沒有的就填代碼，例如某個冷門城市）
-#   month  = 去程月份（必填）
+#   month  = 去程月份（選填！不寫就自動查「這個月起」連續 FLEX_MONTHS_AHEAD
+#            個月、挑最便宜的──這樣不用一直手動改月份，也不會日期一過
+#            就永遠查不到卻沒人發現）
 #   return = 回程月份（選填）→ 有寫就查「來回票」，沒寫就查「單程」
+#            （來回票請連 month 一起指定，彈性月份目前只支援單程）
 ROUTES = [
-    {"origin": "高雄", "dest": "日本",   "month": "2026-09", "return": "2026-09"},  # 全日本 來回
-    {"origin": "高雄", "dest": "韓國",   "month": "2026-09", "return": "2026-09"},  # 全韓國 來回
-    {"origin": "高雄", "dest": "泰國",   "month": "2026-09", "return": "2026-09"},  # 全泰國 來回
-    {"origin": "高雄", "dest": "越南",   "month": "2026-09", "return": "2026-09"},  # 全越南 來回
-    {"origin": "高雄", "dest": "香港",   "month": "2026-09", "return": "2026-09"},  # 香港 來回
-    {"origin": "高雄", "dest": "新加坡", "month": "2026-09", "return": "2026-09"},  # 新加坡 來回
+    {"origin": "高雄", "dest": "日本"},    # 全日本 單程・自動查未來幾個月最便宜
+    {"origin": "高雄", "dest": "韓國"},    # 全韓國 單程・自動查未來幾個月最便宜
+    {"origin": "高雄", "dest": "泰國"},    # 全泰國 單程・自動查未來幾個月最便宜
+    {"origin": "高雄", "dest": "越南"},    # 全越南 單程・自動查未來幾個月最便宜
+    {"origin": "高雄", "dest": "香港"},    # 香港   單程・自動查未來幾個月最便宜
+    {"origin": "高雄", "dest": "新加坡"},  # 新加坡 單程・自動查未來幾個月最便宜
 ]
 
 # 地名對照表：中文 → 代碼（要加新地點就在這裡多寫一行）
@@ -78,8 +81,21 @@ def 轉代碼(name):
     return 地名對照表.get(name, name)
 
 
+def next_months(n=3):
+    """回傳從『這個月』起連續 n 個月份字串 YYYY-MM（本月也算在內）。
+    給『沒指定月份』時自動查用──這樣不用每次手動打年月，也不會因為
+    寫死某個月份、日期一過就永遠查不到而不自知（見 FLEX_MONTHS_AHEAD）。"""
+    y, m = date.today().year, date.today().month
+    out = []
+    for i in range(n):
+        total = m - 1 + i
+        out.append(f"{y + total // 12:04d}-{total % 12 + 1:02d}")
+    return out
+
+
 CURRENCY = "twd"         # 用新台幣報價
 THRESHOLD = 15000        # 低於這個價（TWD）就跳通知（多國來回，先設寬一點 15000）
+FLEX_MONTHS_AHEAD = 3    # route 沒填 "month" 時，自動查「這個月起」連續幾個月
 
 # 資料與 log 都放在「程式所在的資料夾」底下（不管從哪裡點兩下執行都一樣），
 # 所以你把專案放 F 槽，data/ 和 logs/ 就在 F 槽，全部集中、好找。
@@ -165,34 +181,45 @@ def build_skyscanner_link(origin, destination, outbound, inbound=""):
 # 查票：底層拿回所有票，再給上層挑「最便宜一張」或「列出多個選項」
 # ─────────────────────────────────────────────────────────────
 def _fetch_offers(route):
-    """打 API 拿回這條航線的所有票。回傳 (offers, currency, round_trip)。"""
+    """打 API 拿回這條航線的所有票。回傳 (offers, currency, round_trip)。
+    route 沒填 "month"（沒打年月）就自動查未來 FLEX_MONTHS_AHEAD 個月、
+    合併所有結果──不用每次手動打年月，也不怕月份寫死了、日期一過就
+    永遠查不到卻沒人發現（原本 API 的 departure_at 到底能不能留空、
+    留空後行為為何，官方文件查證不到明確結果，所以不賭它，改用
+    我們自己算好的月份清單，行為 100% 可控可測）。"""
     if not TOKEN:
         raise RuntimeError(
             "找不到 token！請先設定環境變數 TRAVELPAYOUTS_TOKEN"
             "（做法見本檔案開頭說明）。")
 
     round_trip = "return" in route  # 有填回程 = 來回票
-    params = {
-        "origin": 轉代碼(route["origin"]),       # 中文地名自動翻成代碼
-        "destination": 轉代碼(route["dest"]),
-        "departure_at": route["month"],
-        "currency": CURRENCY,
-        "sorting": "price",
-        "one_way": "false" if round_trip else "true",
-        "limit": 30,
-    }
-    if round_trip:
-        params["return_at"] = route["return"]  # 回程月份
+    months = [route["month"]] if route.get("month") else next_months(FLEX_MONTHS_AHEAD)
 
-    result = get_json_with_retry(
-        API_URL, headers={"X-Access-Token": TOKEN}, params=params)
-    if not result.get("success", True):
-        raise RuntimeError(f"API 回報錯誤：{result}")
+    all_offers = []
+    currency = CURRENCY.upper()
+    for month in months:
+        params = {
+            "origin": 轉代碼(route["origin"]),       # 中文地名自動翻成代碼
+            "destination": 轉代碼(route["dest"]),
+            "departure_at": month,
+            "currency": CURRENCY,
+            "sorting": "price",
+            "one_way": "false" if round_trip else "true",
+            "limit": 30,
+        }
+        if round_trip:
+            params["return_at"] = route["return"]  # 回程月份
 
-    # 只留有 price 的票，避免後面 min()/取值時 KeyError
-    offers = [o for o in result.get("data", []) if o.get("price") is not None]
-    currency = result.get("currency", CURRENCY).upper()
-    return offers, currency, round_trip
+        result = get_json_with_retry(
+            API_URL, headers={"X-Access-Token": TOKEN}, params=params)
+        if not result.get("success", True):
+            raise RuntimeError(f"API 回報錯誤：{result}")
+
+        currency = result.get("currency", CURRENCY).upper()
+        # 只留有 price 的票，避免後面 min()/取值時 KeyError
+        all_offers.extend(o for o in result.get("data", []) if o.get("price") is not None)
+
+    return all_offers, currency, round_trip
 
 
 def _build_row(offer, route, currency, round_trip):
@@ -223,8 +250,9 @@ def search_cheapest(route):
     """查單一條航線『最便宜的一張』。route 有 return 就查來回，否則單程。"""
     offers, currency, round_trip = _fetch_offers(route)
     if not offers:
+        月份說明 = route.get("month") or f"未來{FLEX_MONTHS_AHEAD}個月"
         log.info("　%s→%s（%s）查無票價（換個月份試試）。",
-                 route["origin"], route["dest"], route["month"])
+                 route["origin"], route["dest"], 月份說明)
         return None
     cheapest = min(offers, key=lambda o: o["price"])
     return _build_row(cheapest, route, currency, round_trip)
@@ -327,9 +355,10 @@ def main():
         # （save_state 在迴圈外，若整個迴圈被例外中斷，之前查到的都不會存檔）。
         try:
             trip = "來回" if "return" in route else "單程"
+            月份說明 = route.get("month") or f"未來{FLEX_MONTHS_AHEAD}個月"
             log.info("[%d/%d] 查 %s→%s（%s，%s）",
                      i + 1, len(ROUTES), route["origin"],
-                     route["dest"], route["month"], trip)
+                     route["dest"], 月份說明, trip)
             row = search_cheapest(route)
             if not row:
                 continue
