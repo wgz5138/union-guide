@@ -33,6 +33,10 @@
     原本 sync_schedule_history_from_csv()/sync_audit_history_from_csv() 是「本機整批覆蓋
     雲端」；改成「先讀雲端現況，只把本機有、雲端沒有的週次/月份補上去，雲端既有資料原封
     不動」——不是加警告字樣，是讓這顆按鈕在設計上就不可能再覆蓋掉雲端較新的資料。
+  • v3.38：同一版加首頁顯眼統計（雲端排班歷史累積筆數／最新一週，大字體 st.metric），
+    每次打開網頁都看得到，平常掃一眼就能發現「數字很久沒變/忽然變小」這種異常，不用等
+    查統計才發現（這次事件玉繡是三週後才發現）；並主動比對本機git備份CSV是否落後於雲端，
+    落後就直接顯示警告，不用等有人誤按同步按鈕才知道備份是舊的。
 """
 import os, io, re, csv, json, base64, hashlib, tempfile, shutil, subprocess, sys
 from datetime import date, datetime
@@ -997,7 +1001,50 @@ if TEST_MODE:
 
 st.title("💊 透析藥水排班")
 st.caption("上傳班表 Excel → 出名單(表格)。可直接點格子改人名。跨區標 🔺。")
-st.caption("🟢 版本 v3.38（統計管理「同步本機CSV→雲端」改為只補雲端沒有的週次/月份，不再整批覆蓋——避免本機備份落後時誤蓋掉雲端較新的資料）· 2026-07-20")
+st.caption("🟢 版本 v3.38（① 統計管理「同步本機CSV→雲端」改為只補雲端沒有的週次/月份，不再整批覆蓋 ② 首頁新增顯眼統計數字＋本機備份落後提醒）· 2026-07-20")
+
+# ── 📊 首頁顯眼統計＋本機備份落後提醒（2026-07-20加，v3.38）─────────────
+# 目的：2026-07-19~20那次「7/20資料被同步按鈕蓋掉」事件，玉繡是三週後才發現雲端資料
+# 不對。這裡把「雲端目前累積筆數／最新一週」放在每次打開網頁都會看到的顯眼位置，
+# 玉繡平常掃一眼「筆數有沒有變多、最新一週對不對」就能及早發現異常，不用等到查統計
+# 才發現。同時主動比對本機git備份CSV是否落後於雲端，落後就直接顯示警告，不用等到
+# 有人誤按「同步本機CSV→雲端」才發現備份是舊的。
+@st.cache_data(ttl=300, show_spinner=False)
+def _home_stats_snapshot():
+    cloud_df = fetch_schedule_history_raw()
+    if isinstance(cloud_df, str) or cloud_df is None or cloud_df.empty:
+        return None
+    def _latest_week(weeks):
+        real = [w for w in weeks if re.match(r"^\d{4}~\d{4}$", str(w))]
+        return real[-1] if real else None   # 取「最後一列」而非字串排序，避免跨年份排序錯誤
+    n_cloud = len(cloud_df)
+    latest_cloud_week = _latest_week(cloud_df["週次"].astype(str).tolist())
+    n_local, latest_local_week = 0, None
+    try:
+        csv_path = os.path.join(HERE, "排班紀錄.csv")
+        if os.path.exists(csv_path):
+            df_local = pd.read_csv(csv_path, encoding="utf-8-sig", dtype=str, keep_default_na=False)
+            n_local = len(df_local)
+            latest_local_week = _latest_week(df_local["週次"].astype(str).tolist())
+    except Exception:
+        pass
+    return {"n_cloud": n_cloud, "latest_cloud_week": latest_cloud_week,
+            "n_local": n_local, "latest_local_week": latest_local_week}
+
+_snap = _home_stats_snapshot()
+if _snap:
+    _s1, _s2 = st.columns(2)
+    _s1.metric("📊 雲端排班歷史累積筆數", _snap["n_cloud"])
+    _s2.metric("📅 雲端最新一週", _snap["latest_cloud_week"] or "—")
+    st.caption("💡 這兩個數字平常應該每週增加／更新。如果覺得好幾週沒變、或忽然變小，"
+               "代表雲端資料可能被誤動過，請截圖跟AI反映，不要等到統計對不上才發現。")
+    if (_snap["latest_local_week"] and _snap["latest_cloud_week"]
+            and _snap["latest_local_week"] != _snap["latest_cloud_week"]):
+        st.warning(f"⚠️ 本機git備份CSV最新只到「{_snap['latest_local_week']}」，比雲端的"
+                   f"「{_snap['latest_cloud_week']}」舊——備份沒跟上雲端。目前「同步本機CSV→雲端」"
+                   f"已經是「只補不蓋」，不會因此蓋掉雲端資料，但建議還是請AI把本機備份補到跟雲端一致。")
+else:
+    st.caption("（雲端統計暫時讀不到，不影響排班功能本身——如果一直讀不到，請告訴AI檢查一下）")
 
 with st.expander("📖 第一次用？點我看「3 步驟」（給玉繡）", expanded=False):
     st.markdown("""
