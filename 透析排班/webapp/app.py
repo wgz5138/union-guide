@@ -823,8 +823,14 @@ def push_history(action, hist_bytes, key):
                              json={"action": action, "secret": WRITE_SECRET,
                                    "key": key, "rows": week_rows},
                              timeout=20)
-        ok = resp.ok and resp.json().get("ok", False)
-        return ok, len(week_rows), ("" if ok else f"HTTP {resp.status_code}: {resp.text[:200]}")
+        rj = resp.json()
+        ok = resp.ok and rj.get("ok", False)
+        if ok:
+            _detail = ""
+            if "before" in rj or "after" in rj:
+                _detail = f"GAS回報：寫入前{rj.get('before','?')}列→寫入後{rj.get('after','?')}列"
+            return ok, len(week_rows), _detail
+        return False, 0, f"HTTP {resp.status_code}: {resp.text[:200]}"
     except Exception as e:
         return False, 0, f"例外：{e}"
 
@@ -936,7 +942,7 @@ if TEST_MODE:
 
 st.title("💊 透析藥水排班")
 st.caption("上傳班表 Excel → 出名單(表格)。可直接點格子改人名。跨區標 🔺。")
-st.caption("🟢 版本 v3.36（修正「排班歷史同步失敗：Out of range float values...nan」— 讀CSV空白治療日被pandas當NaN，改成保留空字串）· 2026-07-15")
+st.caption("🟢 版本 v3.36（修正「排班歷史同步失敗：Out of range float values...nan」— 讀CSV空白治療日被pandas當NaN，改成保留空字串）· 2026-07-19")
 
 with st.expander("📖 第一次用？點我看「3 步驟」（給玉繡）", expanded=False):
     st.markdown("""
