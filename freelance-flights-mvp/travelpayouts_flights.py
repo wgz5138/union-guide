@@ -271,6 +271,59 @@ def search_offers(route, top=5, direct_first=True):
 
 
 # ─────────────────────────────────────────────────────────────
+# 探索模式：不知道要去哪，就不填目的地，掃一輪「熱門國家」找划算的
+# ─────────────────────────────────────────────────────────────
+def explore_deals(origin=None, dests=None, top=5):
+    """『想去別的國家，但還沒決定去哪』用這個：不用填目的地，
+    自動掃一輪 dests（預設＝ROUTES 裡設定的那幾個國家，跟每日排程同一份設定，
+    改 ROUTES 就等於同時改了探索範圍，不用維護第二份清單），
+    每個國家各查『目前最便宜』一張，優先秀「降價幅度（%）大」的，
+    沒有降價紀錄的才用「價格低到高」補在後面。
+
+    降價幅度是跟 price_state.json 裡『上次查到的價格』比較——跟每日排程
+    共用同一份記憶檔，所以查得越勤，比較基準越準；同一天查第二次通常
+    不會再顯示降價（因為第一次查完就把這次的價格存成新的『上次』了），
+    這跟其他地方「只在變便宜時才通知」的邏輯一致，不是 bug。"""
+    if dests is None:
+        dests = sorted({r["dest"] for r in ROUTES}) if ROUTES else []
+    if not dests:
+        return []
+    if origin is None:
+        origin = ROUTES[0]["origin"] if ROUTES else "高雄"
+
+    state = load_state()
+    found = []
+    for dest in dests:
+        route = {"origin": origin, "dest": dest}
+        try:
+            row = search_cheapest(route)
+        except Exception as e:
+            # 單一國家查詢失敗不能讓整個探索中斷，略過繼續查下一個
+            log.warning("　探索 %s→%s 失敗，略過：%s", origin, dest, e)
+            row = None
+        finally:
+            time.sleep(1)  # 禮貌性間隔，別把 API 打太兇（跟每日排程一致）
+        if not row:
+            continue
+        上次 = state.get(row["route"])
+        if 上次 is not None and 上次 > 0:
+            row["drop_pct"] = round((上次 - row["price"]) / 上次 * 100, 1)
+            row["drop_from"] = 上次
+        else:
+            row["drop_pct"] = None
+        state[row["route"]] = row["price"]
+        found.append(row)
+
+    save_state(state)
+
+    降價的 = [r for r in found if r["drop_pct"] and r["drop_pct"] > 0]
+    其他的 = [r for r in found if not (r["drop_pct"] and r["drop_pct"] > 0)]
+    降價的.sort(key=lambda r: -r["drop_pct"])
+    其他的.sort(key=lambda r: r["price"])
+    return (降價的 + 其他的)[:top]
+
+
+# ─────────────────────────────────────────────────────────────
 # 存進 CSV（每天一列）
 # ─────────────────────────────────────────────────────────────
 def save_csv(row):

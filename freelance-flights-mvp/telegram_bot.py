@@ -37,8 +37,16 @@ API = f"https://api.telegram.org/bot{TOKEN}"
     "　查 高雄 東京　（不打月份，自動查未來幾個月）\n"
     "　查 高雄 東京 2026-09　（單程，指定月份）\n"
     "　查 高雄 東京 2026-09 2026-10　（來回）\n"
-    "地名可打中文（高雄、日本、首爾…）或英文代碼。"
+    "地名可打中文（高雄、日本、首爾…）或英文代碼。\n\n"
+    "🔍 還沒決定去哪？不用填目的地，傳「探索」給我，\n"
+    "我會幫你掃一輪常查的幾個國家，優先秀「降價幅度大」的，\n"
+    "沒有降價紀錄的補「最便宜」的給你看。\n"
+    "　探索　（用預設出發地）\n"
+    "　探索 高雄　（指定出發地）"
 )
+
+# 探索模式關鍵字：出現這些字，就不強制要求目的地，改成掃一輪熱門國家找划算的
+探索關鍵字 = ("探索", "驚喜", "隨便看看", "有什麼便宜", "不知道去哪", "隨機")
 
 
 MAX_MSG_LEN = 4000   # Telegram 訊息上限 4096 字，留一點安全margin
@@ -62,11 +70,16 @@ def send(chat_id, text):
 def handle(text):
     """把使用者訊息變成查詢，回傳要回覆的字串。
     很寬鬆：有沒有空格、有沒有逗號、有沒有「查」都看得懂。
-    例：『查 高雄 東京 2026-09』『查高雄福岡，2026-09』都行。"""
-    # 1) 先抓出月份（一個=單程；兩個=來回）
+    例：『查 高雄 東京 2026-09』『查高雄福岡，2026-09』都行。
+    也支援『探索』模式（見 探索關鍵字）：不填目的地，掃一輪熱門國家找划算的。"""
+    is_explore = any(k in text for k in 探索關鍵字)
+
+    # 1) 先抓出月份（一個=單程；兩個=來回；探索模式不需要月份，忽略）
     months = re.findall(r"\d{4}-\d{2}", text)
-    # 2) 把「查」、月份、各種標點都換成空白，剩下的拿來找地名
+    # 2) 把「查」、探索關鍵字、月份、各種標點都換成空白，剩下的拿來找地名
     rest = text.replace("查", " ")
+    for k in 探索關鍵字:
+        rest = rest.replace(k, " ")
     for m in months:
         rest = rest.replace(m, " ")
     for ch in "，,、。；;／/ 　":
@@ -75,8 +88,31 @@ def handle(text):
     hits = sorted((rest.find(n), n) for n in tp.地名對照表 if n in rest)
     places = [n for _, n in hits]
     # 4) 找不到足夠中文地名，就退回用空白切詞（支援英文代碼）
-    if len(places) < 2:
-        places = [w for w in rest.split() if w]
+    #    長度 >=2 才算候選字：地名對照表最短的地名是 2 字、機場代碼是 3 字，
+    #    這樣才不會把口語尾詞（「啊」「呢」「吧」）誤判成使用者打的地名
+    #    ──探索模式門檻只要 1 個地名，特別容易踩到這個情況。
+    if len(places) < (1 if is_explore else 2):
+        places = [w for w in rest.split() if len(w) >= 2]
+
+    if is_explore:
+        # 探索模式：最多只需要一個地名（出發地），沒給就用預設值
+        origin = places[0] if places else None
+        if origin and origin not in tp.地名對照表 and any(ord(c) > 127 for c in origin):
+            return (f"我不認得出發地「{origin}」😅\n"
+                    "請改用機場代碼，或用清單上的中文地名：\n"
+                    + "、".join(tp.地名對照表))
+        rows = tp.explore_deals(origin=origin, top=5)
+        if not rows:
+            return "熱門國家最近都查無票價，晚點再試試看 🙏"
+        起點 = origin or (tp.ROUTES[0]["origin"] if tp.ROUTES else "高雄")
+        lines = [f"🔍 探索模式（出發：{起點}）幫你掃了一輪，這些比較划算 👇"]
+        for i, r in enumerate(rows, 1):
+            drop = (f"　📉 降了 {r['drop_pct']}%（上次 {r['drop_from']:.0f}）"
+                    if r.get("drop_pct") else "")
+            lines.append(
+                f"\n{i}. ✈ {r['route']}（{r['dest_code']}）"
+                f"{r['price']:.0f} {r['currency']}（{r['depart_at']}）{drop}\n{r['link']}")
+        return "\n".join(lines)
 
     # 沒打年月也可以查：不強制要求月份，自動查未來幾個月（見下方 route 組裝）
     if len(places) < 2:
