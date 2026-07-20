@@ -17,9 +17,11 @@
 （不像每日查價可以丟雲端；雙向聊天需要一直在線）。
 """
 
+import logging
 import os
 import re
 import time
+from logging.handlers import RotatingFileHandler
 
 import requests
 
@@ -28,6 +30,37 @@ import travelpayouts_flights as tp
 TOKEN = os.environ.get("TG_TOKEN")
 OWNER = os.environ.get("TG_CHAT")          # 設了就只回應本人
 API = f"https://api.telegram.org/bot{TOKEN}"
+
+# ─────────────────────────────────────────────────────────────
+# log（同時印畫面 + 寫檔）
+# 這支平常用 pythonw 背景啟動（開機背景啟動.bat／背景啟動機器人.bat）
+# 沒有視窗，print() 出來的東西沒地方顯示、等於直接消失——收不到訊息、
+# 有沒有連上、卡在哪一步都無從查起。改成跟 travelpayouts_flights.py
+# 一樣寫檔案，之後「TG 不回」就能翻 logs/telegram_bot.log 直接看原因
+# （常見原因：TG_CHAT 跟實際傳訊息那個聊天對不上號、409 衝突、連線失敗）。
+# ─────────────────────────────────────────────────────────────
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+LOG_FILE = os.path.join(BASE_DIR, "logs", "telegram_bot.log")
+
+
+def setup_logging():
+    os.makedirs(os.path.dirname(LOG_FILE), exist_ok=True)
+    logger = logging.getLogger("telegram_bot")
+    logger.setLevel(logging.INFO)
+    if logger.handlers:
+        return logger
+    fmt = logging.Formatter("%(asctime)s [%(levelname)s] %(message)s")
+    console = logging.StreamHandler()
+    console.setFormatter(fmt)
+    logger.addHandler(console)
+    fileh = RotatingFileHandler(LOG_FILE, maxBytes=1_000_000,
+                                backupCount=3, encoding="utf-8")
+    fileh.setFormatter(fmt)
+    logger.addHandler(fileh)
+    return logger
+
+
+log = setup_logging()
 
 說明 = (
     "✈️ 機票查詢小幫手\n"
@@ -61,10 +94,10 @@ def send(chat_id, text):
         data = resp.json()
         if not data.get("ok", False):
             # 網路層沒出錯，但 Telegram 拒絕了這則訊息（例如格式問題）
-            # ——一定要印出來，不能讓查詢結果無聲無息消失。
-            print("送出失敗（Telegram 拒絕）：", data)
+            # ——一定要記下來，不能讓查詢結果無聲無息消失。
+            log.warning("送出失敗（Telegram 拒絕）：%s", data)
     except (requests.RequestException, ValueError) as e:
-        print("送出失敗：", e)
+        log.warning("送出失敗：%s", e)
 
 
 def handle(text):
@@ -156,9 +189,12 @@ def handle(text):
 
 def main():
     if not TOKEN:
-        print("❌ 還沒設 TG_TOKEN。請先設定環境變數再跑。")
+        log.error("❌ 還沒設 TG_TOKEN。請先設定環境變數再跑。")
         return
-    print("🤖 機票 bot 啟動，去 Telegram 傳訊息給它吧～（這個視窗按 Ctrl+C 可停止）")
+    log.info("🤖 機票 bot 啟動，去 Telegram 傳訊息給它吧～"
+             "（背景執行時看 logs/telegram_bot.log；有開視窗按 Ctrl+C 可停止）")
+    if OWNER:
+        log.info("　目前設定只回應 TG_CHAT=%s，其他聊天傳訊息會被忽略。", OWNER)
     offset = None
     while True:
         # 取得新訊息：連線錯、或回應不是 JSON，都自我恢復，絕不讓 bot 整支掛掉
@@ -167,17 +203,17 @@ def main():
                              params={"timeout": 30, "offset": offset}, timeout=40)
             data = r.json()
         except (requests.RequestException, ValueError) as e:
-            print("連線/回應問題，5 秒後重試：", e)
+            log.warning("連線/回應問題，5 秒後重試：%s", e)
             time.sleep(5)
             continue
 
         if not data.get("ok", False):
             if data.get("error_code") == 409:
-                print("⚠ 偵測到另一個 bot 也在收訊息（409 衝突）。"
-                      "請只留一個：先點『停止機器人.bat』再重開一個。10 秒後重試…")
+                log.warning("⚠ 偵測到另一個 bot 也在收訊息（409 衝突）。"
+                            "請只留一個：先點『停止機器人.bat』再重開一個。10 秒後重試…")
                 time.sleep(10)
             else:
-                print("Telegram 回報異常，5 秒後重試：", data)
+                log.warning("Telegram 回報異常，5 秒後重試：%s", data)
                 time.sleep(5)
             continue
 
@@ -190,11 +226,16 @@ def main():
                 if not chat_id or not text:
                     continue
                 if OWNER and str(chat_id) != str(OWNER):
-                    continue  # 只回應本人
+                    # 常見的「bot 明明在跑卻完全不回」就是卡在這裡：
+                    # 傳訊息的這個聊天跟設定的 TG_CHAT 對不上號，被無聲忽略。
+                    # 記下實際 chat_id，方便比對是不是設定值錯了。
+                    log.info("收到訊息但 chat_id=%s 跟 TG_CHAT=%s 不符，忽略。",
+                             chat_id, OWNER)
+                    continue
                 if text in ("/start", "help", "說明", "?", "？"):
                     send(chat_id, 說明)
                     continue
-                print("收到：", text)
+                log.info("收到（chat_id=%s）：%s", chat_id, text)
                 try:
                     reply = handle(text)
                 except Exception as e:
@@ -202,9 +243,15 @@ def main():
                 send(chat_id, reply)
             except Exception as e:
                 # 單則訊息出錯只略過該則，bot 繼續活著
-                print("處理某則訊息出錯（略過）：", e)
+                log.exception("處理某則訊息出錯（略過）：%s", e)
                 continue
 
 
 if __name__ == "__main__":
-    main()
+    try:
+        main()
+    except Exception:
+        # pythonw 背景啟動沒有視窗，任何沒接住的例外原本會無聲消失，
+        # 讓人完全不知道 bot 已經死掉了。至少留一筆紀錄在檔案裡。
+        log.exception("bot 意外中止")
+        raise
