@@ -62,6 +62,63 @@ def setup_logging():
 
 log = setup_logging()
 
+
+# ─────────────────────────────────────────────────────────────
+# 防止重複啟動：兩份 bot 同時搶 getUpdates 會一直 409 衝突
+# ─────────────────────────────────────────────────────────────
+# 緣由：`啟動聊天機器人.bat`（前景 `python.exe`）跟
+# `背景啟動機器人.bat`／`開機背景啟動.bat`（背景 `pythonw.exe`）是
+# 兩個不同的進程名稱，而 `停止機器人.bat` 原本只殺 `pythonw.exe`——
+# 若使用者兩種都點過，會留下一個殺不掉的前景視窗，永遠 409 下去，
+# 且使用者/我都看不出「已經在跑了，不缺你這份」。
+# 用一個記 PID 的鎖檔在啟動當下自己擋掉，不管是哪個 .bat 點的都有效，
+# 不用依賴使用者記得先點對正確的停止腳本。
+LOCK_FILE = os.path.join(BASE_DIR, "telegram_bot.lock")
+
+
+def _pid_alive(pid):
+    """檢查這個 PID 現在是不是真的還有進程在跑（不是真的送信號，
+    只是問一下，不會影響到那個進程）。"""
+    if os.name == "nt":
+        import subprocess
+        try:
+            out = subprocess.run(
+                ["tasklist", "/fi", f"PID eq {pid}"],
+                capture_output=True, text=True, timeout=10)
+            return str(pid) in out.stdout
+        except (OSError, subprocess.SubprocessError):
+            return False  # 查不到就當作沒在跑，寧可誤判成「可以啟動」
+    try:
+        os.kill(pid, 0)
+        return True
+    except OSError:
+        return False
+
+
+def acquire_lock():
+    """回傳 True＝拿到鎖、可以啟動；False＝已經有一份活著在跑，別再開。
+    鎖檔壞掉／記錄的 PID 已經死了，都當作沒人在跑，直接蓋過去
+    （不會卡死——舊進程真的死掉後，下一次啟動一定拿得到鎖）。"""
+    if os.path.exists(LOCK_FILE):
+        try:
+            with open(LOCK_FILE, encoding="utf-8") as f:
+                old_pid = int(f.read().strip())
+            if _pid_alive(old_pid):
+                return False
+        except (OSError, ValueError):
+            pass
+    with open(LOCK_FILE, "w", encoding="utf-8") as f:
+        f.write(str(os.getpid()))
+    return True
+
+
+def release_lock():
+    try:
+        os.remove(LOCK_FILE)
+    except OSError:
+        pass
+
+
 說明 = (
     "✈️ 機票查詢小幫手\n"
     "傳給我：出發 目的地 [去程月份] [回程月份]\n"
@@ -191,6 +248,16 @@ def main():
     if not TOKEN:
         log.error("❌ 還沒設 TG_TOKEN。請先設定環境變數再跑。")
         return
+    if not acquire_lock():
+        # 不管是前景視窗（啟動聊天機器人.bat）還是背景（開機背景啟動.bat／
+        # 背景啟動機器人.bat）點開的，只要偵測到已經有一份活著，直接不跑，
+        # 別再去搶 getUpdates 製造 409 衝突。
+        log.error("已經有一份機票 bot 在跑了（見 %s），不重複啟動。"
+                  "想換一份跑（例如改了設定要生效），"
+                  "先確定舊的真的關掉——用『停止機器人.bat』，"
+                  "或工作管理員找 python.exe / pythonw.exe 手動結束。",
+                  LOCK_FILE)
+        return
     log.info("🤖 機票 bot 啟動，去 Telegram 傳訊息給它吧～"
              "（背景執行時看 logs/telegram_bot.log；有開視窗按 Ctrl+C 可停止）")
     if OWNER:
@@ -255,3 +322,8 @@ if __name__ == "__main__":
         # 讓人完全不知道 bot 已經死掉了。至少留一筆紀錄在檔案裡。
         log.exception("bot 意外中止")
         raise
+    finally:
+        # 不管是正常結束、Ctrl+C、還是意外中止，都要把鎖放掉，
+        # 不然下次啟動會被自己的舊鎖擋住（鎖檔裡的 PID 已死，
+        # acquire_lock() 其實會自動判斷並蓋過去，這裡純粹求乾淨）。
+        release_lock()
