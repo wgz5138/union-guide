@@ -1,24 +1,17 @@
 @echo off
 chcp 950 >nul
-rem 停止背景執行的 bot，結束所有 pythonw 程序。
-taskkill /im pythonw.exe /f >nul 2>&1
-if %errorlevel%==0 goto stopped
-if %errorlevel%==128 goto notrunning
-goto failed
+rem 停止機票 bot：不管是背景（pythonw）還是前景視窗（python）點開的都關掉。
+rem 舊版只殺 pythonw.exe，若你也開過『啟動聊天機器人.bat』（前景 python.exe）
+rem 會殺不掉、留著繼續跟新開的那份互相 409 衝突，所以改用命令列比對
+rem 「有沒有在跑 telegram_bot.py」，兩種都抓得到，也不會誤殺電腦上其他
+rem 跟這支無關的 python 程式。
 
-:stopped
-echo 已停止背景機器人。
-goto end
+powershell -NoProfile -Command ^
+  "$found = $false; Get-CimInstance Win32_Process | Where-Object { $_.CommandLine -like '*telegram_bot.py*' } | ForEach-Object { $found = $true; Stop-Process -Id $_.ProcessId -Force; Write-Host ('已關閉 PID ' + $_.ProcessId) }; if (-not $found) { Write-Host '目前沒有在跑的機器人，或是已經停了。' }"
 
-:notrunning
-echo 目前沒有在背景跑的機器人，或是已經停了。
-goto end
-
-:failed
-echo 停止失敗（非「找不到程序」的錯誤，可能是權限問題）。
-echo 可嘗試以系統管理員身分重新執行本檔案。
-
-:end
-echo 註：這會結束所有 pythonw 背景程式，你電腦通常只有這支在用 pythonw。
+echo.
+echo 註：這會找出「命令列含 telegram_bot.py」的程序並關閉，
+echo 不管是背景（pythonw）還是前景視窗（python）都會抓到；
+echo 電腦上其他跟這支無關的 python 程式不會被動到。
 echo.
 pause
