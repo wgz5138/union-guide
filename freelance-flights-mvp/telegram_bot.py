@@ -130,7 +130,10 @@ def release_lock():
     "例：\n"
     "　查 高雄 東京　（不打月份，來回，自動查未來幾個月最划算）\n"
     "　查 高雄 東京 2026-09　（來回，去回都在 9 月）\n"
-    "　查 高雄 東京 12月　（月份也可以只打數字，不用打完整年份）\n"
+    "　查 高雄 東京 12月／十二月　（數字或中文都行，不用打完整年份）\n"
+    "　查 高雄 東京 明年3月　（可以加「今年／明年／後年」指定年份）\n"
+    "　查 高雄 東京 下個月／下下個月　（相對月份也看得懂）\n"
+    "　查 高雄 東京 後天／下週／3個月後　（相對日期，換算成那天的月份）\n"
     "　查 高雄 東京 2026-09 2026-10　（來回，9 月去、10 月回）\n"
     "　查 高雄 東京 單程　（改查單程，不管有沒有打月份）\n"
     "地名可打中文（高雄、日本、首爾…）或英文代碼。\n\n"
@@ -175,26 +178,20 @@ def handle(text):
     is_oneway = any(k in text.lower() for k in 單程關鍵字)
 
     # 1) 先抓出月份（一個或兩個都行；預設查來回，見下方 route 組裝）
-    #    支援兩種寫法：完整「2026-12」，或口語「12月」／「12月份」
-    #    （後者沒寫年份，用 tp.resolve_month() 算出「今天以後最近一次」
-    #    出現的那個月，不會因為只打月份數字就被當成沒填、退回彈性查詢）
-    #    用同一個正則、同一次 finditer 抓兩種格式，照文字裡『原本出現的
-    #    先後順序』決定去程/回程──兩種格式混用時（例如「12月 2026-09」）
-    #    才不會因為分兩輪處理，把後面才打的日期誤判成去程。
-    MONTH_PATTERN = re.compile(r"\d{4}-\d{2}|(?:1[0-2]|[1-9])月份?")
-    months = []
-    for tok in MONTH_PATTERN.findall(text):
-        if re.fullmatch(r"\d{4}-\d{2}", tok):
-            months.append(tok)
-        else:
-            months.append(tp.resolve_month(int(re.match(r"\d+", tok).group())))
+    #    支援完整「2026-12」、口語「12月」/中文數字「十二月」、
+    #    可選年份前綴「明年3月」、相對月份「下個月」、相對日期換算
+    #    「後天」「3週後」等（詳見 travelpayouts_flights.parse_natural_dates）。
+    #    find（解析）跟 strip（清掉月份文字方便找地名）用同一個正則
+    #    （tp.NL_DATE_PATTERN），確保兩邊認定的「這是月份」範圍完全一致，
+    #    不會有一邊多認一個字、另一邊少認一個字的落差。
+    months = tp.parse_natural_dates(text)
     # 2) 把「查」、探索關鍵字、單程關鍵字、月份、各種標點都換成空白，剩下的拿來找地名
     rest = text.replace("查", " ")
     for k in 探索關鍵字:
         rest = rest.replace(k, " ")
     for k in 單程關鍵字:
         rest = re.sub(k, " ", rest, flags=re.IGNORECASE)
-    rest = MONTH_PATTERN.sub(" ", rest)
+    rest = tp.NL_DATE_PATTERN.sub(" ", rest)
     for ch in "，,、。；;／/ 　":
         rest = rest.replace(ch, " ")
     # 3) 先用「地名對照表」在字串裡找中文地名（依出現順序）

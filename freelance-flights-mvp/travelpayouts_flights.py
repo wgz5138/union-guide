@@ -27,6 +27,7 @@ import csv
 import json
 import logging
 import os
+import re
 import time
 import urllib.parse
 from datetime import date, datetime, timedelta, timezone
@@ -96,13 +97,89 @@ def next_months(n=3):
     return out
 
 
-def resolve_month(month_num):
-    """把『只打月份數字』（例如使用者說「12月」只給 12）轉成正確年份的
-    YYYY-MM──取「今天以後最近一次」出現的那個月：月份 >= 現在月份就是
-    今年，比現在月份小就跨年算明年（不會查到已經過去的月份）。"""
-    today = date.today()
-    year = today.year if month_num >= today.month else today.year + 1
+def resolve_month(month_num, year=None):
+    """把『只打月份數字』（例如使用者說「12月」只給 12）轉成 YYYY-MM。
+    year 沒給就取「今天以後最近一次」出現的那個月：月份 >= 現在月份就是
+    今年，比現在月份小就跨年算明年（不會查到已經過去的月份）；
+    year 有給（例如「明年12月」已經知道是哪一年）就直接用，不用再猜。"""
+    if year is None:
+        today = date.today()
+        year = today.year if month_num >= today.month else today.year + 1
     return f"{year:04d}-{month_num:02d}"
+
+
+def month_from_date_offset(days=0, weeks=0, months=0):
+    """算『今天 + N天/N週/N個月』落在哪一個月（YYYY-MM），給「明天」
+    「後天」「下週」「3個月後」這種相對日期說法用。只取年月，不管
+    實際是幾號──因為 Travelpayouts API 本來就是用 YYYY-MM 查整個月的
+    最低價（見 _fetch_offers），解析到日期反而是假精確，見 4 節 API 限制。"""
+    target = date.today() + timedelta(days=days + weeks * 7)
+    if months:
+        total = target.year * 12 + (target.month - 1) + months
+        return f"{total // 12:04d}-{total % 12 + 1:02d}"
+    return f"{target.year:04d}-{target.month:02d}"
+
+
+# 中文數字月份（一~十二）→ 阿拉伯數字，給「十二月」這種寫法用
+_中文數字 = {"一": 1, "二": 2, "三": 3, "四": 4, "五": 5, "六": 6,
+             "七": 7, "八": 8, "九": 9, "十": 10, "十一": 11, "十二": 12}
+
+
+def _數字或中文轉月(s):
+    return _中文數字.get(s) or int(s)
+
+
+# 自然語言日期：跟完整 YYYY-MM 用同一個正則、同一次 finditer 掃過整句，
+# 才能保證「找到的順序」＝「使用者實際打字的順序」──兩種以上格式混打
+# 在同一句時（例如「查 高雄 東京 12月 2026-09」）如果分開好幾輪個別擷取，
+# 會因為每輪各自的清單順序，把使用者原本的先後順序弄反（曾經真的踩過
+# 這個 bug，見開發筆記「口語月份」段落的事後健檢補充）。
+# 只解析到「月」的粒度：這個 API 本來就只用 YYYY-MM 查整月最低價，
+# 解析到某天反而是假精確，沒有意義。
+NL_DATE_PATTERN = re.compile(
+    r"(?P<ymd>\d{4}-\d{2})"
+    r"|(?P<yearword>今年|明年|後年)(?P<mnum1>1[0-2]|[1-9]|十二|十一|[一二三四五六七八九十])月份?"
+    r"|(?P<mnum2>1[0-2]|[1-9]|十二|十一|[一二三四五六七八九十])月份?"
+    r"|(?P<relmonth>這個月|這月|本月|下下個月|下下月|下個月|下月)"
+    r"|(?P<reldayword>大後天|後天|明天|今天|下星期|下週)"
+    r"|(?P<reldigit>\d+)(?P<relunit>個月|星期|週|天)後"
+)
+
+_相對月份天數 = {"這個月": 0, "這月": 0, "本月": 0,
+                  "下下個月": 2, "下下月": 2, "下個月": 1, "下月": 1}
+_相對日詞天數 = {"今天": 0, "明天": 1, "後天": 2, "大後天": 3,
+                  "下週": 7, "下星期": 7}
+_年份詞偏移 = {"今年": 0, "明年": 1, "後年": 2}
+
+
+def parse_natural_dates(text):
+    """在一段文字裡找『去程/回程』常見的說法，依照文字裡原本出現的
+    先後順序，逐一轉成 YYYY-MM 字串清單。支援：完整年月（2026-12）、
+    阿拉伯數字或中文數字月份、可選年份前綴（明年3月／今年十二月）、
+    相對月份（這個月／下個月／下下個月）、相對日期換算成所在月份
+    （明天／後天／下週／N天後／N週後／N個月後）。"""
+    out = []
+    for m in NL_DATE_PATTERN.finditer(text):
+        if m.group("ymd"):
+            out.append(m.group("ymd"))
+        elif m.group("mnum1"):
+            year = date.today().year + _年份詞偏移[m.group("yearword")]
+            out.append(resolve_month(_數字或中文轉月(m.group("mnum1")), year=year))
+        elif m.group("mnum2"):
+            out.append(resolve_month(_數字或中文轉月(m.group("mnum2"))))
+        elif m.group("relmonth"):
+            out.append(next_months(_相對月份天數[m.group("relmonth")] + 1)[-1])
+        elif m.group("reldayword"):
+            out.append(month_from_date_offset(days=_相對日詞天數[m.group("reldayword")]))
+        elif m.group("reldigit"):
+            n, unit = int(m.group("reldigit")), m.group("relunit")
+            if unit == "天":
+                out.append(month_from_date_offset(days=n))
+            elif unit in ("週", "星期"):
+                out.append(month_from_date_offset(weeks=n))
+            elif unit == "個月":
+                out.append(month_from_date_offset(months=n))
+    return out
 
 
 CURRENCY = "twd"         # 用新台幣報價
