@@ -29,10 +29,12 @@ import logging
 import os
 import time
 import urllib.parse
-from datetime import date, datetime
+from datetime import date, datetime, timedelta, timezone
 from logging.handlers import RotatingFileHandler
 
 import requests
+
+TW_TZ = timezone(timedelta(hours=8))  # 顯示台灣時間用（GitHub Actions 跑在 UTC）
 
 # ─────────────────────────────────────────────────────────────
 # 設定區（你自己改這裡）★ 想查哪幾條，就在 ROUTES 裡加幾行 ★
@@ -271,6 +273,59 @@ def search_offers(route, top=5, direct_first=True):
 
 
 # ─────────────────────────────────────────────────────────────
+# 探索模式：不知道要去哪，就不填目的地，掃一輪「熱門國家」找划算的
+# ─────────────────────────────────────────────────────────────
+def explore_deals(origin=None, dests=None, top=5):
+    """『想去別的國家，但還沒決定去哪』用這個：不用填目的地，
+    自動掃一輪 dests（預設＝ROUTES 裡設定的那幾個國家，跟每日排程同一份設定，
+    改 ROUTES 就等於同時改了探索範圍，不用維護第二份清單），
+    每個國家各查『目前最便宜』一張，優先秀「降價幅度（%）大」的，
+    沒有降價紀錄的才用「價格低到高」補在後面。
+
+    降價幅度是跟 price_state.json 裡『上次查到的價格』比較——跟每日排程
+    共用同一份記憶檔，所以查得越勤，比較基準越準；同一天查第二次通常
+    不會再顯示降價（因為第一次查完就把這次的價格存成新的『上次』了），
+    這跟其他地方「只在變便宜時才通知」的邏輯一致，不是 bug。"""
+    if dests is None:
+        dests = sorted({r["dest"] for r in ROUTES}) if ROUTES else []
+    if not dests:
+        return []
+    if origin is None:
+        origin = ROUTES[0]["origin"] if ROUTES else "高雄"
+
+    state = load_state()
+    found = []
+    for dest in dests:
+        route = {"origin": origin, "dest": dest}
+        try:
+            row = search_cheapest(route)
+        except Exception as e:
+            # 單一國家查詢失敗不能讓整個探索中斷，略過繼續查下一個
+            log.warning("　探索 %s→%s 失敗，略過：%s", origin, dest, e)
+            row = None
+        finally:
+            time.sleep(1)  # 禮貌性間隔，別把 API 打太兇（跟每日排程一致）
+        if not row:
+            continue
+        上次 = state.get(row["route"])
+        if 上次 is not None and 上次 > 0:
+            row["drop_pct"] = round((上次 - row["price"]) / 上次 * 100, 1)
+            row["drop_from"] = 上次
+        else:
+            row["drop_pct"] = None
+        state[row["route"]] = row["price"]
+        found.append(row)
+
+    save_state(state)
+
+    降價的 = [r for r in found if r["drop_pct"] and r["drop_pct"] > 0]
+    其他的 = [r for r in found if not (r["drop_pct"] and r["drop_pct"] > 0)]
+    降價的.sort(key=lambda r: -r["drop_pct"])
+    其他的.sort(key=lambda r: r["price"])
+    return (降價的 + 其他的)[:top]
+
+
+# ─────────────────────────────────────────────────────────────
 # 存進 CSV（每天一列）
 # ─────────────────────────────────────────────────────────────
 def save_csv(row):
@@ -310,6 +365,28 @@ def save_state(state):
 
 
 # ─────────────────────────────────────────────────────────────
+# 送出到 Telegram（notify() 跟每日總結共用，只寫一次送出邏輯）
+# ─────────────────────────────────────────────────────────────
+def _send_telegram(msg):
+    """只要環境變數 TG_TOKEN 和 TG_CHAT 都有設就會送；沒設就什麼都不做
+    （呼叫端已經用 log.info 印過畫面了，不會漏掉）。"""
+    token = os.environ.get("TG_TOKEN")
+    chat_id = os.environ.get("TG_CHAT")
+    if not (token and chat_id):
+        return
+    try:
+        requests.post(
+            f"https://api.telegram.org/bot{token}/sendMessage",
+            data={"chat_id": chat_id, "text": msg},
+            timeout=10,
+        )
+        log.info("　已推送到 Telegram。")
+    except requests.RequestException as e:
+        # 通知失敗不該害整個程式掛掉，記一筆就好
+        log.warning("　Telegram 推送失敗（不影響記價）：%s", e)
+
+
+# ─────────────────────────────────────────────────────────────
 # 通知（印畫面；TG 有設就推手機）。降價時訊息會多一行省多少。
 # ─────────────────────────────────────────────────────────────
 def notify(row):
@@ -324,21 +401,23 @@ def notify(row):
            f"只要 {row['price']:.0f} {row['currency']}"
            f"（{row['airline']}，轉機 {row['transfers']} 次）{drop}\n{row['link']}")
     log.info("🔔 %s", msg)
-    # 寄到手機（Telegram）：只要環境變數 TG_TOKEN 和 TG_CHAT 都有設就會送。
-    # 沒設就只印在畫面，不會出錯。（怎麼拿這兩個值，見 README / tg_setup.py）
-    token = os.environ.get("TG_TOKEN")
-    chat_id = os.environ.get("TG_CHAT")
-    if token and chat_id:
-        try:
-            requests.post(
-                f"https://api.telegram.org/bot{token}/sendMessage",
-                data={"chat_id": chat_id, "text": msg},
-                timeout=10,
-            )
-            log.info("　已推送到 Telegram。")
-        except requests.RequestException as e:
-            # 通知失敗不該害整個程式掛掉，記一筆就好
-            log.warning("　Telegram 推送失敗（不影響記價）：%s", e)
+    _send_telegram(msg)
+
+
+# ─────────────────────────────────────────────────────────────
+# 每日總結（不管有沒有值得通知，都推一則，讓你知道「有跑、跑到幾點、
+# 現在多少錢」──不然價格是快取資料，常常好幾天都沒變，notify() 的
+# 「只在變便宜時才通知」規則會讓 Telegram 安靜到讓人以為壞掉了）
+# ─────────────────────────────────────────────────────────────
+def send_daily_summary(summary_lines, deals, failed, total):
+    now_tw = datetime.now(timezone.utc).astimezone(TW_TZ)
+    header = (f"🕐 機票日報 {now_tw:%Y-%m-%d %H:%M}（台灣時間）"
+              f"　共 {total} 條・{deals} 條較便宜・{failed} 條失敗")
+    msg = header + "\n" + "\n".join(summary_lines)
+    if len(msg) > 3800:  # Telegram 單則上限 4096 字，留安全margin
+        msg = msg[:3800] + "\n…（內容過長，已截斷，詳見 log）"
+    log.info("📋 每日總結：\n%s", msg)
+    _send_telegram(msg)
 
 
 # ─────────────────────────────────────────────────────────────
@@ -349,6 +428,7 @@ def main():
     state = load_state()   # 上次各航線的價格
     deals = 0              # 這次有幾條值得通知
     failed = 0             # 這次有幾條查詢失敗（不中斷其他航線）
+    summary_lines = []     # 不管有沒有值得通知，每條都記一行，湊成每日總結
     for i, route in enumerate(ROUTES):
         # 每條航線獨立包例外：單一航線失敗（如 API 連續逾時）只略過該條，
         # 不能讓後面的航線都不查、也不能讓已查到的價格記憶跟著遺失
@@ -361,6 +441,7 @@ def main():
                      route["dest"], 月份說明, trip)
             row = search_cheapest(route)
             if not row:
+                summary_lines.append(f"⚠️ {route['origin']}→{route['dest']}：查無票價")
                 continue
             save_csv(row)
 
@@ -369,21 +450,28 @@ def main():
             # 通知規則：① 比上次便宜 → 一定通知（並標降了多少）
             #          ② 第一次看到這條，且低於門檻 → 通知
             #          ③ 沒變便宜（持平或變貴）→ 不通知，避免洗版
+            #            （但不管有沒有觸發通知，都會進每日總結，見下方）
             if 上次 is not None and 價格 < 上次:
                 row["drop_from"] = 上次
                 notify(row)
                 deals += 1
+                summary_lines.append(
+                    f"✈️ {row['route']} {價格:.0f} {row['currency']}"
+                    f"　📉降了（上次 {上次:.0f}）")
             elif 上次 is None and 價格 < THRESHOLD:
                 notify(row)
                 deals += 1
+                summary_lines.append(f"✈️ {row['route']} {價格:.0f} {row['currency']}　🆕首次記錄")
             else:
                 log.info("　最低 %.0f %s（上次 %s），沒變便宜，不通知。",
                          價格, row["currency"],
                          f"{上次:.0f}" if 上次 is not None else "無紀錄")
+                summary_lines.append(f"✈️ {row['route']} {價格:.0f} {row['currency']}（沒變便宜）")
 
             state[row["route"]] = 價格   # 更新這條的最新價
         except Exception as e:
             failed += 1
+            summary_lines.append(f"❌ {route['origin']}→{route['dest']}：查詢失敗")
             log.exception("　%s→%s：查詢失敗，略過（不影響其他航線）：%s",
                           route["origin"], route["dest"], e)
         finally:
@@ -392,6 +480,11 @@ def main():
     save_state(state)   # 不管中途有沒有航線失敗，已查到的價格記憶都要存下來
     log.info("=== 完成：%d 條航線，%d 條值得通知，%d 條失敗 ===",
              len(ROUTES), deals, failed)
+
+    # 不管今天有沒有「值得通知」的降價，都推一則總結──這樣至少知道有跑、
+    # 跑到幾點、現在多少錢，不會因為快取資料好幾天沒變就誤以為 bot 壞了。
+    if ROUTES:
+        send_daily_summary(summary_lines, deals, failed, len(ROUTES))
 
     if ROUTES and failed == len(ROUTES):
         # 全部航線都失敗，很可能是系統性問題（例如 TOKEN 沒設定、API 整個掛掉），
