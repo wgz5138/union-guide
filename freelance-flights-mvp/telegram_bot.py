@@ -127,6 +127,7 @@ def release_lock():
     "例：\n"
     "　查 高雄 東京　（不打月份，來回，自動查未來幾個月最划算）\n"
     "　查 高雄 東京 2026-09　（來回，去回都在 9 月）\n"
+    "　查 高雄 東京 12月　（月份也可以只打數字，不用打完整年份）\n"
     "　查 高雄 東京 2026-09 2026-10　（來回，9 月去、10 月回）\n"
     "　查 高雄 東京 單程　（改查單程，不管有沒有打月份）\n"
     "地名可打中文（高雄、日本、首爾…）或英文代碼。\n\n"
@@ -171,6 +172,9 @@ def handle(text):
     is_oneway = any(k in text.lower() for k in 單程關鍵字)
 
     # 1) 先抓出月份（一個或兩個都行；預設查來回，見下方 route 組裝）
+    #    支援兩種寫法：完整「2026-12」，或口語「12月」／「12月份」
+    #    （後者沒寫年份，用 tp.resolve_month() 算出「今天以後最近一次」
+    #    出現的那個月，不會因為只打月份數字就被當成沒填、退回彈性查詢）
     months = re.findall(r"\d{4}-\d{2}", text)
     # 2) 把「查」、探索關鍵字、單程關鍵字、月份、各種標點都換成空白，剩下的拿來找地名
     rest = text.replace("查", " ")
@@ -180,6 +184,9 @@ def handle(text):
         rest = re.sub(k, " ", rest, flags=re.IGNORECASE)
     for m in months:
         rest = rest.replace(m, " ")
+    for bm in re.findall(r"(?:1[0-2]|[1-9])月份?", rest):
+        months.append(tp.resolve_month(int(re.match(r"\d+", bm).group())))
+    rest = re.sub(r"(?:1[0-2]|[1-9])月份?", " ", rest)
     for ch in "，,、。；;／/ 　":
         rest = rest.replace(ch, " ")
     # 3) 先用「地名對照表」在字串裡找中文地名（依出現順序）

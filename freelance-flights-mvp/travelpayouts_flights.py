@@ -96,6 +96,15 @@ def next_months(n=3):
     return out
 
 
+def resolve_month(month_num):
+    """把『只打月份數字』（例如使用者說「12月」只給 12）轉成正確年份的
+    YYYY-MM──取「今天以後最近一次」出現的那個月：月份 >= 現在月份就是
+    今年，比現在月份小就跨年算明年（不會查到已經過去的月份）。"""
+    today = date.today()
+    year = today.year if month_num >= today.month else today.year + 1
+    return f"{year:04d}-{month_num:02d}"
+
+
 CURRENCY = "twd"         # 用新台幣報價
 THRESHOLD = 15000        # 低於這個價（TWD）就跳通知（多國來回，先設寬一點 15000）
 FLEX_MONTHS_AHEAD = 3    # route 沒填 "month" 時，自動查「這個月起」連續幾個月
