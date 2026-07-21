@@ -123,10 +123,12 @@ def release_lock():
     "✈️ 機票查詢小幫手\n"
     "傳給我：出發 目的地 [去程月份] [回程月份]\n"
     "月份可以不打，不打就自動幫你查未來幾個月最便宜的！\n"
+    "預設查來回票；沒指定回程月份就用跟去程「同一個月」回來。\n"
     "例：\n"
-    "　查 高雄 東京　（不打月份，自動查未來幾個月）\n"
-    "　查 高雄 東京 2026-09　（單程，指定月份）\n"
-    "　查 高雄 東京 2026-09 2026-10　（來回）\n"
+    "　查 高雄 東京　（不打月份，來回，自動查未來幾個月最划算）\n"
+    "　查 高雄 東京 2026-09　（來回，去回都在 9 月）\n"
+    "　查 高雄 東京 2026-09 2026-10　（來回，9 月去、10 月回）\n"
+    "　查 高雄 東京 單程　（改查單程，不管有沒有打月份）\n"
     "地名可打中文（高雄、日本、首爾…）或英文代碼。\n\n"
     "🔍 還沒決定去哪？不用填目的地，傳「探索」給我，\n"
     "我會幫你掃一輪常查的幾個國家，優先秀「降價幅度大」的，\n"
@@ -137,6 +139,9 @@ def release_lock():
 
 # 探索模式關鍵字：出現這些字，就不強制要求目的地，改成掃一輪熱門國家找划算的
 探索關鍵字 = ("探索", "驚喜", "隨便看看", "有什麼便宜", "不知道去哪", "隨機")
+
+# 單程關鍵字：出現這些字才會改查單程，預設一律查來回
+單程關鍵字 = ("單程", "single", "one way", "oneway")
 
 
 MAX_MSG_LEN = 4000   # Telegram 訊息上限 4096 字，留一點安全margin
@@ -163,13 +168,16 @@ def handle(text):
     例：『查 高雄 東京 2026-09』『查高雄福岡，2026-09』都行。
     也支援『探索』模式（見 探索關鍵字）：不填目的地，掃一輪熱門國家找划算的。"""
     is_explore = any(k in text for k in 探索關鍵字)
+    is_oneway = any(k in text.lower() for k in 單程關鍵字)
 
-    # 1) 先抓出月份（一個=單程；兩個=來回；探索模式不需要月份，忽略）
+    # 1) 先抓出月份（一個或兩個都行；預設查來回，見下方 route 組裝）
     months = re.findall(r"\d{4}-\d{2}", text)
-    # 2) 把「查」、探索關鍵字、月份、各種標點都換成空白，剩下的拿來找地名
+    # 2) 把「查」、探索關鍵字、單程關鍵字、月份、各種標點都換成空白，剩下的拿來找地名
     rest = text.replace("查", " ")
     for k in 探索關鍵字:
         rest = rest.replace(k, " ")
+    for k in 單程關鍵字:
+        rest = re.sub(k, " ", rest, flags=re.IGNORECASE)
     for m in months:
         rest = rest.replace(m, " ")
     for ch in "，,、。；;／/ 　":
@@ -198,11 +206,14 @@ def handle(text):
         lines = [f"🔍 探索模式（出發：{起點}）幫你掃了一輪，這些比較划算 👇"]
         for i, r in enumerate(rows, 1):
             飛行 = "直飛" if r["transfers"] == 0 else f"轉{r['transfers']}次"
+            when = r["depart_at"]
+            if r.get("trip") == "來回" and r.get("return_at"):
+                when += f"→{r['return_at']}回"
             drop = (f"　📉 降了 {r['drop_pct']}%（上次 {r['drop_from']:.0f}）"
                     if r.get("drop_pct") else "")
             lines.append(
                 f"\n{i}. ✈ {r['route']}（{r['dest_code']}）"
-                f"{r['price']:.0f} {r['currency']}（{飛行}・{r['depart_at']}）{drop}\n{r['link']}")
+                f"{r['price']:.0f} {r['currency']}（{飛行}・{when}）{drop}\n{r['link']}")
         return "\n".join(lines)
 
     # 沒打年月也可以查：不強制要求月份，自動查未來幾個月（見下方 route 組裝）
@@ -220,6 +231,8 @@ def handle(text):
                 + "、".join(tp.地名對照表))
 
     route = {"origin": origin, "dest": dest}
+    if is_oneway:
+        route["one_way"] = True
     月份說明 = f"未來{tp.FLEX_MONTHS_AHEAD}個月"
     if len(months) >= 1:
         route["month"] = months[0]

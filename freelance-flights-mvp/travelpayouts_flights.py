@@ -41,18 +41,19 @@ TW_TZ = timezone(timedelta(hours=8))  # 顯示台灣時間用（GitHub Actions �
 # ─────────────────────────────────────────────────────────────
 # ★ 好消息：origin / dest 可以直接寫「中文地名」，程式會自動翻成代碼！★
 #   （下面 地名對照表 有的就能用中文；沒有的就填代碼，例如某個冷門城市）
-#   month  = 去程月份（選填！不寫就自動查「這個月起」連續 FLEX_MONTHS_AHEAD
-#            個月、挑最便宜的──這樣不用一直手動改月份，也不會日期一過
-#            就永遠查不到卻沒人發現）
-#   return = 回程月份（選填）→ 有寫就查「來回票」，沒寫就查「單程」
-#            （來回票請連 month 一起指定，彈性月份目前只支援單程）
+#   month    = 去程月份（選填！不寫就自動查「這個月起」連續 FLEX_MONTHS_AHEAD
+#              個月、挑最便宜的──這樣不用一直手動改月份，也不會日期一過
+#              就永遠查不到卻沒人發現）
+#   return   = 回程月份（選填）→ 預設查「來回票」，沒填就用跟去程「同一個月」
+#              回程（短程旅遊最常見的假設）；想查不同月份回程才需要填這個
+#   one_way  = True 才會改查單程（不填就是預設的來回）
 ROUTES = [
-    {"origin": "高雄", "dest": "日本"},    # 全日本 單程・自動查未來幾個月最便宜
-    {"origin": "高雄", "dest": "韓國"},    # 全韓國 單程・自動查未來幾個月最便宜
-    {"origin": "高雄", "dest": "泰國"},    # 全泰國 單程・自動查未來幾個月最便宜
-    {"origin": "高雄", "dest": "越南"},    # 全越南 單程・自動查未來幾個月最便宜
-    {"origin": "高雄", "dest": "香港"},    # 香港   單程・自動查未來幾個月最便宜
-    {"origin": "高雄", "dest": "新加坡"},  # 新加坡 單程・自動查未來幾個月最便宜
+    {"origin": "高雄", "dest": "日本"},    # 全日本 來回・自動查未來幾個月最便宜
+    {"origin": "高雄", "dest": "韓國"},    # 全韓國 來回・自動查未來幾個月最便宜
+    {"origin": "高雄", "dest": "泰國"},    # 全泰國 來回・自動查未來幾個月最便宜
+    {"origin": "高雄", "dest": "越南"},    # 全越南 來回・自動查未來幾個月最便宜
+    {"origin": "高雄", "dest": "香港"},    # 香港   來回・自動查未來幾個月最便宜
+    {"origin": "高雄", "dest": "新加坡"},  # 新加坡 來回・自動查未來幾個月最便宜
 ]
 
 # 地名對照表：中文 → 代碼（要加新地點就在這裡多寫一行）
@@ -188,13 +189,19 @@ def _fetch_offers(route):
     合併所有結果──不用每次手動打年月，也不怕月份寫死了、日期一過就
     永遠查不到卻沒人發現（原本 API 的 departure_at 到底能不能留空、
     留空後行為為何，官方文件查證不到明確結果，所以不賭它，改用
-    我們自己算好的月份清單，行為 100% 可控可測）。"""
+    我們自己算好的月份清單，行為 100% 可控可測）。
+
+    預設查「來回票」：route 明確給 "one_way": True 才查單程。
+    有給 "return"（明確回程月份）就用那個月份回程；沒給的話
+    （包含彈性月份、只給一個月份這兩種情況）預設「去回都在同一個月」
+    ──短程旅遊最常見的假設，也是這份 ROUTES 在做彈性月份之前
+    原本的寫法（"month": X, "return": X），只是現在自動補上不用手寫。"""
     if not TOKEN:
         raise RuntimeError(
             "找不到 token！請先設定環境變數 TRAVELPAYOUTS_TOKEN"
             "（做法見本檔案開頭說明）。")
 
-    round_trip = "return" in route  # 有填回程 = 來回票
+    round_trip = not route.get("one_way", False)  # 預設來回，明確要單程才單程
     months = [route["month"]] if route.get("month") else next_months(FLEX_MONTHS_AHEAD)
 
     all_offers = []
@@ -210,7 +217,7 @@ def _fetch_offers(route):
             "limit": 30,
         }
         if round_trip:
-            params["return_at"] = route["return"]  # 回程月份
+            params["return_at"] = route.get("return") or month  # 沒指定就同月回程
 
         result = get_json_with_retry(
             API_URL, headers={"X-Access-Token": TOKEN}, params=params)
@@ -259,7 +266,7 @@ def _prefer_direct(offers, direct_first=True):
 
 
 def search_cheapest(route, direct_first=True):
-    """查單一條航線『最便宜的一張』。route 有 return 就查來回，否則單程。
+    """查單一條航線『最便宜的一張』。預設查來回，route 給 one_way=True 才查單程。
     direct_first=True（預設）：有直飛就只在直飛裡面比便宜。"""
     offers, currency, round_trip = _fetch_offers(route)
     if not offers:
@@ -445,7 +452,7 @@ def main():
         # 不能讓後面的航線都不查、也不能讓已查到的價格記憶跟著遺失
         # （save_state 在迴圈外，若整個迴圈被例外中斷，之前查到的都不會存檔）。
         try:
-            trip = "來回" if "return" in route else "單程"
+            trip = "單程" if route.get("one_way") else "來回"
             月份說明 = route.get("month") or f"未來{FLEX_MONTHS_AHEAD}個月"
             log.info("[%d/%d] 查 %s→%s（%s，%s）",
                      i + 1, len(ROUTES), route["origin"],
