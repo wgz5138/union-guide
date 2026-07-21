@@ -248,15 +248,27 @@ def _build_row(offer, route, currency, round_trip):
     }
 
 
-def search_cheapest(route):
-    """查單一條航線『最便宜的一張』。route 有 return 就查來回，否則單程。"""
+def _prefer_direct(offers, direct_first=True):
+    """優先只留直飛（transfers==0）；這條航線根本沒有直飛選項才退回全部
+    （含轉機）──使用者明確說『盡量能直航』，能直飛就不要為了省一點錢
+    選轉機，但沒有直飛可選時還是要能查到票，不能直接回傳空清單。"""
+    if not direct_first:
+        return offers
+    directs = [o for o in offers if o.get("transfers") == 0]
+    return directs if directs else offers
+
+
+def search_cheapest(route, direct_first=True):
+    """查單一條航線『最便宜的一張』。route 有 return 就查來回，否則單程。
+    direct_first=True（預設）：有直飛就只在直飛裡面比便宜。"""
     offers, currency, round_trip = _fetch_offers(route)
     if not offers:
         月份說明 = route.get("month") or f"未來{FLEX_MONTHS_AHEAD}個月"
         log.info("　%s→%s（%s）查無票價（換個月份試試）。",
                  route["origin"], route["dest"], 月份說明)
         return None
-    cheapest = min(offers, key=lambda o: o["price"])
+    use = _prefer_direct(offers, direct_first)
+    cheapest = min(use, key=lambda o: o["price"])
     return _build_row(cheapest, route, currency, round_trip)
 
 
@@ -266,8 +278,7 @@ def search_offers(route, top=5, direct_first=True):
     offers, currency, round_trip = _fetch_offers(route)
     if not offers:
         return []
-    directs = [o for o in offers if o.get("transfers") == 0]
-    use = directs if (direct_first and directs) else offers
+    use = _prefer_direct(offers, direct_first)
     use = sorted(use, key=lambda o: o["price"])[:top]
     return [_build_row(o, route, currency, round_trip) for o in use]
 

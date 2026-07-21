@@ -197,11 +197,12 @@ def handle(text):
         起點 = origin or (tp.ROUTES[0]["origin"] if tp.ROUTES else "高雄")
         lines = [f"🔍 探索模式（出發：{起點}）幫你掃了一輪，這些比較划算 👇"]
         for i, r in enumerate(rows, 1):
+            飛行 = "直飛" if r["transfers"] == 0 else f"轉{r['transfers']}次"
             drop = (f"　📉 降了 {r['drop_pct']}%（上次 {r['drop_from']:.0f}）"
                     if r.get("drop_pct") else "")
             lines.append(
                 f"\n{i}. ✈ {r['route']}（{r['dest_code']}）"
-                f"{r['price']:.0f} {r['currency']}（{r['depart_at']}）{drop}\n{r['link']}")
+                f"{r['price']:.0f} {r['currency']}（{飛行}・{r['depart_at']}）{drop}\n{r['link']}")
         return "\n".join(lines)
 
     # 沒打年月也可以查：不強制要求月份，自動查未來幾個月（見下方 route 組裝）
