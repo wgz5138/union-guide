@@ -1,6 +1,17 @@
 /**
- * 透析印藥水 LINE 小幫手 v5.8 — Apps Script
+ * 透析印藥水 LINE 小幫手 v5.9 — Apps Script
  * ════════════════════════════════════════════════════════
+ *  v5.9（2026-07-21）加「補發」機制：v5.8修好算錯天之後，發生林欣儀/高翠盈那週完全沒
+ *  收到提醒——原因是名單送到雲端的時間(7/19傍晚)晚於她們提醒窗口該發生的日子(7/17~18)，
+ *  每天固定一次的排程執行時名單還沒進來，之後也沒有補救機制。就算玉繡照平常週日送出
+ *  下週名單，只要有人印藥水日是週一，提前提醒該發的日子是週六，一樣會卡到同樣的縫——
+ *  不是「送太晚」的問題，是「每天只固定檢查一次」這個機制本身沒有補漏的能力。
+ *  解法：`setWeek` 收到新名單、寫入本週名單的當下，立刻呼叫 sendReminders(true)（補發
+ *  模式）——只要有人的提醒窗口「今天或更早」已經到期但還沒發過，馬上補發，不用等隔天
+ *  固定排程。原本的每日固定觸發（呼叫 sendReminders()，不帶參數）行為完全不變。
+ *  防重複也一併加固：改成掃「提醒紀錄」全部歷史列（不再只看「今天」），因為補發可能
+ *  發生在跟「精準當天」不同的日子，只看「今天」會讓dedup在補發後的隔天固定排程失效、
+ *  重複發送。
  *  v5.8（2026-07-20）修正提醒日期系統性提早一個工作天的bug：sendReminders() 原本假設
  *  「本週名單」存的日期是「上班日」，還要再往前推一個上班日才是真正印藥水日。但這欄
  *  日期本身就已經是 app.py（排班.py）算好、Streamlit畫面顯示、玉繡實際送出的真正印藥水日，
@@ -11,7 +22,8 @@
  *  這樣 app.py 收到回應時就能直接把診斷資訊顯示在 Streamlit 畫面上，不必再靠 Apps Script
  *  的記錄檔 UI。Logger.log 保留，當作備援。
  *  功能①：自動收 userId（LINE webhook）
- *  功能②：每天自動發提醒 ★名單日期=印藥水日（v5.8修正，跳過週日/休診日）；提前一則+當天一則；含防重複
+ *  功能②：每天自動發提醒 ★名單日期=印藥水日（v5.8修正，跳過週日/休診日）；提前一則+當天一則；
+ *  含防重複；名單送到當下立即補發已逾期未發的提醒（v5.9）
  *  功能③：接收網頁送來的名單（setWeek）
  *  功能④：儲存/讀取排班歷史（供下週公平輪序）
  *  功能⑤：儲存/讀取稽核歷史（供下月公平輪序）
@@ -68,6 +80,10 @@ function doPost(e) {
     if (action === "setWeek") {
       var sh2 = ensureSheet_(ss, "本週名單", ["印日期","區","姓名"]);
       writeAllRowsFast_(sh2, ["印日期","區","姓名"], body.rows || []);
+      // v5.9：名單送到的當下，立刻補發「已經過期還沒發過」的提醒，不用等隔天9點多的
+      // 固定排程——這樣不管玉繡幾點送出名單，只要有人的提醒窗口已經過了，送出的當下
+      // 就會馬上補發，不會卡在「送太晚、當天排程已經跑過」這個縫隙裡（見接續包第二十節）。
+      try { sendReminders(true); } catch (e) { Logger.log("setWeek 補發提醒失敗：" + e); }
       return jsonOut_({ok: true, count: (body.rows || []).length});
     }
 
@@ -216,19 +232,25 @@ function parseYmd_(s) {
 }
 
 
-/* ━━━━━━━━━━ 每日提醒（錨定「印藥水日」；兩層＋防重複）━━━━━━━━━━
- * v5.8（2026-07-20）修正：★名單那欄日期本身就已經是「印藥水日」（app.py的排班.py算好、
- *   Streamlit畫面顯示、玉繡實際送出的那一天），不是「上班日」！舊版把這欄日期當「上班日」
- *   又用 prevWorkday_() 往前推一次，等於全部人每週的印藥水日都被算早了一個工作天，連帶
- *   兩層提醒也整批提早發送。實測0720~0726整週12人全部中招，不是單一個案。
- *   （這行舊註解/邏輯保留在下面供對照，已確認錯誤：★名單那欄日期 = 組員「上班日」。
- *   真正要印藥水的日子 =「上班日的前一個上班日」——這個假設本身就是錯的。）
- * 第一層（提前）：今天 = 印藥水日的前一個上班日 → 「🔔 記得 M/d 要印…」
- * 第二層（當天）：今天 = 印藥水日             → 「⚠️ 今天 M/d 要印…」
- * ★防重複：每發一則就記在「提醒紀錄」分頁（日期｜類型｜姓名｜印藥水日）。同一天同一人同一則只發一次，
- *   不管手動測試或鬧鐘跑幾次都不會重複洗版。
+/* ━━━━━━━━━━ 每日提醒（錨定「印藥水日」；兩層＋防重複＋補發）━━━━━━━━━━
+ * v5.9（2026-07-21）加補發機制：v5.8修好「算錯天」之後，又發生「林欣儀/高翠盈這次
+ *   完全沒收到提醒」——查證後發現不是bug，是那週名單送進雲端的時間(7/19傍晚)，晚於
+ *   她們倆提醒窗口該發生的日子(7/17~18)，daily trigger當時執行時名單根本還沒進來，
+ *   之後也沒有任何機制會回頭補發。玉繡就算照平常週日送出下週名單，只要有人印藥水日
+ *   落在週一，提前提醒該發的日子是週六，一樣會卡到同樣的縫——不是「送太晚」的問題，
+ *   是「每天只固定檢查一次」這個機制本身沒有補救漏接的能力。
+ *   解法：`setWeek` 收到新名單、寫入本週名單的當下，立刻呼叫 sendReminders(true)
+ *   （catchUp模式）——只要有人的提醒窗口「今天或更早」就已經到期、但還沒發過，馬上
+ *   補發，不用等隔天固定排程。原本的每日固定觸發（呼叫 sendReminders()，不帶參數）
+ *   完全不受影響，還是只在「精準等於今天」才發，行為不變。
+ * ★防重複：v5.9 改成掃「提醒紀錄」全部歷史列建立 dedup key（不再只看「今天」寫入的
+ *   那幾列）——因為補發可能發生在跟「精準當天」不同的日子，舊版只比對「今天」會讓
+ *   隔天的固定排程誤判成沒發過、重複發送一次。
+ * 第一層（提前）：印藥水日的前一個上班日 → 「🔔 記得 M/d 要印…」
+ * 第二層（當天）：印藥水日當天             → 「⚠️ 今天 M/d 要印…」
+ * catchUp=true 時，這兩層的判斷從「精準等於今天」放寬成「今天或更早（已經過期還沒發）」。
  */
-function sendReminders() {
+function sendReminders(catchUp) {
   var ss = SpreadsheetApp.getActiveSpreadsheet();
   var tz = "Asia/Taipei";
   var todayStr = Utilities.formatDate(new Date(), tz, "yyyy-MM-dd");
@@ -257,24 +279,28 @@ function sendReminders() {
     if (!nm2) continue;
 
     var bucket = null;
-    if (Pstr === todayStr) bucket = sameday;               // 今天就是印藥水日
-    else if (Astr === todayStr) bucket = advance;          // 今天是印藥水日的前一個上班日
+    if (catchUp) {
+      // 補發模式：窗口「今天或更早」就算到期，優先歸類到當天(較晚/較急的那一層)
+      if (Pstr <= todayStr) bucket = sameday;
+      else if (Astr <= todayStr) bucket = advance;
+    } else {
+      // 平常固定排程：維持原本「精準等於今天」的行為，不變動
+      if (Pstr === todayStr) bucket = sameday;
+      else if (Astr === todayStr) bucket = advance;
+    }
     if (!bucket) continue;
 
     if (!bucket[nm2]) bucket[nm2] = {areas: [], printStr: Pstr};   // printStr 一律存「印藥水日」
     if (area && bucket[nm2].areas.indexOf(area) < 0) bucket[nm2].areas.push(area);
   }
 
-  // ★防重複：載入「提醒紀錄」裡今天已發過的 key
-  // 注意：Sheets 會把「2026-07-14」字串自動轉成 Date 物件存回，讀出來也是 Date，
-  // 所以必須用 normDate_() 統一格式，不能直接 String() 比較，否則 dedup 永遠失效。
+  // ★防重複：v5.9 改成掃「提醒紀錄」全部歷史（不再只限今天），因為補發可能發生在
+  // 跟「精準當天」不同的日子，只看「今天」會讓dedup在補發後的隔天固定排程時失效。
   var logSh = ensureSheet_(ss, "提醒紀錄", ["日期","類型","姓名","印日","時間"]);
   var sentKeys = {};
   var logRows = logSh.getDataRange().getValues();
   for (var li = 1; li < logRows.length; li++) {
-    if (normDate_(logRows[li][0], tz) === todayStr) {
-      sentKeys[ logRows[li][1] + "|" + logRows[li][2] + "|" + normDate_(logRows[li][3], tz) ] = true;
-    }
+    sentKeys[ logRows[li][1] + "|" + logRows[li][2] + "|" + normDate_(logRows[li][3], tz) ] = true;
   }
 
   var sent = 0, miss = 0, dup = 0;
@@ -282,7 +308,7 @@ function sendReminders() {
     for (var name in todo) {
       var info = todo[name];
       var key = type + "|" + name + "|" + info.printStr;
-      if (sentKeys[key]) { dup++; continue; }              // 今天已發過 → 跳過，不重複發
+      if (sentKeys[key]) { dup++; continue; }              // 已經發過(不管是哪一天發的) → 跳過
       var uid2 = map[name];
       if (!uid2) { Logger.log("缺 userId：" + name); miss++; continue; }
       var md = Utilities.formatDate(parseYmd_(info.printStr), tz, "M/d");
@@ -297,7 +323,7 @@ function sendReminders() {
   flush_(advance, "前一天", function(md, zpart) { return "🔔 記得 " + md + " 要印" + zpart + "藥水喔！🙏"; });
   flush_(sameday, "當天",   function(md, zpart) { return "⚠️ 今天 " + md + " 就要印" + zpart + "藥水喔！別忘了 🙏"; });
 
-  Logger.log("提醒完成：提前 " + Object.keys(advance).length + " 人、當天 "
+  Logger.log((catchUp ? "[補發]" : "[固定排程]") + "提醒完成：提前 " + Object.keys(advance).length + " 人、當天 "
              + Object.keys(sameday).length + " 人，實發 " + sent + " 則，已發過跳過 " + dup
              + " 則，缺 userId " + miss + " 次（今天 " + todayStr + "）");
 }
