@@ -8,9 +8,12 @@
      （建議也設 TG_CHAT：設了就「只回應你本人」，別人傳訊不理，省你的額度。）
   2. 點兩下『啟動聊天機器人.bat』，或執行：python telegram_bot.py
   3. 程式會一直開著等你。這段時間在 Telegram 對 bot 打：
-        查 高雄 東京 2026-09            （單程）
-        查 高雄 東京 2026-09 2026-10     （來回：多給一個回程月份）
-     它就回你最便宜的票＋繁體中文訂票連結。
+        查 高雄 東京                    （不打月份，來回，自動查未來幾個月最划算）
+        查 高雄 東京 2026-09 或 12月     （來回，去回都在同一個月）
+        查 高雄 東京 2026-09 2026-10     （來回：去程/回程各給一個月份）
+        查 高雄 東京 單程                （改查單程）
+     它就回你最便宜的票＋繁體中文訂票連結；也支援「探索」模式，
+     詳見程式裡的 說明 字串（傳「說明」給 bot 也會回你）。
   4. 要停止：在視窗按 Ctrl + C。
 
 注意：bot 要「一直開著」才能即時回應，所以這支適合電腦開著時跑
@@ -175,18 +178,23 @@ def handle(text):
     #    支援兩種寫法：完整「2026-12」，或口語「12月」／「12月份」
     #    （後者沒寫年份，用 tp.resolve_month() 算出「今天以後最近一次」
     #    出現的那個月，不會因為只打月份數字就被當成沒填、退回彈性查詢）
-    months = re.findall(r"\d{4}-\d{2}", text)
+    #    用同一個正則、同一次 finditer 抓兩種格式，照文字裡『原本出現的
+    #    先後順序』決定去程/回程──兩種格式混用時（例如「12月 2026-09」）
+    #    才不會因為分兩輪處理，把後面才打的日期誤判成去程。
+    MONTH_PATTERN = re.compile(r"\d{4}-\d{2}|(?:1[0-2]|[1-9])月份?")
+    months = []
+    for tok in MONTH_PATTERN.findall(text):
+        if re.fullmatch(r"\d{4}-\d{2}", tok):
+            months.append(tok)
+        else:
+            months.append(tp.resolve_month(int(re.match(r"\d+", tok).group())))
     # 2) 把「查」、探索關鍵字、單程關鍵字、月份、各種標點都換成空白，剩下的拿來找地名
     rest = text.replace("查", " ")
     for k in 探索關鍵字:
         rest = rest.replace(k, " ")
     for k in 單程關鍵字:
         rest = re.sub(k, " ", rest, flags=re.IGNORECASE)
-    for m in months:
-        rest = rest.replace(m, " ")
-    for bm in re.findall(r"(?:1[0-2]|[1-9])月份?", rest):
-        months.append(tp.resolve_month(int(re.match(r"\d+", bm).group())))
-    rest = re.sub(r"(?:1[0-2]|[1-9])月份?", " ", rest)
+    rest = MONTH_PATTERN.sub(" ", rest)
     for ch in "，,、。；;／/ 　":
         rest = rest.replace(ch, " ")
     # 3) 先用「地名對照表」在字串裡找中文地名（依出現順序）
