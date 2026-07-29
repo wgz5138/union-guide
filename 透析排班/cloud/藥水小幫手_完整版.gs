@@ -1,6 +1,11 @@
 /**
- * 透析印藥水 LINE 小幫手 v5.9 — Apps Script
+ * 透析印藥水 LINE 小幫手 v5.10 — Apps Script
  * ════════════════════════════════════════════════════════
+ *  v5.10（2026-07-21）加「主動健康檢查」：使用者反映「有些同仁沒收到提醒也不會主動
+ *  告知」——光靠v5.9的補發機制還是被動的，如果補發之後還是漏了（例如缺userId對照、
+ *  發送當下出錯），沒有人會發現。改成每次sendReminders()執行完，順便掃一次本週名單
+ *  裡所有印藥水日「今天或已過」的人，檢查提醒紀錄有沒有他至少一則紀錄，完全沒有的人
+ *  直接組清單發LINE通知玉繡本人，變成系統主動抓漏，不用等同仁反映才知道。
  *  v5.9（2026-07-21）加「補發」機制：v5.8修好算錯天之後，發生林欣儀/高翠盈那週完全沒
  *  收到提醒——原因是名單送到雲端的時間(7/19傍晚)晚於她們提醒窗口該發生的日子(7/17~18)，
  *  每天固定一次的排程執行時名單還沒進來，之後也沒有補救機制。就算玉繡照平常週日送出
@@ -23,7 +28,8 @@
  *  的記錄檔 UI。Logger.log 保留，當作備援。
  *  功能①：自動收 userId（LINE webhook）
  *  功能②：每天自動發提醒 ★名單日期=印藥水日（v5.8修正，跳過週日/休診日）；提前一則+當天一則；
- *  含防重複；名單送到當下立即補發已逾期未發的提醒（v5.9）
+ *  含防重複；名單送到當下立即補發已逾期未發的提醒（v5.9）；主動健康檢查、發現完全
+ *  沒收到提醒的人直接通知玉繡（v5.10）
  *  功能③：接收網頁送來的名單（setWeek）
  *  功能④：儲存/讀取排班歷史（供下週公平輪序）
  *  功能⑤：儲存/讀取稽核歷史（供下月公平輪序）
@@ -326,6 +332,55 @@ function sendReminders(catchUp) {
   Logger.log((catchUp ? "[補發]" : "[固定排程]") + "提醒完成：提前 " + Object.keys(advance).length + " 人、當天 "
              + Object.keys(sameday).length + " 人，實發 " + sent + " 則，已發過跳過 " + dup
              + " 則，缺 userId " + miss + " 次（今天 " + todayStr + "）");
+
+  // v5.10：主動健康檢查，發現有人完全沒收到提醒就直接通知玉繡，不用等同仁自己反映
+  try { checkMissedReminders_(ss, tz, todayStr, sentKeys, map); } catch (e) { Logger.log("健康檢查失敗：" + e); }
+}
+
+/* ━━━━━━━━━━ 健康檢查：主動抓漏（v5.10，2026-07-21）━━━━━━━━━━
+ * 使用者反映「有些同仁沒收到提醒也不會主動告知」——光靠v5.9的補發機制還是被動的
+ * （只在setWeek送出的當下補一次），如果補發之後還是漏了(例如缺userId、發送當下
+ * 出錯)，沒有人會知道。這裡在每次sendReminders()執行完，順便掃一次「本週名單」
+ * 裡所有印藥水日「今天或已過」的人，檢查「提醒紀錄」裡有沒有他至少一則紀錄
+ * （前一天或當天任一則都算）。完全查無紀錄的人，直接組成清單發LINE通知玉繡本人
+ * （對照表裡的「邱玉繡」），變成系統主動抓漏、不用等同仁反映才知道。
+ * 同一人同一天會每次執行都重複通知，直到問題解決為止——這是刻意的，玉繡是管理者，
+ * 沒解決前持續提醒比漏掉不通知更安全。
+ */
+function checkMissedReminders_(ss, tz, todayStr, sentKeysAll, map) {
+  var sh = ss.getSheetByName("本週名單");
+  if (!sh) return;
+  var rows = sh.getDataRange().getValues();
+  var head = rows[0].map(function(x) { return String(x).trim(); });
+  var iD = head.indexOf("印日期"); if (iD < 0) iD = head.indexOf("上班日");
+  var iN = head.indexOf("姓名");
+  if (iD < 0 || iN < 0) return;
+
+  var missed = [], seen = {};
+  for (var r = 1; r < rows.length; r++) {
+    var dd = parseYmd_(normDate_(rows[r][iD], tz));
+    if (!dd) continue;
+    var Pstr = Utilities.formatDate(dd, tz, "yyyy-MM-dd");
+    if (Pstr > todayStr) continue;                     // 印藥水日還沒到，還不用檢查
+    var nm2 = String(rows[r][iN]).trim();
+    var seenKey = nm2 + "|" + Pstr;
+    if (!nm2 || seen[seenKey]) continue;
+    seen[seenKey] = true;
+    var hasAdvance = sentKeysAll["前一天|" + nm2 + "|" + Pstr];
+    var hasSameday = sentKeysAll["當天|" + nm2 + "|" + Pstr];
+    if (!hasAdvance && !hasSameday) {
+      missed.push(nm2 + "(" + Utilities.formatDate(dd, tz, "M/d") + "印)");
+    }
+  }
+  if (missed.length === 0) return;
+
+  var adminUid = map["邱玉繡"];
+  if (!adminUid) { Logger.log("健康檢查發現漏發但找不到玉繡的userId：" + missed.join("、")); return; }
+  pushLine_(adminUid,
+    "⚠️ 小幫手健康檢查：以下人員的印藥水提醒完全沒有任何發送紀錄，麻煩人工確認一下——\n"
+    + missed.join("、")
+    + "\n（可能原因：本週名單送達時間晚於提醒窗口、缺userId對照、或發送當下出錯）");
+  Logger.log("健康檢查：發現 " + missed.length + " 人完全沒收到提醒，已通知玉繡：" + missed.join("、"));
 }
 
 
