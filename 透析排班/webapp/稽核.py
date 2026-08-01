@@ -171,8 +171,16 @@ def parse_month(paths, want_month):
             for d,rec in days.items():
                 if d.year==yy and d.month==mm:
                     month_status.setdefault(card,{})[d]=rec
-    first_week_monday=month_sheets[0][0]
-    first_week_status=month_sheets[0][1]
+    # v3.41：「當月第一週」要挑「主要落在目標月」的那一張，不是單純第一張。
+    # 舊版 touches_month() 只要一週有任一天落在目標月就算數，所以判斷7月時
+    # 「0629~0705」會被當成第一週——其中6/29、6/30 有2天屬於6月，卻整整7天
+    # 都被拿去數白/夜班與判分區，班型/區域可能被上個月的班表帶偏。
+    def _days_in_month(mon):
+        return sum(1 for i in range(7)
+                   if (mon+timedelta(days=i)).year==yy and (mon+timedelta(days=i)).month==mm)
+    _first = max(month_sheets, key=lambda s: (_days_in_month(s[0]), -s[0].toordinal()))
+    first_week_monday=_first[0]
+    first_week_status=_first[1]
     return month_status, name_of, by_name, (yy,mm), first_week_monday, first_week_status
 
 def match_members(roster, month_status, name_of, by_name):
@@ -259,8 +267,13 @@ def assign(members, info, hist_cnt, hist_rest=None):
     cost={c: hist_cnt.get(c,0) - hist_rest.get(c,0) for c in cards}
     n_white=sum(1 for c in cards if info[c]["type"]=="白")
     n_night=sum(1 for c in cards if info[c]["type"]=="夜")
-    # 白班優先排第二班；只有白班人數 < 小夜人數時，才允許小夜補第二班
-    allow_night_band2 = n_white < n_night
+    # 白班優先排第二班；白班人數不足以填滿「第一班+第二班」時，才允許小夜補第二班。
+    # v3.41 修正：舊版寫 `n_white < n_night`（拿白班人數跟夜班人數比），比錯基準——
+    # 真正該比的是「第一班+第二班總共需要幾個白班格」= 區數×組數×2。實測 2026-07：
+    # 白7人/夜7人 → 7<7 為 False → 第二班鎖死只能白班 → 8個白班格只有7個白班人 →
+    # 二區W246第二班直接❌排不出，同時3位夜班同仁整月閒置被記成「休」。
+    n_white_slots = len(AREAS) * len(GROUPS) * 2   # 第一班 + 第二班
+    allow_night_band2 = n_white < n_white_slots
     slots=[(a,g,s) for a in AREAS for g in GROUPS for s in SHIFTS]
     def need_type(s):
         if s==3: return "夜"
@@ -272,29 +285,57 @@ def assign(members, info, hist_cnt, hist_rest=None):
         if nt=="夜": return t=="夜"
         if nt=="白": return t=="白"
         return True
-    def cands(a,s,cross):
+    # v3.41：真的檢查「這個人到底上不上週一三五 / 週二四六」。
+    # 舊版 classify() 有算 w135/w246 存進 info，但 cands() 根本沒收 g 這個參數，
+    # 整段是死碼——W135/W246 的分配純粹由排序 tie-break 決定，跟本人哪幾天在院無關，
+    # 可能把只上週二四六的人排到「週一三五」的稽核位置。
+    # 相容性：快速模式的 info 沒有 w135/w246 這兩個 key（從沒實作過），
+    # 用 .get(..., True) 預設放行，避免快速模式整個排不出來。
+    def group_ok(c, g):
+        key = "w135" if g == "W135" else "w246"
+        return bool(info[c].get(key, True))
+    def cands(a,g,s,cross):
         res=[]
         for c in cards:
             if c in used: continue
             if not type_ok(c,s): continue
+            if not group_ok(c,g): continue
             if (info[c]["area"]==a) == cross: continue
             res.append(c)
         return res
-    def pick(a,s,cross):
-        pool=cands(a,s,cross)
+    def pick(a,g,s,cross):
+        pool=cands(a,g,s,cross)
         pool.sort(key=lambda c:(cost[c], idx[c]))
         return pool[0] if pool else None
     assigned={}; used=set(); crossed=set()
-    order=sorted(slots, key=lambda sl: len(cands(sl[0],sl[2],False)))
+    order=sorted(slots, key=lambda sl: len(cands(sl[0],sl[1],sl[2],False)))
     for sl in order:
-        c=pick(sl[0],sl[2],False)
+        c=pick(sl[0],sl[1],sl[2],False)
         if c is not None: assigned[sl]=c; used.add(c)
     for sl in slots:
         if sl in assigned: continue
-        c=pick(sl[0],sl[2],True)
+        c=pick(sl[0],sl[1],sl[2],True)
         if c is not None:
             assigned[sl]=c; used.add(c); crossed.add(sl)
-            warn(f"※ {sl[0]} 第{sl[2]}班 本區排不出 → 跨區借「{info[c].get('name','')}」")
+            # v3.41：警告加上組別，玉繡才看得出是週一三五還是週二四六那一格
+            warn(f"※ {sl[0]} {sl[1]} 第{sl[2]}班 本區排不出 → 跨區借「{info[c].get('name','')}」")
+    # v3.41：組別限制若造成排不出，自動放寬該限制再補一輪（寧可排到人、也不要留❌）
+    _relaxed=set()
+    if any(sl not in assigned for sl in slots):
+        def cands_nogroup(a,s,cross):
+            return [c for c in cards
+                    if c not in used and type_ok(c,s) and ((info[c]["area"]==a) != cross)]
+        for sl in slots:
+            if sl in assigned: continue
+            for _cross in (False, True):
+                pool=cands_nogroup(sl[0],sl[2],_cross)
+                pool.sort(key=lambda c:(cost[c], idx[c]))
+                if pool:
+                    c=pool[0]; assigned[sl]=c; used.add(c); _relaxed.add(sl)
+                    if _cross: crossed.add(sl)
+                    warn(f"※ {sl[0]} {sl[1]} 第{sl[2]}班 依組別（{sl[1]}）排不出 → "
+                         f"放寬組別限制安排「{info[c].get('name','')}」，請確認她那幾天有沒有上班")
+                    break
     for sl in slots:
         if sl not in assigned:
             warn(f"❌ {sl[0]} {sl[1]} 第{sl[2]}班 完全排不出人，請人工處理")

@@ -286,7 +286,16 @@ def assign(members, status, window, hist_cnt, hist_rest=None):
     p1={T:prev_treat(T) for T in window}
     p2={T:prev_treat(p1[T]) if p1[T] else None for T in window}
     # 強制可印：玉繡手動指定的人，優先於公平排序（卡號或姓名）
-    def is_force(c): return c in FORCE_PRINT or name_of_g.get(c,"") in FORCE_PRINT
+    # v3.41：改成也接受「只打名不打姓」的簡稱（例：怡璇 → 黃怡璇）。舊版只做精確比對，
+    # 但 UI 輸入框的 placeholder 範例寫的正是「怡璇 / 冠秀」這種簡稱，永遠比不中，
+    # 而且畫面還是會顯示「ℹ 強制可印人員：怡璇」看起來像有生效——靜默失效最危險。
+    def is_force(c):
+        if c in FORCE_PRINT: return True
+        nm = name_of_g.get(c, "")
+        if not nm: return False
+        if nm in FORCE_PRINT: return True
+        # 簡稱比對：輸入「怡璇」要能對到「黃怡璇」（長度≥2 才比，避免單字誤傷）
+        return any(len(f) >= 2 and nm.endswith(f) for f in FORCE_PRINT)
 
     def cands(T, areas):
         res={}
@@ -395,6 +404,18 @@ def run():
     FORCE_PRINT = load_force_print()
     if FORCE_PRINT:
         warn("ℹ 強制可印人員（放假仍排入候選）：" + "、".join(sorted(FORCE_PRINT)))
+        # v3.41：對不到人的輸入要吵出來，不要靜默失效還顯示得像有生效
+        _roster_all = load_roster()
+        _valid = set()
+        for _m in _roster_all:
+            _nm, _cd = _m.get("name",""), _m.get("card","")
+            for _f in FORCE_PRINT:
+                if _f == _cd or _f == _nm or (len(_f) >= 2 and _nm.endswith(_f)):
+                    _valid.add(_f)
+        _bad = sorted(FORCE_PRINT - _valid)
+        if _bad:
+            warn("⚠ 強制可印『" + "、".join(_bad) + "』在組員名單裡找不到對應的人，這幾筆沒有生效！"
+                 "（請確認姓名有沒有打錯，卡號或全名最保險）")
     if not PRINT_AREAS:
         print("❌ 床號分區.csv 裡沒有任何『可印區域』,請檢查設定檔"); return
 

@@ -49,7 +49,7 @@
     才允許這顆按鈕動作，雲端已有名單一律拒絕並提示改用下方表格編輯＋存回雲端。
 """
 import os, io, re, csv, json, base64, hashlib, tempfile, shutil, subprocess, sys
-from datetime import date, datetime
+from datetime import date, datetime, timedelta
 import pandas as pd
 import streamlit as st
 import streamlit.components.v1 as components
@@ -305,6 +305,31 @@ def push_week_draft(rows, sheet0):
     except Exception:
         return False
 
+def gs_date_to_ymd(s):
+    """把 GAS 回傳的日期轉成台北時區的 YYYY-MM-DD 字串。
+
+    ⚠ v3.41 修正的重要 bug：Google Sheets 會把「2026-07-16」這種字串存成**日期型別**，
+    `JSON.stringify` 序列化時會轉成 **UTC**：台北 7/16 00:00 → "2026-07-15T16:00:00.000Z"。
+    舊版三處 `_clean_dt` 都直接 `re.match(r'(\\d{4}-\\d{2}-\\d{2})')` 截前10碼，於是拿到
+    **7/15，整整少一天**。（"T16:00:00Z" 正好是 UTC+8 的午夜，就是它是日期型別的鐵證。）
+    後果：載入雲端草稿後，全部12人的印藥水日整批早一天，接著按「送到雲端」就把錯的
+    日期寫進本週名單，LINE 提醒也跟著錯——症狀跟 v5.8 修掉的那個一樣，但成因完全不同。
+
+    這裡改成：偵測到帶時間的 ISO 格式就先當 UTC 解析、再轉台北時區取日期；
+    純日期字串（沒有時間部分）維持原樣直接取用。
+    """
+    s = str(s).strip()
+    # 帶時間的 ISO 字串（GAS 序列化日期型別會長這樣）→ 必須做時區換算
+    m = re.match(r'^(\d{4}-\d{2}-\d{2})T(\d{2}):(\d{2}):(\d{2})', s)
+    if m:
+        try:
+            dt_utc = datetime.strptime(m.group(0)[:19], "%Y-%m-%dT%H:%M:%S")
+            return (dt_utc + timedelta(hours=8)).strftime("%Y-%m-%d")   # UTC → Asia/Taipei
+        except Exception:
+            return m.group(1)
+    m2 = re.match(r'(\d{4}-\d{2}-\d{2})', s)
+    return m2.group(1) if m2 else s
+
 def fetch_week_draft():
     """讀取雲端草稿 → (rows, sheet0)；沒有草稿回傳 (None, None)。"""
     if not APPS_SCRIPT_URL or not WRITE_SECRET: return None, None
@@ -317,11 +342,8 @@ def fetch_week_draft():
         rows_raw = d["rows"]
         if len(rows_raw) < 2: return None, None
         sheet0 = str(rows_raw[1][0])
-        # GAS 回傳日期可能是 "2026-07-05T16:00:00.000Z"，只取 YYYY-MM-DD
-        def _clean_dt(s):
-            m = re.match(r'(\d{4}-\d{2}-\d{2})', str(s).strip())
-            return m.group(1) if m else str(s).strip()
-        rows = [[_clean_dt(r[1])] + [str(x) for x in r[2:]] for r in rows_raw[1:]]
+        # GAS 回傳日期可能是 "2026-07-05T16:00:00.000Z"（UTC）→ 要轉台北時區才不會少一天
+        rows = [[gs_date_to_ymd(r[1])] + [str(x) for x in r[2:]] for r in rows_raw[1:]]
         return rows, sheet0
     except Exception:
         return None, None
@@ -605,10 +627,7 @@ def _reconstruct_disp_from_rows(rows):
     """
     if not rows: return pd.DataFrame()
     try:
-        def _clean_dt(s):
-            m = re.match(r'(\d{4}-\d{2}-\d{2})', str(s).strip())
-            return m.group(1) if m else str(s).strip()
-        cleaned = [[_clean_dt(r[0]), str(r[1]), str(r[2])] for r in rows]
+        cleaned = [[gs_date_to_ymd(r[0]), str(r[1]), str(r[2])] for r in rows]
         df = pd.DataFrame(cleaned, columns=["印日期","區","姓名"])
         pivot = df.pivot_table(index="區", columns="印日期", values="姓名",
                                aggfunc=lambda x: "、".join(x.dropna())).fillna("")
@@ -682,6 +701,12 @@ def _build_line_txt(rows, disp_df=None):
         return f"{DOW[d.weekday()]} {d.month:02d}/{d.day:02d}"  # 月日補零：07/06，確保等寬
 
     # treats: list of {t: 治療日str, p: 印藥水日str, a: {area: name}}
+    # ⚠ v3.41 修正：每一「格」各自帶自己的印藥水日，不再一整欄共用一個。
+    # 舊寫法用 `print_str is None` 只取該治療日欄「第一個」有(印)標注的日期，然後把
+    # 整欄兩個區的人都算成那一天——但同一個治療日的一區/二區常常一個是白班(印T-1)、
+    # 一個是小夜(印T-2)，印藥水日本來就不同天。實測4週48人次錯9次(19%)，被寫晚的人
+    # 會晚一天備藥水。注意：送GAS的「本週名單」(個人LINE提醒用)日期一直是對的，
+    # 錯的只有貼到LINE群組的這份公告文字，所以會出現「個人提醒跟群組公告對不上」。
     treats = []
 
     if disp_df is not None:
@@ -690,25 +715,22 @@ def _build_line_txt(rows, disp_df=None):
             if t_yr is None: continue
             t_str = _dstr(t_yr, t_mo, t_dy)
 
-            assigns = {}
-            print_str = None   # 取第一個有(印)標注的印藥水日
             for area in ["一區","二區","三區"]:
                 if area not in disp_df.index: continue
                 v = str(disp_df.loc[area, col]).strip()
                 if not v or v in ("nan","None","❌排不出"): continue
                 nm_m = CELL_RE.match(v)
                 if nm_m:
-                    nm = nm_m.group(1).strip() + nm_m.group(4).strip()  # 保留 🔺
+                    # 保留 🔺，但把「雙印」標記濾掉——group(4) 可能是「🔺雙印」，
+                    # 直接串上去會讓公告出現「廖緗玗雙印」這種被污染的姓名（v3.41）
+                    nm = nm_m.group(1).strip() + nm_m.group(4).replace("雙印", "").strip()
                     p_mo, p_dy = int(nm_m.group(2)), int(nm_m.group(3))
-                    if print_str is None:
-                        print_str = _dstr(t_yr, p_mo, p_dy)
+                    p_str = _dstr(t_yr, p_mo, p_dy)   # ← 這一格自己的印藥水日
                 else:
-                    nm = v
+                    nm = v.replace("雙印", "").strip()
+                    p_str = t_str                     # 沒有(印)標注 → 退回用治療日
                 if nm:
-                    assigns[area] = nm
-
-            if assigns:
-                treats.append({"t": t_str, "p": print_str or t_str, "a": assigns})
+                    treats.append({"t": t_str, "p": p_str, "a": {area: nm}})
     else:
         # fallback：印藥水日分組，同一區同一天可能有多人，用 list 累積
         tmp = {}
@@ -1311,8 +1333,10 @@ if mode.startswith("🟦"):
             force_names_raw = st.text_area(
                 "本週放假但可印藥水的人（一行一個姓名，不填則照班別自動判斷）",
                 value=st.session_state.get("force_print_names",""),
-                placeholder="例：\n怡璇\n冠秀",
+                placeholder="例：\n黃怡璇\n潘冠秀",
                 help="班別看起來是假（特休/公假等）但玉繡確認可以印的人，填在這裡就會被排入候選。"
+                     "建議打全名最保險；只打名字（例：怡璇）也可以，但如果打錯字、對不到人，"
+                     "畫面下方會跳警告告訴你哪一筆沒生效。"
             )
             st.session_state["force_print_names"] = force_names_raw
 
@@ -1416,7 +1440,14 @@ if mode.startswith("🟦"):
                 for r in edited.index:
                     for c in edited.columns:
                         raw_val = str(edited.loc[r,c])
-                        nm = re.sub(r'🔺', '', raw_val).strip()  # 去掉顯示用標記
+                        # v3.41：除了 🔺，也要把「雙印」標記拿掉。排班.py 的 celltext()
+                        # 在印第二次的格子後面會接「雙印」（例：余怜緣(7/16印)雙印），
+                        # 舊版只 sub 掉 🔺，導致姓名欄變成「余怜緣雙印」送進雲端，造成
+                        # 三重傷害：①GAS buildUserMap_ 用姓名精確比對 → 查不到 userId
+                        # → 該人完全收不到LINE提醒 ②build_corrected_history 對不上名冊
+                        # → 明明印兩次卻被記成「休」，公平輪序連錯兩格 ③LINE群組公告同時
+                        # 把她列進「印」和「休息」。雙印雖不常見(26週1次)，一發生就是靜默三連錯。
+                        nm = re.sub(r'🔺|雙印', '', raw_val).strip()  # 去掉顯示用標記
                         # 以 editor 內容為準：用戶有加 🔺 就保留，有去掉就不補
                         mk = "🔺" if "🔺" in raw_val else ""
                         dt = dates.loc[r,c]
@@ -1451,11 +1482,8 @@ if mode.startswith("🟦"):
             st.success("✅ 定案完成！")
         if _src == "draft":
             # 草稿來源：用平鋪列表顯示，避免 pivot 因印日期不同而出現空白欄
-            def _clean_dt_disp(s):
-                m = re.match(r'(\d{4}-\d{2}-\d{2})', str(s).strip())
-                return m.group(1) if m else str(s).strip()
             _flat = pd.DataFrame(
-                [[_clean_dt_disp(r[0]), str(r[1]), str(r[2])] for r in rows],
+                [[gs_date_to_ymd(r[0]), str(r[1]), str(r[2])] for r in rows],
                 columns=["印藥水日", "區", "姓名"]
             ).sort_values("印藥水日").reset_index(drop=True)
             st.dataframe(_flat, use_container_width=True, hide_index=True,
@@ -1935,11 +1963,25 @@ if mode.startswith("📊"):
                 edited_ast["淨值(稽核-休)"] = edited_ast["稽核次"] - edited_ast["休次"]
                 st.download_button("⬇️ 下載統計 CSV", edited_ast.to_csv(index=False).encode("utf-8-sig"),
                                    file_name="稽核統計.csv", mime="text/csv", key="audit_stats_dl")
+                # v3.41：補上跟 Tab1「印藥水統計」一模一樣的防呆。v3.35 幫印藥水那顆加了
+                # 警告+必勾確認，但這顆結構完全相同的孿生按鈕被漏掉了——沒警告、沒勾選、
+                # type="primary" 直接可按，一次誤觸就會把152筆稽核明細洗成「統計-稽01」假列。
+                # 這正是接續包第十三節自己寫過的教訓（只修一個、沒推廣去檢查孿生函式）。
+                st.warning("⚠️ 這個「存回雲端」會把「稽核歷史」整份清空重建，只留這裡的總數字，"
+                            "**每個月實際誰稽核哪一區哪一班的明細會全部消失**（變成「統計-稽01」這種"
+                            "沒有月份/位置的假列），連帶「最新稽核名單」也會讀不到東西。"
+                            "只有在你確定要「整批重設」所有人的累計數字時才用這個，"
+                            "平常要修正某個月的資料，請用「每月稽核」重排那個月、送到雲端就好，"
+                            "不要在這裡改數字存檔。")
                 if TEST_MODE:
                     if st.button("🧪 存回雲端（模擬）", key="audit_stats_save_test"):
                         st.info("🧪 測試模式：模擬儲存成功，沒有真的寫到雲端。")
                 elif APPS_SCRIPT_URL and WRITE_SECRET:
-                    if st.button("💾 存回雲端", type="primary", key="audit_stats_save"):
+                    _confirm_wipe_ak = st.checkbox(
+                        "我知道這樣會清空所有人的每月稽核明細、只留總數字，仍要繼續",
+                        key="audit_stats_save_confirm")
+                    if st.button("💾 存回雲端", type="primary", key="audit_stats_save",
+                                 disabled=not _confirm_wipe_ak):
                         with st.spinner("儲存中…"):
                             ok2 = save_audit_stats(edited_ast)
                         if ok2:
