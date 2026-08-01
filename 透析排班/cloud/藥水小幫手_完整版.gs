@@ -1,6 +1,22 @@
 /**
- * 透析印藥水 LINE 小幫手 v6.0 — Apps Script
+ * 透析印藥水 LINE 小幫手 v6.1 — Apps Script
  * ════════════════════════════════════════════════════════
+ *  v6.1（2026-08-01）休診日改成「單一來源」：原本休診日有兩份各自維護的清單——
+ *  webapp/休診日.csv（排班.py 的 prev_treat() 用，決定印藥水日往前推幾天）跟這支
+ *  .gs 裡寫死的 EXTRA_HOLIDAYS 陣列（prevWorkday_() 用，決定 LINE 提醒往前推的
+ *  日子）。改一邊不會同步到另一邊，兩邊一旦對不上，就會出現「排班算出來的印藥水日」
+ *  跟「LINE 提醒的日期」差一天——跟 v5.8 修掉的 off-by-one 是同一類災情，只是還沒
+ *  實際爆發（因為到目前為止兩份清單剛好都是空的）。
+ *  改法：試算表新增「休診日」分頁（欄位：日期, 說明）當唯一來源。
+ *   • 這支 .gs 的 isWorkday_() 改讀該分頁（getHolidaySet_()，同一次執行只讀一次、
+ *     結果快取起來，避免 prevWorkday_ 迴圈重複打 API）
+ *   • app.py 新增 getHolidays/setHolidays 兩個 action，排班前把雲端休診日當
+ *     config_override 餵給 排班.py／稽核.py，跟組員名單走同一套「雲端優先、
+ *     本機 CSV 保底」模式
+ *   • EXTRA_HOLIDAYS 從此只是「分頁還不存在時的一次性種子」，不再是維護入口
+ *  日期一律經 normDate_() 正規化再比對——Google Sheets 會把「2026-01-01」存成
+ *  日期型別，getValues() 拿到的是 Date 物件，直接 String() 會變 "Wed Jan 01 2026…"
+ *  永遠比不中（這正是 app.py v3.41 gs_date_to_ymd 修過的同一類型別陷阱）。
  *  v6.0（2026-07-21）加「主動健康檢查」：使用者反映「有些同仁沒收到提醒也不會主動
  *  告知」——光靠v5.9的補發機制還是被動的，如果補發之後還是漏了（例如缺userId對照、
  *  發送當下出錯），沒有人會發現。改成每次sendReminders()執行完，順便掃一次本週名單
@@ -35,6 +51,8 @@
  *  功能⑤：儲存/讀取稽核歷史（供下月公平輪序）
  *  功能⑥：getLatestBanbiao — 讀 Gmail「班表」標籤最新 Excel 附件（網頁一鍵抓班表）
  *  功能⑦：組員名單雲端主檔、排班草稿（小巫雙重確認）、整批覆寫歷史（統計管理頁用）
+ *  功能⑧：休診日雲端主檔（getHolidays/setHolidays，v6.1）——本檔算提醒日、排班.py
+ *          算印藥水日，兩邊讀同一個「休診日」分頁，改一個地方兩邊自動一致
  *
  *  v5.4（2026-07-19）：發現這份 v5.3 跟 Streamlit 實際呼叫的 URL 是同一個部署但版本落後、
  *  且比對後發現 v5.3 少了 app.py 會呼叫的 6 個功能（setWeekDraft/getWeekDraft/
@@ -51,7 +69,14 @@
 var LINE_TOKEN  = "zeJ2uTt7yRF4EQZ1nN0tgQqZqfzkScfWxTmEtGjPDbByEtjEKkQucms/SYc9uYiEyHbODMrsqlB2L+z0Xl1EPpe4/w/nIR9AT6xb+7gBUgsPlqjEsj4Hp907Zr/gMkpiJWlSWaU20t4vI6au33BKbAdB04t89/1O/w1cDnyilFU=";   // ← Channel access token（不要按 Reissue！）
 var WRITE_SECRET = "yaoshui2026";   // ← 網頁送名單用的暗號（與 Streamlit Secrets 一致）
 
-// ★休診日（沒診、不上班的日子）：過年/國定假日要的話自己加，格式 "2026-01-01"。週日自動跳，不用列。
+// ★休診日的唯一來源＝試算表的「休診日」分頁（欄位：日期, 說明），格式 "2026-01-01"。
+//   週日自動跳過，不用列在裡面。要新增/刪除休診日，請到 Streamlit「📊 統計管理 →
+//   🗓 休診日」編輯，或直接改試算表那個分頁——排班演算法（排班.py 的 prev_treat）
+//   跟這裡的 LINE 提醒（prevWorkday_）都讀同一份，不會再出現兩邊對不上的情況。
+//
+// ⚠️ 下面這個陣列**不是維護入口**，只是「休診日分頁還不存在時」用來建立分頁的一次性
+//   種子（v6.1 之前的舊資料搬家用）。分頁一旦建立，就一律以分頁為準，改這裡沒有用。
+var HOLIDAY_SHEET = "休診日";
 var EXTRA_HOLIDAYS = [
   // "2026-01-01",
   // "2026-02-16",
@@ -154,6 +179,22 @@ function doPost(e) {
       return jsonOut_({ok: true});
     }
 
+    // ── 休診日（v6.1）：唯一來源，排班.py 與本檔的 prevWorkday_ 都讀這一份 ──
+    if (action === "getHolidays") {
+      // 先呼叫 getHolidaySet_ 是為了讓分頁不存在時自動建立（含舊種子搬家），
+      // 這樣 app.py 第一次讀就能拿到正常的表頭而不是空回應。
+      getHolidaySet_("Asia/Taipei");
+      var shHol = ensureSheet_(ss, HOLIDAY_SHEET, ["日期","說明"]);
+      return jsonOut_({ok: true, rows: shHol.getDataRange().getValues()});
+    }
+
+    if (action === "setHolidays") {
+      var shHol2 = ensureSheet_(ss, HOLIDAY_SHEET, ["日期","說明"]);
+      writeAllRowsFast_(shHol2, ["日期","說明"], body.rows || []);
+      _HOLIDAY_CACHE = null;                 // 同一次執行若後續要算日期，要吃到新清單
+      return jsonOut_({ok: true, count: (body.rows || []).length});
+    }
+
     if (action === "getWeekDraft") {
       var shDraft = ensureSheet_(ss, "排班草稿", ["週次","印日期","區","姓名"]);
       return jsonOut_({ok: true, rows: shDraft.getDataRange().getValues()});
@@ -216,10 +257,54 @@ function doGet() { return ContentService.createTextOutput("ok"); }
 
 
 /* ━━━━━━━━━━ 上班日工具（跳過週日 + 休診日）━━━━━━━━━━ */
+
+/* v6.1：休診日改讀試算表「休診日」分頁（唯一來源，跟 排班.py 讀的是同一份）。
+ * ★快取：prevWorkday_() 每個人最多會往回試 21 天、每天都問一次 isWorkday_()，
+ *   12 個人就是好幾百次；沒有快取的話會把 Sheets API 打爆、執行也會變超慢。
+ *   這個變數是「同一次執行」內有效（Apps Script 每次 doPost/觸發器都是全新執行，
+ *   所以不會拿到隔夜的舊資料）。
+ * ★型別陷阱：Sheets 會把 "2026-01-01" 存成日期型別，getValues() 回傳 Date 物件，
+ *   直接 String() 會變 "Wed Jan 01 2026 00:00:00 GMT+0800"，永遠比不中 yyyy-MM-dd。
+ *   一律先過 normDate_() 正規化。
+ */
+var _HOLIDAY_CACHE = null;
+function getHolidaySet_(tz) {
+  if (_HOLIDAY_CACHE) return _HOLIDAY_CACHE;
+  var set = {};
+  try {
+    var ss = SpreadsheetApp.getActiveSpreadsheet();
+    var sh = ss.getSheetByName(HOLIDAY_SHEET);
+    if (!sh) {
+      // 分頁還不存在 → 建立，並把舊的 EXTRA_HOLIDAYS 種子搬進去（一次性搬家）。
+      // 之後這個分頁就是唯一來源，改陣列不再有任何效果。
+      sh = ss.insertSheet(HOLIDAY_SHEET);
+      var seed = [["日期", "說明"]];
+      for (var si = 0; si < EXTRA_HOLIDAYS.length; si++) {
+        seed.push([EXTRA_HOLIDAYS[si], "（v6.1 從程式碼搬過來的舊資料）"]);
+      }
+      sh.getRange(1, 1, seed.length, 2).setValues(seed);
+      Logger.log("已建立「" + HOLIDAY_SHEET + "」分頁，搬入種子 " + EXTRA_HOLIDAYS.length + " 筆");
+    }
+    var rows = sh.getDataRange().getValues();
+    for (var i = 1; i < rows.length; i++) {
+      var s = normDate_(rows[i][0], tz);
+      if (/^\d{4}-\d{2}-\d{2}$/.test(s)) set[s] = true;
+      else if (String(rows[i][0]).trim()) Logger.log("休診日格式不對，已略過：" + rows[i][0]);
+    }
+  } catch (e) {
+    // 讀不到分頁（權限/API 暫時失敗）→ 退回程式碼裡的種子，並記 log。
+    // 寧可用舊清單也不要當成「完全沒有休診日」而把提醒日算錯。
+    Logger.log("讀取休診日分頁失敗，暫時改用 EXTRA_HOLIDAYS 種子：" + e);
+    for (var k = 0; k < EXTRA_HOLIDAYS.length; k++) set[EXTRA_HOLIDAYS[k]] = true;
+  }
+  _HOLIDAY_CACHE = set;
+  return set;
+}
+
 function isWorkday_(d, tz) {
   if (d.getDay() === 0) return false;                       // 週日休
   var s = Utilities.formatDate(d, tz, "yyyy-MM-dd");
-  return EXTRA_HOLIDAYS.indexOf(s) < 0;                     // 不在休診清單
+  return !getHolidaySet_(tz)[s];                            // 不在休診清單
 }
 /** 嚴格「之前」最近的上班日 */
 function prevWorkday_(d, tz) {
@@ -466,7 +551,11 @@ function buildUserMap_(ss) {
   return map;
 }
 function normDate_(v, tz) {
-  if (v instanceof Date) return Utilities.formatDate(v, tz, "yyyy-MM-dd");
+  // 用「有沒有 getFullYear」判斷是不是日期物件，不用 instanceof Date——instanceof 只認
+  // 同一個 realm 建出來的 Date，遇到別處傳進來的日期物件會判成 false，接著掉進下面的
+  // 字串分支，String(日期) 會變 "Mon Feb 16 2026 00:00:00 GMT+0800" 而比不中任何
+  // yyyy-MM-dd，日期就被靜默丟掉。休診日(v6.1)整份清單都靠這個函式正規化，不能有這種洞。
+  if (v && typeof v.getFullYear === "function") return Utilities.formatDate(v, tz, "yyyy-MM-dd");
   var s = String(v).trim().replace(/\//g, "-");
   var m = s.match(/^(\d{4})-(\d{1,2})-(\d{1,2})$/);
   return m ? (m[1] + "-" + ("0"+m[2]).slice(-2) + "-" + ("0"+m[3]).slice(-2)) : s;

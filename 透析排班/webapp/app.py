@@ -78,6 +78,17 @@
     分頁 — 改雙向修正
     【低】稽核歷史同步會把「草稿」「意見-」開頭的特殊列跟正常月份一起重複疊加 — 同步
     前先過濾掉這兩種
+  • v3.42（2026-08-01）休診日單一來源（接續包第二十三節待辦#17，架構決策已由使用者拍板
+    「要有同步機制、不是只加交叉檢查」）：過年/連假清單原本有兩份各自維護——
+    webapp/休診日.csv（排班.py prev_treat 算「印藥水日」用）與 藥水小幫手.gs 的
+    EXTRA_HOLIDAYS 陣列（prevWorkday_ 算「LINE 提醒日」用）。改一邊不會同步到另一邊，
+    兩邊對不上就會讓「排出來的印藥水日」跟「LINE 通知的日期」差一天（跟 v5.8 修掉的
+    off-by-one 同一類，只是兩份剛好都還是空的所以沒爆）。
+    改法：試算表新增「休診日」分頁當唯一來源，.gs 的 isWorkday_ 改讀該分頁（含執行期
+    快取＋日期型別正規化），app.py 新增 getHolidays/setHolidays，排班/稽核執行前把雲端
+    休診日當 config_override 餵進去（雲端優先、本機 CSV 只當讀不到時的保底且會跳警告），
+    並在「📊 統計管理」新增「🗓 休診日」分頁供玉繡直接編輯。
+    ⚠ .gs 要手動「部署→管理部署→新版本」到 v6.1 才會生效。
     尚未修：GAS端 pushLine_() 沒檢查LINE API回應碼(#14)、補發提醒文案沿用「今天」用詞
     不夠精確(#16)、休診日在CSV跟.gs的EXTRA_HOLIDAYS重複維護沒有同步機制(#17，需要先
     跟使用者確認架構怎麼改，不是單純bug)。
@@ -533,6 +544,109 @@ def save_members_cloud(df):
     except Exception:
         return False
 
+# ── 休診日：雲端「休診日」分頁是唯一來源（v3.42）────────────────
+# 過年/連假這種「沒診、不上班」的日子，本來有兩份各自維護的清單：
+#   ① webapp/休診日.csv        → 排班.py 的 prev_treat()，決定「印藥水日」往前推幾天
+#   ② 藥水小幫手.gs 的 EXTRA_HOLIDAYS 陣列 → prevWorkday_()，決定「LINE 提醒日」往前推
+# 改一邊不會同步到另一邊，兩邊一旦對不上，排班算出來的印藥水日跟 LINE 通知的日期
+# 就會差一天——跟 v5.8 修掉的 off-by-one 是同一類災情，只是兩份清單目前剛好都是空的
+# 所以還沒爆發。v3.42 起改成雲端「休診日」分頁當唯一來源，兩邊都讀它。
+def fetch_holidays_cloud():
+    """讀雲端「休診日」分頁 → (DataFrame[日期,說明], 錯誤訊息)。
+
+    (df, "")   成功。⚠ df 可能是空的——「雲端目前沒有登記任何休診日」本身就是有效
+               答案，**不可以**當成失敗而改用本機 CSV，否則又變回兩份清單各自為政。
+    (None, msg) 真的讀不到（沒設定 URL/Secret、網路失敗、或 Apps Script 還停在
+               v6.0 以前、不認得 getHolidays 這個 action）。
+    """
+    if not APPS_SCRIPT_URL or not WRITE_SECRET:
+        return None, "未設定 APPS_SCRIPT_URL / WRITE_SECRET"
+    try:
+        resp = requests.post(APPS_SCRIPT_URL,
+                             json={"action": "getHolidays", "secret": WRITE_SECRET},
+                             timeout=20)
+        d = resp.json()
+        if not d.get("ok"):
+            err = str(d.get("error", "GAS 回傳失敗"))
+            if "unknown action" in err:
+                err = ("Apps Script 還沒部署 v6.1（不認得 getHolidays）。"
+                       "請把 藥水小幫手_完整版.gs 最新版貼進編輯器後「部署→管理部署→新版本」。")
+            return None, err
+        rows = d.get("rows") or []
+        if len(rows) < 1:
+            return pd.DataFrame(columns=["日期", "說明"]), ""
+        hdr = [str(x).strip() for x in rows[0]]
+        out = []
+        for r in rows[1:]:
+            # Sheets 會把日期存成日期型別，GAS 序列化成 UTC ISO 字串（見 gs_date_to_ymd
+            # 的說明），直接截前 10 碼會少一天，一律走同一支轉換函式。
+            ymd = gs_date_to_ymd(r[0]) if len(r) > 0 else ""
+            memo = str(r[1]).strip() if len(r) > 1 else ""
+            if str(ymd).strip():
+                out.append({"日期": str(ymd).strip(), "說明": memo})
+        return pd.DataFrame(out, columns=["日期", "說明"]), ""
+    except Exception as _e:
+        return None, str(_e)
+
+HOLIDAY_RE = re.compile(r"^\d{4}-\d{2}-\d{2}$")
+
+def fetch_holidays_as_csv():
+    """雲端休診日 → 休診日.csv bytes（給 config_override 注入 排班.py/稽核.py）。
+
+    回傳 (csv_bytes, 錯誤訊息)；讀不到時 csv_bytes 為 None，呼叫端要顯示警告
+    （不要靜默改用本機備份，那正是這次要根治的問題）。
+    """
+    df, err = fetch_holidays_cloud()
+    if df is None:
+        return None, err
+    buf = io.StringIO()
+    buf.write("日期,說明\n")
+    bad = []
+    for _, r in df.iterrows():
+        ymd = str(r.get("日期", "")).strip()
+        if not ymd: continue
+        if not HOLIDAY_RE.match(ymd):
+            bad.append(ymd); continue        # 格式不對就不要餵進去，排班.py 也只會警告後略過
+        memo = str(r.get("說明", "")).replace(",", "，").replace("\n", " ").strip()
+        buf.write(f"{ymd},{memo}\n")
+    warn = f"雲端休診日有 {len(bad)} 筆格式不對已略過：{'、'.join(bad)}" if bad else ""
+    return buf.getvalue().encode("utf-8-sig"), warn
+
+def save_holidays_cloud(df):
+    """把休診日 DataFrame 存回雲端「休診日」分頁 → (ok, 寫入筆數, 錯誤訊息)。
+
+    整批取代（不是「只補不蓋」）——休診日跟組員名單一樣，真的會需要「刪除」
+    （例如原本排定的補班日取消），只補不蓋會讓刪掉的日子復活。防呆改成走
+    「表格編輯前一定先讀雲端現況」＋「本機 CSV 只有雲端全空時才能上傳」。
+    """
+    if not APPS_SCRIPT_URL or not WRITE_SECRET:
+        return False, 0, "未設定 APPS_SCRIPT_URL / WRITE_SECRET"
+    try:
+        rows, bad = [], []
+        for _, r in df.iterrows():
+            ymd = str(r.get("日期", "")).strip()
+            if not ymd: continue
+            if not HOLIDAY_RE.match(ymd):
+                bad.append(ymd); continue
+            rows.append([ymd, str(r.get("說明", "")).strip()])
+        if bad:
+            return False, 0, ("日期格式要像 2026-01-01（西元-月-日，補零）。"
+                              f"這幾筆不合格式，沒有存出去：{'、'.join(bad)}")
+        resp = requests.post(APPS_SCRIPT_URL,
+                             json={"action": "setHolidays", "secret": WRITE_SECRET,
+                                   "rows": rows},
+                             timeout=20)
+        d = resp.json()
+        if resp.ok and d.get("ok", False):
+            return True, len(rows), ""
+        err = str(d.get("error", "GAS 回傳失敗"))
+        if "unknown action" in err:
+            err = ("Apps Script 還沒部署 v6.1（不認得 setHolidays）。"
+                   "請把 藥水小幫手_完整版.gs 最新版貼進編輯器後「部署→管理部署→新版本」。")
+        return False, 0, err
+    except Exception as _e:
+        return False, 0, str(_e)
+
 def fetch_audit_stats():
     """從 GS 稽核歷史彙總每人稽核/休次數 → DataFrame，或 None。"""
     if not APPS_SCRIPT_URL or not WRITE_SECRET: return None
@@ -864,7 +978,7 @@ def _build_line_txt(rows, disp_df=None):
 
 
 # ── 💬 意見回饋：借用稽核歷史（特殊鍵「意見-時間」）存放，不動 LINE 程式 ──
-APP_VER = "v3.41"
+APP_VER = "v3.42"
 FEEDBACK_PREFIX = "意見-"
 
 def push_feedback(step, detail, expect, urgency, who):
@@ -1175,7 +1289,7 @@ if TEST_MODE:
 
 st.title("💊 透析藥水排班")
 st.caption("上傳班表 Excel → 出名單(表格)。可直接點格子改人名。跨區標 🔺。")
-st.caption("🟢 版本 v3.41（獨立稽查13項修復：①LINE群組公告日期每格獨立算 ②雙印姓名污染濾除 ③稽核存回雲端補防呆 ④稽核第二班門檻/組別限制修正 ⑤稽核月份改民國格式對齊歷史 ⑥強制可印支援簡稱＋失效跳警告 ⑦雲端草稿時間統一轉換 ⑧稽核人工改派同步回歷史 ⑨產生定案改逐格查真實年份，修正跨年整週共用年份出錯）· 2026-08-01")
+st.caption("🟢 版本 v3.42（休診日改為單一來源：過年/連假清單過去在 休診日.csv 與 LINE小幫手.gs 各存一份、改一邊不同步，兩邊對不上就會讓「排出來的印藥水日」跟「LINE通知的日期」差一天。現在統一存在雲端「休診日」分頁，排班演算法與 LINE 提醒都讀同一份，可在「📊 統計管理 → 🗓 休診日」直接編輯）· 2026-08-01")
 
 # ── 📊 首頁顯眼統計＋本機備份落後提醒（2026-07-20加，v3.38）─────────────
 # 目的：2026-07-19~20那次「7/20資料被同步按鈕蓋掉」事件，玉繡是三週後才發現雲端資料
@@ -1482,6 +1596,17 @@ if mode.startswith("🟦"):
                     mem_csv = fetch_members_as_csv()
                     if mem_csv: config_overrides["組員名單.csv"] = mem_csv
                     else: st.warning("⚠️ 讀不到雲端『組員名單』，改用本機備份（若最近有人入組/退組可能不準）。")
+                    # v3.42：休診日改吃雲端「休診日」分頁（跟 LINE 小幫手 prevWorkday_
+                    # 讀的是同一份），確保「排班算的印藥水日」跟「LINE 提醒的日期」
+                    # 用同一組連假清單。讀不到要明講，不能靜默用本機備份——那正是
+                    # 這次要根治的「兩份清單各自維護」問題。
+                    hol_csv, hol_err = fetch_holidays_as_csv()
+                    if hol_csv is not None:
+                        config_overrides["休診日.csv"] = hol_csv
+                        if hol_err: st.warning(f"⚠️ {hol_err}（請到「📊 統計管理 → 🗓 休診日」修正）")
+                    else:
+                        st.warning(f"⚠️ 讀不到雲端『休診日』（{hol_err}），這次改用本機 休診日.csv。"
+                                   "如果最近有新增過年/連假，排出來的印藥水日可能跟 LINE 提醒對不上。")
                 # 強制可印人員
                 force_names = [n.strip() for n in force_names_raw.splitlines() if n.strip()]
                 if force_names:
@@ -1845,6 +1970,12 @@ else:
                     mem_csv = fetch_members_as_csv()
                     if mem_csv: config_overrides["組員名單.csv"] = mem_csv
                     else: st.warning("⚠️ 讀不到雲端『組員名單』，改用本機備份（若最近有人入組/退組可能不準）。")
+                    # 稽核.py 目前 load_holidays() 有讀、但演算法還沒用到 HOLIDAYS，
+                    # 所以讀不到也不影響結果、不吵使用者。仍然一起注入，是為了讓
+                    # 「休診日只有雲端一個來源」這件事對三個消費者（排班.py／稽核.py／
+                    # .gs）都成立，將來稽核真的用到時不會又冒出第二份清單。
+                    _hol_csv, _ = fetch_holidays_as_csv()
+                    if _hol_csv is not None: config_overrides["休診日.csv"] = _hol_csv
                 out, files, updated_hist = run_tool(
                     "稽核.py", None, ["--quick", month_key], config_overrides)
                 st.session_state["ak"] = (out, files, updated_hist)
@@ -1891,6 +2022,9 @@ else:
                         mem_csv = fetch_members_as_csv()
                         if mem_csv: config_overrides["組員名單.csv"] = mem_csv
                         else: st.warning("⚠️ 讀不到雲端『組員名單』，改用本機備份（若最近有人入組/退組可能不準）。")
+                        # 同上：稽核演算法目前沒用到休診日，一起注入是為了維持單一來源
+                        _hol_csv, _ = fetch_holidays_as_csv()
+                        if _hol_csv is not None: config_overrides["休診日.csv"] = _hol_csv
                     out, files, updated_hist = run_tool(
                         "稽核.py", data, [month_key], config_overrides)
                     st.session_state["ak"] = (out, files, updated_hist)
@@ -1958,7 +2092,8 @@ else:
 # ═══════════════════════ 統計管理 ═══════════════════════
 if mode.startswith("📊"):
     st.markdown("#### 📊 統計管理")
-    tab1, tab2, tab3, tab4 = st.tabs(["📋 印藥水統計", "📋 稽核統計", "📋 最新稽核名單", "👥 組員名單"])
+    tab1, tab2, tab3, tab4, tab5 = st.tabs(
+        ["📋 印藥水統計", "📋 稽核統計", "📋 最新稽核名單", "👥 組員名單", "🗓 休診日"])
 
     # ── Tab1：印藥水統計 ──────────────────────────────────
     with tab1:
@@ -2252,3 +2387,93 @@ if mode.startswith("📊"):
                         st.balloons()
                     else:
                         st.error("儲存失敗，請稍後再試。")
+
+    # ── Tab5：休診日（v3.42，單一來源）──────────────────────
+    with tab5:
+        st.caption("過年、國定假日這種「沒診、不上班」的日子。**週日不用列，程式自動跳過。**")
+        st.info("🔗 這份清單是**唯一來源**：排班演算法算「印藥水日」往前推幾天，"
+                "跟 LINE 小幫手算「提醒日」往前推幾天，都讀這一份。"
+                "在這裡改一次，兩邊自動一致，不會再出現「排的日期」跟「LINE 通知的日期」對不上。")
+        _h1, _h2 = st.columns(2)
+        if _h1.button("🔄 讀取", type="primary", key="hol_load"):
+            with st.spinner("讀取中…"):
+                _hdf, _herr = fetch_holidays_cloud()
+            st.session_state["holidays_cloud"] = _hdf if _hdf is not None else ("err:" + _herr)
+        if _h2.button("📤 從本機 CSV 同步到雲端", key="hol_sync_local",
+                      help="只在雲端「休診日」分頁還完全是空的時候可用（初始化）。"
+                           "雲端已經有資料後，這顆按鈕不會覆蓋，請直接在下方表格編輯後存回雲端。"):
+            # 比照 v3.40 組員名單的作法：休診日跟排班/稽核歷史不同，真的會需要「刪除」
+            # （例如原本排的補班日取消了），不能用 v3.38「只補雲端沒有的」合併邏輯，
+            # 否則刪掉的日子會被本機舊 CSV 救回來。所以只允許在雲端全空時初始化。
+            _hchk, _herr2 = fetch_holidays_cloud()
+            if _hchk is None:
+                st.error(f"讀不到雲端休診日，先不動作以免蓋掉資料：{_herr2}")
+            elif not _hchk.empty:
+                st.error(f"雲端已經有 {len(_hchk)} 筆休診日，為避免蓋掉雲端現況，這顆按鈕已停用。"
+                         "請按上面「🔄 讀取」載入後，在下方表格直接新增/刪除，再按「💾 存回雲端」。")
+            else:
+                _lh = os.path.join(HERE, "休診日.csv")
+                if not os.path.exists(_lh):
+                    st.error("找不到本機 休診日.csv。")
+                else:
+                    try:
+                        _ldf = pd.read_csv(_lh, encoding="utf-8-sig", dtype=str).fillna("")
+                        if "日期" not in _ldf.columns:
+                            st.error("本機 休診日.csv 沒有「日期」欄位。")
+                        elif _ldf.empty:
+                            st.info("本機 休診日.csv 也是空的，沒有東西可以同步"
+                                    "（代表目前確實沒有登記任何休診日，這是正常狀態）。")
+                        else:
+                            if "說明" not in _ldf.columns: _ldf["說明"] = ""
+                            _ok, _n, _e = save_holidays_cloud(_ldf[["日期", "說明"]])
+                            if _ok:
+                                st.success(f"✅ 已同步 {_n} 筆休診日到雲端！")
+                                st.session_state["holidays_cloud"] = _ldf[["日期", "說明"]].reset_index(drop=True)
+                            else:
+                                st.error(f"同步失敗：{_e}")
+                    except Exception as _e:
+                        st.error(f"讀取本機 CSV 失敗：{_e}")
+
+        _hstate = st.session_state.get("holidays_cloud")
+        if _hstate is None:
+            st.info("按「🔄 讀取」載入雲端休診日。")
+        elif isinstance(_hstate, str):
+            st.error("讀取失敗：" + _hstate[4:])
+            st.caption("⚠️ 讀不到的期間，排班會退回用本機 休診日.csv，"
+                       "跟 LINE 小幫手讀的雲端分頁可能不一致——請先修好再排班。")
+        else:
+            _hdf = _hstate.copy()
+            if _hdf.empty:
+                st.warning("雲端目前沒有登記任何休診日。若今年有過年/連假要跳過，請在下面新增。")
+                _hdf = pd.DataFrame(columns=["日期", "說明"])
+            else:
+                st.caption(f"共 {len(_hdf)} 天｜點最下方 ➕ 新增一列，或把整列清空來刪除")
+            _edited_h = st.data_editor(
+                _hdf, num_rows="dynamic", use_container_width=True, hide_index=True,
+                column_config={
+                    "日期": st.column_config.TextColumn(
+                        "日期（YYYY-MM-DD）", help="一定要打成 2026-01-01 這種格式（西元、月日補零）"),
+                    "說明": st.column_config.TextColumn("說明（例：春節）"),
+                }, key="hol_edit")
+            # 存出去之前先自己檢查格式，不要等 GAS 那邊靜默吃掉
+            _bad = [str(v).strip() for v in _edited_h["日期"].tolist()
+                    if str(v).strip() and not HOLIDAY_RE.match(str(v).strip())]
+            if _bad:
+                st.error("這幾筆日期格式不對（要 2026-01-01 這種）：" + "、".join(_bad))
+            st.download_button("⬇️ 下載休診日 CSV", _edited_h.to_csv(index=False).encode("utf-8-sig"),
+                               file_name="休診日.csv", mime="text/csv", key="hol_dl")
+            if TEST_MODE:
+                if st.button("🧪 存回雲端（模擬）", key="hol_save_test"):
+                    st.info("🧪 測試模式：模擬儲存成功，沒有真的寫到雲端。")
+            elif APPS_SCRIPT_URL and WRITE_SECRET:
+                if st.button("💾 存回雲端", type="primary", key="hol_save", disabled=bool(_bad)):
+                    with st.spinner("儲存中…"):
+                        _ok, _n, _e = save_holidays_cloud(_edited_h)
+                    if _ok:
+                        st.success(f"✅ 已存回雲端（{_n} 天）！排班演算法與 LINE 小幫手都會立刻用新清單。")
+                        st.session_state["holidays_cloud"] = _edited_h.reset_index(drop=True)
+                        st.balloons()
+                    else:
+                        st.error(f"儲存失敗：{_e}")
+        st.caption("💡 repo 裡的 `休診日.csv` 從 v3.42 起只是**離線備份**（雲端讀不到時的保底），"
+                   "平常請一律在這一頁改，不要去改那個檔案。")
