@@ -247,6 +247,20 @@ def _area_of_month(card, month_status):
     if not cnt: return "未知"
     return max(cnt, key=cnt.get)
 
+def month_tag(yy, mm):
+    """月份鍵一律用**民國**格式（例：2026-07 → 115-07）。
+
+    v3.41 修正：舊版直接用西元 f"{yy}-{mm:02d}" 產生 tag，但 稽核紀錄.csv / 雲端
+    「稽核歷史」裡從 114-09 到 115-07 全部都是民國格式。兩邊對不起來造成兩個問題：
+      ① load_history(skip_month="2026-07") 比不到任何一列 → 本月已記錄的結果沒被
+         排除、直接混進「歷史」重算，公平分數實測偏差達 ±2（足以改變誰被排到）
+      ② 更嚴重：下次送雲端會用 "2026-07" 當 key，於是同一個月在雲端同時存在
+         "115-07" 與 "2026-07" 兩把鍵，writeHistory_ 只會刪掉同名那把 →
+         **每個人被計算兩次**
+    改成統一輸出民國，跟既有資料一致，不需要動到雲端任何一列（鐵律二）。
+    """
+    return f"{int(yy) - 1911}-{int(mm):02d}"
+
 def load_history(skip_month=None):
     cnt={}; rest={}
     for r in _read_rows(F_HISTORY):
@@ -460,7 +474,7 @@ def run():
         print(f"ℹ 套用班型覆蓋：{len(overrides)} 人")
 
     info=classify(members, month_status, fw_status, overrides)
-    tag=f"{yy}-{mm:02d}"
+    tag=month_tag(yy, mm)
     hist_cnt,hist_rest=load_history(skip_month=tag)
     slots,assigned,used,crossed=assign(members, info, hist_cnt, hist_rest)
     emit(members, info, slots, assigned, used, crossed, hist_cnt, hist_rest, tag,
@@ -477,7 +491,7 @@ def run_quick(month_arg):
         m=re.search(r"(\d{4})\D?(\d{1,2})", month_arg); yy,mm=int(m.group(1)),int(m.group(2))
     else:
         t=date.today(); yy,mm=t.year,t.month
-    tag=f"{yy}-{mm:02d}"
+    tag=month_tag(yy, mm)
 
     members=[]; info={}; seen=set()
     for r in rows:

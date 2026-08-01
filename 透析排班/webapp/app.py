@@ -47,6 +47,40 @@
     稽核歷史不同：真的會有人被移除（離職/退組），不能沿用v3.38「只補missing」的合併
     邏輯（會把雲端正確移除的人誤救回來）。改成更嚴格：只有雲端目前是空的（真正的初始化）
     才允許這顆按鈕動作，雲端已有名單一律拒絕並提示改用下方表格編輯＋存回雲端。
+  • v3.41：派獨立agent全面稽查出17個bug（5高7中5低），逐一實測資料驗證後修復13個
+    （app.py + 排班.py + 稽核.py）：
+    【高】LINE群組公告日期每週錯2-3人 — 每欄只取第一區的印藥水日當整欄日期，改成每
+    格各自帶自己的印藥水日（實測4週48人次：修正前錯9次→修正後0次）
+    【高】雙印時姓名被污染成「XXX雙印」送上雲端，導致收不到提醒/公平歷史算錯/公告
+    同時列印與休 — 產生定案 + _build_line_txt 都補上濾除
+    【高】稽核統計「存回雲端」沒有防呆，補上跟排班統計一樣的警告勾選框
+    【高】稽核第二班白/夜門檻算錯（allow_night_band2 拿 n_night 當基準）— 改成用
+    「總白班格數」判斷，實測7月真實資料從1格排不出→0格
+    【高】稽核 W135/W246 組別限制形同虛設（cands() 漏帶 g 參數）— 補上 group_ok() 檢查
+    ＋排不出時自動放寬並跳警告
+    【中】稽核月份key用西元(2026-07)、稽核紀錄.csv卻是民國(115-07)，skip_month永遠對
+    不上、公平分數悄悄算錯 — 統一改民國，app.py/稽核.py兩邊都修，連帶修正
+    fetch_last_audit_prefill() 抓「上次稽核月」的排序bug
+    【中】稽核「第一週」判斷邏輯選錯月份 — 改成看該週落在目標月的天數最多者
+    【中】強制可印只認得完整全名，玉繡輸入簡稱查無此人時完全靜默失效 — 改成後綴比對
+    ＋比對不到時明確跳警告列出哪幾筆沒生效
+    【中】雲端草稿UTC時間字串截前10碼取到錯誤日期（3處同樣手寫 _clean_dt，跨日/跨年
+    都會錯）— 統一改共用 gs_date_to_ymd()，已測5組含跨年案例
+    【中】排班/稽核歷史讀取失敗時靜默改用本機舊備份算分數，畫面完全無提示 — 3處呼叫
+    點補上明確錯誤/警告訊息
+    【中】稽核人工改派沒同步回歷史紀錄，下次公平分數對不上玉繡實際決定 — 新增
+    build_corrected_audit_history()，仿照排班歷史既有做法
+    【中】「產生定案」整週共用同一個猜測年份，跨年那週（如12月最後一週+1月第一週）
+    後半段月份年份一定算錯 — 改成從當次產生的雲端貼上CSV建「每格自己的年份」對照表
+    （(區,月,日)→年），逐格查表不再整週共用；4週真實資料驗證0筆查表失敗，且跨年模擬
+    案例確認1/1、1/2從錯誤的去年改成正確的隔年
+    【低】_best_sheet_index 年份修正只做單向（假設分頁一定是未來），跨年後選到半年前
+    分頁 — 改雙向修正
+    【低】稽核歷史同步會把「草稿」「意見-」開頭的特殊列跟正常月份一起重複疊加 — 同步
+    前先過濾掉這兩種
+    尚未修：GAS端 pushLine_() 沒檢查LINE API回應碼(#14)、補發提醒文案沿用「今天」用詞
+    不夠精確(#16)、休診日在CSV跟.gs的EXTRA_HOLIDAYS重複維護沒有同步機制(#17，需要先
+    跟使用者確認架構怎麼改，不是單純bug)。
 """
 import os, io, re, csv, json, base64, hashlib, tempfile, shutil, subprocess, sys
 from datetime import date, datetime, timedelta
@@ -145,6 +179,29 @@ def year_from_cloud(files):
         except Exception: pass
     return pd.Timestamp.now().year
 
+def year_map_from_cloud(files):
+    """v3.41 修正 #13a：整週不能只用一個年份！
+    舊版 year_from_cloud() 只抓 CSV 第一列的年份當「整週共用」，如果這週剛好跨年
+    （例如 12月最後一週+1月第一週排在同一張表，或單週橫跨 12/29~1/4），
+    後面月份的格子年份一定會算錯（該是明年的被標成今年，或反過來）。
+    這支改成「每一格自己查」：排班.py 產生的『雲端貼上_*.csv』本來就有每一列真正的
+    印日期(含年)，這裡直接建 (區, 月, 日) → 年 的對照表，之後產生定案時逐格查表，
+    不再整週共用單一猜測值。"""
+    out = {}
+    _, b = pick(files, ".csv")
+    if b:
+        try:
+            d = pd.read_csv(io.BytesIO(b), encoding="utf-8-sig", dtype=str)
+            for _, row in d.iterrows():
+                ds = str(row.get("印日期", "")).strip()
+                m = re.match(r'(\d{4})-(\d{1,2})-(\d{1,2})', ds)
+                if not m: continue
+                area = str(row.get("區", "")).strip()
+                out[(area, int(m.group(2)), int(m.group(3)))] = int(m.group(1))
+        except Exception:
+            pass
+    return out
+
 
 # ── Fix3：自動選最接近今天的班表分頁 ─────────────────────
 def _best_sheet_index(sheets):
@@ -174,8 +231,15 @@ def _best_sheet_index(sheets):
                 if 1 <= mo <= 12 and 1 <= dy <= 31:
                     yr = today.year
                     d = date(yr, mo, dy)
+                    # 跨年修正要做**雙向**。v3.41：舊版只有「太舊 → 加一年」，
+                    # 少了反向的「太新 → 減一年」，導致例如今天是 2027-01-02 時，
+                    # 分頁「1228~0103」會被算成 2027-12-28（delta 360）而不是
+                    # 2026-12-28（delta 5），預設就選錯分頁。
+                    # （_fmt_week 在下方本來就是雙向寫法，兩邊原本不一致。）
                     if (today - d).days > 180:
                         d = date(yr + 1, mo, dy)
+                    elif (d - today).days > 180:
+                        d = date(yr - 1, mo, dy)
                     delta = abs((d - today).days)
                     if best_delta is None or delta < best_delta:
                         best_delta = delta; best_idx = i
@@ -224,11 +288,20 @@ def fetch_last_audit_prefill():
         if len(rows) < 2: return {}
         hdr = [str(x).strip() for x in rows[0]]
         iM, iN, iP = hdr.index("月份"), hdr.index("姓名"), hdr.index("位置")
-        # 只看正常的「YYYY-MM」月份，跳過草稿那筆
+        # 只看正常的月份鍵，跳過草稿/意見那些特殊列。
+        # v3.41：舊版寫死 ^\d{4}-\d{2}$（只吃西元4位數），但實際資料全是民國3位數
+        # （114-09 ~ 115-07），永遠比不中 → 「快速點選會帶出上個月設定」這功能其實
+        # 一直是靜默失效的，玉繡每個月都得從頭點。改成民國/西元都接受。
         months = [str(r[iM]).strip() for r in rows[1:]
-                  if re.match(r"^\d{4}-\d{2}$", str(r[iM]).strip())]
+                  if re.match(r"^\d{3,4}-\d{2}$", str(r[iM]).strip())]
         if not months: return {}
-        last = max(months)
+        # 民國(115-07)與西元(2026-07)若混在一起，直接 max() 會用字串比而排錯
+        # （"2">"1" 會讓 2026-07 永遠勝過 115-12），先正規化成西元再取最大
+        def _to_ce(k):
+            y, m = k.split("-")
+            y = int(y)
+            return (y + 1911 if y < 1911 else y, int(m))
+        last = max(months, key=_to_ce)
         pf = {}
         for r in rows[1:]:
             if str(r[iM]).strip() != last: continue
@@ -612,6 +685,13 @@ def sync_audit_history_from_csv():
         missing = df_local[~df_local["月份"].astype(str).isin(cloud_months)]
         if missing.empty:
             return True, 0, ""
+        # v3.41：送出前先把「草稿」與「意見-」那些特殊列濾掉。GAS 端的
+        # setAllAuditHistory 本來就會自己保留這些列（keptAud），我們這邊若又原封不動
+        # 送回去，同一批草稿/意見會被寫兩次 → 列數翻倍（實測按1次：草稿1→2筆、
+        # 意見1→2筆）。不會掉資料，但會累積雜訊、回饋清單出現重複。
+        if cloud_df is not None and not cloud_df.empty:
+            _mon = cloud_df["月份"].astype(str)
+            cloud_df = cloud_df[~(_mon.eq("草稿") | _mon.str.startswith("意見-"))]
         combined = (pd.concat([cloud_df, missing], ignore_index=True)
                     if cloud_df is not None and not cloud_df.empty else missing)
         rows = [list(r) for _, r in combined.iterrows()]
@@ -784,7 +864,7 @@ def _build_line_txt(rows, disp_df=None):
 
 
 # ── 💬 意見回饋：借用稽核歷史（特殊鍵「意見-時間」）存放，不動 LINE 程式 ──
-APP_VER = "v3.40"
+APP_VER = "v3.41"
 FEEDBACK_PREFIX = "意見-"
 
 def push_feedback(step, detail, expect, urgency, who):
@@ -887,6 +967,54 @@ def build_corrected_history(cloud_rows, sheet_name, prev_hist_bytes):
 
     all_rows = existing + new_rows
     df_new = pd.DataFrame(all_rows, columns=headers)
+    return df_new.to_csv(index=False).encode("utf-8-sig")
+
+
+def build_corrected_audit_history(edited_ak, month_key, prev_hist_bytes):
+    """用玉繡實際改過的稽核名單（edited_ak）覆蓋 稽核.py 原排的歷史。
+
+    v3.41 新增。印藥水那邊早就有 build_corrected_history()（app.py 檔頭寫的
+    「Fix1：公平歷史學玉繡實際決定，而非程式原排」），但**稽核這邊從來沒做過**：
+    送出時 `ak_hist_b` 來自子行程原封不動的產出，而 LINE 通知用的是玉繡點格子改過的
+    `edited_ak`，兩者來源不同、中間沒有任何同步。結果就是玉繡把某格從 A 改成 B →
+    B 收到通知去稽核，雲端歷史卻記「A=稽核、B=休」，下個月 cost 對兩人各錯一格，
+    而且會**逐月累積**——這正是「玉繡實際排的跟系統差異越來越大」的其中一個來源。
+
+    edited_ak: DataFrame，欄位 區/組/班次/稽核者（稽核者可能帶「(跨區)」後綴）
+    prev_hist_bytes: 稽核.py 寫的 稽核紀錄_輸出.csv bytes（本月那批會被替換）
+    """
+    roster = _load_roster_names()          # {姓名: 卡號}
+    if not roster or edited_ak is None or edited_ak.empty:
+        return prev_hist_bytes             # 讀不到名單/沒有編輯結果 → 維持原版
+
+    headers = ["月份","卡號","姓名","狀態","位置"]
+    # 玉繡定案後，每個人實際被分配到的位置（區/組/班次）
+    pos_of = {}
+    try:
+        for _, r in edited_ak.iterrows():
+            nm = re.sub(r'\(.*?\)', '', str(r.get("稽核者",""))).strip()   # 去掉「(跨區)」
+            if not nm: continue
+            pos_of[nm] = f"{str(r.get('區','')).strip()}/{str(r.get('組','')).strip()}/{str(r.get('班次','')).strip()}"
+    except Exception:
+        return prev_hist_bytes             # 欄位對不上就別亂改，維持原版
+
+    # 讀舊歷史，移除本月（稽核.py 版），保留其他月
+    existing = []
+    if prev_hist_bytes:
+        try:
+            df_h = pd.read_csv(io.BytesIO(prev_hist_bytes), encoding="utf-8-sig",
+                               dtype=str, keep_default_na=False)
+            existing = df_h[df_h["月份"].astype(str) != str(month_key)].values.tolist()
+        except Exception: pass
+
+    new_rows = []
+    for name, card in roster.items():
+        if name in pos_of:
+            new_rows.append([month_key, card, name, "稽核", pos_of[name]])
+        else:
+            new_rows.append([month_key, card, name, "休", ""])
+
+    df_new = pd.DataFrame(existing + new_rows, columns=headers)
     return df_new.to_csv(index=False).encode("utf-8-sig")
 
 
@@ -1047,7 +1175,7 @@ if TEST_MODE:
 
 st.title("💊 透析藥水排班")
 st.caption("上傳班表 Excel → 出名單(表格)。可直接點格子改人名。跨區標 🔺。")
-st.caption("🟢 版本 v3.40（① 統計管理「同步本機CSV→雲端」改為只補雲端沒有的週次/月份 ② 首頁新增顯眼統計數字＋本機備份落後提醒 ③ 傳LINE群組文字改依印藥水日合併 ④ 組員名單同步按鈕改為雲端有名單就拒絕覆蓋）· 2026-07-20")
+st.caption("🟢 版本 v3.41（獨立稽查13項修復：①LINE群組公告日期每格獨立算 ②雙印姓名污染濾除 ③稽核存回雲端補防呆 ④稽核第二班門檻/組別限制修正 ⑤稽核月份改民國格式對齊歷史 ⑥強制可印支援簡稱＋失效跳警告 ⑦雲端草稿時間統一轉換 ⑧稽核人工改派同步回歷史 ⑨產生定案改逐格查真實年份，修正跨年整週共用年份出錯）· 2026-08-01")
 
 # ── 📊 首頁顯眼統計＋本機備份落後提醒（2026-07-20加，v3.38）─────────────
 # 目的：2026-07-19~20那次「7/20資料被同步按鈕蓋掉」事件，玉繡是三週後才發現雲端資料
@@ -1344,10 +1472,16 @@ if mode.startswith("🟦"):
             with st.spinner("讀取雲端歷史 + 排班中…"):
                 config_overrides = {}
                 if APPS_SCRIPT_URL and WRITE_SECRET:
+                    # v3.41：讀不到雲端資料時要明講。舊版 `if hist_csv:` 沒有 else，
+                    # 抓失敗就靜默改用 repo 裡那份「已知落後」的本機備份算公平分數，
+                    # 畫面完全沒提示（首頁自己都在警告本機備份比雲端舊）。
                     hist_csv = fetch_history_csv("getScheduleHistory")
                     if hist_csv: config_overrides["排班紀錄.csv"] = hist_csv
+                    else: st.error("⚠️ 讀不到雲端『排班歷史』，這次會改用本機舊備份算公平分數，"
+                                   "結果可能不準！請確認網路後重新排一次。")
                     mem_csv = fetch_members_as_csv()
                     if mem_csv: config_overrides["組員名單.csv"] = mem_csv
+                    else: st.warning("⚠️ 讀不到雲端『組員名單』，改用本機備份（若最近有人入組/退組可能不準）。")
                 # 強制可印人員
                 force_names = [n.strip() for n in force_names_raw.splitlines() if n.strip()]
                 if force_names:
@@ -1366,7 +1500,8 @@ if mode.startswith("🟦"):
                 st.error("沒產生名單，請看下方訊息。"); st.code(out); st.stop()
             grid  = pd.read_excel(io.BytesIO(b), index_col=0).fillna("")
             names, dates, marks = parse_grid(grid)
-            yr    = year_from_cloud(files)
+            yr     = year_from_cloud(files)      # 整週猜測值，僅供查不到時退回
+            yr_map = year_map_from_cloud(files)   # v3.41：每一格自己的真實年份
 
             # 自動套回上次定案的修改（如顏凰任→張雅雯），避免重排後又要重改
             override_names = names.copy()
@@ -1455,8 +1590,11 @@ if mode.startswith("🟦"):
                             disp.loc[r,c] = f"{nm}({dt}印){mk}" if dt else f"{nm}{mk}"
                             if dt:
                                 mo,dy = dt.split("/")
+                                mo_i, dy_i = int(mo), int(dy)
+                                # v3.41：先查每格真實年份表，查不到（例如手動改動導致對不上）才退回整週猜測值
+                                _row_yr = yr_map.get((r, mo_i, dy_i), yr)
                                 # 格式：[印日期, 區, 姓名, 🔺標記, 治療欄key]
-                                rows.append([f"{yr}-{int(mo):02d}-{int(dy):02d}", r, nm, mk, str(c)])
+                                rows.append([f"{_row_yr}-{mo_i:02d}-{dy_i:02d}", r, nm, mk, str(c)])
                         else:
                             disp.loc[r,c] = nm
                 rows.sort(key=lambda x:(x[0],x[1]))
@@ -1610,7 +1748,11 @@ else:
     c1, c2 = st.columns(2)
     yy = c1.number_input("年", 2024, 2100, 2026)
     mm = c2.number_input("月", 1, 12, pd.Timestamp.now().month)
-    month_key = f"{int(yy)}-{int(mm):02d}"
+    # v3.41：月份鍵一律用**民國**格式，跟 稽核.py 的 month_tag() 及雲端既有資料
+    # （114-09 ~ 115-07 全是民國）保持一致。舊版用西元 "2026-07"，會造成
+    # ①load_history 的 skip_month 比不到本月、本月結果混進歷史重算（實測公平分數偏差±2）
+    # ②送雲端時同一個月同時存在 "115-07" 與 "2026-07" 兩把鍵 → 每個人被計算兩次
+    month_key = f"{int(yy) - 1911}-{int(mm):02d}"
 
     if st.session_state.get("ak_month_key") != month_key:
         st.session_state.pop("ak_shifts", None)
@@ -1696,10 +1838,13 @@ else:
                 quick_csv = edited_q.to_csv(index=False).encode("utf-8-sig")
                 config_overrides = {"快速名冊.csv": quick_csv}
                 if APPS_SCRIPT_URL and WRITE_SECRET:
-                    hist_csv = fetch_history_csv("getAuditHistory")
+                    hist_csv = fetch_history_csv("getAuditHistory")   # v3.41：失敗要吵，不要靜默用舊備份
                     if hist_csv: config_overrides["稽核紀錄.csv"] = hist_csv
+                    else: st.error("⚠️ 讀不到雲端『稽核歷史』，這次會改用本機舊備份算公平分數，"
+                                   "結果可能不準！請確認網路後重新排一次。")
                     mem_csv = fetch_members_as_csv()
                     if mem_csv: config_overrides["組員名單.csv"] = mem_csv
+                    else: st.warning("⚠️ 讀不到雲端『組員名單』，改用本機備份（若最近有人入組/退組可能不準）。")
                 out, files, updated_hist = run_tool(
                     "稽核.py", None, ["--quick", month_key], config_overrides)
                 st.session_state["ak"] = (out, files, updated_hist)
@@ -1739,10 +1884,13 @@ else:
                     override_csv = override_df.to_csv(index=False).encode("utf-8-sig")
                     config_overrides = {"班型覆蓋.csv": override_csv}
                     if APPS_SCRIPT_URL and WRITE_SECRET:
-                        hist_csv = fetch_history_csv("getAuditHistory")
+                        hist_csv = fetch_history_csv("getAuditHistory")   # v3.41：失敗要吵
                         if hist_csv: config_overrides["稽核紀錄.csv"] = hist_csv
+                        else: st.error("⚠️ 讀不到雲端『稽核歷史』，這次會改用本機舊備份算公平分數，"
+                                       "結果可能不準！請確認網路後重新排一次。")
                         mem_csv = fetch_members_as_csv()
                         if mem_csv: config_overrides["組員名單.csv"] = mem_csv
+                        else: st.warning("⚠️ 讀不到雲端『組員名單』，改用本機備份（若最近有人入組/退組可能不準）。")
                     out, files, updated_hist = run_tool(
                         "稽核.py", data, [month_key], config_overrides)
                     st.session_state["ak"] = (out, files, updated_hist)
@@ -1770,6 +1918,9 @@ else:
             if st.button("🚀 送稽核結果到雲端", type="primary"):
                 with st.spinner("送出中，請稍候…"):
                     ak_hist_b = files.get("稽核紀錄_輸出.csv")
+                    # v3.41：先用玉繡實際改過的名單修正歷史，再送出（比照印藥水的 Fix1）。
+                    # 舊版直接送子行程原本的產出，玉繡手改的部分不會進歷史，公平輪序逐月累積誤差。
+                    ak_hist_b = build_corrected_audit_history(edited_ak, month_key, ak_hist_b)
                     ok_hist, n_hist, detail_hist = False, 0, "沒有稽核紀錄檔案可送"
                     if ak_hist_b:
                         ok_hist, n_hist, detail_hist = push_history("setAuditResult", ak_hist_b, month_key)
