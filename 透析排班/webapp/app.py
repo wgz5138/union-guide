@@ -89,9 +89,12 @@
     休診日當 config_override 餵進去（雲端優先、本機 CSV 只當讀不到時的保底且會跳警告），
     並在「📊 統計管理」新增「🗓 休診日」分頁供玉繡直接編輯。
     ⚠ .gs 要手動「部署→管理部署→新版本」到 v6.1 才會生效。
-    尚未修：GAS端 pushLine_() 沒檢查LINE API回應碼(#14)、補發提醒文案沿用「今天」用詞
-    不夠精確(#16)、休診日在CSV跟.gs的EXTRA_HOLIDAYS重複維護沒有同步機制(#17，需要先
-    跟使用者確認架構怎麼改，不是單純bug)。
+  • v3.43（2026-08-01）搭配 .gs v6.2：GAS 的 sendAuditNotice 現在會檢查 LINE API 回應碼，
+    把「真的沒送出去」的人回報在 failed/failedNames。app.py 這端接住並在畫面明確列出
+    「這幾位的 LINE 通知實際發送失敗，請改用其他方式告知」——以前 LINE 回 401/403/400
+    會被整個吞掉、畫面照樣顯示「已通知 N 人」，那幾個人其實根本沒收到。
+    （舊版 GAS 沒有這兩個欄位，取不到就當 0/空，不會壞。）
+    接續包第二十三節的 3 項待辦至此全部完成（#14/#16 在 .gs v6.2、#17 在 v3.42/v6.1）。
 """
 import os, io, re, csv, json, base64, hashlib, tempfile, shutil, subprocess, sys
 from datetime import date, datetime, timedelta
@@ -978,7 +981,7 @@ def _build_line_txt(rows, disp_df=None):
 
 
 # ── 💬 意見回饋：借用稽核歷史（特殊鍵「意見-時間」）存放，不動 LINE 程式 ──
-APP_VER = "v3.42"
+APP_VER = "v3.43"
 FEEDBACK_PREFIX = "意見-"
 
 def push_feedback(step, detail, expect, urgency, who):
@@ -1195,7 +1198,7 @@ def send_audit_notices(month_key, audit_df):
         group = str(row.get("組","")).strip()
         band  = str(row.get("班次","")).strip()
         notices.append({"name": name, "position": f"{area}/{group}/{band}"})
-    if not notices: return 0, 0
+    if not notices: return 0, 0, []
     try:
         resp = requests.post(APPS_SCRIPT_URL,
                              json={"action":"sendAuditNotice","secret":WRITE_SECRET,
@@ -1203,9 +1206,11 @@ def send_audit_notices(month_key, audit_df):
                              timeout=20)
         if resp.ok:
             d = resp.json()
-            return d.get("sent",0), d.get("miss",0)
+            # v3.43：GAS v6.2 起會檢查 LINE API 回應碼，把「真的沒送出去」的人另外
+            # 回報在 failed/failedNames（舊版 GAS 沒有這兩個欄位，取不到就當 0/空）。
+            return d.get("sent",0), d.get("miss",0), list(d.get("failedNames") or [])
     except Exception: pass
-    return 0, 0
+    return 0, 0, []
 
 
 # ── 月稽核 Stage1：快速偵測班型 ──────────────────────────
@@ -1289,7 +1294,7 @@ if TEST_MODE:
 
 st.title("💊 透析藥水排班")
 st.caption("上傳班表 Excel → 出名單(表格)。可直接點格子改人名。跨區標 🔺。")
-st.caption("🟢 版本 v3.42（休診日改為單一來源：過年/連假清單過去在 休診日.csv 與 LINE小幫手.gs 各存一份、改一邊不同步，兩邊對不上就會讓「排出來的印藥水日」跟「LINE通知的日期」差一天。現在統一存在雲端「休診日」分頁，排班演算法與 LINE 提醒都讀同一份，可在「📊 統計管理 → 🗓 休診日」直接編輯）· 2026-08-01")
+st.caption("🟢 版本 v3.43（①休診日改為單一來源：過年/連假清單過去在 休診日.csv 與 LINE小幫手.gs 各存一份、改一邊不同步，兩邊對不上就會讓「排出來的印藥水日」跟「LINE通知的日期」差一天。現在統一存在雲端「休診日」分頁，排班演算法與 LINE 提醒都讀同一份，可在「📊 統計管理 → 🗓 休診日」直接編輯 ②稽核 LINE 通知若實際發送失敗，畫面會明確列出是誰沒收到，不再只顯示「已通知N人」）· 2026-08-01")
 
 # ── 📊 首頁顯眼統計＋本機備份落後提醒（2026-07-20加，v3.38）─────────────
 # 目的：2026-07-19~20那次「7/20資料被同步按鈕蓋掉」事件，玉繡是三週後才發現雲端資料
@@ -2060,7 +2065,7 @@ else:
                         ok_hist, n_hist, detail_hist = push_history("setAuditResult", ak_hist_b, month_key)
 
                     # Fix2：LINE 通知每位稽核者
-                    sent, miss = send_audit_notices(month_key, edited_ak)
+                    sent, miss, failed_names = send_audit_notices(month_key, edited_ak)
 
                     if ok_hist:
                         st.success(f"🎉 稽核歷史已送到雲端（{month_key}，{n_hist} 筆），下個月公平輪序更準確。")
@@ -2071,6 +2076,12 @@ else:
                         st.balloons()
                     if miss > 0:
                         st.warning(f"⚠️ {miss} 人缺 userId，無法 LINE 通知（請確認「對照」分頁）。")
+                    if failed_names:
+                        # v3.43：以前 LINE API 回錯誤碼會被 GAS 整個吞掉、畫面照樣顯示
+                        # 「已通知 N 人」，這幾個人其實根本沒收到。現在會明確列出來。
+                        st.error(f"❌ 這 {len(failed_names)} 位的 LINE 通知**實際發送失敗**，"
+                                 f"請改用其他方式告知：{'、'.join(failed_names)}"
+                                 "（可能是對照表的 userId 失效，或 LINE 官方帳號額度／token 有問題）")
 
         st.download_button("⬇️ 下載稽核名單（已套用修改）",
                            edited_ak.to_csv(index=False).encode("utf-8-sig"),

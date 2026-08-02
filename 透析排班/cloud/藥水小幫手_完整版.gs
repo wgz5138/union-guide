@@ -1,6 +1,18 @@
 /**
- * 透析印藥水 LINE 小幫手 v6.1 — Apps Script
+ * 透析印藥水 LINE 小幫手 v6.2 — Apps Script
  * ════════════════════════════════════════════════════════
+ *  v6.2（2026-08-01）補完接續包第二十三節剩下的兩個 GAS 待辦：
+ *  【#14】pushLine_() 沒檢查 LINE API 回應碼：原本 muteHttpExceptions:true 把回應
+ *   整個吞掉、回傳值也沒人看，就算 LINE 回 401(token失效)/403(額度)/400(userId無效)，
+ *   程式一樣當成功、照樣寫「提醒紀錄」、照樣算 sent++。這會同時騙過三道防線：
+ *   ①同仁其實沒收到 ②提醒紀錄有假紀錄，dedup 之後永遠不會重試 ③v6.0 健康檢查看到
+ *   有紀錄就以為沒事、連玉繡都不會被通知。改成檢查 getResponseCode()，只有 2xx 算成功；
+ *   sendReminders 發送失敗就**不寫提醒紀錄**（下次執行自動重試、健康檢查也抓得到），
+ *   sendAuditNotice 把失敗人數與名字回傳給網頁，健康檢查那則也會在 log 標明有沒有送出去。
+ *  【#16】補發（catch-up）文案沿用「今天」用詞：印藥水日已經過去了才補發時，訊息照講
+ *   「⚠️ 今天 M/d 就要印」，但那個日期根本不是今天，同仁會看不懂或誤以為排錯。改成
+ *   印藥水日已過就講「⚠️ 補發通知：M/d 就要印…（這個日期已經過了），如果還沒印請盡快
+ *   處理」。提前提醒那一層維持原文案（那層的印藥水日一定還沒到，本來就沒有這個問題）。
  *  v6.1（2026-08-01）休診日改成「單一來源」：原本休診日有兩份各自維護的清單——
  *  webapp/休診日.csv（排班.py 的 prev_treat() 用，決定印藥水日往前推幾天）跟這支
  *  .gs 裡寫死的 EXTRA_HOLIDAYS 陣列（prevWorkday_() 用，決定 LINE 提醒往前推的
@@ -209,15 +221,20 @@ function doPost(e) {
     if (action === "sendAuditNotice") {
       var map2 = buildUserMap_(ss);
       var month = body.month || "";
-      var sent2 = 0, miss2 = 0;
+      var sent2 = 0, miss2 = 0, failed2 = 0, failedNames = [];
       (body.notices || []).forEach(function(n) {
         var uid3 = map2[n.name];
         if (!uid3) { Logger.log("缺 userId（稽核通知）：" + n.name); miss2++; return; }
-        pushLine_(uid3, "📋 " + month + " 你這個月負責【" + n.position + "】稽核藥水，請自行安排兩天進行稽核。🙏");
-        sent2++;
+        // v6.2（#14）：LINE 真的送失敗時要算成失敗、回報給網頁，不能一律 sent2++
+        if (pushLine_(uid3, "📋 " + month + " 你這個月負責【" + n.position + "】稽核藥水，請自行安排兩天進行稽核。🙏")) {
+          sent2++;
+        } else {
+          failed2++; failedNames.push(n.name);
+        }
       });
-      Logger.log("稽核通知：發 " + sent2 + " 人，缺 userId " + miss2 + " 人");
-      return jsonOut_({ok: true, sent: sent2, miss: miss2});
+      Logger.log("稽核通知：發 " + sent2 + " 人，缺 userId " + miss2 + " 人，LINE發送失敗 " + failed2 + " 人");
+      return jsonOut_({ok: true, sent: sent2, miss: miss2,
+                       failed: failed2, failedNames: failedNames});
     }
 
     if (action === "getLatestBanbiao") {
@@ -394,7 +411,7 @@ function sendReminders(catchUp) {
     sentKeys[ logRows[li][1] + "|" + logRows[li][2] + "|" + normDate_(logRows[li][3], tz) ] = true;
   }
 
-  var sent = 0, miss = 0, dup = 0;
+  var sent = 0, miss = 0, dup = 0, failed = 0;
   function flush_(todo, type, makeMsg) {
     for (var name in todo) {
       var info = todo[name];
@@ -405,18 +422,35 @@ function sendReminders(catchUp) {
       var md = Utilities.formatDate(parseYmd_(info.printStr), tz, "M/d");
       var zone = info.areas.join("、");
       var zpart = zone ? ("「" + zone + "」") : "";
-      pushLine_(uid2, makeMsg(md, zpart));
+      // v6.2（#16）：印藥水日已經過去了才補發的情況，文案要講清楚是補發，
+      // 不能照講「今天」——那個日期根本不是今天，同仁會看不懂或以為排錯。
+      var overdue = info.printStr < todayStr;
+      // v6.2（#14）：只有真的送成功才寫「提醒紀錄」。送失敗就不寫，讓下一次執行
+      // 自動重試，v6.0 健康檢查也才抓得到「這個人完全沒有紀錄」。
+      if (!pushLine_(uid2, makeMsg(md, zpart, overdue))) {
+        Logger.log("發送失敗，不寫提醒紀錄以便下次重試：" + type + "|" + name + "|" + info.printStr);
+        failed++;
+        continue;
+      }
       logSh.appendRow([todayStr, type, name, info.printStr, new Date()]);
       sentKeys[key] = true;
       sent++;
     }
   }
-  flush_(advance, "前一天", function(md, zpart) { return "🔔 記得 " + md + " 要印" + zpart + "藥水喔！🙏"; });
-  flush_(sameday, "當天",   function(md, zpart) { return "⚠️ 今天 " + md + " 就要印" + zpart + "藥水喔！別忘了 🙏"; });
+  flush_(advance, "前一天", function(md, zpart, overdue) {
+    // 提前提醒這一層的印藥水日一定還沒到（catchUp 只在 Pstr > todayStr 時歸到這層），
+    // 所以照原本的講法即可，overdue 不會是 true。
+    return "🔔 記得 " + md + " 要印" + zpart + "藥水喔！🙏";
+  });
+  flush_(sameday, "當天", function(md, zpart, overdue) {
+    return overdue
+      ? "⚠️ 補發通知：" + md + " 就要印" + zpart + "藥水（這個日期已經過了），如果還沒印請盡快處理 🙏"
+      : "⚠️ 今天 " + md + " 就要印" + zpart + "藥水喔！別忘了 🙏";
+  });
 
   Logger.log((catchUp ? "[補發]" : "[固定排程]") + "提醒完成：提前 " + Object.keys(advance).length + " 人、當天 "
              + Object.keys(sameday).length + " 人，實發 " + sent + " 則，已發過跳過 " + dup
-             + " 則，缺 userId " + miss + " 次（今天 " + todayStr + "）");
+             + " 則，缺 userId " + miss + " 次，LINE發送失敗 " + failed + " 則（今天 " + todayStr + "）");
 
   // v6.0：主動健康檢查，發現有人完全沒收到提醒就直接通知玉繡，不用等同仁自己反映
   try { checkMissedReminders_(ss, tz, todayStr, sentKeys, map); } catch (e) { Logger.log("健康檢查失敗：" + e); }
@@ -461,11 +495,15 @@ function checkMissedReminders_(ss, tz, todayStr, sentKeysAll, map) {
 
   var adminUid = map["邱玉繡"];
   if (!adminUid) { Logger.log("健康檢查發現漏發但找不到玉繡的userId：" + missed.join("、")); return; }
-  pushLine_(adminUid,
+  var notified = pushLine_(adminUid,
     "⚠️ 小幫手健康檢查：以下人員的印藥水提醒完全沒有任何發送紀錄，麻煩人工確認一下——\n"
     + missed.join("、")
     + "\n（可能原因：本週名單送達時間晚於提醒窗口、缺userId對照、或發送當下出錯）");
-  Logger.log("健康檢查：發現 " + missed.length + " 人完全沒收到提醒，已通知玉繡：" + missed.join("、"));
+  // v6.2（#14）：連這則警告都送不出去，代表 LINE 端整個有問題（token 失效之類），
+  // 一定要在 log 講清楚，否則會變成「系統以為通知過了、其實沒人知道」的雙重靜默。
+  Logger.log("健康檢查：發現 " + missed.length + " 人完全沒收到提醒："
+             + missed.join("、")
+             + (notified ? " → 已通知玉繡" : " → ⚠️ 連通知玉繡的 LINE 訊息都發送失敗！"));
 }
 
 
@@ -560,11 +598,30 @@ function normDate_(v, tz) {
   var m = s.match(/^(\d{4})-(\d{1,2})-(\d{1,2})$/);
   return m ? (m[1] + "-" + ("0"+m[2]).slice(-2) + "-" + ("0"+m[3]).slice(-2)) : s;
 }
+/* v6.2 修正（接續包第二十三節待辦#14）：原本 muteHttpExceptions:true 把 LINE API 的
+ * 回應整個吞掉，回傳值也沒人看——就算 LINE 回 401(token失效)、403(額度用完)、
+ * 400(userId 無效)，程式一樣當作發送成功、照樣寫進「提醒紀錄」、照樣算 sent++。
+ * 後果很嚴重：①同仁其實沒收到 ②「提醒紀錄」有假紀錄，dedup 之後永遠不會重試
+ * ③v6.0 的健康檢查看到有紀錄就以為沒事，連玉繡都不會被通知——三道防線同時被騙過。
+ * 改成檢查 getResponseCode()，只有 2xx 才算成功；失敗回 false 並記下狀態碼與回應內容，
+ * 由呼叫端決定「不要寫紀錄、算成失敗」，這樣下一次執行會自動重試、健康檢查也抓得到。
+ * 回傳：true=送成功、false=沒送成功。
+ */
 function pushLine_(uid, text) {
-  UrlFetchApp.fetch("https://api.line.me/v2/bot/message/push", {
-    method: "post", contentType: "application/json",
-    headers: {"Authorization": "Bearer " + LINE_TOKEN},
-    payload: JSON.stringify({to: uid, messages: [{type: "text", text: text}]}),
-    muteHttpExceptions: true
-  });
+  try {
+    var resp = UrlFetchApp.fetch("https://api.line.me/v2/bot/message/push", {
+      method: "post", contentType: "application/json",
+      headers: {"Authorization": "Bearer " + LINE_TOKEN},
+      payload: JSON.stringify({to: uid, messages: [{type: "text", text: text}]}),
+      muteHttpExceptions: true
+    });
+    var code = resp.getResponseCode();
+    if (code >= 200 && code < 300) return true;
+    Logger.log("LINE 發送失敗 code=" + code + " uid=" + uid
+               + " 回應=" + String(resp.getContentText()).slice(0, 300));
+    return false;
+  } catch (e) {
+    Logger.log("LINE 發送例外 uid=" + uid + "：" + e);
+    return false;
+  }
 }
