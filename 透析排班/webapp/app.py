@@ -89,6 +89,19 @@
     休診日當 config_override 餵進去（雲端優先、本機 CSV 只當讀不到時的保底且會跳警告），
     並在「📊 統計管理」新增「🗓 休診日」分頁供玉繡直接編輯。
     ⚠ .gs 要手動「部署→管理部署→新版本」到 v6.1 才會生效。
+  • v3.44（2026-08-02）修玉繡回報的「暫存失敗」（搭配 .gs v6.3）：按「✅ 產生定案」跳
+    「⚠️ 雲端草稿暫存失敗（網路問題？）」、按「💾 備份草稿」跳「暫存失敗」——不是網路問題。
+    push_week_draft() 送的是 6 欄（[週次]+[印日期,區,姓名,🔺,治療欄key]），但 GAS 的
+    「排班草稿」分頁表頭只有 4 欄，Range.setValues() 欄數不合直接拋例外，每次都失敗。
+    連帶的影響是：app.py 讀回草稿時本來就預期有第5欄（治療欄key）才能走「零碰撞」套回
+    定案那條路，所以那個功能從加進來就沒真正生效過，小巫也從來看不到草稿。
+    修法：.gs 表頭補成 6 欄；這裡把欄數固定補成 5 欄再前綴週次，格式再變動也不會帶歪；
+    push_week_draft 改回傳 (ok, 錯誤訊息)，畫面顯示真正的原因，不再寫死「（網路問題？）」
+    害人往網路方向查，並註明這只影響給小巫預覽的草稿、不影響 LINE 提醒與統計。
+    ⚠️ 同一次在 .gs 挖出更嚴重的地雷並修掉：writeAllRowsFast_ 原本先 clearContents 才
+    setValues，寫入一失敗分頁就停在「已清空、資料沒寫進去」＝整份消失（排班草稿就是
+    這樣每次被清空的，已實際重現）。該函式同時被 setWeek/setAllScheduleHistory/
+    setMembers/writeHistory_ 共用，踩在排班歷史上就是整年資料歸零。詳見 .gs v6.3。
   • v3.43（2026-08-01）搭配 .gs v6.2：GAS 的 sendAuditNotice 現在會檢查 LINE API 回應碼，
     把「真的沒送出去」的人回報在 failed/failedNames。app.py 這端接住並在畫面明確列出
     「這幾位的 LINE 通知實際發送失敗，請改用其他方式告知」——以前 LINE 回 401/403/400
@@ -380,17 +393,32 @@ def clear_audit_draft():
 
 # ── 印藥水定案雲端草稿（讓小巫雙重確認）───────────────────
 def push_week_draft(rows, sheet0):
-    """把玉繡的定案存到雲端草稿（排班草稿分頁），讓小巫可以讀取確認。"""
-    if not APPS_SCRIPT_URL or not WRITE_SECRET: return False
+    """把玉繡的定案存到雲端草稿（排班草稿分頁），讓小巫可以讀取確認。
+
+    回傳 (ok, 錯誤訊息)。v3.44：以前只回 True/False，畫面永遠只能猜「網路問題？」
+    ——玉繡實際遇到的「暫存失敗」根本不是網路，是欄數對不上，卻完全看不出來。
+
+    ⚠️ 欄數必須剛好 6 欄，跟 .gs 的 DRAFT_HEADERS（週次/印日期/區/姓名/跨區/治療欄）
+    一致。rows 每筆是 [印日期, 區, 姓名, 🔺, 治療欄key]，這裡固定補成 5 欄再前綴週次，
+    以後就算 rows 格式再變動也不會把欄數帶歪、害 GAS 端 setValues 爆掉。
+    """
+    if not APPS_SCRIPT_URL or not WRITE_SECRET: return False, "未設定 APPS_SCRIPT_URL/WRITE_SECRET"
     try:
-        cloud_rows = [[str(sheet0)] + [str(v) for v in r] for r in rows]
+        cloud_rows = [[str(sheet0)] + [str(v) for v in (list(r) + ["", "", "", "", ""])[:5]]
+                      for r in rows]
         resp = requests.post(APPS_SCRIPT_URL,
                              json={"action": "setWeekDraft", "secret": WRITE_SECRET,
                                    "rows": cloud_rows},
                              timeout=20)
-        return resp.ok and resp.json().get("ok", False)
-    except Exception:
-        return False
+        d = resp.json()
+        if resp.ok and d.get("ok", False):
+            return True, ""
+        err = str(d.get("error", f"HTTP {resp.status_code}"))
+        if "超過表頭" in err or "does not match" in err:
+            err += "（Apps Script 版本太舊，請部署到 v6.3 以上）"
+        return False, err
+    except Exception as _e:
+        return False, str(_e)
 
 def gs_date_to_ymd(s):
     """把 GAS 回傳的日期轉成台北時區的 YYYY-MM-DD 字串。
@@ -981,7 +1009,7 @@ def _build_line_txt(rows, disp_df=None):
 
 
 # ── 💬 意見回饋：借用稽核歷史（特殊鍵「意見-時間」）存放，不動 LINE 程式 ──
-APP_VER = "v3.43"
+APP_VER = "v3.44"
 FEEDBACK_PREFIX = "意見-"
 
 def push_feedback(step, detail, expect, urgency, who):
@@ -1294,7 +1322,7 @@ if TEST_MODE:
 
 st.title("💊 透析藥水排班")
 st.caption("上傳班表 Excel → 出名單(表格)。可直接點格子改人名。跨區標 🔺。")
-st.caption("🟢 版本 v3.43（①休診日改為單一來源：過年/連假清單過去在 休診日.csv 與 LINE小幫手.gs 各存一份、改一邊不同步，兩邊對不上就會讓「排出來的印藥水日」跟「LINE通知的日期」差一天。現在統一存在雲端「休診日」分頁，排班演算法與 LINE 提醒都讀同一份，可在「📊 統計管理 → 🗓 休診日」直接編輯 ②稽核 LINE 通知若實際發送失敗，畫面會明確列出是誰沒收到，不再只顯示「已通知N人」）· 2026-08-01")
+st.caption("🟢 版本 v3.44（①修「產生定案／備份草稿」一直跳「暫存失敗」——原因是雲端草稿分頁欄數對不上，不是網路問題；失敗訊息現在會講真正的原因 ②休診日改為單一來源，排班演算法與 LINE 提醒都讀雲端「休診日」分頁，可在「📊 統計管理 → 🗓 休診日」直接編輯 ③稽核 LINE 通知實際發送失敗時會列出是誰沒收到）· 2026-08-02")
 
 # ── 📊 首頁顯眼統計＋本機備份落後提醒（2026-07-20加，v3.38）─────────────
 # 目的：2026-07-19~20那次「7/20資料被同步按鈕蓋掉」事件，玉繡是三週後才發現雲端資料
@@ -1734,9 +1762,13 @@ if mode.startswith("🟦"):
                 st.session_state["cloud_rows_source"] = "finalized"
                 _save_week_draft(rows, sheet0, disp)   # 自動存本機
                 if not TEST_MODE and APPS_SCRIPT_URL and WRITE_SECRET:
-                    _draft_ok = push_week_draft(rows, sheet0)
+                    _draft_ok, _draft_err = push_week_draft(rows, sheet0)
                     if not _draft_ok:
-                        st.warning("⚠️ 雲端草稿暫存失敗（網路問題？），請稍後按「💾 備份草稿」手動重試。")
+                        # v3.44：以前這裡寫死「（網路問題？）」，害人往網路方向查；
+                        # 實際成因是 GAS 端欄數對不上。改成把真正的原因顯示出來。
+                        st.warning(f"⚠️ 雲端草稿暫存失敗：{_draft_err}\n\n"
+                                   "（這只影響「給小巫預覽的草稿」，**不影響 LINE 提醒、也不影響統計**，"
+                                   "可以照常按「🚀 送到雲端」。）")
 
     # 定案顯示（有定案就顯示，不管是否剛排班）
     if "cloud_rows" in st.session_state:
@@ -1779,11 +1811,13 @@ if mode.startswith("🟦"):
             _wd1, _wd2 = st.columns(2)
             if _wd1.button("💾 備份草稿（小巫更新程式後可查看）", key="week_draft_save"):
                 with st.spinner("暫存中…"):
-                    _ok = push_week_draft(rows, sheet0)
+                    _ok, _err = push_week_draft(rows, sheet0)
                 if _ok:
                     st.success("✅ 草稿已存到雲端！小巫可按「📥 讀取玉繡的排班草稿」來確認。")
                 else:
-                    st.error("暫存失敗，請稍後再試。")
+                    st.error(f"暫存失敗：{_err}\n\n"
+                             "（只影響給小巫預覽的草稿，不影響 LINE 提醒與統計，"
+                             "可以照常按「🚀 送到雲端」。）")
             if _wd2.button("🗑 清除草稿", key="week_draft_clear"):
                 if clear_week_draft_cloud():
                     st.success("✅ 草稿已清除。")

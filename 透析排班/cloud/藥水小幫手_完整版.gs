@@ -1,6 +1,21 @@
 /**
- * 透析印藥水 LINE 小幫手 v6.2 — Apps Script
+ * 透析印藥水 LINE 小幫手 v6.3 — Apps Script
  * ════════════════════════════════════════════════════════
+ *  v6.3（2026-08-02）修玉繡回報的「暫存失敗」，順帶挖出一顆更嚴重的地雷：
+ *  【症狀】按「✅ 產生定案」跳「⚠️ 雲端草稿暫存失敗（網路問題？）」、按「💾 備份草稿」
+ *   跳「暫存失敗，請稍後再試」。**不是網路問題。**
+ *  【成因1】「排班草稿」分頁表頭只有 4 欄，但 app.py 的 push_week_draft() 送的是 6 欄
+ *   （[週次] + [印日期, 區, 姓名, 🔺跨區, 治療欄key]）。Range.setValues() 欄數對不上
+ *   直接拋例外 → 每次都失敗。而且 app.py 讀回來時本來就預期有第5欄才能走「零碰撞」
+ *   那條路（同一個印藥水日有多人時，不用靠日期猜是哪一格），所以這個功能從加進來
+ *   就沒真正生效過，小巫也從來看不到草稿。表頭補成 6 欄（DRAFT_HEADERS）對齊兩端。
+ *  【成因2／更嚴重】writeAllRowsFast_() 是「先 clearContents() 再 setValues()」。
+ *   setValues() 一失敗，分頁就停在「已清空、新資料沒寫進去」＝**資料整份消失**。
+ *   「排班草稿」就是這樣每次被清成空的（已實際重現：寫入前 2 列 → 失敗後 0 列）。
+ *   而這個函式同時被 setWeek(本週名單)、setAllScheduleHistory(排班歷史)、setMembers
+ *   (組員名單)、writeHistory_ 共用——同一顆踩在排班歷史上就是整年資料歸零，正是這個
+ *   專案出事過好幾次的災情類型（接續包第十三、十六節）。改成先把每列正規化成表頭
+ *   寬度、欄數超過就丟例外**中止且完全不動原有資料**，全部檢查完才清空寫入。
  *  v6.2（2026-08-01）補完接續包第二十三節剩下的兩個 GAS 待辦：
  *  【#14】pushLine_() 沒檢查 LINE API 回應碼：原本 muteHttpExceptions:true 把回應
  *   整個吞掉、回傳值也沒人看，就算 LINE 回 401(token失效)/403(額度)/400(userId無效)，
@@ -89,6 +104,14 @@ var WRITE_SECRET = "yaoshui2026";   // ← 網頁送名單用的暗號（與 Str
 // ⚠️ 下面這個陣列**不是維護入口**，只是「休診日分頁還不存在時」用來建立分頁的一次性
 //   種子（v6.1 之前的舊資料搬家用）。分頁一旦建立，就一律以分頁為準，改這裡沒有用。
 var HOLIDAY_SHEET = "休診日";
+
+/* v6.3：「排班草稿」分頁的表頭。原本只有 4 欄（週次/印日期/區/姓名），但 app.py 的
+ * push_week_draft() 送的是 6 欄——[週次] + [印日期, 區, 姓名, 🔺跨區, 治療欄key]，
+ * 欄數對不上，Range.setValues() 每次都拋例外，玉繡按「💾 備份草稿」或「產生定案」
+ * 一律看到「暫存失敗」。而且 app.py 讀回來時本來就預期有第5欄（治療欄key）才能走
+ * 「零碰撞」那條路（同一個印藥水日有多人時不用靠日期猜是哪一格），等於這個功能
+ * 從加入以來就沒真正生效過。表頭補成 6 欄，跟兩端實際的資料格式對齊。 */
+var DRAFT_HEADERS = ["週次","印日期","區","姓名","跨區","治療欄"];
 var EXTRA_HOLIDAYS = [
   // "2026-01-01",
   // "2026-02-16",
@@ -208,14 +231,14 @@ function doPost(e) {
     }
 
     if (action === "getWeekDraft") {
-      var shDraft = ensureSheet_(ss, "排班草稿", ["週次","印日期","區","姓名"]);
+      var shDraft = ensureSheet_(ss, "排班草稿", DRAFT_HEADERS);
       return jsonOut_({ok: true, rows: shDraft.getDataRange().getValues()});
     }
 
     if (action === "setWeekDraft") {
-      var shDraft2 = ensureSheet_(ss, "排班草稿", ["週次","印日期","區","姓名"]);
-      writeAllRowsFast_(shDraft2, ["週次","印日期","區","姓名"], body.rows || []);
-      return jsonOut_({ok: true});
+      var shDraft2 = ensureSheet_(ss, "排班草稿", DRAFT_HEADERS);
+      writeAllRowsFast_(shDraft2, DRAFT_HEADERS, body.rows || []);
+      return jsonOut_({ok: true, count: (body.rows || []).length});
     }
 
     if (action === "sendAuditNotice") {
@@ -562,12 +585,33 @@ function sheetToArray_(ss, name) {
 }
 /* 一次寫入整批列（setValues 只有 1 次 API 呼叫），取代逐列 appendRow()（N 次 API 呼叫）。
  * 逐列寫入在資料量大（例如整年 300~400 列歷史）時很容易逾時，這是 2026-07-19 發現的效能問題。 */
+/* ⚠️ v6.3 重要修正：原本第一行就 sh.clearContents()，然後才 setValues()。
+ * 只要 setValues() 因為任何原因失敗（最常見：某一列的欄數跟表頭對不上，Google 會直接
+ * 拋例外），分頁就會停在「已經清空、但新資料沒寫進去」的狀態——**資料整份消失**。
+ * 這不是假設，是 2026-08-02 實際重現出來的：「排班草稿」就是這樣每次被清成空的。
+ * 而這個函式同時被 setWeek(本週名單)、setAllScheduleHistory(排班歷史)、setMembers
+ * (組員名單)、writeHistory_ 使用——同一顆地雷踩在排班歷史上就是整年資料歸零，
+ * 正是這個專案已經出事過好幾次的那種災情（見接續包第十三、十六節）。
+ * 改成：先把每一列正規化成表頭寬度（短的補空白），欄數超過表頭就直接丟例外
+ * **中止、完全不動原有資料**；全部檢查過了才 clearContents + setValues。 */
 function writeAllRowsFast_(sh, headers, rows) {
-  sh.clearContents();
-  var allRows = [headers].concat(rows);
-  if (allRows.length > 0) {
-    sh.getRange(1, 1, allRows.length, headers.length).setValues(allRows);
+  var w = headers.length;
+  var src = rows || [];
+  var norm = [];
+  for (var i = 0; i < src.length; i++) {
+    var r = src[i] || [];
+    if (r.length > w) {
+      throw new Error("寫入「" + sh.getName() + "」中止：第 " + (i + 1) + " 筆有 " + r.length
+                      + " 欄，超過表頭的 " + w + " 欄。原有資料未被更動。");
+    }
+    var row = r.slice();
+    while (row.length < w) row.push("");     // 短的補空白，setValues 才不會抱怨
+    norm.push(row);
   }
+  // 到這裡才動真格的：前面任何一列有問題都已經丟例外了，不會出現「清空後寫入失敗」
+  sh.clearContents();
+  var allRows = [headers].concat(norm);
+  sh.getRange(1, 1, allRows.length, w).setValues(allRows);
 }
 function writeHistory_(ss, sheetName, headers, key, newRows) {
   if (!key && newRows.length === 0) return;
