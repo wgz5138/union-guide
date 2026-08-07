@@ -194,6 +194,23 @@ def _cell(df,r,c):
     if r<0 or r>=len(df) or c<0 or c>=df.shape[1]: return ""
     v=df.iat[r,c]; return "" if pd.isna(v) else str(v).strip()
 
+# 抓不到日期時的診斷資訊（由 parse_sheet 填，主程式在報錯時拿來給使用者看）
+PARSE_DIAG = {}
+
+def date_fail_hint():
+    """把「為什麼抓不到日期」講清楚，不要只丟一句『抓不到日期』讓人乾瞪眼。"""
+    d = PARSE_DIAG
+    if not d:
+        return "（沒有取得診斷資訊）"
+    if d.get("n_blocks", 0) == 0:
+        return (f"表頭在第 {d.get('header_row')} 列（有找到『卡號/姓名』），但整列找不到任何『類別』欄位。"
+                "→ 這通常表示班表格式跟以往不同，或這個分頁還是空白樣板。")
+    return (f"表頭在第 {d.get('header_row')} 列，找到 {d.get('n_blocks')} 個『類別』欄位，"
+            f"但只有 {d.get('n_dates')} 個上方讀得到日期。實際讀到的內容："
+            + "；".join(d.get("samples", []))
+            + "\n   → 最常見的兩個原因：①這週班表還沒填（醫院只先開了空表）"
+              "②日期欄位格式跟以往不同。請把這個 .xls 檔給 AI 看，一次就能確認。")
+
 def parse_date(v):
     if v is None: return None
     if isinstance(v,(pd.Timestamp,datetime)):
@@ -205,6 +222,15 @@ def parse_date(v):
     if m:
         try: return date(int(m.group(1)),int(m.group(2)),int(m.group(3)))
         except Exception: return None
+    # 民國年（3碼）：醫院班表連檔名都是「115.08.10~115.08.16.xls」這種民國格式，
+    # 若表頭日期也用民國（115/8/10、115.08.10），舊版一律讀不到 → 整週排不出來。
+    # 只有西元那兩個 pattern 都比不中才會走到這裡，所以不會影響原本正常的檔案。
+    m=re.search(r"(?<!\d)(\d{3})\D(\d{1,2})\D(\d{1,2})(?!\d)", s)
+    if m:
+        y=int(m.group(1))
+        if 100 <= y <= 200:          # 民國100~200年＝西元2011~2111，超出就不是民國年
+            try: return date(y+1911, int(m.group(2)), int(m.group(3)))
+            except Exception: return None
     return None
 
 def parse_sheet(path, sheet):
@@ -215,12 +241,20 @@ def parse_sheet(path, sheet):
     if hr is None: raise RuntimeError(f"分頁「{sheet}」找不到『卡號/姓名』表頭,請確認檔案格式")
     blocks=[c for c in range(df.shape[1]) if _cell(df,hr,c)=="類別"]
     bdates=[]
+    _diag=[]                      # 抓不到日期時，用來告訴使用者「實際讀到什麼」
     for c in blocks:
-        d=None
+        d=None; _seen=[]
         for rr in range(hr-1,hr-4,-1):
+            _seen.append(_cell(df,rr,c))
             d=parse_date(df.iat[rr,c]) if 0<=rr<len(df) else None
             if d: break
         bdates.append(d)
+        if d is None and len(_diag)<3:
+            _shown=[x for x in _seen if x] or ["(上面幾格都是空的)"]
+            _diag.append(f"第{c+1}欄上方讀到 {_shown}")
+    PARSE_DIAG.clear()
+    PARSE_DIAG.update({"header_row": hr+1, "n_blocks": len(blocks),
+                       "n_dates": sum(1 for d in bdates if d), "samples": _diag})
     status={}; name_of={}; by_name={}
     for r in range(hr+1,len(df)):
         card=_cell(df,r,0); name=_cell(df,r,1)
@@ -437,7 +471,9 @@ def run():
     status, name_of, by_name, monday = parse_sheet(path, sheet)
     name_of_g=name_of
     if not monday:
-        print(f"❌ 分頁「{sheet}」抓不到日期,無法決定治療日"); return
+        print(f"❌ 分頁「{sheet}」抓不到日期,無法決定治療日")
+        print("   " + date_fail_hint())
+        return
 
     window=[]; t=next_treat(monday)
     for _ in range(6):

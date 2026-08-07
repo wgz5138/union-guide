@@ -103,6 +103,9 @@ def _cell(df,r,c):
     if r<0 or r>=len(df) or c<0 or c>=df.shape[1]: return ""
     v=df.iat[r,c]; return "" if pd.isna(v) else str(v).strip()
 
+# 抓不到日期時的診斷資訊（parse_sheet 逐分頁累積，parse_month 報錯時一起顯示）
+PARSE_DIAG = []
+
 def parse_date(v):
     if v is None: return None
     if isinstance(v,(pd.Timestamp,datetime)):
@@ -113,6 +116,15 @@ def parse_date(v):
     if m:
         try: return date(int(m.group(1)),int(m.group(2)),int(m.group(3)))
         except Exception: return None
+    # 民國年（3碼）：醫院班表連檔名都是「115.08.10~115.08.16.xls」這種民國格式，
+    # 若表頭日期也用民國（115/8/10、115.08.10），舊版一律讀不到 → 整週排不出來。
+    # 只有西元那兩個 pattern 都比不中才會走到這裡，所以不會影響原本正常的檔案。
+    m=re.search(r"(?<!\d)(\d{3})\D(\d{1,2})\D(\d{1,2})(?!\d)", s)
+    if m:
+        y=int(m.group(1))
+        if 100 <= y <= 200:          # 民國100~200年＝西元2011~2111，超出就不是民國年
+            try: return date(y+1911, int(m.group(2)), int(m.group(3)))
+            except Exception: return None
     return None
 
 def parse_sheet(df):
@@ -122,12 +134,20 @@ def parse_sheet(df):
     if hr is None: return {}, {}, {}, None
     blocks=[c for c in range(df.shape[1]) if _cell(df,hr,c)=="類別"]
     bdates=[]
+    _diag=[]                      # 抓不到日期時，用來告訴使用者「實際讀到什麼」
     for c in blocks:
-        d=None
+        d=None; _seen=[]
         for rr in range(hr-1,hr-4,-1):
+            _seen.append(_cell(df,rr,c))
             d=parse_date(df.iat[rr,c]) if 0<=rr<len(df) else None
             if d: break
         bdates.append(d)
+        if d is None and len(_diag)<3:
+            _shown=[x for x in _seen if x] or ["(上面幾格都是空的)"]
+            _diag.append(f"第{c+1}欄上方讀到 {_shown}")
+    if not any(bdates):
+        PARSE_DIAG.append(f"表頭第{hr+1}列、{len(blocks)}個『類別』欄，但一個日期都讀不到"
+                          + ("：" + "；".join(_diag) if _diag else ""))
     status={}; name_of={}; by_name={}
     for r in range(hr+1,len(df)):
         card=_cell(df,r,0); name=_cell(df,r,1)
@@ -150,7 +170,12 @@ def parse_month(paths, want_month):
             except Exception as e: warn(f"⚠ {os.path.basename(path)} 分頁「{sn}」讀取失敗({e})"); continue
             st,no,bn,mon=parse_sheet(df)
             if mon: sheets.append((mon,st,no,bn,f"{os.path.basename(path)}#{sn}"))
-    if not sheets: raise RuntimeError("所有檔案都抓不到表頭或日期，請確認是正確的小班檔")
+    if not sheets:
+        # 不要只丟一句「抓不到」——把每個分頁實際讀到什麼講出來，才查得下去
+        _hint = ("\n   " + "\n   ".join(PARSE_DIAG[:5])) if PARSE_DIAG else ""
+        raise RuntimeError("所有檔案都抓不到表頭或日期，請確認是正確的小班檔。"
+                           "最常見原因：①這個月班表還沒填（只開了空表）②日期格式跟以往不同。"
+                           + _hint)
     sheets.sort(key=lambda x:x[0])
     if want_month is None:
         last=sheets[-1][0]; want_month=(last.year, last.month)
