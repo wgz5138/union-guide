@@ -16,7 +16,7 @@ v0.3 重點:
 用法:  python 排班.py <班表.xls> [分頁名稱]
         分頁不填 → 自動用最後一個分頁(最新一週)
 """
-import os, sys, csv, traceback
+import os, sys, csv, re, traceback
 from datetime import date, datetime, timedelta
 import pandas as pd
 
@@ -233,6 +233,44 @@ def parse_date(v):
             except Exception: return None
     return None
 
+def parse_date_parts(v):
+    """回傳 (完整date, (月,日))。
+    抓得到年月日 → (date, None)；只抓得到月日 → (None, (m,d))；都沒有 → (None, None)。
+
+    2026-08-06 真實案例：0810~0816 那張班表的日期格被打成「8月10日  缺31-33」
+    ——有人把備註打進日期格，Excel 就把整格從日期型別變成純文字，而「8月10日」
+    沒有年份，舊版一律讀不到。7 欄裡有 4 欄還是正常日期，偏偏第 1 欄壞掉，
+    而 monday 取的正是第 1 欄 → 整週排不出來。
+    這裡把「只有月日」也認出來當半成品，年份稍後由 parse_sheet 從同一張表裡
+    **已經成功解析的日期**借過來（不是亂猜年份）。
+    """
+    d = parse_date(v)
+    if d: return d, None
+    if v is None: return None, None
+    s = str(v).strip()
+    # 中文「8月10日」——優先，最不會誤判
+    m = re.search(r"(?<!\d)(\d{1,2})\s*月\s*(\d{1,2})\s*日", s)
+    if not m:
+        # 「8/10」這種只有月日的寫法（不含 8-10，避免把「缺31-33」這類備註誤判成日期）
+        m = re.search(r"(?<!\d)(\d{1,2})/(\d{1,2})(?!\d)", s)
+    if m:
+        mo, dy = int(m.group(1)), int(m.group(2))
+        if 1 <= mo <= 12 and 1 <= dy <= 31:
+            return None, (mo, dy)
+    return None, None
+
+
+def _year_for(mo, dy, ref):
+    """已知月日、缺年份時，挑一個離參考日期最近的年份（跨年也不會挑錯）。"""
+    best = None
+    for y in (ref.year - 1, ref.year, ref.year + 1):
+        try: cand = date(y, mo, dy)
+        except ValueError: continue
+        if best is None or abs((cand - ref).days) < abs((best - ref).days):
+            best = cand
+    return best
+
+
 def parse_sheet(path, sheet):
     df=pd.read_excel(path,sheet_name=sheet,header=None)
     hr=None
@@ -240,18 +278,33 @@ def parse_sheet(path, sheet):
         if _cell(df,i,0)=="卡號" and _cell(df,i,1)=="姓名": hr=i; break
     if hr is None: raise RuntimeError(f"分頁「{sheet}」找不到『卡號/姓名』表頭,請確認檔案格式")
     blocks=[c for c in range(df.shape[1]) if _cell(df,hr,c)=="類別"]
-    bdates=[]
-    _diag=[]                      # 抓不到日期時，用來告訴使用者「實際讀到什麼」
+    bdates=[]; parts=[]; seen_cells=[]
     for c in blocks:
-        d=None; _seen=[]
+        d=None; part=None; _seen=[]
         for rr in range(hr-1,hr-4,-1):
             _seen.append(_cell(df,rr,c))
-            d=parse_date(df.iat[rr,c]) if 0<=rr<len(df) else None
-            if d: break
-        bdates.append(d)
-        if d is None and len(_diag)<3:
-            _shown=[x for x in _seen if x] or ["(上面幾格都是空的)"]
-            _diag.append(f"第{c+1}欄上方讀到 {_shown}")
+            got,pt = parse_date_parts(df.iat[rr,c]) if 0<=rr<len(df) else (None,None)
+            if got: d=got; break
+            if pt and part is None: part=pt      # 先記著「只有月日」的半成品，繼續找完整的
+        bdates.append(d); parts.append(part); seen_cells.append(_seen)
+    # 第二輪：拿同一張表裡已經解析成功的日期當年份參考，補回只有月日的格子。
+    # 參考點取「欄位距離最近」的那一個，跨年份（12月底接1月初）也不會挑錯年。
+    if any(bdates) and not all(bdates):
+        _resolved=[(i,d) for i,d in enumerate(bdates) if d]
+        for i,(d,part) in enumerate(zip(bdates,parts)):
+            if d or not part: continue
+            _ri,_ref = min(_resolved, key=lambda t: abs(t[0]-i))
+            _fixed = _year_for(part[0], part[1], _ref)
+            if _fixed:
+                bdates[i]=_fixed
+                warn(f"ℹ 第{blocks[i]+1}欄日期格被打成純文字（只有月日），"
+                     f"已依同表其他日期補回年份 → {_fixed}")
+    # 兩輪都補不起來的欄位才列進診斷（給「抓不到日期」的錯誤訊息用）
+    _diag=[]
+    for i,c in enumerate(blocks):
+        if bdates[i] is not None or len(_diag)>=3: continue
+        _shown=[x for x in seen_cells[i] if x] or ["(上面幾格都是空的)"]
+        _diag.append(f"第{c+1}欄上方讀到 {_shown}")
     PARSE_DIAG.clear()
     PARSE_DIAG.update({"header_row": hr+1, "n_blocks": len(blocks),
                        "n_dates": sum(1 for d in bdates if d), "samples": _diag})
