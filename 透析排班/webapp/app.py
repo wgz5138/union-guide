@@ -89,6 +89,23 @@
     休診日當 config_override 餵進去（雲端優先、本機 CSV 只當讀不到時的保底且會跳警告），
     並在「📊 統計管理」新增「🗓 休診日」分頁供玉繡直接編輯。
     ⚠ .gs 要手動「部署→管理部署→新版本」到 v6.1 才會生效。
+  • v3.47（2026-08-06）兩件事：
+    ①【首頁補上稽核統計】使用者反映「我的藥水稽核累積筆數咧？我要的東西必須要有啊」——
+      首頁只看得到印藥水的累積筆數/最新一週，稽核同樣是每月要送雲端的東西，卻沒有一眼
+      可判斷「數字有沒有在增加」的地方。新增「🩺 雲端稽核歷史累積筆數」「🗓 雲端最新稽核
+      月份」兩個 metric，與印藥水並列。月份排序用民國→西元換算後比較（115-12 比 2026-07
+      晚，直接字串比會錯），草稿/意見-/統計- 等特殊列不計入。排班讀不到但稽核讀得到時，
+      稽核仍會顯示，不會整塊消失。
+    ②【班表日期完全不依賴排班組怎麼填】使用者明講「那是排班組弄的，我們藥水組管不得，
+      想一個辦法繞過去」。v3.46 的修法還需要「表格裡至少有一格日期是正常的」才借得到
+      年份，萬一七格全被打上備註就仍然掛掉。新增 week_hint()：從**檔名**
+      （115.08.10~115.08.16.xls，民國3碼自動+1911）與**分頁名**（0810~0816，用今天挑
+      最接近的年份）取得這一週的起訖日，當第三、四層備援：
+        第1層 表格內完整日期 → 第2層 表格內其他日期借年份 → 第3層 檔名/分頁名借年份
+        → 第4層（最後手段）整排完全讀不到時，若「檔名天數 == 類別欄數」才依序補連續
+          日期，並大聲警告「請務必核對日期再送出」；天數對不上就維持失敗、絕不硬補
+      優先序保證表格內容永遠贏過檔名（檔名寫錯也不會把正確資料帶偏，已測）。
+      排班.py / 稽核.py 兩支都改。
   • v3.46（2026-08-06）承 v3.45：用新的診斷訊息抓到玉繡那張表的真正原因——日期格被打成
     「8月10日  缺31-33」，有人把備註打進日期格，Excel 就把整格從日期型別變成純文字，而
     「8月10日」沒有年份，舊版讀不到。7 個類別欄有 4 個是正常日期、3 個是文字，偏偏壞掉的
@@ -1026,7 +1043,7 @@ def _build_line_txt(rows, disp_df=None):
 
 
 # ── 💬 意見回饋：借用稽核歷史（特殊鍵「意見-時間」）存放，不動 LINE 程式 ──
-APP_VER = "v3.46"
+APP_VER = "v3.47"
 FEEDBACK_PREFIX = "意見-"
 
 def push_feedback(step, detail, expect, urgency, who):
@@ -1339,7 +1356,7 @@ if TEST_MODE:
 
 st.title("💊 透析藥水排班")
 st.caption("上傳班表 Excel → 出名單(表格)。可直接點格子改人名。跨區標 🔺。")
-st.caption("🟢 版本 v3.46（①班表日期格被打成純文字（例如「8月10日  缺31-33」）不再整週排不出來——中文月日也認得，年份從同表其他日期借；讀不到時會講清楚實際讀到什麼 ②修「產生定案／備份草稿」一直跳「暫存失敗」 ③休診日改為單一來源，排班與 LINE 提醒都讀雲端「休診日」分頁）· 2026-08-06")
+st.caption("🟢 版本 v3.47（①首頁補上「稽核累積筆數／最新稽核月份」，跟印藥水並列 ②班表日期不再依賴排班組怎麼填——日期格被打成文字（「8月10日 缺31-33」）或整排讀不到時，會依序用「表格其他日期→檔名→分頁名」補回來，補不回來才失敗並講清楚原因 ③修「產生定案／備份草稿」暫存失敗 ④休診日改為單一來源）· 2026-08-06")
 
 # ── 📊 首頁顯眼統計＋本機備份落後提醒（2026-07-20加，v3.38）─────────────
 # 目的：2026-07-19~20那次「7/20資料被同步按鈕蓋掉」事件，玉繡是三週後才發現雲端資料
@@ -1348,10 +1365,35 @@ st.caption("🟢 版本 v3.46（①班表日期格被打成純文字（例如「
 # 才發現。同時主動比對本機git備份CSV是否落後於雲端，落後就直接顯示警告，不用等到
 # 有人誤按「同步本機CSV→雲端」才發現備份是舊的。
 @st.cache_data(ttl=300, show_spinner=False)
+def _home_audit_snapshot():
+    """首頁的稽核統計：累積筆數 + 最新月份。
+    v3.47：使用者反映首頁只看得到印藥水、看不到稽核（「我的藥水稽核累積筆數咧」）——
+    稽核跟印藥水一樣是每個月要送雲端的東西，同樣需要「數字有沒有在增加」一眼可判斷，
+    不然又要等到對不上才發現（接續包第十六節那次就是三週後才發現）。
+    回傳 (筆數, 最新月份) 或 (None, None)。"""
+    df = fetch_audit_history_full_raw()
+    if isinstance(df, str) or df is None or df.empty:
+        return None, None
+    m = df["月份"].astype(str).str.strip()
+    # 只算正常月份鍵，草稿/意見-/統計- 這些特殊列不列入
+    real = df[m.str.match(r"^\d{3,4}-\d{2}$")]
+    if real.empty:
+        return len(df), None
+    def _to_ce(k):
+        y, mo = str(k).split("-")
+        y = int(y)
+        return (y + 1911 if y < 1911 else y, int(mo))   # 民國(115-07)/西元都能排
+    months = sorted(real["月份"].astype(str).str.strip().unique(), key=_to_ce)
+    return len(real), months[-1]
+
 def _home_stats_snapshot():
     cloud_df = fetch_schedule_history_raw()
+    n_audit, latest_audit = _home_audit_snapshot()
     if isinstance(cloud_df, str) or cloud_df is None or cloud_df.empty:
-        return None
+        # 排班讀不到但稽核讀得到時，也要把稽核顯示出來，不要整塊消失
+        if n_audit is None: return None
+        return {"n_cloud": None, "latest_cloud_week": None, "n_local": 0,
+                "latest_local_week": None, "n_audit": n_audit, "latest_audit": latest_audit}
     def _latest_week(weeks):
         real = [w for w in weeks if re.match(r"^\d{4}~\d{4}$", str(w))]
         return real[-1] if real else None   # 取「最後一列」而非字串排序，避免跨年份排序錯誤
@@ -1367,15 +1409,21 @@ def _home_stats_snapshot():
     except Exception:
         pass
     return {"n_cloud": n_cloud, "latest_cloud_week": latest_cloud_week,
-            "n_local": n_local, "latest_local_week": latest_local_week}
+            "n_local": n_local, "latest_local_week": latest_local_week,
+            "n_audit": n_audit, "latest_audit": latest_audit}
 
 _snap = _home_stats_snapshot()
 if _snap:
     _s1, _s2 = st.columns(2)
-    _s1.metric("📊 雲端排班歷史累積筆數", _snap["n_cloud"])
+    _s1.metric("📊 雲端排班歷史累積筆數", _snap["n_cloud"] if _snap["n_cloud"] is not None else "—")
     _s2.metric("📅 雲端最新一週", _snap["latest_cloud_week"] or "—")
-    st.caption("💡 這兩個數字平常應該每週增加／更新。如果覺得好幾週沒變、或忽然變小，"
-               "代表雲端資料可能被誤動過，請截圖跟AI反映，不要等到統計對不上才發現。")
+    # v3.47：稽核也要有，跟印藥水並列。稽核是每月一次，數字變化比較慢是正常的。
+    _a1, _a2 = st.columns(2)
+    _a1.metric("🩺 雲端稽核歷史累積筆數", _snap.get("n_audit") if _snap.get("n_audit") is not None else "—")
+    _a2.metric("🗓 雲端最新稽核月份", _snap.get("latest_audit") or "—")
+    st.caption("💡 上面兩個（印藥水）平常應該**每週**增加、下面兩個（稽核）**每月**更新。"
+               "如果該增加卻好幾次沒變、或數字忽然變小，代表雲端資料可能被誤動過，"
+               "請截圖跟AI反映，不要等到統計對不上才發現。")
     if (_snap["latest_local_week"] and _snap["latest_cloud_week"]
             and _snap["latest_local_week"] != _snap["latest_cloud_week"]):
         st.warning(f"⚠️ 本機git備份CSV最新只到「{_snap['latest_local_week']}」，比雲端的"

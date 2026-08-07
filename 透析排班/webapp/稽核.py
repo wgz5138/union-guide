@@ -165,7 +165,42 @@ def _year_for(mo, dy, ref):
     return best
 
 
-def parse_sheet(df):
+def week_hint(path, sheet, today=None):
+    """從『檔名』和『分頁名』推出這一週的起訖日，當作日期的備援來源。
+
+    為什麼需要這個：班表是排班組產出的，藥水組管不到他們怎麼填。實際遇過日期格
+    被打成「8月10日  缺31-33」變成純文字的情況；萬一哪天七格全被打上備註，
+    表格內就完全借不到年份了。檔名（115.08.10~115.08.16.xls）與分頁名（0810~0816）
+    是同一份檔案自帶的資訊，不需要任何人配合就能拿到。
+
+    回傳 (起日, 迄日, 來源說明)；推不出來就 (None, None, "")。
+    """
+    today = today or date.today()
+    base = os.path.basename(str(path or ""))
+    # ① 檔名帶年份：115.08.10~115.08.16 / 2026-08-10~2026-08-16（民國3碼會自動+1911）
+    ms = re.findall(r"(?<!\d)(\d{3,4})[.\-/](\d{1,2})[.\-/](\d{1,2})(?!\d)", base)
+    got = []
+    for y, mo, dy in ms:
+        y = int(y)
+        if y < 1911: y += 1911
+        try: got.append(date(y, int(mo), int(dy)))
+        except ValueError: pass
+    if got:
+        return min(got), (max(got) if len(got) > 1 else None), f"檔名「{base}」"
+    # ② 分頁名只有月日：0810~0816 → 用今天挑最接近的年份
+    ms = re.findall(r"(?<!\d)(\d{2})(\d{2})(?!\d)", str(sheet or ""))
+    got = []
+    for mo, dy in ms:
+        mo, dy = int(mo), int(dy)
+        if 1 <= mo <= 12 and 1 <= dy <= 31:
+            d = _year_for(mo, dy, today)
+            if d: got.append(d)
+    if got:
+        return min(got), (max(got) if len(got) > 1 else None), f"分頁名「{sheet}」"
+    return None, None, ""
+
+
+def parse_sheet(df, path_hint=None, sheet_hint=None):
     hr=None
     for i in range(len(df)):
         if _cell(df,i,0)=="卡號" and _cell(df,i,1)=="姓名": hr=i; break
@@ -192,6 +227,27 @@ def parse_sheet(df):
                 bdates[i]=_fixed
                 warn(f"ℹ 第{blocks[i]+1}欄日期格被打成純文字（只有月日），"
                      f"已依同表其他日期補回年份 → {_fixed}")
+    # 第三輪：表格裡一格年份都借不到時，改用檔名／分頁名當年份參考。
+    # （班表是排班組產的，我們管不到他們怎麼填，所以備援不能依賴表格內容。）
+    _h1, _h2, _hsrc = week_hint(path_hint, sheet_hint)
+    if _h1 and not all(bdates):
+        for i,(d,part) in enumerate(zip(bdates,parts)):
+            if d or not part: continue
+            _fixed = _year_for(part[0], part[1], _h1)
+            if _fixed:
+                bdates[i]=_fixed
+                warn(f"ℹ 第{blocks[i]+1}欄日期格是純文字且表內無其他日期可參考，"
+                     f"已依{_hsrc}補回年份 → {_fixed}")
+    # 第四輪（最後手段）：整排日期完全讀不到，但檔名/分頁名看得出這是哪一週，
+    # 且「天數」剛好等於『類別』欄數 → 依序補上連續日期，並大聲提醒要人工核對。
+    if not any(bdates) and _h1 and _h2 and blocks:
+        _span = (_h2 - _h1).days + 1
+        if _span == len(blocks):
+            for i in range(len(blocks)):
+                bdates[i] = _h1 + timedelta(days=i)
+            warn(f"⚠ 這張班表的日期欄完全讀不到（可能整排都被打成文字），"
+                 f"已改用{_hsrc}推算成 {_h1}～{_h2} 這 {_span} 天。"
+                 f"**請務必核對下面表格的日期對不對再送出！**")
     # 兩輪都補不起來的欄位才列進診斷（給「抓不到日期」的錯誤訊息用）
     _diag=[]
     for i,c in enumerate(blocks):
@@ -221,7 +277,7 @@ def parse_month(paths, want_month):
         for sn in xls.sheet_names:
             try: df=pd.read_excel(path, sheet_name=sn, header=None)
             except Exception as e: warn(f"⚠ {os.path.basename(path)} 分頁「{sn}」讀取失敗({e})"); continue
-            st,no,bn,mon=parse_sheet(df)
+            st,no,bn,mon=parse_sheet(df, path, sn)
             if mon: sheets.append((mon,st,no,bn,f"{os.path.basename(path)}#{sn}"))
     if not sheets:
         # 不要只丟一句「抓不到」——把每個分頁實際讀到什麼講出來，才查得下去
