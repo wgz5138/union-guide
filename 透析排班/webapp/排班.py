@@ -166,12 +166,25 @@ ZONE2AREA={}; AVOID=set(); PRINT_AREAS=[]; SHIFT_EXCLUDE=[]; HOLIDAYS=set()
 FORCE_PRINT=set()   # 本週強制可印人員（放假仍可印），存姓名或卡號
 UNKNOWN_BEDS={}     # 床號字串 -> set((姓名,日期))
 
+def _shift_tok_in(tok, s):
+    """v3.50（獨立稽查低-19）：不可印班別表裡有「1-9」「2-10」這種純數字-連字號代碼，
+    原本用 `tok in s` 純子字串比對，會被夾在別的數字班別碼裡誤配——例如某人班別若是
+    「11-9」（1加1小時的11-9班），字串裡確實含有子字串「1-9」，就會被誤判成不可印班別
+    整個排除掉，其實那是完全不同的一個班。改成：token 開頭/結尾是數字時，前後不能
+    緊接著別的數字（用 lookaround 卡住），這樣「1-9」只會配到真的獨立出現的「1-9」，
+    不會誤配到「11-9」或「1-90」這種前後還有數字接著的情況；token 不是以數字開頭/
+    結尾的（例如中文班別名稱）維持原本行為不變。"""
+    pat = re.escape(tok)
+    if tok[:1].isdigit(): pat = r'(?<!\d)' + pat
+    if tok[-1:].isdigit(): pat = pat + r'(?!\d)'
+    return re.search(pat, s) is not None
+
 def is_excluded_shift(s):
     s=(s or "").strip()
     if not s: return False
     for tok in SHIFT_EXCLUDE:
         if s==tok: return True
-        if len(tok)>=3 and tok in s: return True
+        if len(tok)>=3 and _shift_tok_in(tok, s): return True
     return False
 
 def zone_area(zone):
@@ -379,19 +392,29 @@ def parse_sheet(path, sheet):
 
 # ===================== 比對名單(卡號優先 / 姓名補位 / 變號自動更新) =====================
 def match_members(roster, status, name_of, by_name):
-    members=[]; changed=False
+    members=[]
     for m in roster:
         card,name=m["card"],m["name"]
         if card and card in status:
             members.append({"card":card,"name":name or name_of.get(card,name)})
         elif name and name in by_name:
             nc=by_name[name]
-            warn(f"⚠ 「{name}」卡號變了:名單 {card or '(空)'} → 班表 {nc};已自動更新名單檔")
-            m["card"]=nc; changed=True
+            # v3.50（獨立稽查低-17）：這裡原本講「已自動更新名單檔」，但兩個原因讓這句話
+            # 是假的：①透過 app.py 網頁執行時，save_roster() 寫的是 run_tool() 開的
+            # tempdir 裡那份 組員名單.csv，一執行完 shutil.rmtree 就整個被丟掉，根本沒有
+            # 「存到」任何使用者看得到的地方；②就算真的存到本機，本機 CSV 現在只是雲端
+            # 讀不到時的備援保底（見 get_roster_full()），雲端「組員名單」分頁才是真正
+            # 的單一來源——本機存了雲端也不會跟著動，下次照樣要重新對一次。改成明確
+            # 提醒使用者去雲端「👥 組員名單」分頁自己改，不再宣稱系統已經處理好了。
+            warn(f"⚠ 「{name}」卡號變了:名單 {card or '(空)'} → 班表 {nc};本次排班先照新卡號處理，"
+                 f"但請記得去雲端「👥 組員名單」分頁把「{name}」的卡號也改成 {nc}，否則下次還是要重對一次")
+            m["card"]=nc
             members.append({"card":nc,"name":name})
         else:
             warn(f"❌ 名單上的「{name}({card})」這週班表找不到 → 請確認:離職/換人/整週休假?(本週略過)")
-    if changed: save_roster(roster)
+    # v3.50（低-17）：這次排班用新卡號臨時頂著只影響 m（roster 這份 in-memory 資料，
+    # 只在這次執行期間有效），不再呼叫 save_roster() 假裝存檔——見上方註解，那份存檔
+    # 在 app.py 的 tempdir 裡存了也是白存，雲端才是真正的單一來源。
     return members
 
 # 某人某天 →('白'/'夜', 區域);不可印回 (None,None)
@@ -588,6 +611,14 @@ def run():
     for _ in range(6):
         if t is None: break
         window.append(t); t=next_treat(t)
+    # v3.50（獨立稽查低-15）：next_treat 連續跳休診日跳到超出搜尋範圍（例如遇到
+    # 罕見的長假期串連，如農曆年+補假湊在一起）時，window 會整個是空的。原本沒擋，
+    # 後面 window[0]／window[-1] 會直接 IndexError，使用者只會看到一串 traceback、
+    # 完全不知道發生什麼事。改成明確擋下來、印出可理解的錯誤訊息再 return。
+    if not window:
+        print("❌ 這一週從頭到尾都判定為休診日，抓不到任何治療日，無法排藥水名單")
+        print("   請確認休診日設定是否誤把整週都標成休診（雲端「休診日」分頁 / 本機 休診日.csv）")
+        return
     skipped=[d for d in (monday+timedelta(days=i) for i in range(1,8)) if d in HOLIDAYS]
     if skipped: warn("ℹ 視為休診跳過:" + "、".join(lab(d) for d in skipped))
 

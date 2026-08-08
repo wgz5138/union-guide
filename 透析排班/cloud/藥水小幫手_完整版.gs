@@ -1,6 +1,24 @@
 /**
- * 透析印藥水 LINE 小幫手 v6.3 — Apps Script
+ * 透析印藥水 LINE 小幫手 v6.4 — Apps Script
  * ════════════════════════════════════════════════════════
+ *  v6.4（2026-08-08）獨立派出稽查agent全面徹查（跟 app.py v3.50 同一輪），這支.gs命中2項：
+ *  【低-14】補發模式下「雙印」（同一人一週印兩次、兩個不同印藥水日）只補得到一個日期，
+ *   健康檢查還會**每天**重發同一則「XXX(第二個日期)沒收到提醒」給玉繡，造成警報疲勞。
+ *   實測重現（section-21/25那次事故：潘冠秀8/10一區、8/13二區，名單8/14才送達）：她
+ *   只收到8/10那則、8/13完全沒發也補不回來。成因：sendReminders() 的 bucket 只用姓名
+ *   當 key，同一人第二筆會被 `if (!bucket[nm2])` 擋掉。改成 key 用「姓名|印藥水日」
+ *   組合鍵，兩個日期各自獨立成一則提醒；同一人同一天印兩區（同一 key）維持原本合併
+ *   成一則的行為不變。下游 flush_() 也跟著改用 info.name（不能再直接用迴圈變數，
+ *   因為它現在是組合鍵不是姓名），否則 map[name] 查無此人、提醒紀錄姓名欄會寫進
+ *   「潘冠秀|2026-08-10」這種壞字串。已用 gasmock.js 重現雙印情境並確認兩則都送達、
+ *   提醒紀錄兩列姓名都正確、健康檢查不再誤報。
+ *  【低-18／已知限制，本輪僅記錄未修改】sendReminders() 內 tz 寫死 "Asia/Taipei" 字面值
+ *   （非 Session.getScriptTimeZone()），Utilities.formatDate() 這幾處因為都明確傳了
+ *   tz 參數，行為不受專案時區設定影響；但 `new Date()`／`.getHours()` 這類沒有明確傳
+ *   時區的 Date 方法，其行為由 Apps Script 專案本身的時區設定（appsscript.json，這個
+ *   repo 沒有存這個檔）決定，本機無法讀取雲端專案實際設定值，也就無法用實測驗證是否
+ *   一致——如果專案時區設定被不小心改成非 Asia/Taipei，「今天」的判斷可能跟預期差一天。
+ *   建議：偶爾去 Apps Script 編輯器「專案設定」確認時區仍是「(GMT+08:00) 台北」。
  *  v6.3（2026-08-02）修玉繡回報的「暫存失敗」，順帶挖出一顆更嚴重的地雷：
  *  【症狀】按「✅ 產生定案」跳「⚠️ 雲端草稿暫存失敗（網路問題？）」、按「💾 備份草稿」
  *   跳「暫存失敗，請稍後再試」。**不是網路問題。**
@@ -394,8 +412,16 @@ function sendReminders(catchUp) {
   var iZ = head.indexOf("區"), iN = head.indexOf("姓名");
 
   var map = buildUserMap_(ss);
-  var advance = {};   // 提前提醒：姓名 → {areas:[], printStr=印藥水日}
-  var sameday = {};   // 當天提醒：姓名 → {areas:[], printStr=印藥水日}
+  // v6.4 修正（獨立稽查低-14）：以前 bucket 只用姓名當 key，同一人「雙印」（一週印
+  // 兩次、兩個不同印藥水日）時，第二筆會被 `if (!bucket[nm2])` 擋掉、日期永遠停在
+  // 第一筆——實測（名單8/14才送達，潘冠秀8/10一區、8/13二區兩筆）：她只收到8/10
+  // 那則補發通知，8/13那筆完全沒發、也補不回來（固定排程要求 Pstr===todayStr，
+  // 8/13已經過了），而且 v6.0 健康檢查會**每天**重發同一則「潘冠秀(8/13印)沒收到
+  // 提醒」給玉繡，直到下週名單覆蓋為止，造成警報疲勞。
+  // 改成 key 用「姓名|印藥水日」，雙印的兩個日期各自獨立成一則提醒；一天內同一人
+  // 同一天印兩個區的正常情況（同一 key）維持原本「areas 合併成一則」的行為不變。
+  var advance = {};   // (姓名|印藥水日) → {name, areas:[], printStr}
+  var sameday = {};   // (姓名|印藥水日) → {name, areas:[], printStr}
 
   for (var r = 1; r < rows.length; r++) {
     var dStr = normDate_(rows[r][iD], tz);                  // 名單上的日期 = 印藥水日本身（v5.8修正，不用再往前推）
@@ -421,8 +447,9 @@ function sendReminders(catchUp) {
     }
     if (!bucket) continue;
 
-    if (!bucket[nm2]) bucket[nm2] = {areas: [], printStr: Pstr};   // printStr 一律存「印藥水日」
-    if (area && bucket[nm2].areas.indexOf(area) < 0) bucket[nm2].areas.push(area);
+    var bkey = nm2 + "|" + Pstr;   // 雙印時兩個印藥水日各自一個 key，不會互相覆蓋
+    if (!bucket[bkey]) bucket[bkey] = {name: nm2, areas: [], printStr: Pstr};
+    if (area && bucket[bkey].areas.indexOf(area) < 0) bucket[bkey].areas.push(area);
   }
 
   // ★防重複：v5.9 改成掃「提醒紀錄」全部歷史（不再只限今天），因為補發可能發生在
@@ -436,8 +463,13 @@ function sendReminders(catchUp) {
 
   var sent = 0, miss = 0, dup = 0, failed = 0;
   function flush_(todo, type, makeMsg) {
-    for (var name in todo) {
-      var info = todo[name];
+    // v6.4（低-14 續）：todo 的 key 現在是「姓名|印藥水日」的組合鍵 bkey，不再是
+    // 單純姓名，所以底下所有「真人姓名」的用途（查 userId、寫入提醒紀錄、log）
+    // 都必須改用 info.name，不能再直接用迴圈變數 name（否則 map[name] 查無此人、
+    // 提醒紀錄寫進去的姓名欄會變成「潘冠秀|2026-08-10」這種怪字串）。
+    for (var bkey in todo) {
+      var info = todo[bkey];
+      var name = info.name;
       var key = type + "|" + name + "|" + info.printStr;
       if (sentKeys[key]) { dup++; continue; }              // 已經發過(不管是哪一天發的) → 跳過
       var uid2 = map[name];
@@ -613,14 +645,26 @@ function writeAllRowsFast_(sh, headers, rows) {
   var allRows = [headers].concat(norm);
   sh.getRange(1, 1, allRows.length, w).setValues(allRows);
 }
+/* v6.4 修正（獨立稽查中-8）：writeAllRowsFast_ 的欄數保護（v6.3）檢查對象是
+ * 「送進去的每一列」，但 writeHistory_ 送進去的是「舊資料(kept) + 這次新資料
+ * (newRows)」兩批合併——只要分頁裡任何一筆舊資料曾經被人手動多打一欄（例如在
+ * F 欄打了句備註），getDataRange() 會把那欄也讀進來，之後**每一次**
+ * setScheduleHistory/setAuditResult 都會因為那筆舊資料超欄而整批拋例外中止，
+ * 而且錯誤訊息報的「第 N 筆」指的是分頁裡的舊資料、不是這次送的資料，玉繡會
+ * 往錯的方向查（以為是這次排班出問題）。資料本身不會消失（v6.3 的保護還在），
+ * 但公平輪序從此停止累積，直到有人發現並手動清掉那欄雜訊為止。
+ * 改法：kept（舊資料）先截到表頭寬度再合併——截掉的是本來就不算資料的雜訊欄，
+ * 不會丟真正的資料；newRows（這次真的要寫的資料）不截，超欄還是要如實拋例外，
+ * 因為那才是「呼叫端真的送錯格式」的訊號。 */
 function writeHistory_(ss, sheetName, headers, key, newRows) {
   if (!key && newRows.length === 0) return;
   var sh = ensureSheet_(ss, sheetName, headers);
+  var w = headers.length;
   var vals = sh.getLastRow() > 0 ? sh.getDataRange().getValues() : [headers];
   var kept = vals.filter(function(r, i) {
     return i === 0 || String(r[0]) !== String(key);
-  });
-  writeAllRowsFast_(sh, headers, kept.slice(1).concat(newRows));
+  }).slice(1).map(function(r) { return r.slice(0, w); });   // 舊資料截到表頭寬度
+  writeAllRowsFast_(sh, headers, kept.concat(newRows));
 }
 function buildUserMap_(ss) {
   var map = {}, sh = ss.getSheetByName("對照");

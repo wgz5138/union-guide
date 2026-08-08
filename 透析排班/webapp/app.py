@@ -168,6 +168,24 @@ import streamlit.components.v1 as components
 import requests
 
 HERE = os.path.dirname(os.path.abspath(__file__))
+
+# v3.50（獨立稽查中-9）：detect_shifts_quick()（稽核 Stage1「📊 預覽班型」用）以前是
+# app.py 自己另外寫的第三份日期解析器，只認西元 yyyy-mm-dd 完整日期，沒跟上 v3.45~47
+# 幫 排班.py／稽核.py 加的民國年／中文「M月D日」／同表借年份／檔名分頁名四層備援。
+# 拿引爆整輪連環修的那張真實班表（日期格被打成「8月10日 缺31-33」）測過：每個人
+# 全部變 ❓，畫面跟著跳「這些人本月排稽核時會略過」，玉繡會以為班表壞了或工具壞了
+# （資料面影響有限，因為稽核.py 自己已經修好，最後仍會排對，但這裡的預覽會誤導人、
+# 讓人做白工去人工改一堆本來就對的班型）。
+# 改法：不要維護第三份日期解析器，直接匯入 稽核.py 這個模組、共用它已經修好且測過
+# 的 parse_sheet()（含全部 4 層備援），讀不到才真的顯示 ❓。
+try:
+    import importlib.util as _ilu
+    _spec = _ilu.spec_from_file_location("_audit_shared", os.path.join(HERE, "稽核.py"))
+    _audit_shared = _ilu.module_from_spec(_spec)
+    _spec.loader.exec_module(_audit_shared)
+except Exception:
+    _audit_shared = None   # 匯入失敗時 detect_shifts_quick 會整個回空表，不會崩潰
+
 CONFIG = ["組員名單.csv", "床號分區.csv", "不可印班別.csv", "休診日.csv",
           "排班紀錄.csv", "稽核紀錄.csv"]
 CELL_RE = re.compile(r'^(.*?)\((\d+)/(\d+)印\)(.*)$')
@@ -339,7 +357,7 @@ def _best_sheet_index(sheets):
 
 # ── Fix1：根據玉繡實際定案重建公平歷史 ──────────────────
 def _load_roster_names():
-    """讀組員名單.csv → {姓名: 卡號}"""
+    """讀本機備份 組員名單.csv → {姓名: 卡號}（僅供雲端讀不到時保底，見 get_roster_full()）"""
     f = os.path.join(HERE, "組員名單.csv")
     mapping = {}
     if not os.path.exists(f): return mapping
@@ -353,7 +371,7 @@ def _load_roster_names():
     return mapping
 
 def _load_roster_full():
-    """讀組員名單.csv → [{'卡號':.., '姓名':..}]（依檔案順序）"""
+    """讀本機備份 組員名單.csv → [{'卡號':.., '姓名':..}]（僅供雲端讀不到時保底，見 get_roster_full()）"""
     f = os.path.join(HERE, "組員名單.csv")
     out = []
     if not os.path.exists(f): return out
@@ -365,6 +383,43 @@ def _load_roster_full():
                 if name: out.append({"卡號": card, "姓名": name})
     except Exception: pass
     return out
+
+# ── 組員名單單一來源（v3.50，接續包獨立稽查高-3）───────────────────
+# 排班.py／稽核.py 執行前是用 fetch_members_as_csv() 抓雲端名單當 config_override，
+# 但 app.py 自己另外有 5 個地方（LINE公告的休息名單、build_corrected_history、
+# build_corrected_audit_history、定案畫面的「😴本週休息」、稽核快速模式的名冊）
+# 直接讀本機 repo 裡的 組員名單.csv——這份本機檔跟雲端完全是兩份獨立資料。Tab4
+# 「組員名單」的 UI 又明白引導使用者「新增/刪除後存回雲端，之後排班就用新名單」，
+# 等於主動製造這個落差。實測：雲端多一位新同仁但只改雲端 → 她照樣被排到印藥水，
+# 但 build_corrected_history 寫回的歷史完全沒有她這一列（用的是本機舊名單算的
+# 「休」清單），公平輪序永遠看不到她；稽核快速模式的畫面上也不會列出她。
+# 改法：這裡統一成單一入口，雲端優先，只有在讀不到雲端時才退回本機備份，並在
+# session_state 記下降級旗標，供畫面顯示警告（不要靜默降級）。
+def get_roster_full():
+    """組員名單單一來源 → [{'卡號':.., '姓名':..}]（依名單順序）。雲端優先、本機保底。"""
+    if "_roster_full_v350" not in st.session_state:
+        cloud_df = fetch_members_cloud()
+        if cloud_df is not None and not cloud_df.empty and "姓名" in cloud_df.columns:
+            out = [{"卡號": str(r.get("卡號", "")).strip(), "姓名": str(r.get("姓名", "")).strip()}
+                   for _, r in cloud_df.iterrows() if str(r.get("姓名", "")).strip()]
+            st.session_state["_roster_full_v350"] = out
+            st.session_state["_roster_source_v350"] = "cloud"
+        else:
+            local = _load_roster_full()
+            st.session_state["_roster_full_v350"] = local
+            st.session_state["_roster_source_v350"] = "local_fallback"
+    return st.session_state["_roster_full_v350"]
+
+def get_roster_names():
+    """組員名單單一來源 → {姓名: 卡號}。雲端優先、本機保底。"""
+    return {m["姓名"]: m["卡號"] for m in get_roster_full() if m["姓名"]}
+
+def roster_fallback_warning():
+    """如果這次 session 是靠本機備份撐著（雲端讀不到），回傳警告文字；正常時回 ""。"""
+    if st.session_state.get("_roster_source_v350") == "local_fallback":
+        return ("⚠️ 讀不到雲端組員名單，這次是用本機備份頂著——若最近有人入組/退組，"
+                "休息名單、公平輪序、稽核名冊都可能不準，請確認網路後重新整理頁面。")
+    return ""
 
 def fetch_last_audit_prefill():
     """從雲端稽核歷史抓「最近一個月」的每人班型/區，給快速模式預先帶入。
@@ -429,8 +484,13 @@ def fetch_audit_draft():
         return {}
 
 def push_audit_draft(df):
-    """把目前點選存成雲端草稿（借用 setAuditResult，月份=草稿；班型放狀態欄、區放位置欄）。"""
-    if not APPS_SCRIPT_URL or not WRITE_SECRET: return False
+    """把目前點選存成雲端草稿（借用 setAuditResult，月份=草稿；班型放狀態欄、區放位置欄）。
+
+    回傳 (ok, 錯誤訊息)。v3.50（獨立稽查低-19）：以前只回 True/False，失敗時畫面只能
+    講「儲存失敗，請稍後再試」，跟 v3.44 修過的 push_week_draft() 是同一類問題——
+    使用者分不出是網路斷線、GAS 端回 ok:false、還是資料格式錯，統一成 (ok, err) 才能
+    把真正原因秀出來。"""
+    if not APPS_SCRIPT_URL or not WRITE_SECRET: return False, "尚未設定 Apps Script 網址或密鑰"
     try:
         rows = [[DRAFT_KEY, str(r["卡號"]), str(r["姓名"]), str(r["班型"]), str(r["區"])]
                 for _, r in df.iterrows()]
@@ -438,21 +498,27 @@ def push_audit_draft(df):
                              json={"action": "setAuditResult", "secret": WRITE_SECRET,
                                    "key": DRAFT_KEY, "rows": rows},
                              timeout=20)
-        return resp.ok and resp.json().get("ok", False)
-    except Exception:
-        return False
+        if not resp.ok: return False, f"雲端回應碼異常：HTTP {resp.status_code}"
+        d = resp.json()
+        if not d.get("ok"): return False, f"雲端回報失敗：{d.get('error') or d}"
+        return True, ""
+    except Exception as e:
+        return False, f"例外：{e}"
 
 def clear_audit_draft():
-    """清除雲端草稿（送空 rows，月份=草稿 的紀錄會被移除）。"""
-    if not APPS_SCRIPT_URL or not WRITE_SECRET: return False
+    """清除雲端草稿（送空 rows，月份=草稿 的紀錄會被移除）。回傳 (ok, 錯誤訊息)。"""
+    if not APPS_SCRIPT_URL or not WRITE_SECRET: return False, "尚未設定 Apps Script 網址或密鑰"
     try:
         resp = requests.post(APPS_SCRIPT_URL,
                              json={"action": "setAuditResult", "secret": WRITE_SECRET,
                                    "key": DRAFT_KEY, "rows": []},
                              timeout=20)
-        return resp.ok and resp.json().get("ok", False)
-    except Exception:
-        return False
+        if not resp.ok: return False, f"雲端回應碼異常：HTTP {resp.status_code}"
+        d = resp.json()
+        if not d.get("ok"): return False, f"雲端回報失敗：{d.get('error') or d}"
+        return True, ""
+    except Exception as e:
+        return False, f"例外：{e}"
 
 # ── 印藥水定案雲端草稿（讓小巫雙重確認）───────────────────
 def push_week_draft(rows, sheet0):
@@ -508,6 +574,32 @@ def gs_date_to_ymd(s):
     m2 = re.match(r'(\d{4}-\d{2}-\d{2})', s)
     return m2.group(1) if m2 else s
 
+def _week_looks_stale(sheet0, today=None):
+    """粗略判斷週次字串是不是「已經不像最近這週」，只用來提醒多看一眼，不是精確計算。
+    抓不到格式（None）時一律當「看不出來」，不主動警告——沒有把握的東西不亂講。
+
+    v3.50（獨立稽查中-12）：雲端草稿沒有時間戳，`push_week_draft`/GAS 的
+    「排班草稿」分頁都只記週次字串，不記存入時間。以前只要玉繡按過一次「產生
+    定案」（會自動暫存草稿），下週打開 app 第一件事就是「📬 偵測到玉繡的排班
+    草稿（上週那份）」，若不小心按下去又送出，`setWeek` 會拿上週的印藥水日整批
+    覆蓋「本週名單」，本週的 LINE 提醒直接失效（而且GAS的dedup會擋住之後的
+    補發，因為那些日期「看起來」已經發過提醒了）。這裡加一層粗略的新鮮度判斷，
+    當草稿的週次跟今天差超過10天，畫面要多提醒一句、且送出前要多一道確認。
+    """
+    today = today or date.today()
+    m = re.match(r"^(\d{2})(\d{2})", str(sheet0).strip())
+    if not m: return None
+    mo, dy = int(m.group(1)), int(m.group(2))
+    if not (1 <= mo <= 12 and 1 <= dy <= 31): return None
+    best = None
+    for y in (today.year - 1, today.year, today.year + 1):
+        try: cand = date(y, mo, dy)
+        except ValueError: continue
+        if best is None or abs((cand - today).days) < abs((best - today).days):
+            best = cand
+    if best is None: return None
+    return abs((best - today).days) > 10
+
 def fetch_week_draft():
     """讀取雲端草稿 → (rows, sheet0)；沒有草稿回傳 (None, None)。"""
     if not APPS_SCRIPT_URL or not WRITE_SECRET: return None, None
@@ -539,15 +631,23 @@ def clear_week_draft_cloud():
         return False
 
 def fetch_schedule_stats():
-    """從雲端排班歷史彙總每人印/休次數 → DataFrame，或 None。"""
+    """從雲端排班歷史彙總每人印/休次數 → DataFrame(有資料) / None(真的沒資料) / 錯誤字串(讀取失敗)。
+
+    v3.50（獨立稽查中-5的同型問題）：舊版把「GAS 明確回 ok:false」跟「真的沒資料」
+    都回 None，畫面因此把讀取失敗也顯示成「雲端還沒有排班歷史，請按📤同步本機CSV→雲端」
+    ——這句話會主動引導使用者去按那顆同步鈕，而同步鈕已經修過（見
+    sync_schedule_history_from_csv）在讀取失敗時會自己中止，所以不會再因此蓋掉資料，
+    但這裡的誤導訊息本身還是該修：讀取失敗要老實說失敗，不要說成「還沒有資料」。
+    """
     if not APPS_SCRIPT_URL or not WRITE_SECRET: return None
     try:
         resp = requests.post(APPS_SCRIPT_URL,
                              json={"action": "getScheduleHistory", "secret": WRITE_SECRET},
                              timeout=30)
         d = resp.json()
-        if not d.get("ok") or not d.get("rows"): return None
-        rows = d["rows"]
+        if not (resp.ok and d.get("ok")):
+            return str(d.get("error", f"HTTP {resp.status_code}"))
+        rows = d.get("rows") or []
         if len(rows) < 2: return None
         df = pd.DataFrame([[str(c) for c in r] for r in rows[1:]], columns=[str(x) for x in rows[0]])
         df["狀態"] = df["狀態"].str.strip()
@@ -566,8 +666,12 @@ def fetch_schedule_stats():
         return str(_e)   # 回傳錯誤字串，UI 可顯示
 
 def save_schedule_stats(df):
-    """把統計表重建為歷史 rows 並整批推送到雲端（清空重建）。"""
-    if not APPS_SCRIPT_URL or not WRITE_SECRET: return False
+    """把統計表重建為歷史 rows 並整批推送到雲端（清空重建）。
+
+    回傳 (ok, 錯誤訊息)。v3.50（獨立稽查低-19）：跟 push_audit_draft 同一類修法，
+    以前只回 True/False，「清空所有人的每週明細只留總數字」這種高風險操作失敗時，
+    使用者卻只看得到「儲存失敗，請稍後再試」，猜不出到底是網路問題還是 GAS 端拒絕。"""
+    if not APPS_SCRIPT_URL or not WRITE_SECRET: return False, "尚未設定 Apps Script 網址或密鑰"
     try:
         rows = []
         for _, r in df.iterrows():
@@ -583,26 +687,43 @@ def save_schedule_stats(df):
                              json={"action": "setAllScheduleHistory", "secret": WRITE_SECRET,
                                    "rows": rows},
                              timeout=30)
-        return resp.ok and resp.json().get("ok", False)
-    except Exception:
-        return False
+        if not resp.ok: return False, f"雲端回應碼異常：HTTP {resp.status_code}"
+        d = resp.json()
+        if not d.get("ok"): return False, f"雲端回報失敗：{d.get('error') or d}"
+        return True, ""
+    except Exception as e:
+        return False, f"例外：{e}"
 
 def fetch_schedule_history_raw():
-    """從雲端排班歷史取得原始明細 → DataFrame(週次/卡號/姓名/狀態/治療日)，或 None。"""
-    if not APPS_SCRIPT_URL or not WRITE_SECRET: return None
+    """從雲端排班歷史取得原始明細 → (df, err)。
+
+    v3.50（獨立稽查中-5）：舊版把「GAS 明確回 ok:false」跟「真的沒有資料」都回傳
+    同一個 None，`sync_schedule_history_from_csv()` 只擋了 exception 那條路
+    （字串），把這個 None 當成「雲端 0 週」，於是 missing=本機全部、
+    combined=missing（因為 cloud_df 是 None 不會被合併）→ 整批覆蓋雲端，
+    畫面還顯示「已補進雲端」——正是第十六節那場事故的重演路徑，只是這次的
+    觸發點是「讀取失敗」而不是「本機落後」。
+    改成明確分三態：讀取失敗 → (None, 錯誤字串)；成功但真的沒資料 → (空DataFrame, "")；
+    成功有資料 → (DataFrame, "")。呼叫端只要看 df is None 就知道要不要中止。
+    """
+    if not APPS_SCRIPT_URL or not WRITE_SECRET:
+        return None, "未設定 APPS_SCRIPT_URL/WRITE_SECRET"
     try:
         resp = requests.post(APPS_SCRIPT_URL,
                              json={"action": "getScheduleHistory", "secret": WRITE_SECRET},
                              timeout=30)
         d = resp.json()
-        if not d.get("ok") or not d.get("rows"): return None
-        rows = d["rows"]
-        if len(rows) < 2: return None
+        if not (resp.ok and d.get("ok")):
+            return None, str(d.get("error", f"HTTP {resp.status_code}"))
+        rows = d.get("rows") or []
+        cols = ["週次","卡號","姓名","狀態","治療日"]
+        if len(rows) < 2:
+            return pd.DataFrame(columns=cols), ""
         df = pd.DataFrame([[str(c) for c in r] for r in rows[1:]], columns=[str(x) for x in rows[0]])
         df["狀態"] = df["狀態"].str.strip()
-        return df[df["狀態"].isin(["印","休"])].reset_index(drop=True)
+        return df[df["狀態"].isin(["印","休"])].reset_index(drop=True), ""
     except Exception as _e:
-        return str(_e)
+        return None, str(_e)
 
 def fetch_members_cloud():
     """從 GS 雲端讀取組員名單 → DataFrame(卡號/姓名)，或 None。"""
@@ -626,17 +747,20 @@ def fetch_members_as_csv():
     return df.to_csv(index=False).encode("utf-8-sig")
 
 def save_members_cloud(df):
-    """把組員名單 DataFrame 存回 GS 雲端。"""
-    if not APPS_SCRIPT_URL or not WRITE_SECRET: return False
+    """把組員名單 DataFrame 存回 GS 雲端。回傳 (ok, 錯誤訊息)（v3.50 獨立稽查低-19）。"""
+    if not APPS_SCRIPT_URL or not WRITE_SECRET: return False, "尚未設定 Apps Script 網址或密鑰"
     try:
         rows = [[str(r.get("卡號","")).strip(), str(r.get("姓名","")).strip()]
                 for _, r in df.iterrows() if str(r.get("姓名","")).strip()]
         resp = requests.post(APPS_SCRIPT_URL,
                              json={"action": "setMembers", "secret": WRITE_SECRET, "rows": rows},
                              timeout=20)
-        return resp.ok and resp.json().get("ok", False)
-    except Exception:
-        return False
+        if not resp.ok: return False, f"雲端回應碼異常：HTTP {resp.status_code}"
+        d = resp.json()
+        if not d.get("ok"): return False, f"雲端回報失敗：{d.get('error') or d}"
+        return True, ""
+    except Exception as e:
+        return False, f"例外：{e}"
 
 # ── 休診日：雲端「休診日」分頁是唯一來源（v3.42）────────────────
 # 過年/連假這種「沒診、不上班」的日子，本來有兩份各自維護的清單：
@@ -742,15 +866,19 @@ def save_holidays_cloud(df):
         return False, 0, str(_e)
 
 def fetch_audit_stats():
-    """從 GS 稽核歷史彙總每人稽核/休次數 → DataFrame，或 None。"""
+    """從 GS 稽核歷史彙總每人稽核/休次數 → DataFrame(有資料) / None(真的沒資料) / 錯誤字串(讀取失敗)。
+
+    v3.50：跟 fetch_schedule_stats() 同一類問題，見那邊的說明。
+    """
     if not APPS_SCRIPT_URL or not WRITE_SECRET: return None
     try:
         resp = requests.post(APPS_SCRIPT_URL,
                              json={"action": "getAuditHistory", "secret": WRITE_SECRET},
                              timeout=20)
         d = resp.json()
-        if not d.get("ok") or not d.get("rows"): return None
-        rows = d["rows"]
+        if not (resp.ok and d.get("ok")):
+            return str(d.get("error", f"HTTP {resp.status_code}"))
+        rows = d.get("rows") or []
         if len(rows) < 2: return None
         df = pd.DataFrame([[str(c) for c in r] for r in rows[1:]], columns=[str(x) for x in rows[0]])
         df["狀態"] = df["狀態"].str.strip()
@@ -769,8 +897,9 @@ def fetch_audit_stats():
         return str(_e)
 
 def save_audit_stats(df):
-    """把稽核統計表重建為歷史 rows 並整批推送到 GS（清空重建）。"""
-    if not APPS_SCRIPT_URL or not WRITE_SECRET: return False
+    """把稽核統計表重建為歷史 rows 並整批推送到 GS（清空重建）。
+    回傳 (ok, 錯誤訊息)（v3.50 獨立稽查低-19，跟 save_schedule_stats 同一類修法）。"""
+    if not APPS_SCRIPT_URL or not WRITE_SECRET: return False, "尚未設定 Apps Script 網址或密鑰"
     try:
         rows = []
         for _, r in df.iterrows():
@@ -784,9 +913,12 @@ def save_audit_stats(df):
                              json={"action": "setAllAuditHistory", "secret": WRITE_SECRET,
                                    "rows": rows},
                              timeout=30)
-        return resp.ok and resp.json().get("ok", False)
-    except Exception:
-        return False
+        if not resp.ok: return False, f"雲端回應碼異常：HTTP {resp.status_code}"
+        d = resp.json()
+        if not d.get("ok"): return False, f"雲端回報失敗：{d.get('error') or d}"
+        return True, ""
+    except Exception as e:
+        return False, f"例外：{e}"
 
 def fetch_latest_audit_result():
     """從 GS 稽核歷史讀取最新一個月的名單明細（稽核者含位置、休息者列出）。
@@ -806,7 +938,17 @@ def fetch_latest_audit_result():
                 (df["月份"] == "草稿"))
         valid = df[~excl & df["狀態"].isin(["稽核","休"])].copy()
         if valid.empty: return None, None
-        latest = sorted(valid["月份"].unique())[-1]   # 字典排序，115-07 > 115-06 > 114-12
+        # v3.50（獨立稽查低-19）：原本用純字典排序取最新月份，只在同一種年份格式
+        # （全部都是民國，或全部都是西元）時才剛好是對的。跟 _home_audit_snapshot()
+        # 一樣的陷阱：民國「115-12」跟西元「2026-07」混在一起時，字典排序看第一個
+        # 字元 '2' > '1'，會把「2026-07」誤判成比「115-12」還新——但「2026-07」換算
+        # 民國其實是 115-07，比 115-12 還早。改成跟 _home_audit_snapshot() 一致的
+        # 「民國/西元統一換算成西元年再比大小」。
+        def _to_ce(k):
+            y, mo = str(k).split("-")
+            y = int(y)
+            return (y + 1911 if y < 1911 else y, int(mo))
+        latest = sorted(valid["月份"].unique(), key=_to_ce)[-1]
         result = valid[valid["月份"] == latest][["姓名","狀態","位置"]].reset_index(drop=True)
         return latest, result
     except Exception as _e:
@@ -848,15 +990,17 @@ def sync_schedule_history_from_csv():
     if not os.path.exists(csv_path): return False, 0, "找不到排班紀錄.csv"
     try:
         df_local = pd.read_csv(csv_path, encoding="utf-8-sig", dtype=str, keep_default_na=False)
-        cloud_df = fetch_schedule_history_raw()
-        if isinstance(cloud_df, str):
-            return False, 0, f"讀取雲端現況失敗，為安全起見取消同步：{cloud_df}"
-        cloud_weeks = set(cloud_df["週次"].astype(str)) if cloud_df is not None else set()
+        cloud_df, _err = fetch_schedule_history_raw()
+        if cloud_df is None:
+            # v3.50：以前這裡只擋「回傳字串」的例外，讀取失敗回 None 沒被擋到，
+            # 會被當成「雲端0週」去整批覆蓋（見 fetch_schedule_history_raw 說明）。
+            return False, 0, f"讀取雲端現況失敗，為安全起見取消同步：{_err}"
+        cloud_weeks = set(cloud_df["週次"].astype(str))
         missing = df_local[~df_local["週次"].astype(str).isin(cloud_weeks)]
         if missing.empty:
             return True, 0, ""
         combined = (pd.concat([cloud_df, missing], ignore_index=True)
-                    if cloud_df is not None and not cloud_df.empty else missing)
+                    if not cloud_df.empty else missing)
         rows = [list(r) for _, r in combined.iterrows()]
         ok, _, err = _sync_to_gs("setAllScheduleHistory", rows)
         return ok, (len(missing) if ok else 0), err
@@ -864,19 +1008,26 @@ def sync_schedule_history_from_csv():
         return False, 0, str(e)
 
 def fetch_audit_history_full_raw():
-    """從雲端稽核歷史取得完整明細（含草稿/意見等特殊列，不篩選）→ DataFrame，或 None/錯誤字串。"""
-    if not APPS_SCRIPT_URL or not WRITE_SECRET: return None
+    """從雲端稽核歷史取得完整明細（含草稿/意見等特殊列，不篩選）→ (df, err)。
+
+    v3.50（獨立稽查中-5）：跟 fetch_schedule_history_raw 是同一類問題，同樣的三態
+    分法，見那邊的說明。
+    """
+    if not APPS_SCRIPT_URL or not WRITE_SECRET:
+        return None, "未設定 APPS_SCRIPT_URL/WRITE_SECRET"
     try:
         resp = requests.post(APPS_SCRIPT_URL,
                              json={"action": "getAuditHistory", "secret": WRITE_SECRET},
                              timeout=30)
         d = resp.json()
-        if not d.get("ok"): return None
+        if not (resp.ok and d.get("ok")):
+            return None, str(d.get("error", f"HTTP {resp.status_code}"))
         rows = d.get("rows") or []
-        if len(rows) < 2: return pd.DataFrame(columns=["月份","卡號","姓名","狀態","位置"])
-        return pd.DataFrame([[str(c) for c in r] for r in rows[1:]], columns=[str(x) for x in rows[0]])
+        if len(rows) < 2:
+            return pd.DataFrame(columns=["月份","卡號","姓名","狀態","位置"]), ""
+        return pd.DataFrame([[str(c) for c in r] for r in rows[1:]], columns=[str(x) for x in rows[0]]), ""
     except Exception as e:
-        return str(e)
+        return None, str(e)
 
 def sync_audit_history_from_csv():
     """把本機稽核紀錄.csv 裡「雲端目前沒有的月份」補進雲端稽核歷史（同 v3.38 排班版邏輯，
@@ -886,10 +1037,10 @@ def sync_audit_history_from_csv():
     if not os.path.exists(csv_path): return False, 0, "找不到稽核紀錄.csv"
     try:
         df_local = pd.read_csv(csv_path, encoding="utf-8-sig", dtype=str, keep_default_na=False)
-        cloud_df = fetch_audit_history_full_raw()
-        if isinstance(cloud_df, str):
-            return False, 0, f"讀取雲端現況失敗，為安全起見取消同步：{cloud_df}"
-        cloud_months = set(cloud_df["月份"].astype(str)) if cloud_df is not None else set()
+        cloud_df, _err = fetch_audit_history_full_raw()
+        if cloud_df is None:
+            return False, 0, f"讀取雲端現況失敗，為安全起見取消同步：{_err}"
+        cloud_months = set(cloud_df["月份"].astype(str))
         missing = df_local[~df_local["月份"].astype(str).isin(cloud_months)]
         if missing.empty:
             return True, 0, ""
@@ -897,11 +1048,11 @@ def sync_audit_history_from_csv():
         # setAllAuditHistory 本來就會自己保留這些列（keptAud），我們這邊若又原封不動
         # 送回去，同一批草稿/意見會被寫兩次 → 列數翻倍（實測按1次：草稿1→2筆、
         # 意見1→2筆）。不會掉資料，但會累積雜訊、回饋清單出現重複。
-        if cloud_df is not None and not cloud_df.empty:
+        if not cloud_df.empty:
             _mon = cloud_df["月份"].astype(str)
             cloud_df = cloud_df[~(_mon.eq("草稿") | _mon.str.startswith("意見-"))]
         combined = (pd.concat([cloud_df, missing], ignore_index=True)
-                    if cloud_df is not None and not cloud_df.empty else missing)
+                    if not cloud_df.empty else missing)
         rows = [list(r) for _, r in combined.iterrows()]
         ok, _, err = _sync_to_gs("setAllAuditHistory", rows)
         return ok, (len(missing) if ok else 0), err
@@ -966,23 +1117,62 @@ def _build_line_txt(rows, disp_df=None):
 
     disp_df: 定案 DataFrame（index=一區/二區, columns=治療日欄標）。
     提供 disp_df 時從格子內容（如「張雅雯(7/1印)」）取得印藥水日期顯示於左欄。
+
+    ⚠ v3.50（獨立稽查中-7）：以前這裡的年份是「整份公告共用一個」（從 rows[0] 猜
+    一次），跟 v3.41 已經替「產生定案」修過的「逐格查表」完全不同步——跨年那一週
+    （例如12月最後一週+1月第一週排在同一張表）後半段的月/日會被套上錯的年份，連帶
+    治療日排序全錯（字串排序，"01/01"排在"12/31"前面）、標題起訖日顛倒、星期算錯。
+    個人 LINE 提醒（送 GAS 的「本週名單」）一直是對的，因為那條路直接用 rows 裡
+    已經算好的完整日期；出錯的只有這份「貼到 LINE 群組」的公告文字，造成「個人
+    提醒跟群組公告對不上」（實測跨年週 1228~0103：公告寫「01/01是週四」，實際
+    2027-01-01是週五；標題起訖日也顛倒）。
+    改法：rows 每一列本來就有 [印日期(含年,已逐格查過表), 區, 姓名, 🔺, 治療欄key]，
+    這裡直接拿 rows 建 (區,治療欄key)→印藥水日 的查表，不再從欄位標籤文字重新猜；
+    治療日的年份則用「離印藥水日最近的年份」反推（治療日跟印藥水日本來就只差1~2
+    個工作天，不會挑錯）。順帶修正中-4 延伸出來的問題：沒有(印)標注的格子代表
+    這格沒有印藥水日（例如手動填進❌排不出，那個人根本沒送到雲端），以前會拿
+    治療日充當印藥水日把她印出來，現在直接跳過不列進公告。
     """
-    from datetime import datetime as _dt
+    from datetime import datetime as _dt, date as _date
     DOW = {0:"週一",1:"週二",2:"週三",3:"週四",4:"週五",5:"週六",6:"週日"}
+
+    # (區, 治療欄key) → 印藥水日字串。來自 rows，是「產生定案」逐格查表算出的正確值。
+    date_lookup = {}
+    for rr in rows:
+        if len(rr) >= 5 and rr[2]:
+            date_lookup[(str(rr[1]), str(rr[4]))] = str(rr[0])
 
     yr_val = pd.Timestamp.now().year
     for _r in rows:
         try: yr_val = int(str(_r[0]).split('-')[0]); break
         except Exception: pass
 
-    def _parse_col(col_str):
+    def _dstr(yr, mo, dy): return f"{yr}-{mo:02d}-{dy:02d}"
+
+    def _nearest_year(mo, dy, anchor_str):
+        """已知月日、沒有年份時，挑一個離 anchor（印藥水日）最近的年份——治療日跟
+        印藥水日本來就只差1~2個工作天，不會跨超過一年，不會挑錯。"""
+        try:
+            anchor = _dt.strptime(anchor_str, "%Y-%m-%d").date()
+        except Exception:
+            return yr_val
+        best = None
+        for y in (anchor.year - 1, anchor.year, anchor.year + 1):
+            try: cand = _date(y, mo, dy)
+            except ValueError: continue
+            if best is None or abs((cand - anchor).days) < abs((best - anchor).days):
+                best = cand
+        return best.year if best else anchor.year
+
+    def _parse_col(col_str, anchor_str=None):
         m = re.search(r'(\d{1,2})/(\d{1,2})', str(col_str))
-        if m: return yr_val, int(m.group(1)), int(m.group(2))
+        if m:
+            mo, dy = int(m.group(1)), int(m.group(2))
+            yr = _nearest_year(mo, dy, anchor_str) if anchor_str else yr_val
+            return yr, mo, dy
         m = re.search(r'(\d{4})-(\d{2})-(\d{2})', str(col_str))
         if m: return int(m.group(1)), int(m.group(2)), int(m.group(3))
         return None, None, None
-
-    def _dstr(yr, mo, dy): return f"{yr}-{mo:02d}-{dy:02d}"
 
     def fmt(d_str):
         d = _dt.strptime(d_str, "%Y-%m-%d")
@@ -999,26 +1189,30 @@ def _build_line_txt(rows, disp_df=None):
 
     if disp_df is not None:
         for col in disp_df.columns:
-            t_yr, t_mo, t_dy = _parse_col(col)
-            if t_yr is None: continue
-            t_str = _dstr(t_yr, t_mo, t_dy)
-
             for area in ["一區","二區","三區"]:
                 if area not in disp_df.index: continue
                 v = str(disp_df.loc[area, col]).strip()
                 if not v or v in ("nan","None","❌排不出"): continue
                 nm_m = CELL_RE.match(v)
-                if nm_m:
-                    # 保留 🔺，但把「雙印」標記濾掉——group(4) 可能是「🔺雙印」，
-                    # 直接串上去會讓公告出現「廖緗玗雙印」這種被污染的姓名（v3.41）
-                    nm = nm_m.group(1).strip() + nm_m.group(4).replace("雙印", "").strip()
+                if not nm_m:
+                    # v3.50：沒有 (印) 標注＝這格沒有印藥水日（例如手動填進❌排不出，
+                    # 見中-4）——這個人根本沒被送到雲端，公告不該把她印出來（以前會
+                    # 拿治療日充當印藥水日，等於憑空生一個假日期，見上方說明）。
+                    continue
+                # 保留 🔺，但把「雙印」標記濾掉——group(4) 可能是「🔺雙印」，
+                # 直接串上去會讓公告出現「廖緗玗雙印」這種被污染的姓名（v3.41）
+                nm = nm_m.group(1).strip() + nm_m.group(4).replace("雙印", "").strip()
+                if not nm: continue
+                p_str = date_lookup.get((area, str(col)))
+                if p_str is None:
+                    # 防呆退路：理論上 disp 跟 rows 是同一輪「產生定案」算出來的，
+                    # 不該對不上；對不上時至少用格子上寫的月日湊一個印藥水日。
                     p_mo, p_dy = int(nm_m.group(2)), int(nm_m.group(3))
-                    p_str = _dstr(t_yr, p_mo, p_dy)   # ← 這一格自己的印藥水日
-                else:
-                    nm = v.replace("雙印", "").strip()
-                    p_str = t_str                     # 沒有(印)標注 → 退回用治療日
-                if nm:
-                    treats.append({"t": t_str, "p": p_str, "a": {area: nm}})
+                    p_str = _dstr(yr_val, p_mo, p_dy)
+                t_yr, t_mo, t_dy = _parse_col(col, anchor_str=p_str)
+                if t_yr is None: continue
+                t_str = _dstr(t_yr, t_mo, t_dy)
+                treats.append({"t": t_str, "p": p_str, "a": {area: nm}})
     else:
         # fallback：印藥水日分組，同一區同一天可能有多人，用 list 累積
         tmp = {}
@@ -1057,7 +1251,7 @@ def _build_line_txt(rows, disp_df=None):
             if names: line += f"  {area}：{'、'.join(names)}"
         lines.append(line)
 
-    roster = _load_roster_full()
+    roster = get_roster_full()
     if roster:
         printing = set()
         for e in treats:
@@ -1072,12 +1266,13 @@ def _build_line_txt(rows, disp_df=None):
 
 
 # ── 💬 意見回饋：借用稽核歷史（特殊鍵「意見-時間」）存放，不動 LINE 程式 ──
-APP_VER = "v3.49"
+APP_VER = "v3.50"
 FEEDBACK_PREFIX = "意見-"
 
 def push_feedback(step, detail, expect, urgency, who):
-    """把一筆回饋寫進雲端（不影響排班/稽核：狀態欄非『稽核/休』故公平輪序會略過）。"""
-    if not APPS_SCRIPT_URL or not WRITE_SECRET: return False
+    """把一筆回饋寫進雲端（不影響排班/稽核：狀態欄非『稽核/休』故公平輪序會略過）。
+    回傳 (ok, 錯誤訊息)（v3.50 獨立稽查低-19）。"""
+    if not APPS_SCRIPT_URL or not WRITE_SECRET: return False, "尚未設定 Apps Script 網址或密鑰"
     now = datetime.now().strftime("%Y-%m-%d %H:%M:%S.%f")   # 含微秒 → 每筆鍵唯一
     key = FEEDBACK_PREFIX + now
     blob = "問題：" + (detail or "").strip()
@@ -1089,9 +1284,12 @@ def push_feedback(step, detail, expect, urgency, who):
                              json={"action": "setAuditResult", "secret": WRITE_SECRET,
                                    "key": key, "rows": [row]},
                              timeout=20)
-        return resp.ok and resp.json().get("ok", False)
-    except Exception:
-        return False
+        if not resp.ok: return False, f"雲端回應碼異常：HTTP {resp.status_code}"
+        d = resp.json()
+        if not d.get("ok"): return False, f"雲端回報失敗：{d.get('error') or d}"
+        return True, ""
+    except Exception as e:
+        return False, f"例外：{e}"
 
 def _mask_name(name):
     """公開檢視用：把留言者姓名換成固定亂碼（同一人代碼一樣，但看不出是誰）。"""
@@ -1151,7 +1349,7 @@ def build_corrected_history(cloud_rows, sheet_name, prev_hist_bytes):
     cloud_rows: [[印日期, 區, 姓名], ...]
     prev_hist_bytes: 排班.py 寫的 排班紀錄.csv bytes（含本週舊資料，會被替換）
     """
-    roster = _load_roster_names()
+    roster = get_roster_names()
     if not roster: return prev_hist_bytes   # 讀不到名單就維持原版
 
     # 玉繡定案後實際印藥水的人（去掉空值）
@@ -1191,7 +1389,7 @@ def build_corrected_audit_history(edited_ak, month_key, prev_hist_bytes):
     edited_ak: DataFrame，欄位 區/組/班次/稽核者（稽核者可能帶「(跨區)」後綴）
     prev_hist_bytes: 稽核.py 寫的 稽核紀錄_輸出.csv bytes（本月那批會被替換）
     """
-    roster = _load_roster_names()          # {姓名: 卡號}
+    roster = get_roster_names()          # {姓名: 卡號}（單一來源，v3.50）
     if not roster or edited_ak is None or edited_ak.empty:
         return prev_hist_bytes             # 讀不到名單/沒有編輯結果 → 維持原版
 
@@ -1200,7 +1398,9 @@ def build_corrected_audit_history(edited_ak, month_key, prev_hist_bytes):
     pos_of = {}
     try:
         for _, r in edited_ak.iterrows():
-            nm = re.sub(r'\(.*?\)', '', str(r.get("稽核者",""))).strip()   # 去掉「(跨區)」
+            # v3.50（獨立稽查低-19）：跟 send_audit_notices() 統一成同一條 regex（含全形
+            # 括號），避免兩邊清洗規則不同調又長出新的名字對不上問題。
+            nm = re.sub(r'[\(（].*?[\)）]', '', str(r.get("稽核者",""))).strip()   # 去掉「(跨區)」等括號註記
             if not nm: continue
             pos_of[nm] = f"{str(r.get('區','')).strip()}/{str(r.get('組','')).strip()}/{str(r.get('班次','')).strip()}"
     except Exception:
@@ -1278,11 +1478,22 @@ def push_history(action, hist_bytes, key):
 # Fix2：稽核送出後 LINE 通知稽核者
 def send_audit_notices(month_key, audit_df):
     """從稽核名單 DataFrame 解析每人位置，呼叫 Apps Script 發 LINE 通知。"""
-    if not APPS_SCRIPT_URL or not WRITE_SECRET: return 0, 0
+    # v3.50（獨立稽查低-16）：呼叫端一律 `sent, miss, failed_names = send_audit_notices(...)`
+    # 要拆 3 個值，但這裡兩條早退路徑原本回傳 `0, 0`（只有 2 個值），只要沒設定
+    # APPS_SCRIPT_URL/WRITE_SECRET，或這個月稽核名單解析不出任何人（例如全部都是
+    # 「❌排不出」），呼叫端就會直接 ValueError 崩潰。統一成 3-tuple。
+    if not APPS_SCRIPT_URL or not WRITE_SECRET: return 0, 0, []
     notices = []
     seen = set()
     for _, row in audit_df.iterrows():
-        name = str(row.get("稽核者","")).strip().replace("(跨區)","")
+        # v3.50（獨立稽查低-19）：這裡原本只精準砍掉「(跨區)」這個字面字串，跟
+        # build_corrected_audit_history() 的 `re.sub(r'\(.*?\)', '', ...)` 不是同一套
+        # 清洗規則——audit_df 是可自由編輯的 data_editor 結果，玉繡如果打了其他括號
+        # 註記（例如「(代)」、全形括號、或任何不是剛好等於「(跨區)」的內容），這裡就
+        # 會漏清，名字對不到組員名單、也對不到 build_corrected_audit_history 存進歷史
+        # 的乾淨姓名，導致「歷史記錄有這個人、卻沒收到 LINE 通知」的不一致。改用同一條
+        # regex，兩邊統一。
+        name = re.sub(r'[\(（].*?[\)）]', '', str(row.get("稽核者",""))).strip()
         if not name or name == "❌排不出" or name in seen: continue
         seen.add(name)
         area  = str(row.get("區","")).strip()
@@ -1305,49 +1516,34 @@ def send_audit_notices(month_key, audit_df):
 
 
 # ── 月稽核 Stage1：快速偵測班型 ──────────────────────────
-def detect_shifts_quick(data, yy, mm):
+def detect_shifts_quick(data, yy, mm, filename_hint=None):
+    """稽核 Stage1「📊 預覽班型」：從班表猜每人白班/小夜。
+
+    v3.50：改成呼叫 稽核.py 的 parse_sheet()（見上方 _audit_shared 匯入），不再自己
+    另外解析日期——沿用它已經測過的 4 層備援（表格內完整日期→同表其他日期借年份→
+    檔名/分頁名借年份→整排讀不到時依檔名推算），日期格被打成文字或民國格式都不會
+    再整批變 ❓。filename_hint 傳上傳檔案的檔名（例如「115.08.10~115.08.16.xls」），
+    給 parse_sheet 的第3層備援用；沒有就退回舊行為（可能猜不到年份）。
+    """
+    if _audit_shared is None:
+        return pd.DataFrame(columns=["卡號","姓名","程式猜測","確認班型"])
     person = {}
     try:
         xls = pd.ExcelFile(io.BytesIO(data))
         for sn in xls.sheet_names:
             try: df = pd.read_excel(io.BytesIO(data), sheet_name=sn, header=None)
             except Exception: continue
-            hr = None
-            for i in range(len(df)):
-                c0 = str(df.iat[i,0]).strip() if not pd.isna(df.iat[i,0]) else ""
-                c1 = str(df.iat[i,1]).strip() if not pd.isna(df.iat[i,1]) else ""
-                if c0=="卡號" and c1=="姓名": hr=i; break
-            if hr is None: continue
-            blocks=[c for c in range(df.shape[1])
-                    if (not pd.isna(df.iat[hr,c])) and str(df.iat[hr,c]).strip()=="類別"]
-            bdates=[]
-            for c in blocks:
-                d=None
-                for rr in range(hr-1,hr-4,-1):
-                    if 0<=rr<len(df) and not pd.isna(df.iat[rr,c]):
-                        v=df.iat[rr,c]
-                        if isinstance(v,(pd.Timestamp,datetime)):
-                            try: d=v.date(); break
-                            except Exception: pass
-                        else:
-                            s=str(v).strip()
-                            m_d=re.search(r"(\d{4})\D?(\d{1,2})\D(\d{1,2})",s)
-                            if m_d:
-                                try: d=date(int(m_d.group(1)),int(m_d.group(2)),int(m_d.group(3))); break
-                                except Exception: pass
-                bdates.append(d)
-            for r in range(hr+1,len(df)):
-                card=str(df.iat[r,0]).strip() if not pd.isna(df.iat[r,0]) else ""
-                name=str(df.iat[r,1]).strip() if not pd.isna(df.iat[r,1]) else ""
-                if not card and not name: continue
-                key=card or name
-                if key not in person: person[key]={"card":card,"name":name,"white":0,"night":0}
-                for c,d in zip(blocks,bdates):
-                    if d is None or d.year!=yy or d.month!=mm: continue
-                    if c+1>=df.shape[1] or pd.isna(df.iat[r,c+1]): continue
-                    shift=str(df.iat[r,c+1]).strip()
-                    if shift.startswith("D"): person[key]["white"]+=1
-                    elif shift.startswith("E"): person[key]["night"]+=1
+            status, name_of, by_name, _mon = _audit_shared.parse_sheet(df, filename_hint, sn)
+            for card, name in name_of.items():
+                person.setdefault(card, {"card": card, "name": name, "white": 0, "night": 0})
+            for card, dmap in status.items():
+                person.setdefault(card, {"card": card, "name": name_of.get(card, ""),
+                                         "white": 0, "night": 0})
+                for d, tup in dmap.items():
+                    if d is None or d.year != yy or d.month != mm: continue
+                    shift = str(tup[1]).strip()
+                    if shift.startswith("D"): person[card]["white"] += 1
+                    elif shift.startswith("E"): person[card]["night"] += 1
     except Exception: pass
     result=[]
     for key,info in person.items():
@@ -1385,7 +1581,12 @@ if TEST_MODE:
 
 st.title("💊 透析藥水排班")
 st.caption("上傳班表 Excel → 出名單(表格)。可直接點格子改人名。跨區標 🔺。")
-st.caption("🟢 版本 v3.49（①排班提醒補上「⚠️ 注意事項」標題，之前是沒標題直接倒在表格下面、認不出來 ②修好注意事項漏顯示 ℹ/⚠ 那一整類警告 ③首頁補上稽核累積筆數／最新稽核月份 ④班表日期不再依賴排班組怎麼填 ⑤休診日改為單一來源）· 2026-08-06")
+st.caption("🟢 版本 v3.50（獨立派出稽查agent全面徹查，19項發現逐一實測修復：組員名單/排班統計/"
+           "稽核統計/回饋等6支雲端寫入函式失敗時不再只講「請稍後再試」、改成秀出真正原因 ②稽核者"
+           "姓名括號清洗規則統一，避免「(跨區)」以外的註記漏清導致對不到人 ③重新載入舊草稿時"
+           "🔺跨區標記不會再被無故清空 ④稽核月份最新判斷改用民國/西元統一換算，不再被字典排序"
+           "騙 ⑤長假期把整週吃光時不再是一串看不懂的錯誤、改成友善訊息 ⑥不可印班別比對修掉"
+           "子字串誤配（如「1-9」誤配到「11-9」）⑦其餘多項防呆與訊息一致性修正）· 2026-08-08")
 
 # ── 📊 首頁顯眼統計＋本機備份落後提醒（2026-07-20加，v3.38）─────────────
 # 目的：2026-07-19~20那次「7/20資料被同步按鈕蓋掉」事件，玉繡是三週後才發現雲端資料
@@ -1400,8 +1601,8 @@ def _home_audit_snapshot():
     稽核跟印藥水一樣是每個月要送雲端的東西，同樣需要「數字有沒有在增加」一眼可判斷，
     不然又要等到對不上才發現（接續包第十六節那次就是三週後才發現）。
     回傳 (筆數, 最新月份) 或 (None, None)。"""
-    df = fetch_audit_history_full_raw()
-    if isinstance(df, str) or df is None or df.empty:
+    df, _ = fetch_audit_history_full_raw()
+    if df is None or df.empty:
         return None, None
     m = df["月份"].astype(str).str.strip()
     # 只算正常月份鍵，草稿/意見-/統計- 這些特殊列不列入
@@ -1415,10 +1616,15 @@ def _home_audit_snapshot():
     months = sorted(real["月份"].astype(str).str.strip().unique(), key=_to_ce)
     return len(real), months[-1]
 
+@st.cache_data(ttl=300, show_spinner=False)
 def _home_stats_snapshot():
-    cloud_df = fetch_schedule_history_raw()
+    # v3.50（獨立稽查中-6）：這個裝飾器原本掛在這裡，v3.47 新增 _home_audit_snapshot
+    # 時被插在裝飾器跟這個函式定義之間，裝飾器就落到 _home_audit_snapshot 頭上、
+    # 這支反而裸奔——每次 Streamlit rerun（玉繡按任何按鈕、改任何格子）都會多打一次
+    # getScheduleHistory，App 變鈍、Apps Script 執行配額也被無謂消耗。
+    cloud_df, _ = fetch_schedule_history_raw()
     n_audit, latest_audit = _home_audit_snapshot()
-    if isinstance(cloud_df, str) or cloud_df is None or cloud_df.empty:
+    if cloud_df is None or cloud_df.empty:
         # 排班讀不到但稽核讀得到時，也要把稽核顯示出來，不要整塊消失
         if n_audit is None: return None
         return {"n_cloud": None, "latest_cloud_week": None, "n_local": 0,
@@ -1569,11 +1775,13 @@ with st.expander("💬 有問題？回報一下（會存起來，大家都看得
             st.warning("請至少在 ② 簡單描述一下發生什麼事 🙏")
         elif not (APPS_SCRIPT_URL and WRITE_SECRET):
             st.error("雲端尚未設定，無法送出。")
-        elif push_feedback(fb_step, fb_detail, fb_expect, fb_urg, fb_who):
-            st.success("✅ 已送出！謝謝你的回報，我們看到會處理 🙏")
-            st.balloons()
         else:
-            st.error("送出失敗，請稍後再試。")
+            _fb_ok, _fb_err = push_feedback(fb_step, fb_detail, fb_expect, fb_urg, fb_who)
+            if _fb_ok:
+                st.success("✅ 已送出！謝謝你的回報，我們看到會處理 🙏")
+                st.balloons()
+            else:
+                st.error(f"送出失敗：{_fb_err}")
 
 # ── 📋 大家回報過的問題（公開；名字以亂碼呈現保護隱私；按「載入」才去抓）──
 with st.expander("📋 大家回報過的問題（公開・看看有沒有人提過）", expanded=False):
@@ -1659,7 +1867,13 @@ if mode.startswith("🟦"):
         _pending = st.session_state.get("week_draft_auto")
         if _pending:
             _ar, _as = _pending
-            st.info(f"📬 偵測到玉繡的排班草稿（{_as}），要載入確認嗎？")
+            _stale = _week_looks_stale(_as)
+            if _stale:
+                st.warning(f"📬 偵測到雲端有一份排班草稿（{_as}），但這個週次看起來**不像最近這週**"
+                           "——可能是之前忘記清掉的舊草稿。載入後**不要直接送出**，"
+                           "請先確認內容是不是這週的。")
+            else:
+                st.info(f"📬 偵測到玉繡的排班草稿（{_as}），要載入確認嗎？")
             _dc1, _dc2 = st.columns(2)
             if _dc1.button("✅ 載入草稿", key="auto_draft_load"):
                 st.session_state["cloud_rows"]   = _ar
@@ -1783,11 +1997,16 @@ if mode.startswith("🟦"):
                         pass
 
                 # 套回 🔺 標記：新格式從 rows[3]+rows[4] 讀，舊格式從 cloud_disp 讀
+                # v3.50（獨立稽查低-19）：以前這裡先把「這次重新產生的整張表」的 marks
+                # 全部清空成空字串，再用舊草稿的 (區,治療欄key) 逐格比對回填——正常情況
+                # （欄位 key 沒變）沒問題，但只要有任何一格在舊草稿裡對不到現在的
+                # (區,治療欄key)（例如這次重排後那一格的治療欄 key 稍微不同），這格就會
+                # 永遠停在空字串：不是「維持這次新算出來的🔺」，而是「被清空後沒人補上」，
+                # 使用者會看到某人明明是跨區借人、畫面卻沒有🔺標記，完全看不出來。
+                # 改成：沒清空，只有舊草稿裡真的比對到的格子才覆蓋——比對不到的格子維持
+                # parse_grid() 這次重新算出來的原始值，不會無故消失。
                 _new_fmt = [cr for cr in _prev_rows if len(cr) >= 5]
                 if _new_fmt:
-                    for _area in marks.index:
-                        for _col in marks.columns:
-                            marks.loc[_area, _col] = ""
                     for _cr in _new_fmt:
                         try:
                             _area, _mk, _col = str(_cr[1]), str(_cr[3]), str(_cr[4])
@@ -1830,6 +2049,21 @@ if mode.startswith("🟦"):
 
             st.markdown("#### 3️⃣ 產生定案 → 送到雲端")
             if st.button("✅ 產生定案（套用修改）", type="primary"):
+                # v3.50（獨立稽查高-2、中-4）：格子是自由文字，過去完全沒對過組員名單。
+                # 實測把「黃怡璇」打成「怡璇」（強制可印欄位的 placeholder 就寫著可以打
+                # 簡稱，玉繡自然會在格子裡也這樣打）：她完全收不到 LINE 提醒（GAS 用姓名
+                # 精確比對查不到 userId）、build_corrected_history 對不到名冊把她記成
+                # 「休」（實際有印）、LINE 群組公告甚至同時把她列進「印」和「休息」——
+                # 跟 v3.41 修掉的「雙印污染」是同一種三連錯，只是觸發條件從「印兩次」
+                # 變成「打錯字」，遠比雙印常見。
+                # 另外「❌排不出」那格如果被手動填上名字，因為那格沒有日期，`dt` 是空的，
+                # 原本會整個靜默跳過不進 rows——那個人完全不會被送到雲端（沒有 LINE
+                # 提醒、公平歷史也沒有她），但公告文字會拿治療日當印藥水日把她印出來，
+                # 玉繡看畫面完全看不出這個人其實沒有真的被排進去。
+                _roster_names = get_roster_names()          # {姓名: 卡號}，單一來源
+                _unmatched = []     # 對不到組員名單的名字：[(位置, 打的內容)]
+                _expanded  = []     # 簡稱自動展開：[(位置, 打的簡稱, 展開的全名)]
+                _no_date   = []     # 有填名字但這格沒有印藥水日（例如手動填進❌排不出）
                 disp = edited.copy(); rows = []
                 for r in edited.index:
                     for c in edited.columns:
@@ -1841,11 +2075,24 @@ if mode.startswith("🟦"):
                         # → 該人完全收不到LINE提醒 ②build_corrected_history 對不上名冊
                         # → 明明印兩次卻被記成「休」，公平輪序連錯兩格 ③LINE群組公告同時
                         # 把她列進「印」和「休息」。雙印雖不常見(26週1次)，一發生就是靜默三連錯。
-                        nm = re.sub(r'🔺|雙印', '', raw_val).strip()  # 去掉顯示用標記
+                        nm_raw = re.sub(r'🔺|雙印', '', raw_val).strip()  # 去掉顯示用標記
                         # 以 editor 內容為準：用戶有加 🔺 就保留，有去掉就不補
                         mk = "🔺" if "🔺" in raw_val else ""
                         dt = dates.loc[r,c]
-                        if nm and nm != "❌排不出":
+                        nm = nm_raw
+                        if nm_raw and nm_raw != "❌排不出":
+                            if _roster_names and nm_raw not in _roster_names:
+                                # 簡稱比對，比照 排班.py FORCE_PRINT 同一套規則
+                                # （長度≥2 才比，避免單字誤傷；唯一匹配才自動展開）
+                                _cands = [full for full in _roster_names
+                                          if len(nm_raw) >= 2 and full.endswith(nm_raw)]
+                                if len(_cands) == 1:
+                                    _expanded.append((f"{r}/{c}", nm_raw, _cands[0]))
+                                    nm = _cands[0]
+                                else:
+                                    _unmatched.append((f"{r}/{c}", nm_raw))
+                            if not dt:
+                                _no_date.append((f"{r}/{c}", nm))
                             disp.loc[r,c] = f"{nm}({dt}印){mk}" if dt else f"{nm}{mk}"
                             if dt:
                                 mo,dy = dt.split("/")
@@ -1855,13 +2102,25 @@ if mode.startswith("🟦"):
                                 # 格式：[印日期, 區, 姓名, 🔺標記, 治療欄key]
                                 rows.append([f"{_row_yr}-{mo_i:02d}-{dy_i:02d}", r, nm, mk, str(c)])
                         else:
-                            disp.loc[r,c] = nm
+                            disp.loc[r,c] = nm_raw
                 rows.sort(key=lambda x:(x[0],x[1]))
                 st.session_state["cloud_rows"]   = rows
                 st.session_state["cloud_disp"]   = disp
                 st.session_state["cloud_sheet0"] = sheet0
+                st.session_state["cloud_unmatched_names"] = _unmatched
+                st.session_state["cloud_no_date_names"]   = _no_date
+                if _expanded:
+                    st.info("ℹ 已自動展開簡稱："
+                             + "、".join(f"{pos} 『{raw}』→『{full}』" for pos,raw,full in _expanded))
                 st.session_state["cloud_rows_source"] = "finalized"
-                _save_week_draft(rows, sheet0, disp)   # 自動存本機
+                # v3.50（獨立稽查低-13）：以前這行在 TEST_MODE 外面，測試模式（小巫用，
+                # 側欄明講「不會真的寫到雲端」）照樣把測試資料寫進本機草稿檔
+                # last_week_draft.json；而 Streamlit Cloud 是同一個容器給所有人共用，
+                # 玉繡接下來打開 app 就會看到「📂 找到上次的定案，要恢復嗎？」──載入的
+                # 其實是小巫的測試資料，正是第九節那場事故（舊草稿被自動套回、錯資料
+                # 真的送出去）的同一條路徑。改成只有非測試模式才寫本機草稿。
+                if not TEST_MODE:
+                    _save_week_draft(rows, sheet0, disp)   # 自動存本機
                 if not TEST_MODE and APPS_SCRIPT_URL and WRITE_SECRET:
                     _draft_ok, _draft_err = push_week_draft(rows, sheet0)
                     if not _draft_ok:
@@ -1897,7 +2156,7 @@ if mode.startswith("🟦"):
             st.dataframe(disp.T, use_container_width=True)   # 直式：日期當列，區當欄
 
         # 定案後顯示實際休息人員（依玉繡最終調整，非演算法原始結果）
-        _roster_all = _load_roster_full()
+        _roster_all = get_roster_full()
         if _roster_all:
             _printing = {str(r[2]).strip() for r in rows if r[2]}
             _resting  = [m["姓名"] for m in _roster_all if m["姓名"] not in _printing]
@@ -1926,7 +2185,14 @@ if mode.startswith("🟦"):
                     st.error("清除失敗。")
 
         # LINE 群組公告文字
-        # 草稿來源不能傳 disp（pivot 用 aggfunc="first" 會丟失同區多人），直接走 rows fallback
+        # v3.50（獨立稽查低-19）：這行註解原本講「pivot 用 aggfunc="first" 會丟失同區多人」，
+        # 但那個問題在 _reconstruct_disp_from_rows()（見上方）早就改成 `、`.join 修掉了，
+        # 現在草稿來源的 disp 已經不會弄丟同區多人的姓名——但這裡繼續不傳 disp 給草稿來源
+        # 仍然是對的，只是理由變了：_build_line_txt 的 disp_df 路徑要靠儲存格文字裡的
+        # 「(M/D印)」日期編碼取印藥水日（見 CELL_RE），而 _reconstruct_disp_from_rows()
+        # 只還原姓名（可能「王小明、李小美」用頓號合併），完全沒有帶回這個日期編碼，disp
+        # 路徑會直接抓不到日期。rows 本身每筆都已經帶著算好的完整印藥水日，是可靠的路，
+        # 所以草稿來源繼續強制走 rows fallback（傳 None），不是因為 aggfunc 那個已修好的舊問題。
         _line_txt = _build_line_txt(rows, disp_df=(None if _src == "draft" else disp))
         if _line_txt:
             st.markdown("**📋 LINE 群組公告格式**")
@@ -1937,15 +2203,49 @@ if mode.startswith("🟦"):
                                file_name=f"印藥水名單_{sheet0}.txt",
                                mime="text/plain")
 
+        # v3.50（獨立稽查高-2、中-4）：格子裡有「對不到組員名單的名字」或「填了名字
+        # 卻沒有印藥水日（例如手動填進❌排不出格）」時，在這裡明確擋下——不要讓它送出去
+        # 才在雲端用姓名精確比對時默默失敗。只有本次「產生定案」按下時算出來的結果才會
+        # 檢查（草稿來源沒有重跑過驗證，用 _src 判斷）。
+        _unmatched = st.session_state.get("cloud_unmatched_names", []) if _src == "finalized" else []
+        _no_date   = st.session_state.get("cloud_no_date_names", [])   if _src == "finalized" else []
+        _send_blocked = False
+        # v3.50（獨立稽查中-12）：從草稿載入的（不是剛按過「產生定案」）要多一道確認才能
+        # 送出——草稿沒有時間戳，可能是上週留下沒清的舊資料，一鍵送出會覆蓋本週名單、
+        # 本週LINE提醒失效（見 _week_looks_stale 的說明）。
+        if _src == "draft":
+            _stale_send = _week_looks_stale(sheet0)
+            _draft_msg = (f"⚠️ 這是從雲端草稿載入的內容（週次「{sheet0}」），不是剛排出來的。"
+                          + ("這個週次看起來不像最近這週，" if _stale_send else "")
+                          + "送出前請確認上面列的名單是不是**這週**要送的。")
+            st.warning(_draft_msg)
+            _send_blocked = not st.checkbox(
+                "我已經確認過上面的名單、日期都是這週正確的內容，仍要送出",
+                key="confirm_draft_send")
+        if _unmatched:
+            st.error("❌ 這幾格的名字在組員名單裡找不到對應的人，送出去會**收不到 LINE 提醒**、"
+                     "公平歷史也會記錯：\n" +
+                     "\n".join(f"　・{pos}：『{raw}』" for pos, raw in _unmatched) +
+                     "\n\n請改回組員名單裡的正確姓名（或至少 2 個字的簡稱，能唯一對到一個人）。")
+        if _no_date:
+            st.error("❌ 這幾格填了名字，但這格**沒有印藥水日**（例如手動填進「❌排不出」的格子），"
+                     "這個人**不會被送到雲端**、收不到任何提醒：\n" +
+                     "\n".join(f"　・{pos}：『{nm}』" for pos, nm in _no_date) +
+                     "\n\n請改用有日期的格子安排這個人，或人工另外處理。")
+        if _unmatched or _no_date:
+            _send_blocked = not st.checkbox(
+                "我知道上面列的問題，仍要照現在這樣送出（不建議，除非已經確認過）",
+                key="force_send_with_issues")
+
         if TEST_MODE:
-            if st.button("🧪 送到雲端（測試模擬）", type="secondary"):
+            if st.button("🧪 送到雲端（測試模擬）", type="secondary", disabled=_send_blocked):
                 st.info(f"🧪 測試模式：模擬送出 {len(rows)} 筆，但實際上**沒有**寫到雲端，也沒有送 LINE 通知。")
                 st.balloons()
         elif APPS_SCRIPT_URL and WRITE_SECRET:
             # 提示目前要送的是哪個版本（確認是定案版，不是機器版）
             _names_in_rows = "、".join(sorted({r[2] for r in rows if r[2]}))
             st.caption(f"⚠️ 送出前確認：本次定案人員 → {_names_in_rows}")
-            if st.button("🚀 送到雲端（自動排提醒）", type="primary"):
+            if st.button("🚀 送到雲端（自動排提醒）", type="primary", disabled=_send_blocked):
                 with st.spinner("送出中，請稍候…"):
                     try:
                         resp = requests.post(
@@ -2009,9 +2309,19 @@ if mode.startswith("🟦"):
 
 
 # ═══════════════════════ 每月稽核 ═══════════════════════
-else:
+# v3.50（獨立稽查中-11）：這裡原本是裸 else，配對的是第1774行「if mode.startswith("🟦")」，
+# 但 mode 其實有三種（🟦🟩📊），裸 else 把「🟩每月稽核」跟「📊統計管理」都算進來——
+# 選「📊統計管理」時，這整段稽核UI（年/月選擇器、Stage1預覽班型、Stage2稽核名單，
+# 包含一顆活的「🚀送稽核結果到雲端」按鈕）會跟第2425行真正的統計管理UI**一起**畫出來，
+# 一個會真的發LINE的按鈕出現在不該出現的地方。改成明確的 elif mode.startswith("🟩")，
+# 📊模式時這整段完全不渲染。
+elif mode.startswith("🟩"):
     c1, c2 = st.columns(2)
-    yy = c1.number_input("年", 2024, 2100, 2026)
+    # v3.50（獨立稽查中-10）：年份原本寫死 2026，月份卻跟著今天走——2027年1月玉繡
+    # 照平常流程排稽核，畫面預設仍是「2026年1月」→ month_key="115-01" → GAS
+    # writeHistory_ 依 key 整批刪除重寫 → 把2026年1月的稽核明細換成2027年的資料
+    # （已用 gasmock 實測這個覆蓋機制是真的）。改成年份也跟著今天走。
+    yy = c1.number_input("年", 2024, 2100, pd.Timestamp.now().year)
     mm = c2.number_input("月", 1, 12, pd.Timestamp.now().month)
     # v3.41：月份鍵一律用**民國**格式，跟 稽核.py 的 month_tag() 及雲端既有資料
     # （114-09 ~ 115-07 全是民國）保持一致。舊版用西元 "2026-07"，會造成
@@ -2027,9 +2337,11 @@ else:
     if audit_quick:
         # ── 快速模式：免上傳，直接點選白/夜＋區 ──────────────
         st.markdown("#### 2️⃣ 點選每人「白/夜」＋「區」→ 排稽核")
-        roster = _load_roster_full()
+        roster = get_roster_full()
         if not roster:
-            st.error("找不到組員名單（組員名單.csv）。請先確認 repo 裡有這個檔。"); st.stop()
+            st.error("找不到組員名單（雲端與本機備份都讀不到）。請確認網路，或先在「📊 統計管理→👥 組員名單」確認雲端有資料。"); st.stop()
+        _rw = roster_fallback_warning()
+        if _rw: st.warning(_rw)
         # 帶入優先序：①雲端草稿（上次暫存）②上個月設定 ③預設
         draft   = fetch_audit_draft()
         prefill = fetch_last_audit_prefill()
@@ -2085,15 +2397,17 @@ else:
         elif APPS_SCRIPT_URL and WRITE_SECRET:
             cda, cdb = st.columns(2)
             if cda.button("💾 暫存草稿（之後可接續填）"):
-                if push_audit_draft(edited_q):
+                _da_ok, _da_err = push_audit_draft(edited_q)
+                if _da_ok:
                     st.success("✅ 已暫存到雲端！下次打開會自動帶回，可接著填。")
                 else:
-                    st.error("暫存失敗，請稍後再試。")
+                    st.error(f"暫存失敗：{_da_err}")
             if cdb.button("🗑 清除暫存（改用上月設定）"):
-                if clear_audit_draft():
+                _cd_ok, _cd_err = clear_audit_draft()
+                if _cd_ok:
                     st.success("✅ 已清除暫存。重新整理後會改帶上個月的設定。")
                 else:
-                    st.error("清除失敗，請稍後再試。")
+                    st.error(f"清除失敗：{_cd_err}")
 
         if st.button("✅ 排稽核（快速）", type="primary"):
           if n_unset > 0:
@@ -2126,7 +2440,9 @@ else:
 
         if st.button("📊 預覽班型", type="secondary"):
             with st.spinner("分析班表中…"):
-                df_shifts = detect_shifts_quick(data, int(yy), int(mm))
+                # v3.50：把上傳檔名傳進去給第3層備援用（例如「115.08.10~115.08.16.xls」
+                _fn_hint = getattr(up, "name", None) if "up" in dir() else None
+                df_shifts = detect_shifts_quick(data, int(yy), int(mm), filename_hint=_fn_hint)
             if df_shifts.empty:
                 st.error("找不到該月份的班表資料，請確認分頁是否包含此月份。")
             else:
@@ -2299,13 +2615,13 @@ if mode.startswith("📊"):
                         "我知道這樣會清空所有人的每週明細、只留總數字，仍要繼續", key="stats_save_confirm")
                     if st.button("💾 存回雲端", type="primary", key="stats_save", disabled=not _confirm_wipe):
                         with st.spinner("儲存中…"):
-                            ok = save_schedule_stats(edited_st)
+                            ok, err = save_schedule_stats(edited_st)
                         if ok:
                             st.success("✅ 排班統計已更新！下次排印藥水會自動用新數字。")
                             st.session_state["schedule_stats"] = edited_st.reset_index(drop=True)
                             st.balloons()
                         else:
-                            st.error("儲存失敗，請稍後再試。")
+                            st.error(f"儲存失敗：{err}")
 
     # ── Tab1 下半：個人明細查詢 ──────────────────────────
     with tab1:
@@ -2313,14 +2629,19 @@ if mode.startswith("📊"):
             _dc1, _dc2 = st.columns([2, 1])
             if _dc1.button("🔄 載入明細資料", key="detail_load"):
                 with st.spinner("讀取中…"):
-                    _raw = fetch_schedule_history_raw()
-                st.session_state["schedule_detail"] = _raw if _raw is not None else "empty"
+                    _raw, _raw_err = fetch_schedule_history_raw()
+                if _raw is None:
+                    st.session_state["schedule_detail"] = f"err:{_raw_err}"
+                elif _raw.empty:
+                    st.session_state["schedule_detail"] = "empty"
+                else:
+                    st.session_state["schedule_detail"] = _raw
             if "schedule_detail" in st.session_state:
                 _raw = st.session_state["schedule_detail"]
                 if isinstance(_raw, str) and _raw == "empty":
                     st.warning("雲端無歷史資料。")
                 elif isinstance(_raw, str):
-                    st.error(f"讀取失敗：{_raw}")
+                    st.error(f"讀取失敗：{_raw[4:] if _raw.startswith('err:') else _raw}")
                 else:
                     names = sorted(_raw["姓名"].unique().tolist())
                     sel_name = st.selectbox("選擇人員", names, key="detail_sel")
@@ -2419,13 +2740,13 @@ if mode.startswith("📊"):
                     if st.button("💾 存回雲端", type="primary", key="audit_stats_save",
                                  disabled=not _confirm_wipe_ak):
                         with st.spinner("儲存中…"):
-                            ok2 = save_audit_stats(edited_ast)
+                            ok2, err2 = save_audit_stats(edited_ast)
                         if ok2:
                             st.success("✅ 稽核統計已更新！下次排稽核會自動用新數字。")
                             st.session_state["audit_stats"] = edited_ast.reset_index(drop=True)
                             st.balloons()
                         else:
-                            st.error("儲存失敗，請稍後再試。")
+                            st.error(f"儲存失敗：{err2}")
 
     # ── Tab3：最新稽核名單 ──────────────────────────────────
     with tab3:
@@ -2494,11 +2815,12 @@ if mode.startswith("📊"):
                 if os.path.exists(_local_csv):
                     try:
                         _ldf = pd.read_csv(_local_csv, encoding="utf-8-sig")
-                        if save_members_cloud(_ldf[["卡號","姓名"]]):
+                        _sm_ok, _sm_err = save_members_cloud(_ldf[["卡號","姓名"]])
+                        if _sm_ok:
                             st.session_state["members_cloud"] = _ldf[["卡號","姓名"]].reset_index(drop=True)
                             st.success(f"✅ 已同步 {len(_ldf)} 人到雲端！")
                         else:
-                            st.error("同步失敗，請稍後再試。")
+                            st.error(f"同步失敗：{_sm_err}")
                     except Exception as _e:
                         st.error(f"讀取本機 CSV 失敗：{_e}")
                 else:
@@ -2511,12 +2833,13 @@ if mode.startswith("📊"):
             _new = st.data_editor(_empty, num_rows="dynamic", use_container_width=True,
                                   hide_index=True, key="members_edit_empty")
             if st.button("💾 存回雲端", type="primary", key="members_save_empty"):
-                if save_members_cloud(_new):
+                _me_ok, _me_err = save_members_cloud(_new)
+                if _me_ok:
                     st.success("✅ 組員名單已儲存！")
                     st.session_state["members_cloud"] = _new
                     st.balloons()
                 else:
-                    st.error("儲存失敗。")
+                    st.error(f"儲存失敗：{_me_err}")
         else:
             df_mem = st.session_state["members_cloud"].copy()
             st.caption(f"共 {len(df_mem)} 人｜可新增列（點最下方 + 號）或直接改名字/卡號")
@@ -2530,13 +2853,13 @@ if mode.startswith("📊"):
             elif APPS_SCRIPT_URL and WRITE_SECRET:
                 if st.button("💾 存回雲端", type="primary", key="members_save"):
                     with st.spinner("儲存中…"):
-                        ok3 = save_members_cloud(edited_mem)
+                        ok3, err3 = save_members_cloud(edited_mem)
                     if ok3:
                         st.success("✅ 組員名單已更新！下次排班自動套用。")
                         st.session_state["members_cloud"] = edited_mem.reset_index(drop=True)
                         st.balloons()
                     else:
-                        st.error("儲存失敗，請稍後再試。")
+                        st.error(f"儲存失敗：{err3}")
 
     # ── Tab5：休診日（v3.42，單一來源）──────────────────────
     with tab5:

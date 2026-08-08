@@ -87,12 +87,21 @@ def load_shift_overrides():
 
 ZONE2AREA={}; SHIFT_EXCLUDE=[]; HOLIDAYS=set()
 
+def _shift_tok_in(tok, s):
+    """v3.50（獨立稽查低-19，跟 排班.py 同一顆蟲）：純數字-連字號代碼（如「1-9」）用
+    子字串比對會被夾在別的班別碼裡誤配（例如「11-9」內含「1-9」子字串）。改成數字
+    開頭/結尾時前後不能緊接著別的數字，才不會誤配。"""
+    pat = re.escape(tok)
+    if tok[:1].isdigit(): pat = r'(?<!\d)' + pat
+    if tok[-1:].isdigit(): pat = pat + r'(?!\d)'
+    return re.search(pat, s) is not None
+
 def is_excluded_shift(s):
     s=(s or "").strip()
     if not s: return True
     for tok in SHIFT_EXCLUDE:
         if s==tok: return True
-        if len(tok)>=3 and tok in s: return True
+        if len(tok)>=3 and _shift_tok_in(tok, s): return True
     return False
 
 def zone_area(zone):
@@ -381,6 +390,26 @@ def _area_of_month(card, month_status):
     if not cnt: return "未知"
     return max(cnt, key=cnt.get)
 
+# ── 命令列月份參數解析（v3.50 修）─────────────────────────────
+# ⚠ 這裡曾經是一個「高嚴重度、完全靜默」的 bug：app.py 從 v3.41 起改傳**民國**
+#   格式（115-08），但底下原本寫的是 re.fullmatch(r"\d{4}\D?\d{1,2}")，`\d{4}`
+#   吃不到 3 碼民國年 → 永遠比不中 → want=None →
+#     Excel 模式：parse_month() 自己挑「最後一個分頁所屬的月份」
+#     快速模式：改用 date.today() 當月份
+#   實測 `python 稽核.py m.xlsx 115-08` 會排出 **115-09** 的名單，卻被 app.py
+#   貼上使用者選的月份標籤送上雲端；load_history(skip_month=) 也跟著排除錯的
+#   月份，公平分數 15 人中 6 人偏差 ±2。畫面上完全看不出來。
+MONTH_ARG_RE = re.compile(r"^\d{3,4}\D?\d{1,2}$")
+
+def parse_month_arg(s):
+    """月份參數 → (西元年, 月)。民國(115-08)與西元(2026-08)都接受；認不出回 None。"""
+    m = re.search(r"(\d{3,4})\D?(\d{1,2})", str(s or ""))
+    if not m: return None
+    y, mo = int(m.group(1)), int(m.group(2))
+    if y < 1911: y += 1911               # 民國 → 西元
+    if not (1 <= mo <= 12) or not (2000 <= y <= 2200): return None
+    return (y, mo)
+
 def month_tag(yy, mm):
     """月份鍵一律用**民國**格式（例：2026-07 → 115-07）。
 
@@ -579,7 +608,7 @@ def run():
     """Excel 模式：解析班表 → 猜白/夜＋區 → 排稽核。"""
     args=sys.argv[1:]
     files=[a for a in args if a.lower().endswith((".xls",".xlsx"))]
-    month_args=[a for a in args if re.fullmatch(r"\d{4}\D?\d{1,2}", a)]
+    month_args=[a for a in args if MONTH_ARG_RE.fullmatch(a)]
     missing=[f for f in files if not os.path.exists(f)]
     if not files or missing:
         if missing: print("❌ 找不到這些檔案：" + "、".join(missing))
@@ -591,8 +620,9 @@ def run():
 
     want=None
     if month_args:
-        mm=re.search(r"(\d{4})\D?(\d{1,2})", month_args[0])
-        want=(int(mm.group(1)), int(mm.group(2)))
+        want = parse_month_arg(month_args[0])
+        if want is None:
+            warn(f"⚠ 月份參數『{month_args[0]}』認不得，改由班表自行判斷月份")
 
     try:
         month_status,name_of,by_name,(yy,mm),fw_mon,fw_status=parse_month(files, want)
@@ -621,9 +651,12 @@ def run_quick(month_arg):
     if not rows:
         print("❌ 找不到『快速名冊.csv』或內容是空的。"); return
 
-    if month_arg:
-        m=re.search(r"(\d{4})\D?(\d{1,2})", month_arg); yy,mm=int(m.group(1)),int(m.group(2))
+    parsed = parse_month_arg(month_arg) if month_arg else None
+    if parsed:
+        yy, mm = parsed
     else:
+        if month_arg:
+            warn(f"⚠ 月份參數『{month_arg}』認不得，改用今天的月份")
         t=date.today(); yy,mm=t.year,t.month
     tag=month_tag(yy, mm)
 
@@ -650,7 +683,7 @@ def run_quick(month_arg):
 def main():
     try:
         if "--quick" in sys.argv[1:]:
-            month_args=[a for a in sys.argv[1:] if re.fullmatch(r"\d{4}\D?\d{1,2}", a)]
+            month_args=[a for a in sys.argv[1:] if MONTH_ARG_RE.fullmatch(a)]
             run_quick(month_args[0] if month_args else None)
         else:
             run()
