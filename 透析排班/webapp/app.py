@@ -89,6 +89,11 @@
     休診日當 config_override 餵進去（雲端優先、本機 CSV 只當讀不到時的保底且會跳警告），
     並在「📊 統計管理」新增「🗓 休診日」分頁供玉繡直接編輯。
     ⚠ .gs 要手動「部署→管理部署→新版本」到 v6.1 才會生效。
+  • v3.49（2026-08-06）那串提醒**根本沒有標題**：v3.48 修好「ℹ/⚠ 被濾掉」之後，使用者
+    問「注意事項區在哪???」——查程式碼才發現那些訊息只是 st.write("・"+n) 直接倒在可編輯
+    表格下面，沒有任何標題或說明，使用者當然認不出那是什麼、也不知道要看。補上
+    「⚠️ 注意事項（產生定案前請看過）」標題與一行說明，並改成沒有訊息時整區不出現。
+    印藥水與稽核兩處都補。
   • v3.48（2026-08-06）畫面「注意事項」區漏顯示一整類警告（使用者質疑「警告區會告訴你
     哪幾欄的日期是補回來??」，實測後確認 AI 前一則講錯了——那些警告根本不會顯示）：
     extract_notes() 只挑含「休息 ↳ ※ ❌ 借」的行，但 排班.py 的 warn() 有一整批是
@@ -1067,7 +1072,7 @@ def _build_line_txt(rows, disp_df=None):
 
 
 # ── 💬 意見回饋：借用稽核歷史（特殊鍵「意見-時間」）存放，不動 LINE 程式 ──
-APP_VER = "v3.48"
+APP_VER = "v3.49"
 FEEDBACK_PREFIX = "意見-"
 
 def push_feedback(step, detail, expect, urgency, who):
@@ -1380,7 +1385,7 @@ if TEST_MODE:
 
 st.title("💊 透析藥水排班")
 st.caption("上傳班表 Excel → 出名單(表格)。可直接點格子改人名。跨區標 🔺。")
-st.caption("🟢 版本 v3.48（①修好「注意事項」區漏顯示 ℹ/⚠ 那一整類警告——包括「強制可印打錯名字」這種本來就該吵出來的 ②首頁補上稽核累積筆數／最新稽核月份 ③班表日期不再依賴排班組怎麼填，依序用「表格其他日期→檔名→分頁名」補回來 ④修「產生定案／備份草稿」暫存失敗 ⑤休診日改為單一來源）· 2026-08-06")
+st.caption("🟢 版本 v3.49（①排班提醒補上「⚠️ 注意事項」標題，之前是沒標題直接倒在表格下面、認不出來 ②修好注意事項漏顯示 ℹ/⚠ 那一整類警告 ③首頁補上稽核累積筆數／最新稽核月份 ④班表日期不再依賴排班組怎麼填 ⑤休診日改為單一來源）· 2026-08-06")
 
 # ── 📊 首頁顯眼統計＋本機備份落後提醒（2026-07-20加，v3.38）─────────────
 # 目的：2026-07-19~20那次「7/20資料被同步按鈕蓋掉」事件，玉繡是三週後才發現雲端資料
@@ -1807,7 +1812,14 @@ if mode.startswith("🟦"):
                         display_names.loc[_r, _c] = str(override_names.loc[_r, _c]) + _mk
             _edit_T = st.data_editor(display_names.T, use_container_width=True, key="yao_edit")
             edited = _edit_T.T   # 轉回 area×day 給後續邏輯用
-            for n in extract_notes(out): st.write("・" + n)
+            # v3.49：這串提醒以前是「沒有標題、直接倒在表格下面」，使用者根本認不出那是
+            # 什麼、也找不到（問「注意事項區在哪???」）。補上標題與說明。
+            _notes = extract_notes(out)
+            if _notes:
+                st.markdown("#### ⚠️ 注意事項（產生定案前請看過）")
+                st.caption("排班過程中程式想告訴你的事：排不出人、跨區借人、日期被自動補回、"
+                           "強制可印沒生效…等等。沒有異常時這一區不會出現。")
+                for n in _notes: st.write("・" + n)
 
             # 公平累計統計（含本週預覽）
             _fair_lines = extract_fairness(out)
@@ -2170,7 +2182,11 @@ else:
         st.caption("可直接點「稽核者」欄改人名。")
         edited_ak = st.data_editor(df, use_container_width=True,
                                     key="ak_edit", hide_index=True)
-        for n in extract_notes(out): st.write("・" + n)
+        _notes_ak = extract_notes(out)
+        if _notes_ak:
+            st.markdown("#### ⚠️ 注意事項（送出前請看過）")
+            st.caption("排稽核過程中程式想告訴你的事：排不出人、跨區借人、班型判斷…等等。")
+            for n in _notes_ak: st.write("・" + n)
 
         if TEST_MODE:
             if st.button("🧪 送稽核結果到雲端（測試模擬）", type="secondary"):
