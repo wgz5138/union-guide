@@ -1,5 +1,17 @@
 # -*- coding: utf-8 -*-
 """透析藥水排班 — 手機網頁版（Streamlit）v3.26
+  • v3.51（2026-08-10真實事件）：0810~0816這週，排班組給的班表檔案「115.08.10~
+    115.08.16.xls」，檔名寫這週，但表頭日期實際是兩週前的「2026/07/27~2026/08/02」。
+    這種「整份檔案的日期都完整合法可解析、只是根本是別週的」情況，過去完全沒有任何
+    自動檢查——排班.py/稽核.py 既有的四層日期備援（v3.45~47）只在表格內容本身壞掉
+    （文字/民國年/整排讀不到）時才會被觸發，這次表格內容本身是好的，四層備援完全不會
+    介入，全靠玉繡肉眼比對格子內容才發現，屬於僥倖，不是系統設計上真的有防到。
+    修法：parse_sheet() 新增第五輪，不管前面哪一層解出日期，只要能解出真實日期、且
+    檔名/分頁名也能推出參考週次（既有的 week_hint()），就比對兩者，差距超過3天就在
+    「注意事項」跳出醒目警告（⚠🚨 檔案週次不符）。app.py 端另外加硬性攔阻：偵測到這
+    則警告時，「✅ 產生定案」／「🚀 送稽核結果到雲端」按鈕會被停用，要勾選「已跟排班組
+    核對過」才能繼續，不是只被動顯示警告字（v3.48/v3.49 的教訓——警告訊息容易被忙起來
+    的人掃過去，這次改成真的擋住操作）。排班.py／稽核.py 兩邊同步修（同一顆蟲兩份程式碼）。
   • Fix1：公平歷史學玉繡實際決定，而非程式原排
   • Fix2：稽核送出後 LINE 通知每位稽核者責任班次
   • Fix3：自動選最接近今天的班表分頁
@@ -1266,7 +1278,7 @@ def _build_line_txt(rows, disp_df=None):
 
 
 # ── 💬 意見回饋：借用稽核歷史（特殊鍵「意見-時間」）存放，不動 LINE 程式 ──
-APP_VER = "v3.50"
+APP_VER = "v3.51"
 FEEDBACK_PREFIX = "意見-"
 
 def push_feedback(step, detail, expect, urgency, who):
@@ -2040,6 +2052,23 @@ if mode.startswith("🟦"):
                            "強制可印沒生效…等等。沒有異常時這一區不會出現。")
                 for n in _notes: st.write("・" + n)
 
+            # v3.51（2026-08-10真實事件）：排班.py 的 parse_sheet 第五輪偵測到「檔案日期
+            # 跟這週對不起來」（例如檔名/分頁名寫 115.08.10~115.08.16，表格裡卻是兩週前
+            # 的日期）時，會在上面的 _notes 裡印一則含「檔案週次不符」的警告——但那次
+            # 事件就是靠玉繡自己肉眼比對格子內容才發現，警告文字本身很容易被忙起來的人
+            # 掃過去。這裡額外做一道跟 _send_blocked（見下方送雲端那段）同款的硬性攔阻：
+            # 偵測到這個字樣就必須勾選「已核對過」才能按「產生定案」，不能只是被動顯示。
+            _week_mismatch = any("檔案週次不符" in n for n in _notes)
+            if _week_mismatch:
+                st.error("🚨 系統偵測到上傳的班表檔案，日期範圍跟這週對不起來，"
+                          "很可能是排班組給錯檔案（例如誤用了舊週次的檔案）！"
+                          "請先跟排班組核對清楚、拿到正確的這週檔案，不要直接繼續排下去。")
+            _confirm_week_mismatch = (
+                st.checkbox("我已經跟排班組核對過，確認上面表格的日期真的是這週正確的班表，仍要繼續",
+                            key="confirm_week_mismatch")
+                if _week_mismatch else True
+            )
+
             # 公平累計統計（含本週預覽）
             _fair_lines = extract_fairness(out)
             if _fair_lines:
@@ -2048,7 +2077,7 @@ if mode.startswith("🟦"):
                     st.code("\n".join(_fair_lines), language=None)
 
             st.markdown("#### 3️⃣ 產生定案 → 送到雲端")
-            if st.button("✅ 產生定案（套用修改）", type="primary"):
+            if st.button("✅ 產生定案（套用修改）", type="primary", disabled=not _confirm_week_mismatch):
                 # v3.50（獨立稽查高-2、中-4）：格子是自由文字，過去完全沒對過組員名單。
                 # 實測把「黃怡璇」打成「怡璇」（強制可印欄位的 placeholder 就寫著可以打
                 # 簡稱，玉繡自然會在格子裡也這樣打）：她完全收不到 LINE 提醒（GAS 用姓名
@@ -2504,12 +2533,23 @@ elif mode.startswith("🟩"):
             st.caption("排稽核過程中程式想告訴你的事：排不出人、跨區借人、班型判斷…等等。")
             for n in _notes_ak: st.write("・" + n)
 
+        # v3.51：跟印藥水那邊同款的硬性攔阻，見上方 _week_mismatch 的說明。
+        _week_mismatch_ak = any("檔案週次不符" in n for n in _notes_ak)
+        if _week_mismatch_ak:
+            st.error("🚨 系統偵測到上傳的班表檔案，日期範圍跟目標月份/週對不起來，"
+                      "很可能是排班組給錯檔案！請先核對清楚再送出。")
+        _confirm_week_mismatch_ak = (
+            st.checkbox("我已經核對過，確認上面表格的日期真的是正確的班表，仍要繼續",
+                        key="confirm_week_mismatch_ak")
+            if _week_mismatch_ak else True
+        )
+
         if TEST_MODE:
-            if st.button("🧪 送稽核結果到雲端（測試模擬）", type="secondary"):
+            if st.button("🧪 送稽核結果到雲端（測試模擬）", type="secondary", disabled=not _confirm_week_mismatch_ak):
                 st.info("🧪 測試模式：模擬送出成功，但實際上**沒有**寫到雲端，也沒有送 LINE 通知給稽核者。")
                 st.balloons()
         elif APPS_SCRIPT_URL and WRITE_SECRET:
-            if st.button("🚀 送稽核結果到雲端", type="primary"):
+            if st.button("🚀 送稽核結果到雲端", type="primary", disabled=not _confirm_week_mismatch_ak):
                 with st.spinner("送出中，請稍候…"):
                     ak_hist_b = files.get("稽核紀錄_輸出.csv")
                     # v3.41：先用玉繡實際改過的名單修正歷史，再送出（比照印藥水的 Fix1）。

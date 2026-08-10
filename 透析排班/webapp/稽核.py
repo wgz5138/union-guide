@@ -257,6 +257,21 @@ def parse_sheet(df, path_hint=None, sheet_hint=None):
             warn(f"⚠ 這張班表的日期欄完全讀不到（可能整排都被打成文字），"
                  f"已改用{_hsrc}推算成 {_h1}～{_h2} 這 {_span} 天。"
                  f"**請務必核對下面表格的日期對不對再送出！**")
+    # 第五輪（v3.51，2026-08-10真實事件，跟 排班.py 同一顆蟲同步修）：整份檔案的
+    # 日期格全部完整合法，前面四層完全不會被觸發，但這份檔案根本是另外兩週前的
+    # 舊資料——檔名/分頁名寫「115.08.10~115.08.16」，表格裡卻是「2026/07/27～
+    # 2026/08/02」。過去完全沒有任何檢查，全靠人工肉眼比對格子內容才發現。
+    _real_dates = [d for d in bdates if d]
+    if _real_dates and _h1:
+        _actual_min, _actual_max = min(_real_dates), max(_real_dates)
+        _drift = min(abs((_actual_min - _h1).days), abs((_actual_max - _h1).days))
+        if _drift > 3:
+            _range_str = f"{_actual_min}" + (f"～{_actual_max}" if _actual_max != _actual_min else "")
+            warn(f"⚠🚨 檔案週次不符：{_hsrc}顯示應該是 {_h1}"
+                 f"{'～'+str(_h2) if _h2 else ''}這週，但表格裡實際讀到的日期是 "
+                 f"{_range_str}（差了 {_drift} 天）。這極可能是排班組給錯檔案（例如誤用了"
+                 f"舊週次的檔案），**請務必跟排班組核對清楚、確認這真的是這週的班表，"
+                 f"再繼續排下去，不要直接送出！**")
     # 兩輪都補不起來的欄位才列進診斷（給「抓不到日期」的錯誤訊息用）
     _diag=[]
     for i,c in enumerate(blocks):
