@@ -278,6 +278,7 @@
   <h2>實證評讀工作台</h2>
   <p>請輸入通行密碼</p>
   <input id="gate-pw" type="password" inputmode="text" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" placeholder="••••••">
+  <div id="gate-hint" style="display:none;color:var(--amber);font-size:11.5px;line-height:1.6;margin-top:8px;max-width:240px"></div>
   <button id="gate-go">進入</button>
   <div class="err" id="gate-err"></div>
 </div>
@@ -607,12 +608,30 @@ function endTour(){ document.querySelectorAll(".tour-hi").forEach(e=>e.classList
 document.getElementById("tour-next").addEventListener("click",()=>{ if(_ti<TOUR.length-1){_ti++;tourStep();}else endTour(); });
 document.getElementById("tour-skip").addEventListener("click",endTour);
 if(sessionStorage.getItem(UNLOCK_KEY)==="1") unlock();
+let _gateCaps=false;
+function gateHint(e){
+  const el=document.getElementById("gate-pw"), h=document.getElementById("gate-hint"); if(!el||!h) return;
+  if(e&&e.getModifierState){ try{ _gateCaps=e.getModifierState("CapsLock"); }catch(err){} }
+  const v=el.value, tips=[];
+  if(/[　-〿＀-￯぀-ヿ一-鿿]/.test(v)) tips.push("偵測到中文／全形字元，密碼是英數字，請切換成英文輸入法");
+  if(_gateCaps) tips.push("Caps Lock（大寫鎖）已開啟，密碼有分大小寫");
+  if(tips.length){ h.textContent="⚠️ "+tips.join("；"); h.style.display="block"; } else h.style.display="none";
+}
 document.getElementById("gate-go").addEventListener("click",tryUnlock);
-document.getElementById("gate-pw").addEventListener("keydown",e=>{ if(e.key==="Enter") tryUnlock(); });
+document.getElementById("gate-pw").addEventListener("keydown",e=>{ gateHint(e); if(e.key==="Enter") tryUnlock(); });
+document.getElementById("gate-pw").addEventListener("keyup",gateHint);
+document.getElementById("gate-pw").addEventListener("input",gateHint);
 function tryUnlock(){
   const v=document.getElementById("gate-pw").value;
   if(pwOk(v)){ sessionStorage.setItem(UNLOCK_KEY,"1"); unlock(); }
-  else{ document.getElementById("gate-err").textContent="密碼不對"; document.getElementById("gate-pw").value=""; }
+  else{
+    const tips=[];
+    if(/[　-〿＀-￯぀-ヿ一-鿿]/.test(v)) tips.push("切換成英文輸入法");
+    if(_gateCaps) tips.push("檢查 Caps Lock 是否開啟");
+    document.getElementById("gate-err").textContent="密碼不對"+(tips.length?"（"+tips.join("、")+"）":"");
+    document.getElementById("gate-pw").value="";
+    const h=document.getElementById("gate-hint"); if(h) h.style.display="none";
+  }
 }
 document.getElementById("lock-btn").addEventListener("click",()=>{ sessionStorage.removeItem(UNLOCK_KEY); location.reload(); });
 document.getElementById("chpw-btn").addEventListener("click",()=>{
@@ -980,8 +999,9 @@ window.addEventListener("load",function(){
 });
 
 // 🔄 自動偵測新版本
-const BUILD="2026071307";
+const BUILD="2026081801";
 const CHANGELOG=[
+  "密碼輸入防呆：偵測到中文/全形字元會提醒切換英文輸入法、偵測到 Caps Lock 開啟會提醒檢查大寫鎖，打錯密碼時給更精確的原因",
   "版本號同步（lawyer.html 修掉密碼永遠打不開的致命 bug，三工具版號一起校正）",
   "修正密碼驗證：改密碼功能若曾誤存壞值到本機，預設通行密碼會永久失效且無法復原；現在預設密碼永遠有效（當備用鑰匙），不會被本機自訂密碼卡死；SW 也修正網路優先抓 HTML 時可能被瀏覽器 HTTP 快取蓋掉的問題",
   "類型預設改為「🤖 我不確定→AI 判斷」，避免忘記改、套錯檢核表",

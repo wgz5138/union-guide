@@ -187,6 +187,7 @@
   <h2>AI 律師</h2>
   <p>請輸入通行密碼</p>
   <input id="gate-pw" type="password" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" placeholder="••••••">
+  <div id="gate-hint" style="display:none;color:var(--amber);font-size:11.5px;line-height:1.6;margin-top:8px;max-width:240px"></div>
   <button id="gate-go">進入</button>
   <div class="err" id="gate-err"></div>
 </div>
@@ -514,11 +515,29 @@ document.getElementById("tour-skip").addEventListener("click",endTour);
 document.getElementById("wel-tour").addEventListener("click",startTour);
 document.getElementById("man-tour").addEventListener("click",startTour);
 if(sessionStorage.getItem(UNLOCK_KEY)==="1") unlock();
+let _gateCaps=false;
+function gateHint(e){
+  const el=document.getElementById("gate-pw"), h=document.getElementById("gate-hint"); if(!el||!h) return;
+  if(e&&e.getModifierState){ try{ _gateCaps=e.getModifierState("CapsLock"); }catch(err){} }
+  const v=el.value, tips=[];
+  if(/[　-〿＀-￯぀-ヿ一-鿿]/.test(v)) tips.push("偵測到中文／全形字元，密碼是英數字，請切換成英文輸入法");
+  if(_gateCaps) tips.push("Caps Lock（大寫鎖）已開啟，密碼有分大小寫");
+  if(tips.length){ h.textContent="⚠️ "+tips.join("；"); h.style.display="block"; } else h.style.display="none";
+}
 function tryUnlock(){ const v=document.getElementById("gate-pw").value;
   if(pwOk(v)){ sessionStorage.setItem(UNLOCK_KEY,"1"); unlock(); }
-  else{ document.getElementById("gate-err").textContent="密碼不對"; document.getElementById("gate-pw").value=""; } }
+  else{
+    const tips=[];
+    if(/[　-〿＀-￯぀-ヿ一-鿿]/.test(v)) tips.push("切換成英文輸入法");
+    if(_gateCaps) tips.push("檢查 Caps Lock 是否開啟");
+    document.getElementById("gate-err").textContent="密碼不對"+(tips.length?"（"+tips.join("、")+"）":"");
+    document.getElementById("gate-pw").value="";
+    const h=document.getElementById("gate-hint"); if(h) h.style.display="none";
+  } }
 document.getElementById("gate-go").addEventListener("click",tryUnlock);
-document.getElementById("gate-pw").addEventListener("keydown",e=>{ if(e.key==="Enter") tryUnlock(); });
+document.getElementById("gate-pw").addEventListener("keydown",e=>{ gateHint(e); if(e.key==="Enter") tryUnlock(); });
+document.getElementById("gate-pw").addEventListener("keyup",gateHint);
+document.getElementById("gate-pw").addEventListener("input",gateHint);
 document.getElementById("chpw-btn").addEventListener("click",()=>{
   const a=prompt("輸入新密碼（至少 4 字）："); if(a==null) return;
   if(a.trim().length<4){ toast("密碼太短，至少 4 字"); return; }
@@ -532,8 +551,9 @@ document.getElementById("man-close2").addEventListener("click",closeManual);
 
 /* ===== 小工具 ===== */
 /* 🔄 自動偵測新版本 */
-const BUILD="2026071312";
+const BUILD="2026081801";
 const CHANGELOG=[
+  "密碼輸入防呆：偵測到中文/全形字元會提醒切換英文輸入法、偵測到 Caps Lock 開啟會提醒檢查大寫鎖，打錯密碼時給更精確的原因",
   "記憶卡新增5張到50張，聚焦「加班費常見規避手法」：雇主片面設加班認定門檻/私訊施壓不准報（§24）、先刷卡再做事及異常申覆制度規避工時（§30／勞動事件法§38）、特休排定權在勞工不是雇主代排（§38）、排了休息時間卻要隨傳隨到不算真休息（§35）、下班後line/電話交接算隱性加班（§30／§24）——對應會員回報的實際職場常見狀況整理而成",
   "📻 連續播放三項改善：①修正鎖屏/切到背景時播完一張就卡住要手動重點的 bug（原本靠 setTimeout 排程下一張，背景會被瀏覽器凍結；改成在 onEnded 內直接同步接下一張，不依賴計時器）②新增「上次聽到哪裡」記憶：關掉再打開，按📻會自動從上次的那張接著播，不用從頭找③記憶卡新增5張到45張：國定假日調移出勤的舉證責任在雇主（§39）、特休屆期或離職未休要算錢（§38）、產檢假陪產假全薪另計（性平法§15）、育嬰留停復職保障（性平法§17）、職災醫療期間工資照給不得解僱（§59／§13）",
   "🚨 修正朗讀播幾秒就被腰斬的 bug：昨晚加的逾時防呆寫錯了——不管音檔有沒有正常在播，時間一到就強制打斷、改播別的內容，導致每張卡都只聽到開頭幾個字就沒了。已改成只在「真的完全沒開始播放」時才觸發，一旦偵測到音框確實在輸出（playing 事件）就解除逾時，不會再打斷正常播放中的音檔。用瀏覽器自動化實測 42 秒的卡片，確認全程 currentTime 順利跑完、不再中途被砍",
