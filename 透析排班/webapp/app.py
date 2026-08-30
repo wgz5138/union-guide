@@ -1,5 +1,24 @@
 # -*- coding: utf-8 -*-
 """透析藥水排班 — 手機網頁版（Streamlit）v3.26
+  • v3.53（2026-08-10，v3.52同一天往下查出的兩個連帶問題，使用者要求「不是只查漏洞，
+    是要確保玉繡每個月稽核不會出狀況」而主動深挖）：
+    ①`extract_notes()` 只排除「【公平累計】」標題那一行，底下逐人明細（例如「林欣儀
+    稽11 休 2 本月:休息（夜/一區）」）因為含「休息」二字被誤判成注意事項警告，混進
+    畫面「⚠️ 注意事項」清單——這些明細本來就是排出來當下的舊資料，跟旁邊v3.52新增的
+    「以這行為準」休息名單同時出現在畫面上，看起來像系統自相矛盾。改成跟
+    `extract_fairness()` 一樣用「整個區塊」判斷去跳過，不是只跳過標題那一行。
+    ②比①更嚴重：稽核 Stage 2「其他檔案下載」的 Excel（貼護理站公告欄用）、文字檔
+    （傳LINE群組用），發的是 稽核.py 子行程當初的原始輸出，**跟玉繡點格子的修改完全
+    脫鉤**——如果她改過名字之後去下載這裡的檔案去公告或傳群組，公告欄/群組看到的名單
+    會跟系統實際記錄、LINE個別通知的內容兜不起來，這不只是畫面文字沒更新，是真的會把
+    錯誤名單傳達出去。改成用玉繡編輯後的 `edited_ak` 現場重建這兩個檔案內容（.csv那顆
+    「上傳雲端歷史用」本來就有走 `build_corrected_audit_history()` 修正，維持原樣，
+    只補上標籤說明它本身仍是原始版本，不影響雲端同步的正確性）。
+    用真實 `ast` 抽出的函式驗證：模擬玉繡把「王乃君」改成「林欣儀」，重建的 txt／xlsx
+    （xlsx有做 round-trip 讀回驗證）都正確反映修改；並用「舊版本」（不套用修改的
+    DataFrame）當對照組，證實這個問題是真實存在、不是無中生有。extract_notes 也補了
+    v3.51「檔案週次不符」與 排班.py 公平累計格式的 regression 測試，確認沒有把真正
+    該顯示的警告一起濾掉。
   • v3.52（2026-08-10，玉繡實際回報）：稽核 Stage 2「稽核 AK 名單」畫面點格子把某人
     改成另一個人（例如機器人原排「王乃君」稽核二區/週二四六/第三班，玉繡改成
     「林欣儀」）後，「⚠️ 注意事項」裡的「本月休息」那行沒有跟著更新——因為那行是
@@ -268,11 +287,29 @@ def extract_notes(stdout):
       ℹ 第N欄日期格被打成純文字，已補回年份（v3.46 新增）
       ⚠ 這張班表的日期欄完全讀不到，已依檔名推算（v3.47 新增）
     這些正是最需要被看到的東西，補進關鍵字。
+
+    ⚠ v3.53 續修：舊版只排除「【公平累計】」那個標題行本身，底下**逐人**的明細行
+    （例如「林欣儀 稽11 休 2  本月:休息（夜/一區）」）完全沒排除。稽核.py 的休息狀態
+    寫的是「休息」兩個字（排班.py 寫的是單一個「休」字），剛好命中這裡的關鍵字比對，
+    導致每個月「休息」的那幾個人的公平累計明細，全部被誤判成注意事項、混進「⚠️ 注意
+    事項」清單裡——這些明細本來就是排出來當下的舊資料，玉繡點格子改稽核者之後不會
+    重算，混進注意事項只會讓人以為那是需要處理的警告，也會跟旁邊新增的「以這行為準」
+    休息名單互相矛盾看起來像系統講話不一致。改成跟 extract_fairness() 用同一套「整個
+    區塊都跳過」邏輯，不是只排除標題那一行。
     """
+    lines = stdout.splitlines()
+    in_fairness = False
     notes = []
-    for ln in stdout.splitlines():
+    for ln in lines:
         s = ln.strip()
-        if any(k in s for k in ("休息","↳","※","❌","借","ℹ","⚠")) and "【公平累計】" not in s:
+        if "【公平累計】" in s:
+            in_fairness = True
+            continue
+        if in_fairness:
+            if s == "":              # 空行代表公平累計區段結束
+                in_fairness = False
+            continue                 # 區段內的行(含標題後第一個空行前)一律不進注意事項
+        if any(k in s for k in ("休息","↳","※","❌","借","ℹ","⚠")):
             notes.append(s)
     return notes
 
@@ -1290,7 +1327,7 @@ def _build_line_txt(rows, disp_df=None):
 
 
 # ── 💬 意見回饋：借用稽核歷史（特殊鍵「意見-時間」）存放，不動 LINE 程式 ──
-APP_VER = "v3.52"
+APP_VER = "v3.53"
 FEEDBACK_PREFIX = "意見-"
 
 def push_feedback(step, detail, expect, urgency, who):
@@ -1605,9 +1642,10 @@ if TEST_MODE:
 
 st.title("💊 透析藥水排班")
 st.caption("上傳班表 Excel → 出名單(表格)。可直接點格子改人名。跨區標 🔺。")
-st.caption(f"🟢 版本 {APP_VER}（玉繡實際回報：稽核名單點格子改稽核者之後，「本月休息」"
-           "顯示的還是機器人原排的舊名單，沒有跟著改——已改成依表格目前內容即時重算，"
-           "跟印藥水那邊「定案後顯示實際休息人員」同一套邏輯）· 2026-08-10")
+st.caption(f"🟢 版本 {APP_VER}（延續上一版稽核bug往下查：①公平累計逐人明細（含「休息」"
+           "字樣）誤混進「注意事項」警告清單 ②稽核「其他檔案下載」的Excel/文字檔是"
+           "點格子改之前的舊版本，貼公告欄/傳LINE群組可能傳達錯誤名單——都已改成依"
+           "你目前的修改重新產生）· 2026-08-10")
 
 # ── 📊 首頁顯眼統計＋本機備份落後提醒（2026-07-20加，v3.38）─────────────
 # 目的：2026-07-19~20那次「7/20資料被同步按鈕蓋掉」事件，玉繡是三週後才發現雲端資料
@@ -2552,6 +2590,7 @@ elif mode.startswith("🟩"):
         # build_corrected_audit_history()/send_audit_notices() 用同一條 regex，避免
         # 又長出第三種不一致的清洗規則。
         _roster_ak = get_roster_names()
+        _resting_ak = []
         if _roster_ak and edited_ak is not None and not edited_ak.empty:
             _auditing_ak = set()
             for _, _r in edited_ak.iterrows():
@@ -2612,13 +2651,48 @@ elif mode.startswith("🟩"):
         st.download_button("⬇️ 下載稽核名單（已套用修改）",
                            edited_ak.to_csv(index=False).encode("utf-8-sig"),
                            file_name=f"稽核名單_{month_key}.csv", mime="text/csv")
-        with st.expander("⬇️ 其他檔案下載"):
+
+        # v3.53 續修：下面「其他檔案下載」的 .xlsx／.txt 原本直接發 稽核.py 子行程產出
+        # 的原始檔案——那是玉繡在上面表格點格子改稽核者**之前**的版本，跟送到雲端／
+        # LINE通知的內容完全脫鉤。這兩個檔案的用途正好是「貼護理站公告欄」「傳LINE
+        # 群組」，一旦她真的改過名字又下載這裡的檔案去公告，公告欄/群組看到的名字會
+        # 跟系統實際記錄、LINE個別通知的內容兜不起來，比「畫面上一段文字沒更新」嚴重
+        # 得多，是會真的傳達錯誤資訊出去的等級。改成用 edited_ak（她修改後的現況）
+        # 現場重建這兩個檔案內容，不再發子行程當初的舊版本。
+        def _build_audit_xlsx_bytes(df):
+            buf = io.BytesIO()
+            df.to_excel(buf, index=False)
+            return buf.getvalue()
+
+        def _build_audit_txt(df, tag, resting_names):
+            lines = [f"📋 {tag} 稽核藥水 AK 名單", ""]
+            for a in ["一區", "二區"]:
+                lines.append(f"《{a}》")
+                for gl in ["週一三五", "週二四六"]:
+                    parts = []
+                    for band in ["第一班", "第二班", "第三班"]:
+                        sub = df[(df["區"] == a) & (df["組"] == gl) & (df["班次"] == band)]
+                        nm = str(sub.iloc[0]["稽核者"]).strip() if not sub.empty else ""
+                        parts.append(f"{band}:{nm or '❌排不出'}")
+                    lines.append("　" + gl + "　" + "　".join(parts))
+            lines += ["", "休息:" + ("、".join(resting_names) if resting_names else "無")]
+            return "\n".join(lines).encode("utf-8")
+
+        _ak_corrected_files = dict(files)
+        if edited_ak is not None and not edited_ak.empty and {"區","組","班次","稽核者"} <= set(edited_ak.columns):
+            for fn in list(_ak_corrected_files.keys()):
+                if fn.endswith(".xlsx"):
+                    _ak_corrected_files[fn] = _build_audit_xlsx_bytes(edited_ak)
+                elif fn.endswith(".txt"):
+                    _ak_corrected_files[fn] = _build_audit_txt(edited_ak, month_key, _resting_ak)
+
+        with st.expander("⬇️ 其他檔案下載（已套用修改）"):
             _AK_FILE_LABELS = {
-                ".csv":  "📊 稽核紀錄（上傳到雲端歷史用）",
-                ".xlsx": "📋 列印用（Excel）",
-                ".txt":  "💬 傳 LINE 群組用（文字）",
+                ".csv":  "📊 稽核紀錄（上傳到雲端歷史用，仍為原始版本，不受格子編輯影響）",
+                ".xlsx": "📋 列印用（Excel，已套用你的修改）",
+                ".txt":  "💬 傳 LINE 群組用（文字，已套用你的修改）",
             }
-            for fn, b in files.items():
+            for fn, b in _ak_corrected_files.items():
                 ext = os.path.splitext(fn)[1].lower()
                 label = _AK_FILE_LABELS.get(ext, "")
                 if label:
