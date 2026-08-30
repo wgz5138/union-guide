@@ -5,8 +5,12 @@
  *  「太麻煩不修」的Streamlit網頁加密碼那項）：
  *  【高】WRITE_SECRET 舊值「yaoshui2026」曾經被接續包.md文件明文寫出來，跟著公開
  *   repo一起外流——任何人都能繞過網頁，直接對這支.gs的API發完整讀寫請求（改組員
- *   名單、洗掉排班/稽核歷史、觸發LINE通知…全部15個action）。換成隨機字串，見下方
- *   WRITE_SECRET定義處的部署說明（雙邊要一起改，不然會壞）。
+ *   名單、洗掉排班/稽核歷史、觸發LINE通知…全部15個action）。
+ *   ⚠️ 這條在同一輪修復裡自己犯過一次同樣的錯：第一次動手時只是把 WRITE_SECRET
+ *   換成新的隨機字串、卻還是直接寫死在.gs跟接續包.md裡——這樣做完全沒解決問題，
+ *   新密鑰照樣在push的當下重新外流一次。後來改成 LINE_TOKEN／WRITE_SECRET 都從
+ *   Apps Script 的「指令碼屬性」(PropertiesService) 讀取，程式碼本身完全不帶密鑰值，
+ *   這才是真正的修法。見下方 LINE_TOKEN/WRITE_SECRET 定義處的部署說明。
  *  【中，M1】sendAuditNotice 的 month/position 原本是呼叫端傳什麼就原封不動拼進LINE
  *   訊息內容，密鑰外流的話等於能借工會官方帳號名義發任意文字。新增 _sanitizeMsgField_()
  *   白名單字元+長度上限收斂。
@@ -132,15 +136,27 @@
  *  writeHistory_ 全部套用，行為不變、只是變快。
  */
 
-var LINE_TOKEN  = "zeJ2uTt7yRF4EQZ1nN0tgQqZqfzkScfWxTmEtGjPDbByEtjEKkQucms/SYc9uYiEyHbODMrsqlB2L+z0Xl1EPpe4/w/nIR9AT6xb+7gBUgsPlqjEsj4Hp907Zr/gMkpiJWlSWaU20t4vI6au33BKbAdB04t89/1O/w1cDnyilFU=";   // ← Channel access token（不要按 Reissue！）
-// v6.5（安全稽查H2）：舊密鑰「yaoshui2026」曾經被接續包.md文件明文寫出來、跟著公開
-// repo一起外流（見接續包第三十二節），任何人拿到就能繞過網頁、直接對這支.gs發完整
-// 讀寫請求。換成隨機字串。⚠️ 換密鑰是「雙邊要一起改才不會壞」的操作：
-//   ①先去 Streamlit Cloud 後台把 Secrets 的 WRITE_SECRET 改成下面這個新值
-//   ②再把這支最新的 .gs 貼進 Apps Script 編輯器、部署→管理部署→新版本
-// 兩步盡量緊接著做完；中間如果剛好有人按到「送到雲端」會看到密鑰錯誤訊息，
-// 不會壞資料，重試一次即可。
-var WRITE_SECRET = "cCfXRzatKnGVxPSJvcuGgvyIlpDtyHwF";   // ← 網頁送名單用的暗號（與 Streamlit Secrets 一致）
+/* v6.5（安全稽查H2，2026-08-10 修正過一次）：LINE_TOKEN／WRITE_SECRET 原本是寫死在
+ * 這支.gs檔案裡的常數，而這支.gs本身跟著公開repo一起被git追蹤——這代表「換一個
+ * 新密鑰」本身並不是真正的修法：不管換成什麼值，只要還是寫在會被commit的檔案裡，
+ * push的那一刻就重新外流一次（這件事這一輪修復自己就示範了一次：第一次動手時只是
+ * 把WRITE_SECRET換成新的隨機字串、卻還是直接寫進.gs跟接續包.md裡，等於立刻又外洩
+ * 了新密鑰，後來才發現問題所在並改成這裡的做法）。真正的解法是密鑰完全不出現在
+ * 任何會被commit的檔案裡，改成從 Apps Script 專案自己的「指令碼屬性」
+ * （Script Properties，只存在Apps Script後台，不會被git追蹤、也不會顯示在原始碼裡）
+ * 讀取。
+ *
+ * ⚠️ 部署這版之後，第一次執行前必須先手動設定，否則兩個值都會是 null：
+ *   Apps Script 編輯器 → 左側齒輪圖示「專案設定」→ 最下面「指令碼屬性」→
+ *   「新增指令碼屬性」，新增兩筆：
+ *     WRITE_SECRET = （跟 Streamlit Cloud 後台 Secrets 的 WRITE_SECRET 設一樣的值）
+ *     LINE_TOKEN   = （目前的 LINE Channel access token，沒有要重新Reissue就填舊值）
+ *   這兩個值只有使用者跟 Apps Script 後台知道，不會出現在任何git commit裡，這才是
+ *   真正把密鑰從公開repo拿掉的做法（AI 不會知道、也不需要知道實際值是什麼）。
+ * WRITE_SECRET 沒設定時 doPost 會直接全部拒絕（fail closed，見下方檢查邏輯），
+ * 不會因為兩邊剛好都是 null/undefined 而意外放行。 */
+var LINE_TOKEN   = PropertiesService.getScriptProperties().getProperty('LINE_TOKEN');
+var WRITE_SECRET = PropertiesService.getScriptProperties().getProperty('WRITE_SECRET');
 
 // ★休診日的唯一來源＝試算表的「休診日」分頁（欄位：日期, 說明），格式 "2026-01-01"。
 //   週日自動跳過，不用列在裡面。要新增/刪除休診日，請到 Streamlit「📊 統計管理 →
@@ -186,8 +202,10 @@ function doPost(e) {
       return ContentService.createTextOutput("OK");
     }
 
-    // ── 網頁 API（需要暗號）──
-    if (body.secret !== WRITE_SECRET) {
+    // ── 網頁 API（需要暗號）── v6.5：WRITE_SECRET 改讀指令碼屬性，若忘記設定會是
+    // null——加 !WRITE_SECRET 這個條件確保「沒設定」一律當拒絕（fail closed），不會
+    // 因為呼叫端剛好也送 secret:null/沒帶secret欄位而意外通過驗證。
+    if (!WRITE_SECRET || body.secret !== WRITE_SECRET) {
       return jsonOut_({ok: false, error: "wrong secret"});
     }
 
