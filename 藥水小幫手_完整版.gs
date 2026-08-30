@@ -1,6 +1,31 @@
 /**
- * 透析印藥水 LINE 小幫手 v6.4 — Apps Script
+ * 透析印藥水 LINE 小幫手 v6.5 — Apps Script
  * ════════════════════════════════════════════════════════
+ *  v6.5（2026-08-10）獨立派出的資安漏洞稽查agent找出的問題，逐項修（不含使用者明講
+ *  「太麻煩不修」的Streamlit網頁加密碼那項）：
+ *  【高】WRITE_SECRET 舊值「yaoshui2026」曾經被接續包.md文件明文寫出來，跟著公開
+ *   repo一起外流——任何人都能繞過網頁，直接對這支.gs的API發完整讀寫請求（改組員
+ *   名單、洗掉排班/稽核歷史、觸發LINE通知…全部15個action）。
+ *   ⚠️ 這條在同一輪修復裡自己犯過一次同樣的錯：第一次動手時只是把 WRITE_SECRET
+ *   換成新的隨機字串、卻還是直接寫死在.gs跟接續包.md裡——這樣做完全沒解決問題，
+ *   新密鑰照樣在push的當下重新外流一次。後來改成 LINE_TOKEN／WRITE_SECRET 都從
+ *   Apps Script 的「指令碼屬性」(PropertiesService) 讀取，程式碼本身完全不帶密鑰值，
+ *   這才是真正的修法。見下方 LINE_TOKEN/WRITE_SECRET 定義處的部署說明。
+ *  【中，M1】sendAuditNotice 的 month/position 原本是呼叫端傳什麼就原封不動拼進LINE
+ *   訊息內容，密鑰外流的話等於能借工會官方帳號名義發任意文字。新增 _sanitizeMsgField_()
+ *   白名單字元+長度上限收斂。
+ *  【中，M3】setValues() 寫入的儲存格內容沒有跳脫，開頭是=/+/-/@的字串會被 Google
+ *   Sheets當公式執行（例如塞入=IMPORTXML(...)），玉繡打開試算表時就會自動觸發。新增
+ *   _escapeFormulaCell_()，writeAllRowsFast_() 跟 LINE webhook 寫入的訊息文字都套用
+ *   （webhook那條完全不驗證密鑰、是任何人傳訊息給官方帳號都能觸發的路徑，優先處理）。
+ *  【中，M2，已評估，未做完整修復】doPost 的 LINE webhook 分支（body.events）設計上
+ *   就在WRITE_SECRET檢查之前、不驗證LINE官方要求的X-Line-Signature簽章。已實測追查
+ *   影響範圍：webhook寫入的「userid」分頁從頭到尾沒有被任何其他函式讀取（真正發通知
+ *   查的是「對照」分頁，只能人工維護），所以偽造webhook事件*不能*用來冒充/劫持特定
+ *   組員的通知——影響僅止於灌垃圾資料到「userid」分頁。完整修法（HMAC簽章驗證）需要
+ *   LINE Channel Secret（不同於Channel Access Token的另一組密鑰），這支.gs目前沒有
+ *   存這個值，也不是本地能生出來的東西，需要使用者自己去LINE Developers後台取得後
+ *   用PropertiesService存起來才能做——本輪先記錄清楚、不做半套的假驗證。
  *  v6.4（2026-08-08）獨立派出稽查agent全面徹查（跟 app.py v3.50 同一輪），這支.gs命中2項：
  *  【低-14】補發模式下「雙印」（同一人一週印兩次、兩個不同印藥水日）只補得到一個日期，
  *   健康檢查還會**每天**重發同一則「XXX(第二個日期)沒收到提醒」給玉繡，造成警報疲勞。
@@ -111,8 +136,27 @@
  *  writeHistory_ 全部套用，行為不變、只是變快。
  */
 
-var LINE_TOKEN  = "zeJ2uTt7yRF4EQZ1nN0tgQqZqfzkScfWxTmEtGjPDbByEtjEKkQucms/SYc9uYiEyHbODMrsqlB2L+z0Xl1EPpe4/w/nIR9AT6xb+7gBUgsPlqjEsj4Hp907Zr/gMkpiJWlSWaU20t4vI6au33BKbAdB04t89/1O/w1cDnyilFU=";   // ← Channel access token（不要按 Reissue！）
-var WRITE_SECRET = "yaoshui2026";   // ← 網頁送名單用的暗號（與 Streamlit Secrets 一致）
+/* v6.5（安全稽查H2，2026-08-10 修正過一次）：LINE_TOKEN／WRITE_SECRET 原本是寫死在
+ * 這支.gs檔案裡的常數，而這支.gs本身跟著公開repo一起被git追蹤——這代表「換一個
+ * 新密鑰」本身並不是真正的修法：不管換成什麼值，只要還是寫在會被commit的檔案裡，
+ * push的那一刻就重新外流一次（這件事這一輪修復自己就示範了一次：第一次動手時只是
+ * 把WRITE_SECRET換成新的隨機字串、卻還是直接寫進.gs跟接續包.md裡，等於立刻又外洩
+ * 了新密鑰，後來才發現問題所在並改成這裡的做法）。真正的解法是密鑰完全不出現在
+ * 任何會被commit的檔案裡，改成從 Apps Script 專案自己的「指令碼屬性」
+ * （Script Properties，只存在Apps Script後台，不會被git追蹤、也不會顯示在原始碼裡）
+ * 讀取。
+ *
+ * ⚠️ 部署這版之後，第一次執行前必須先手動設定，否則兩個值都會是 null：
+ *   Apps Script 編輯器 → 左側齒輪圖示「專案設定」→ 最下面「指令碼屬性」→
+ *   「新增指令碼屬性」，新增兩筆：
+ *     WRITE_SECRET = （跟 Streamlit Cloud 後台 Secrets 的 WRITE_SECRET 設一樣的值）
+ *     LINE_TOKEN   = （目前的 LINE Channel access token，沒有要重新Reissue就填舊值）
+ *   這兩個值只有使用者跟 Apps Script 後台知道，不會出現在任何git commit裡，這才是
+ *   真正把密鑰從公開repo拿掉的做法（AI 不會知道、也不需要知道實際值是什麼）。
+ * WRITE_SECRET 沒設定時 doPost 會直接全部拒絕（fail closed，見下方檢查邏輯），
+ * 不會因為兩邊剛好都是 null/undefined 而意外放行。 */
+var LINE_TOKEN   = PropertiesService.getScriptProperties().getProperty('LINE_TOKEN');
+var WRITE_SECRET = PropertiesService.getScriptProperties().getProperty('WRITE_SECRET');
 
 // ★休診日的唯一來源＝試算表的「休診日」分頁（欄位：日期, 說明），格式 "2026-01-01"。
 //   週日自動跳過，不用列在裡面。要新增/刪除休診日，請到 Streamlit「📊 統計管理 →
@@ -142,20 +186,26 @@ function doPost(e) {
     var body = JSON.parse(e.postData.contents);
     var ss = SpreadsheetApp.getActiveSpreadsheet();
 
-    // ── LINE webhook（有 events 欄位，沒有 action）──
+    // ── LINE webhook（有 events 欄位，沒有 action）── 這個分支在 WRITE_SECRET
+    // 檢查**之前**，設計上就是給 LINE 平台呼叫、不帶密鑰（見下方安全稽查M2說明）。
     if (body.events) {
       var sh = ensureSheet_(ss, "userid", ["時間","事件","userId","傳來的文字"]);
       (body.events || []).forEach(function(ev) {
         var uid = ev.source && ev.source.userId;
         var text = (ev.type === "message" && ev.message && ev.message.type === "text")
                    ? ev.message.text : "";
-        if (uid) sh.appendRow([new Date(), ev.type, uid, text]);
+        // v6.5（安全稽查M3）：這裡完全不驗證密鑰，text 是任何人傳給LINE官方帳號的
+        // 訊息內容，最容易被拿來塞公式的一條路——傳「=IMPORTXML(...)」這種文字，
+        // 玉繡打開這份試算表時就會被自動執行。跳脫成純文字。
+        if (uid) sh.appendRow([new Date(), ev.type, uid, _escapeFormulaCell_(text)]);
       });
       return ContentService.createTextOutput("OK");
     }
 
-    // ── 網頁 API（需要暗號）──
-    if (body.secret !== WRITE_SECRET) {
+    // ── 網頁 API（需要暗號）── v6.5：WRITE_SECRET 改讀指令碼屬性，若忘記設定會是
+    // null——加 !WRITE_SECRET 這個條件確保「沒設定」一律當拒絕（fail closed），不會
+    // 因為呼叫端剛好也送 secret:null/沒帶secret欄位而意外通過驗證。
+    if (!WRITE_SECRET || body.secret !== WRITE_SECRET) {
       return jsonOut_({ok: false, error: "wrong secret"});
     }
 
@@ -261,13 +311,19 @@ function doPost(e) {
 
     if (action === "sendAuditNotice") {
       var map2 = buildUserMap_(ss);
-      var month = body.month || "";
+      // v6.5（安全稽查M1）：month/position 原本是呼叫端傳什麼就原封不動拼進LINE訊息，
+      // 沒有任何長度/字元限制——正常情況下這兩個值來自app.py自己組的月份字串跟
+      // 區/組/班次組合，本來就是短字串，但 doPost 本身只驗證WRITE_SECRET，一旦密鑰
+      // 外流，任何人都能透過這個action塞入任意長字串當成「稽核通知」內容發出去，
+      // 等於借工會官方帳號名義做社交工程/釣魚。用白名單字元+長度上限收斂，擋掉這條路。
+      var month = _sanitizeMsgField_(body.month || "", 20);
       var sent2 = 0, miss2 = 0, failed2 = 0, failedNames = [];
       (body.notices || []).forEach(function(n) {
         var uid3 = map2[n.name];
         if (!uid3) { Logger.log("缺 userId（稽核通知）：" + n.name); miss2++; return; }
+        var position = _sanitizeMsgField_(n.position || "", 30);
         // v6.2（#14）：LINE 真的送失敗時要算成失敗、回報給網頁，不能一律 sent2++
-        if (pushLine_(uid3, "📋 " + month + " 你這個月負責【" + n.position + "】稽核藥水，請自行安排兩天進行稽核。🙏")) {
+        if (pushLine_(uid3, "📋 " + month + " 你這個月負責【" + position + "】稽核藥水，請自行安排兩天進行稽核。🙏")) {
           sent2++;
         } else {
           failed2++; failedNames.push(n.name);
@@ -626,6 +682,17 @@ function sheetToArray_(ss, name) {
  * 正是這個專案已經出事過好幾次的那種災情（見接續包第十三、十六節）。
  * 改成：先把每一列正規化成表頭寬度（短的補空白），欄數超過表頭就直接丟例外
  * **中止、完全不動原有資料**；全部檢查過了才 clearContents + setValues。 */
+/* v6.5（安全稽查M3）：儲存格內容若原封不動用 setValues() 寫入，開頭是
+ * =／+／-／@ 的字串會被 Google Sheets 當成公式執行（例如塞入
+ * =IMPORTXML(...)、=HYPERLINK(...)）——只要之後有人（例如玉繡）打開這份
+ * 試算表，公式就會自動跑。這系統會把使用者可自由輸入的文字（稽核者姓名、
+ * 意見回饋內容等）寫進 Sheets，加一道跳脫，用不到公式的欄位一律當純文字。*/
+function _escapeFormulaCell_(v) {
+  if (typeof v !== "string") return v;
+  if (/^[=+\-@]/.test(v)) return "'" + v;
+  return v;
+}
+
 function writeAllRowsFast_(sh, headers, rows) {
   var w = headers.length;
   var src = rows || [];
@@ -636,7 +703,7 @@ function writeAllRowsFast_(sh, headers, rows) {
       throw new Error("寫入「" + sh.getName() + "」中止：第 " + (i + 1) + " 筆有 " + r.length
                       + " 欄，超過表頭的 " + w + " 欄。原有資料未被更動。");
     }
-    var row = r.slice();
+    var row = r.slice().map(_escapeFormulaCell_);
     while (row.length < w) row.push("");     // 短的補空白，setValues 才不會抱怨
     norm.push(row);
   }
@@ -666,6 +733,15 @@ function writeHistory_(ss, sheetName, headers, key, newRows) {
   }).slice(1).map(function(r) { return r.slice(0, w); });   // 舊資料截到表頭寬度
   writeAllRowsFast_(sh, headers, kept.concat(newRows));
 }
+/* v6.5（安全稽查M1）：LINE訊息文字裡會嵌入呼叫端傳來的自由字串（目前用在
+ * sendAuditNotice 的 month/position）時，用這個收斂——只留中英數字/常見標點，
+ * 並砍到長度上限，防止密鑰外流時被拿來塞任意文字冒充官方帳號發訊息。*/
+function _sanitizeMsgField_(s, maxLen) {
+  s = String(s == null ? "" : s);
+  s = s.replace(/[^一-鿿0-9A-Za-z\/\-（）()、，,._ ]/g, "");
+  return s.slice(0, maxLen);
+}
+
 function buildUserMap_(ss) {
   var map = {}, sh = ss.getSheetByName("對照");
   if (!sh) return map;
