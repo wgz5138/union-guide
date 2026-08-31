@@ -1,5 +1,25 @@
 # -*- coding: utf-8 -*-
 """透析藥水排班 — 手機網頁版（Streamlit）v3.26
+  • v3.55（2026-08-10，使用者觀察「稽核一個月才排一次，曝光率比每週的印藥水低，
+    可能有埋很久的bug」，派agent專門查低頻路徑找到的兩項）：
+    ①【高】`稽核.py` `classify()` 的白/夜班型判斷跟分區(area)判斷本來該是對稱的
+    備援邏輯，但只有分區有「第一週判不出來就退回全月統計」，白/夜沒有——如果
+    第一週剛好整週是連假/特休等排除班別，會被誤判成「班型未知」，即使全月其他
+    週明顯是白班或夜班，也完全排不進任何稽核格，還會連帶汙染下個月的公平分數。
+    抽出共用的 `_count_shifts()`，讓白/夜判斷比照分區用同一套備援，第一週判不出
+    來就退回全月重算。用實際重現的合成資料驗證：第一週全排除班別+第二週全白班
+    的人，修好前判成None、修好後正確判成白班；也驗證真的整月都沒資料時仍正確
+    回傳None，不會硬掰答案。
+    ②【中】快速模式（免上傳Excel）從設計之初就沒有「這人到底上週一三五還是
+    週二四六」的欄位，`assign()`的分組檢查對這條路徑只能一律放行，可能把只上
+    二四六班的人排進週一三五的稽核格，且不會有任何警告。新增「組別」欄（快速
+    名冊.csv新增第5欄，UI新增對應selectbox），`稽核.py` `run_quick()` 據此正確
+    填入`w135`/`w246`；沒有這欄的舊CSV向下相容（退回兩組都放行，不強迫重填）、
+    欄位存在但填不懂的值會明確警告而不是靜默放行。連帶更新
+    `fetch_last_audit_prefill()`/`push_audit_draft()`/`fetch_audit_draft()`，
+    從真實稽核歷史的「區/組/班次」位置格式拆出組別做預填、草稿暫存也保留組別
+    （編碼進既有的「位置」欄，沒有另外擴充雲端schema），用真實函式碼驗證三種
+    組別設定、向下相容（舊草稿沒有組別）、亂填值會警告都正確。
   • v3.54（2026-08-10，修稽核v3.53時順手發現印藥水流程有同一類風險，這次補上）：
     印藥水 Stage 3「⬇️ 其他檔案下載（列印用 xlsx / 貼 LINE 用 txt）」的 `.xlsx`
     （標「貼到護理站公告欄」）、`.txt`（標「傳LINE群組用」），發的是「➡️排印藥水」
@@ -499,8 +519,10 @@ def roster_fallback_warning():
     return ""
 
 def fetch_last_audit_prefill():
-    """從雲端稽核歷史抓「最近一個月」的每人班型/區，給快速模式預先帶入。
-    回傳 {姓名: (班型, 區)}；班型由班次推回（第三班=小夜，否則白班）。"""
+    """從雲端稽核歷史抓「最近一個月」的每人班型/區/組別，給快速模式預先帶入。
+    回傳 {姓名: (班型, 區, 組別)}；班型由班次推回（第三班=小夜，否則白班），
+    組別直接從「位置」欄的「區/組/班次」格式拆出中間那段（2026-08-10新增，
+    配合快速模式補上w135/w246檢查——見稽核.py run_quick()的說明）。"""
     if not APPS_SCRIPT_URL or not WRITE_SECRET: return {}
     try:
         resp = requests.post(APPS_SCRIPT_URL,
@@ -529,9 +551,11 @@ def fetch_last_audit_prefill():
             if str(r[iM]).strip() != last: continue
             name = str(r[iN]).strip(); pos = str(r[iP]).strip()
             if not name or not pos: continue          # 休息者無位置 → 不帶入
-            area = pos.split("/")[0].strip()
+            parts = pos.split("/")
+            area = parts[0].strip()
+            group = parts[1].strip() if len(parts) > 1 else ""
             typ  = "小夜" if "第三班" in pos else "白班"
-            pf[name] = (typ, area)
+            pf[name] = (typ, area, group)
         return pf
     except Exception:
         return {}
@@ -540,7 +564,13 @@ def fetch_last_audit_prefill():
 DRAFT_KEY = "草稿"
 
 def fetch_audit_draft():
-    """讀雲端草稿（稽核歷史裡 月份=='草稿' 那幾筆）→ {姓名: (班型, 區)}。"""
+    """讀雲端草稿（稽核歷史裡 月份=='草稿' 那幾筆）→ {姓名: (班型, 區, 組別)}。
+
+    草稿沿用「稽核紀錄」既有的5欄schema（月份/卡號/姓名/狀態/位置），沒有獨立的
+    「組別」欄位可以存（改schema要動.gs，牽涉到跟正式稽核紀錄共用的格式，這次
+    不擴大範圍）。2026-08-10 新增組別後，改成把組別編碼進「位置」欄，存成
+    「區/組別」（例如「一區/週一三五」）；沒有組別資訊的舊草稿「位置」欄只有
+    區（例如「一區」），拆開時組別會是空字串，向下相容不會壞。"""
     if not APPS_SCRIPT_URL or not WRITE_SECRET: return {}
     try:
         resp = requests.post(APPS_SCRIPT_URL,
@@ -555,13 +585,19 @@ def fetch_audit_draft():
         for r in rows[1:]:
             if str(r[iM]).strip() != DRAFT_KEY: continue
             name = str(r[iN]).strip()
-            if name: d[name] = (str(r[iS]).strip(), str(r[iP]).strip())  # 狀態=班型, 位置=區
+            if not name: continue
+            typ = str(r[iS]).strip()
+            parts = str(r[iP]).strip().split("/")
+            area = parts[0].strip() if parts else ""
+            group = parts[1].strip() if len(parts) > 1 else ""
+            d[name] = (typ, area, group)
         return d
     except Exception:
         return {}
 
 def push_audit_draft(df):
-    """把目前點選存成雲端草稿（借用 setAuditResult，月份=草稿；班型放狀態欄、區放位置欄）。
+    """把目前點選存成雲端草稿（借用 setAuditResult，月份=草稿；班型放狀態欄，
+    區+組別編碼成「區/組別」放位置欄——見上面 fetch_audit_draft() 的說明）。
 
     回傳 (ok, 錯誤訊息)。v3.50（獨立稽查低-19）：以前只回 True/False，失敗時畫面只能
     講「儲存失敗，請稍後再試」，跟 v3.44 修過的 push_week_draft() 是同一類問題——
@@ -569,7 +605,8 @@ def push_audit_draft(df):
     把真正原因秀出來。"""
     if not APPS_SCRIPT_URL or not WRITE_SECRET: return False, "尚未設定 Apps Script 網址或密鑰"
     try:
-        rows = [[DRAFT_KEY, str(r["卡號"]), str(r["姓名"]), str(r["班型"]), str(r["區"])]
+        rows = [[DRAFT_KEY, str(r["卡號"]), str(r["姓名"]), str(r["班型"]),
+                 str(r["區"]) + ("/" + str(r["組別"]) if "組別" in df.columns and str(r.get("組別","")).strip() else "")]
                 for _, r in df.iterrows()]
         resp = requests.post(APPS_SCRIPT_URL,
                              json={"action": "setAuditResult", "secret": WRITE_SECRET,
@@ -1343,7 +1380,7 @@ def _build_line_txt(rows, disp_df=None):
 
 
 # ── 💬 意見回饋：借用稽核歷史（特殊鍵「意見-時間」）存放，不動 LINE 程式 ──
-APP_VER = "v3.54"
+APP_VER = "v3.55"
 FEEDBACK_PREFIX = "意見-"
 
 def push_feedback(step, detail, expect, urgency, who):
@@ -1658,11 +1695,10 @@ if TEST_MODE:
 
 st.title("💊 透析藥水排班")
 st.caption("上傳班表 Excel → 出名單(表格)。可直接點格子改人名。跨區標 🔺。")
-st.caption(f"🟢 版本 {APP_VER}（印藥水流程也修了跟稽核同一顆蟲：「其他檔案下載」的"
-           "Excel（貼公告欄用）/文字檔（傳LINE群組用）原本是排出來當下的舊版本，"
-           "點格子改人之後不會跟著更新——改成用你「產生定案」後的內容重新產生，"
-           "並修掉一個容易誤按的地方：這裡跟上面3️⃣區塊的「下載txt傳LINE群組」標籤"
-           "幾乎一樣，以前一個對一個錯，現在兩邊內容一致）· 2026-08-10")
+st.caption(f"🟢 版本 {APP_VER}（低頻路徑深查修復：①班型判斷（白/夜）第一週剛好整週"
+           "連假/特休時會誤判成「未知」、整月排不進任何格，已比照分區判斷補上退回"
+           "全月統計的備援 ②快速模式新增「組別」欄，之前完全不檢查週一三五/週二四六，"
+           "現在會真的比對、沒設定會提醒）· 2026-08-10")
 
 # ── 📊 首頁顯眼統計＋本機備份落後提醒（2026-07-20加，v3.38）─────────────
 # 目的：2026-07-19~20那次「7/20資料被同步按鈕蓋掉」事件，玉繡是三週後才發現雲端資料
@@ -2453,8 +2489,8 @@ elif mode.startswith("🟩"):
         st.session_state["ak_month_key"] = month_key
 
     if audit_quick:
-        # ── 快速模式：免上傳，直接點選白/夜＋區 ──────────────
-        st.markdown("#### 2️⃣ 點選每人「白/夜」＋「區」→ 排稽核")
+        # ── 快速模式：免上傳，直接點選白/夜＋區＋組別 ──────────────
+        st.markdown("#### 2️⃣ 點選每人「白/夜」＋「區」＋「組別」→ 排稽核")
         roster = get_roster_full()
         if not roster:
             st.error("找不到組員名單（雲端與本機備份都讀不到）。請確認網路，或先在「📊 統計管理→👥 組員名單」確認雲端有資料。"); st.stop()
@@ -2467,17 +2503,22 @@ elif mode.startswith("🟩"):
             st.caption("📌 已帶回你上次「暫存」的草稿。改好可再按「💾 暫存」，或直接「✅ 排稽核」。")
         else:
             st.caption("免上傳 Excel。系統已帶出上個月的設定，只要改這個月有變動的人即可。")
+        # 2026-08-10 獨立稽查實測發現：快速模式之前完全沒有「組別」欄，`assign()`
+        # 對這條路徑一律放行週一三五/週二四六的檢查，可能把只上二四六班的人排進
+        # 週一三五的稽核格，而且不會有任何警告。新增「組別」欄補上這個檢查，冷
+        # 啟動時留❓逼玉繡設定，跟「區」欄同一套「不設就會提醒、不會默默排錯」。
         base = []
         for m in roster:
             nm = m["姓名"]
             pre = draft.get(nm) or prefill.get(nm)   # 有草稿/上次才帶；沒有就留「未設」
             if pre:
-                typ, area = pre
+                typ, area, group = pre
             else:
-                typ, area = "白班", "❓"               # 冷啟動：區留❓未設，逼人設定、避免默默全一區
+                typ, area, group = "白班", "❓", "❓"   # 冷啟動：留❓未設，逼人設定、避免默默排錯
             if typ not in ("白班","小夜"): typ = "白班"
             if area not in ("一區","二區","❓"): area = "❓"
-            base.append({"卡號": m["卡號"], "姓名": nm, "班型": typ, "區": area})
+            if group not in ("週一三五","週二四六","❓"): group = "❓"
+            base.append({"卡號": m["卡號"], "姓名": nm, "班型": typ, "區": area, "組別": group})
         df_q = pd.DataFrame(base)
         edited_q = st.data_editor(
             df_q,
@@ -2486,6 +2527,7 @@ elif mode.startswith("🟩"):
                 "姓名": st.column_config.TextColumn("姓名", disabled=True),
                 "班型": st.column_config.SelectboxColumn("班型 ✏️", options=["白班","小夜"], required=True),
                 "區":   st.column_config.SelectboxColumn("區 ✏️",   options=["一區","二區","❓"], required=True),
+                "組別": st.column_config.SelectboxColumn("組別 ✏️", options=["週一三五","週二四六","❓"], required=True),
             },
             use_container_width=True, hide_index=True, key="quick_edit"
         )
@@ -2494,8 +2536,14 @@ elif mode.startswith("🟩"):
         n_a1    = int((edited_q["區"] == "一區").sum())
         n_a2    = int((edited_q["區"] == "二區").sum())
         n_unset = int((edited_q["區"] == "❓").sum())
+        n_g135  = int((edited_q["組別"] == "週一三五").sum())
+        n_g246  = int((edited_q["組別"] == "週二四六").sum())
+        n_gunset= int((edited_q["組別"] == "❓").sum())
         st.caption(f"目前：白班 {n_white}、小夜 {n_night}；一區 {n_a1}、二區 {n_a2}"
-                   + (f"；❓未設區 {n_unset}" if n_unset else "") + f"（共 {len(edited_q)} 人）")
+                   + (f"；❓未設區 {n_unset}" if n_unset else "")
+                   + f"；週一三五 {n_g135}、週二四六 {n_g246}"
+                   + (f"、❓未設組別 {n_gunset}" if n_gunset else "")
+                   + f"（共 {len(edited_q)} 人）")
         if n_unset:
             st.warning(f"⚠️ 還有 {n_unset} 人的「區」是 ❓ 未設，請先點成一區/二區，否則他們會排不進去（會噴錯）。")
         if n_unset == 0 and n_a2 == 0:
@@ -2504,6 +2552,13 @@ elif mode.startswith("🟩"):
             st.warning("⚠️ 目前沒有人在「一區」。")
         if n_night == 0:
             st.warning("⚠️ 目前沒有人是「小夜」——第三班（小夜）會排不出來。")
+        if n_gunset:
+            # 2026-08-10新增：組別不設不會讓排稽核噴錯（跟「區」不一樣），但那個人的
+            # 週一三五/週二四六完全不會被檢查，可能被排到跟她實際上班日不符的格子，
+            # 所以用提醒而不是像「區」那樣講「會噴錯」——語氣要如實，不能亂講後果。
+            st.warning(f"⚠️ 還有 {n_gunset} 人的「組別」是 ❓ 未設——不會讓排稽核失敗，"
+                       f"但這幾位會完全不檢查週一三五/週二四六，可能被排到跟實際上班日"
+                       f"不符的格子，建議先點好再排。")
 
         # 💾 暫存 / 🗑 清除暫存（雲端草稿，可分次填、明天再回來接續）
         if TEST_MODE:

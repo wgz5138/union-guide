@@ -4,8 +4,10 @@
 ===============================================================
 v0.3 新增:
   • 快速模式（免上傳 Excel）：python 稽核.py --quick 2026-06
-    直接讀「快速名冊.csv」(卡號, 姓名, 班型, 區) 排稽核，
-    白/夜與一區/二區由網頁玉繡點選決定，不必解析班表。
+    直接讀「快速名冊.csv」(卡號, 姓名, 班型, 區, 組別) 排稽核，
+    白/夜、一區/二區、週一三五/週二四六由網頁玉繡點選決定，不必解析班表。
+    「組別」是 2026-08-10 補的欄位——之前快速模式完全不檢查這個人實際上
+    週一三五還是週二四六，可能把只上二四六班的人排進週一三五的稽核格。
 v0.2 新增:
   • 支援「班型覆蓋.csv」— 網頁 Stage 1 玉繡確認後寫入，程式優先採用
     格式: 卡號, 姓名, 班型（白班/夜班）
@@ -25,7 +27,7 @@ F_SHIFTS  = os.path.join(BASE, "不可印班別.csv")
 F_HOLIDAY = os.path.join(BASE, "休診日.csv")
 F_HISTORY = os.path.join(BASE, "稽核紀錄.csv")
 F_SHIFT_OVERRIDE = os.path.join(BASE, "班型覆蓋.csv")   # ← Stage 1 玉繡確認的班型
-F_QUICK   = os.path.join(BASE, "快速名冊.csv")           # ← 快速模式：卡號,姓名,班型,區
+F_QUICK   = os.path.join(BASE, "快速名冊.csv")           # ← 快速模式：卡號,姓名,班型,區,組別
 OUT_DIR   = os.path.join(BASE, "輸出")
 os.makedirs(OUT_DIR, exist_ok=True)
 
@@ -357,6 +359,20 @@ def match_members(roster, month_status, name_of, by_name):
 
 W135_WD={0,2,4}; W246_WD={1,3,5}
 
+def _count_shifts(card, status):
+    """數某人在某份班表(週/月)裡的白班/夜班天數、有沒有出現在W135/W246的日子。
+    抽成共用函式，讓 classify() 對『第一週資料』跟『全月備援』用同一套算法，
+    避免像 2026-08-10 獨立稽查抓到的那種「area有備援、白夜判斷沒有」的不對稱。"""
+    white=night=0; w135=w246=False
+    for d,(cat,shift,zone) in status.get(card,{}).items():
+        s=(shift or "").strip()
+        if is_excluded_shift(s): continue
+        if s.startswith("D"): white+=1
+        elif s.startswith("E"): night+=1
+        if d.weekday() in W135_WD: w135=True
+        if d.weekday() in W246_WD: w246=True
+    return white,night,w135,w246
+
 def classify(members, month_status, first_week_status, overrides=None):
     """回傳 info[card] = {type:'白'/'夜'/None, area, w135, w246, ...}
        overrides: {card_or_name: '白'/'夜'} — 玉繡在 Stage 1 手動確認的班型，優先採用。
@@ -366,14 +382,15 @@ def classify(members, month_status, first_week_status, overrides=None):
     for m in members:
         c=m["card"]; nm=m["name"]
         src = first_week_status if first_week_status.get(c) else month_status
-        white=night=0; w135=w246=False
-        for d,(cat,shift,zone) in src.get(c,{}).items():
-            s=(shift or "").strip()
-            if is_excluded_shift(s): continue
-            if s.startswith("D"): white+=1
-            elif s.startswith("E"): night+=1
-            if d.weekday() in W135_WD: w135=True
-            if d.weekday() in W246_WD: w246=True
+        white,night,w135,w246 = _count_shifts(c, src)
+        # 2026-08-10 獨立稽查實測發現：分區(area)判斷本來就有「第一週判不出來就退回
+        # 全月統計」的備援（見下面 area 那段），但白/夜判斷跟w135/w246沒有對等的
+        # 備援——如果第一週剛好整週都是連假/特休等排除班別，white=night=0，
+        # typ直接卡在None，即使全月其他週明顯是白班或夜班，也會被誤判成本月完全
+        # 排不進任何格，還會連帶汙染下個月的公平分數（hist_rest被灌水）。用
+        # 全月資料(month_status)重算一次，跟area用同一套備援邏輯。
+        if white==0 and night==0:
+            white,night,w135,w246 = _count_shifts(c, month_status)
         # 自動判斷（平手算白）
         if white==0 and night==0: typ=None
         elif white>=night: typ="白"
@@ -661,7 +678,13 @@ def run():
 
 
 def run_quick(month_arg):
-    """快速模式：讀 快速名冊.csv（卡號,姓名,班型,區）直接排稽核，不必解析班表。"""
+    """快速模式：讀 快速名冊.csv（卡號,姓名,班型,區,組別）直接排稽核，不必解析班表。
+
+    2026-08-10 獨立稽查實測發現：快速模式的 info 從沒帶過 w135/w246，
+    `assign()` 裡的 `group_ok()` 只好對這條路徑一律 `.get(key, True)` 放行——
+    等於完全不檢查「這人到底是上週一三五還是週二四六」，可能把只上二四六班的人
+    排進週一三五的稽核格，而且因為 group_ok 從沒失敗過，連既有的『排不出才放寬』
+    警告都不會被觸發，玉繡完全看不出來。新增「組別」欄補上這個檢查。"""
     rows=_read_rows(F_QUICK)
     if not rows:
         print("❌ 找不到『快速名冊.csv』或內容是空的。"); return
@@ -679,6 +702,7 @@ def run_quick(month_arg):
     for r in rows:
         card=(r.get("卡號") or "").strip(); name=(r.get("姓名") or "").strip()
         typ_raw=(r.get("班型") or "").strip(); area=(r.get("區") or "").strip()
+        grp_raw=(r.get("組別") or "").strip()
         if not card and not name: continue
         key=card or name
         if key in seen: continue
@@ -686,8 +710,20 @@ def run_quick(month_arg):
         typ = "白" if "白" in typ_raw else ("夜" if ("夜" in typ_raw or "小夜" in typ_raw) else None)
         if area not in ("一區","二區"):
             warn(f"⚠ 「{name}」的區『{area}』不是一區/二區，本月可能排不進去")
+        # 「組別」欄是這次新增的，舊版存的快速名冊.csv沒有這欄——沒有這欄時退回
+        # 舊行為（兩組都放行），不強迫舊資料重填；欄位存在但這個人沒填/填不懂時，
+        # 明確跳警告而不是默默放行，讓玉繡知道這個人沒被真正檢查過組別。
+        if "組別" not in r:
+            w135=w246=True
+        elif grp_raw=="週一三五": w135,w246=True,False
+        elif grp_raw=="週二四六": w135,w246=False,True
+        elif grp_raw in ("不限","兩者皆可","皆可"): w135=w246=True
+        else:
+            warn(f"⚠ 「{name}」的組別『{grp_raw}』看不懂，本次視為「不限」——"
+                 f"請補成「週一三五」或「週二四六」，不然沒辦法真的檢查這人上班日對不對")
+            w135=w246=True
         members.append({"card":key,"name":name})
-        info[key]={"type":typ,"area":area,"name":name}
+        info[key]={"type":typ,"area":area,"w135":w135,"w246":w246,"name":name}
 
     print(f"ℹ 快速點選模式：{len(members)} 人")
     hist_cnt,hist_rest=load_history(skip_month=tag)
