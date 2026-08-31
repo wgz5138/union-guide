@@ -1,5 +1,21 @@
 # -*- coding: utf-8 -*-
 """透析藥水排班 — 手機網頁版（Streamlit）v3.26
+  • v3.54（2026-08-10，修稽核v3.53時順手發現印藥水流程有同一類風險，這次補上）：
+    印藥水 Stage 3「⬇️ 其他檔案下載（列印用 xlsx / 貼 LINE 用 txt）」的 `.xlsx`
+    （標「貼到護理站公告欄」）、`.txt`（標「傳LINE群組用」），發的是「➡️排印藥水」
+    子行程當初的原始輸出，玉繡在「產生定案」點格子改人之後，這兩個檔案完全不會
+    跟著更新——跟v3.53修的稽核那個問題是同一顆蟲。而且這裡的`.txt`特別容易誤按：
+    上面3️⃣區塊本來就有一顆用`_build_line_txt(rows,...)`即時重建、內容正確的
+    「⬇️下載txt傳LINE群組」，跟這裡標籤幾乎一樣的另一顆按鈕，內容卻是舊版本，
+    兩顆長得很像、一個對一個錯。
+    修法：`cloud_rows`／`cloud_disp` 存在時（玉繡至少按過一次「產生定案」），用
+    它們現場重建這兩個檔案——`.txt`直接呼叫已經在用的`_build_line_txt()`（跟
+    3️⃣區塊那顆用同一個函式、同一份資料，不再重複維護第二套邏輯）；`.xlsx`用
+    `cloud_disp.to_excel()`（`disp`本來就是index=區、columns=治療日標籤、
+    cell="姓名(M/D印)"格式，跟`排班.py`原本輸出的Excel結構一致，只是少了原本
+    的儲存格上色）。`.csv`（雲端貼上用）本來就是獨立邏輯，不受影響。
+    用真實`_build_line_txt()`函式驗證：模擬換人情境（黃怡璇→林欣儀），重建的
+    txt/xlsx都正確反映修改，換掉的人正確出現在休息名單。
   • v3.53（2026-08-10，v3.52同一天往下查出的兩個連帶問題，使用者要求「不是只查漏洞，
     是要確保玉繡每個月稽核不會出狀況」而主動深挖）：
     ①`extract_notes()` 只排除「【公平累計】」標題那一行，底下逐人明細（例如「林欣儀
@@ -1327,7 +1343,7 @@ def _build_line_txt(rows, disp_df=None):
 
 
 # ── 💬 意見回饋：借用稽核歷史（特殊鍵「意見-時間」）存放，不動 LINE 程式 ──
-APP_VER = "v3.53"
+APP_VER = "v3.54"
 FEEDBACK_PREFIX = "意見-"
 
 def push_feedback(step, detail, expect, urgency, who):
@@ -1642,10 +1658,11 @@ if TEST_MODE:
 
 st.title("💊 透析藥水排班")
 st.caption("上傳班表 Excel → 出名單(表格)。可直接點格子改人名。跨區標 🔺。")
-st.caption(f"🟢 版本 {APP_VER}（延續上一版稽核bug往下查：①公平累計逐人明細（含「休息」"
-           "字樣）誤混進「注意事項」警告清單 ②稽核「其他檔案下載」的Excel/文字檔是"
-           "點格子改之前的舊版本，貼公告欄/傳LINE群組可能傳達錯誤名單——都已改成依"
-           "你目前的修改重新產生）· 2026-08-10")
+st.caption(f"🟢 版本 {APP_VER}（印藥水流程也修了跟稽核同一顆蟲：「其他檔案下載」的"
+           "Excel（貼公告欄用）/文字檔（傳LINE群組用）原本是排出來當下的舊版本，"
+           "點格子改人之後不會跟著更新——改成用你「產生定案」後的內容重新產生，"
+           "並修掉一個容易誤按的地方：這裡跟上面3️⃣區塊的「下載txt傳LINE群組」標籤"
+           "幾乎一樣，以前一個對一個錯，現在兩邊內容一致）· 2026-08-10")
 
 # ── 📊 首頁顯眼統計＋本機備份落後提醒（2026-07-20加，v3.38）─────────────
 # 目的：2026-07-19~20那次「7/20資料被同步按鈕蓋掉」事件，玉繡是三週後才發現雲端資料
@@ -2375,8 +2392,33 @@ if mode.startswith("🟦"):
             ".txt":  "💬 傳 LINE 群組用（文字，複製貼上）",
             ".csv":  "☁️ 雲端貼上用（CSV，貼到 Google 試算表）",
         }
+        # v3.54：這個expander跟稽核那邊v3.53修過的是同一顆蟲——`files`是「➡️排印藥水」
+        # 子行程當初的原始輸出，玉繡在「產生定案」階段點格子改動之後，這裡的.xlsx／.txt
+        # 完全不會跟著更新。.xlsx標榜「貼護理站公告欄」、.txt標榜「傳LINE群組」，
+        # 如果她改過名字之後下載這裡的檔案去公告，會把錯誤名單傳達出去（不只是畫面
+        # 顯示問題）。而且.txt這裡容易誤按：上面「3️⃣產生定案」區塊其實已經有一顆
+        # 用即時重建的正確版「⬇️下載txt傳LINE群組」（見_line_txt那段），這裡又有一顆
+        # 標籤幾乎一樣、內容卻是舊版本的按鈕，兩顆長得很像、一個對一個錯。
+        # 改法：`cloud_rows`／`cloud_disp` 存在時（表示玉繡至少按過一次「產生定案」），
+        # 用它們現場重建這兩個檔案；`.csv`（雲端貼上用）本來就是直接從 rows 建的獨立
+        # 邏輯，不受這顆問題影響，維持原樣。
+        _corrected_files = dict(files)
+        _cr = st.session_state.get("cloud_rows")
+        _cd = st.session_state.get("cloud_disp")
+        if _cr and _cd is not None:
+            _corrected_txt = _build_line_txt(_cr, disp_df=(None if st.session_state.get("cloud_rows_source") == "draft" else _cd))
+            _xlsx_buf = io.BytesIO()
+            _cd.to_excel(_xlsx_buf)
+            for fn in list(_corrected_files.keys()):
+                ext = os.path.splitext(fn)[1].lower()
+                if ext == ".xlsx":
+                    _corrected_files[fn] = _xlsx_buf.getvalue()
+                elif ext == ".txt" and _corrected_txt:
+                    _corrected_files[fn] = _corrected_txt.encode("utf-8")
+            _FILE_LABELS[".xlsx"] = "📋 列印用（Excel，貼到護理站公告欄，已套用你的修改）"
+            _FILE_LABELS[".txt"]  = "💬 傳 LINE 群組用（文字，已套用你的修改——跟上面3️⃣區塊那顆下載按鈕內容相同）"
         with st.expander("⬇️ 其他檔案下載（列印用 xlsx / 貼 LINE 用 txt）"):
-            for fn, b in files.items():
+            for fn, b in _corrected_files.items():
                 ext = os.path.splitext(fn)[1].lower()
                 label = _FILE_LABELS.get(ext, "")
                 if label:
