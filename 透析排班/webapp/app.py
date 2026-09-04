@@ -1,5 +1,28 @@
 # -*- coding: utf-8 -*-
 """透析藥水排班 — 手機網頁版（Streamlit）v3.26
+  • v3.56（2026-09-04，第4次派agent全面查bug——前3次都被環境問題（背景任務遺失/
+    容器重啟）中斷，這次終於跑完，找到兩項之前3次agent都沒查到的真bug）：
+    ①【高】稽核 Stage 2「稽核者」欄位是自由文字格子，跟印藥水那邊「格子對不到組員
+    名單」的問題（v3.50 高-2）一模一樣，但當初稽核這邊沒有一起補。實測：打「欣儀」
+    而不是「林欣儀」，`build_corrected_audit_history()` 對不到名冊，把她靜默記成
+    「休」（污染下個月公平累計，且不會被 v3.52 那個「本月休息」提示抓到，因為那段
+    也是拿同一份 `edited_ak` 算的，一樣看不懂「欣儀」），她的LINE提醒不會送出、失敗
+    原因只會顯示「缺userId」，容易誤導成對照表壞掉，不會讓人聯想到是打字打錯。
+    修法：比照印藥水那邊同一套規則（長度≥2且能唯一對到一個人才自動展開簡稱；
+    「(跨區)」等括號註記先剝掉比對、展開後再接回去），加在 `edited_ak` 產生後、
+    任何下游函式讀它之前，對不到就攔阻「🚀 送稽核結果到雲端」，要勾選確認才能送。
+    用真實抽出的偵測邏輯驗證6種情況（精確符合/唯一簡稱展開/展開後保留跨區標記/
+    單字模糊拒絕展開/完全打錯攔阻/空格忽略）全部正確。
+    ②【中】`稽核.py` `assign()` 允許白班人力不夠時讓夜班人代稽核「第二班」
+    （`allow_night_band2`，v3.41已有的正常設計），但稽核歷史只記錄「區/組別/班次」，
+    完全沒記真正班型。`fetch_last_audit_prefill()` 舊版只認「第三班=小夜、其他一律
+    白班」猜下個月快速模式要帶入的班型，代第二班的夜班人會被誤判成白班，可能被算進
+    白班人力、甚至排到她根本上不了的班次，且畫面上完全不會有任何警示。
+    修法：`稽核.py` `emit()` 寫歷史時把 `info[c]["type"]`（排這個月當下算出來的真正
+    班型）存進「位置」欄第4段（`區/組別/班次/白或夜`），`fetch_last_audit_prefill()`
+    優先讀這段，沒有這段（舊資料）才退回原本用班次猜的邏輯，向下相容不影響既有歷史。
+    用真實函式碼驗證：新格式正確讀出代第二班的夜班人為「小夜」；舊格式（無第4段）
+    行為不變，仍照舊邏輯猜。
   • v3.55（2026-08-10，使用者觀察「稽核一個月才排一次，曝光率比每週的印藥水低，
     可能有埋很久的bug」，派agent專門查低頻路徑找到的兩項）：
     ①【高】`稽核.py` `classify()` 的白/夜班型判斷跟分區(area)判斷本來該是對稱的
@@ -554,7 +577,17 @@ def fetch_last_audit_prefill():
             parts = pos.split("/")
             area = parts[0].strip()
             group = parts[1].strip() if len(parts) > 1 else ""
-            typ  = "小夜" if "第三班" in pos else "白班"
+            # v3.56（獨立稽查agent中-2）：「位置」第4段（2026-09-04後新增，見稽核.py
+            # emit() 的說明）直接記錄排稽核當下算出來的真正班型（白/夜），比用「班次」
+            # 猜準——第二班允許夜班人代白班人力不夠的缺（allow_night_band2），舊版只認
+            # 「第三班=小夜、其他一律白班」，代第二班的夜班人下個月會被誤判成白班，
+            # 靜默把她算進白班人力，也可能被排到她根本上不了的班次。第4段不存在（舊
+            # 資料，這次修改之前排的月份）才退回舊猜法。
+            _typ_seg = parts[3].strip() if len(parts) > 3 else ""
+            if _typ_seg:
+                typ = "小夜" if _typ_seg == "夜" else "白班"
+            else:
+                typ = "小夜" if "第三班" in pos else "白班"
             pf[name] = (typ, area, group)
         return pf
     except Exception:
@@ -1380,7 +1413,7 @@ def _build_line_txt(rows, disp_df=None):
 
 
 # ── 💬 意見回饋：借用稽核歷史（特殊鍵「意見-時間」）存放，不動 LINE 程式 ──
-APP_VER = "v3.55"
+APP_VER = "v3.56"
 FEEDBACK_PREFIX = "意見-"
 
 def push_feedback(step, detail, expect, urgency, who):
@@ -1695,10 +1728,11 @@ if TEST_MODE:
 
 st.title("💊 透析藥水排班")
 st.caption("上傳班表 Excel → 出名單(表格)。可直接點格子改人名。跨區標 🔺。")
-st.caption(f"🟢 版本 {APP_VER}（低頻路徑深查修復：①班型判斷（白/夜）第一週剛好整週"
-           "連假/特休時會誤判成「未知」、整月排不進任何格，已比照分區判斷補上退回"
-           "全月統計的備援 ②快速模式新增「組別」欄，之前完全不檢查週一三五/週二四六，"
-           "現在會真的比對、沒設定會提醒）· 2026-08-10")
+st.caption(f"🟢 版本 {APP_VER}（第4次全面查bug再修2項：①稽核者欄位打簡稱/打錯字，"
+           "以前完全不檢查，會被靜默記成「休息」污染下個月公平累計、也收不到LINE提醒，"
+           "已比照印藥水那邊補上自動展開簡稱/攔阻送出 ②代稽核第二班的夜班人，下個月"
+           "快速模式帶入會被誤判成白班，已把真正班型存進歷史紀錄，不用再用班次猜）"
+           "· 2026-09-04")
 
 # ── 📊 首頁顯眼統計＋本機備份落後提醒（2026-07-20加，v3.38）─────────────
 # 目的：2026-07-19~20那次「7/20資料被同步按鈕蓋掉」事件，玉繡是三週後才發現雲端資料
@@ -2671,6 +2705,40 @@ elif mode.startswith("🟩"):
         st.caption("可直接點「稽核者」欄改人名。")
         edited_ak = st.data_editor(df, use_container_width=True,
                                     key="ak_edit", hide_index=True)
+
+        # v3.56（獨立稽查agent高-1）：稽核者欄位是自由文字格子，跟印藥水那邊「格子對不到
+        # 組員名單」的問題（v3.50 高-2）一模一樣，但當初稽核這邊沒有一起補。實測把
+        # 「林欣儀」打成「欣儀」：build_corrected_audit_history() 對不到名冊，把她靜默
+        # 記成「休」（汙染下個月公平累計，且不會被上面「本月休息」提示抓到，因為那段
+        # 也是拿同一份 edited_ak 算的，一樣看不懂「欣儀」），她的LINE提醒不會送出、
+        # 失敗原因只會顯示成「缺userId」，看起來像對照表壞了，不會讓人聯想到是打字
+        # 打錯。比照印藥水那邊同一套規則：長度≥2 且能唯一對到一個人才自動展開；「(跨
+        # 區)」等括號註記先剝掉比對、展開後再接回去；對不到就攔下來，不讓送出。
+        _roster_names_ak = get_roster_names()
+        _unmatched_ak = []   # [(位置, 打的內容)]
+        _expanded_ak  = []   # [(位置, 打的簡稱, 展開的全名)]
+        if _roster_names_ak and edited_ak is not None and not edited_ak.empty and "稽核者" in edited_ak.columns:
+            _has_pos_cols = {"區", "組", "班次"} <= set(edited_ak.columns)
+            for _idx in edited_ak.index:
+                _raw = str(edited_ak.at[_idx, "稽核者"])
+                _suffix_m = re.search(r'[\(（].*?[\)）]', _raw)
+                _suffix = _suffix_m.group(0) if _suffix_m else ""
+                _nm_raw = re.sub(r'[\(（].*?[\)）]', '', _raw).strip()
+                if not _nm_raw or _nm_raw in _roster_names_ak:
+                    continue
+                _pos = (f"{edited_ak.at[_idx,'區']}/{edited_ak.at[_idx,'組']}/{edited_ak.at[_idx,'班次']}"
+                        if _has_pos_cols else f"第{_idx+1}列")
+                _cands = [full for full in _roster_names_ak
+                          if len(_nm_raw) >= 2 and full.endswith(_nm_raw)]
+                if len(_cands) == 1:
+                    _expanded_ak.append((_pos, _nm_raw, _cands[0]))
+                    edited_ak.at[_idx, "稽核者"] = _cands[0] + _suffix
+                else:
+                    _unmatched_ak.append((_pos, _nm_raw))
+        if _expanded_ak:
+            st.info("ℹ 已自動展開簡稱："
+                     + "、".join(f"{pos} 『{raw}』→『{full}』" for pos, raw, full in _expanded_ak))
+
         _notes_ak = extract_notes(out)
         if _notes_ak:
             st.markdown("#### ⚠️ 注意事項（送出前請看過）")
@@ -2711,12 +2779,27 @@ elif mode.startswith("🟩"):
             if _week_mismatch_ak else True
         )
 
+        # v3.56（獨立稽查agent高-1）：跟印藥水那邊同款的硬性攔阻——稽核者欄位對不到
+        # 組員名單時，不要讓它送出去才在雲端用姓名精確比對時默默失敗，見上方 _unmatched_ak
+        # 的說明。
+        if _unmatched_ak:
+            st.error("❌ 這幾格的稽核者名字在組員名單裡找不到對應的人，送出去會**收不到 LINE 提醒**、"
+                     "公平歷史也會被靜默記成「休息」：\n" +
+                     "\n".join(f"　・{pos}：『{raw}』" for pos, raw in _unmatched_ak) +
+                     "\n\n請改回組員名單裡的正確姓名（或至少 2 個字的簡稱，能唯一對到一個人）。")
+        _confirm_unmatched_ak = (
+            st.checkbox("我知道上面列的問題，仍要照現在這樣送出（不建議，除非已經確認過）",
+                        key="confirm_unmatched_ak")
+            if _unmatched_ak else True
+        )
+        _send_blocked_ak = not (_confirm_week_mismatch_ak and _confirm_unmatched_ak)
+
         if TEST_MODE:
-            if st.button("🧪 送稽核結果到雲端（測試模擬）", type="secondary", disabled=not _confirm_week_mismatch_ak):
+            if st.button("🧪 送稽核結果到雲端（測試模擬）", type="secondary", disabled=_send_blocked_ak):
                 st.info("🧪 測試模式：模擬送出成功，但實際上**沒有**寫到雲端，也沒有送 LINE 通知給稽核者。")
                 st.balloons()
         elif APPS_SCRIPT_URL and WRITE_SECRET:
-            if st.button("🚀 送稽核結果到雲端", type="primary", disabled=not _confirm_week_mismatch_ak):
+            if st.button("🚀 送稽核結果到雲端", type="primary", disabled=_send_blocked_ak):
                 with st.spinner("送出中，請稍候…"):
                     ak_hist_b = files.get("稽核紀錄_輸出.csv")
                     # v3.41：先用玉繡實際改過的名單修正歷史，再送出（比照印藥水的 Fix1）。

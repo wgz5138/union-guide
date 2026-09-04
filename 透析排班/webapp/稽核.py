@@ -621,7 +621,15 @@ def emit(members, info, slots, assigned, used, crossed, hist_cnt, hist_rest, tag
         c=m["card"]; st="稽核" if c in used else "休"
         pos=""
         for k,v in assigned.items():
-            if v==c: pos=f"{k[0]}/{'週一三五' if k[1]=='W135' else '週二四六'}/{BAND[k[2]]}"; break
+            if v==c:
+                # v3.56（獨立稽查agent中-2）：以前「位置」只存 區/組別/班次，第二班允許
+                # 白班人力不夠時讓夜班人代（allow_night_band2），所以光看班次猜不出這個
+                # 人真正的班型——app.py fetch_last_audit_prefill() 舊版靠「第三班=小夜、
+                # 其他一律白班」猜，代第二班的夜班人下個月會被誤判成白班。這裡把
+                # info[c]["type"]（排這個月當下算出來的真正班型，白/夜）一起存進第4段，
+                # 下個月快速模式帶入時直接讀這段，不用再猜。
+                pos=f"{k[0]}/{'週一三五' if k[1]=='W135' else '週二四六'}/{BAND[k[2]]}/{info[c]['type'] or ''}"
+                break
         row={"月份":tag,"卡號":c,"姓名":m["name"],"狀態":st,"位置":pos}
         keep.append(row); all_hist_rows.append(row)
     try:
