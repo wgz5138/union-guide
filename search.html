@@ -436,7 +436,7 @@ document.getElementById("man-tour").addEventListener("click",()=>{ closeManual()
 /* ===== 小工具 ===== */
 function cleanAbs(t){ return String(t||"").replace(/<h[1-6][^>]*>/gi,"\n").replace(/<\/h[1-6]>/gi,"：").replace(/<[^>]+>/g," ").replace(/[ \t]{2,}/g," ").replace(/\s*\n\s*/g,"\n").trim(); }
 // 🔄 自動偵測新版本
-const BUILD="2026101201";
+const BUILD="2026101202";
 const CHANGELOG=[
   "每篇文獻新增「🌐 翻譯中文」：有 API 金鑰用 Claude 翻（醫學術語更準），沒有則自動用 MyMemory 免費翻，不需跳頁",
   "新增「⚖️ AI 律師」工具（勞動法主場，引法條／判斷對方說法／列證據；法規用全國法規資料庫官方真資料；上方可進）",
@@ -767,14 +767,21 @@ async function translateCard(btn, i){
       const {text}=await callClaude(prompt, 1500);
       box.innerHTML=`<div>${esc(text).replace(/\n/g,"<br>")}</div>`;
     } else {
-      // 無金鑰：用 MyMemory 免費 API（英→繁中）
-      const toTranslate=(title+(abstract?"\n\n"+abstract:"")).slice(0,4800);
-      const resp=await fetch(`https://api.mymemory.translated.net/get?q=${encodeURIComponent(toTranslate)}&langpair=en|zh-TW`);
-      if(!resp.ok) throw new Error("HTTP "+resp.status);
-      const data=await resp.json();
-      if(data.responseStatus!==200) throw new Error(data.responseDetails||"翻譯失敗");
-      box.innerHTML=`<div>${esc(data.responseData.translatedText).replace(/\n/g,"<br>")}</div>
-        <div style="margin-top:8px;font-size:11.5px;color:var(--muted)">由 MyMemory 免費翻譯・貼你的 API 金鑰可改用 Claude（醫學術語更準）</div>`;
+      // 無金鑰：用 Google Translate（無 500 字元限制）
+      async function gtrChunk(text){
+        if(!text) return "";
+        const CHUNK=800; const parts=[];
+        for(let i=0;i<text.length;i+=CHUNK){
+          const url="https://translate.googleapis.com/translate_a/single?client=gtx&sl=en&tl=zh-TW&dt=t&q="+encodeURIComponent(text.slice(i,i+CHUNK));
+          const r2=await fetch(url); if(!r2.ok) throw new Error("HTTP "+r2.status);
+          const d=await r2.json(); parts.push((d[0]||[]).map(x=>x[0]||"").join(""));
+        }
+        return parts.join("");
+      }
+      const trTitle=await gtrChunk(title);
+      const trAbs=abstract?await gtrChunk(abstract):"";
+      box.innerHTML=`<div><b>${esc(trTitle)}</b>${trAbs?"<br><br>"+esc(trAbs).replace(/\n/g,"<br>"):""}</div>
+        <div style="margin-top:8px;font-size:11.5px;color:var(--muted)">由 Google 翻譯・貼 API 金鑰可改用 Claude（醫學術語更準）</div>`;
     }
     box.dataset.done="1";
     btn.textContent="🌐 隱藏翻譯";
